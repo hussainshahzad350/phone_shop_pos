@@ -1,0 +1,17 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub/
+build/
+
+# IDE
+.idea/
+.vscode/*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Flutter generated
+**/generated_plugin_registrant.dart
+**/flutter_export_environment.sh
