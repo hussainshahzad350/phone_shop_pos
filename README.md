@@ -93,12 +93,15 @@ The same module pattern supports adding:
 
 by introducing new feature folders under `modules/` with the same `data/domain/presentation` split.
 
-## Recommended Package List (next phase)
+## Package Guidance
+Already added in this baseline:
 - `flutter_riverpod`
 - `go_router`
 - `sqflite_common_ffi`
 - `path`
 - `path_provider`
+
+Recommended for next phase:
 - `freezed_annotation` + `json_serializable` (when model generation starts)
 - `intl` (when receipt/report formatting starts)
 
