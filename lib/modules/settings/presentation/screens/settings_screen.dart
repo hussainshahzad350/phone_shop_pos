@@ -1,6 +1,7 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 import 'package:phone_shop_pos/modules/settings/presentation/providers/settings_providers.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -47,7 +48,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Restore Backup'),
-        content: Text('Restore database from ${file.path}? This will overwrite current data.'),
+        content: Text(
+          'Restore database from ${p.basename(file.path)}? This will overwrite current data.',
+        ),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),

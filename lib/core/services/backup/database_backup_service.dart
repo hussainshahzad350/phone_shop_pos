@@ -53,7 +53,15 @@ class DatabaseBackupService with BaseRepositoryGuard {
         await folder.create(recursive: true);
       }
 
-      await _appDatabase.database.rawQuery('PRAGMA wal_checkpoint(FULL);');
+      final checkpointRows = await _appDatabase.database.rawQuery(
+        'PRAGMA wal_checkpoint(FULL);',
+      );
+      if (checkpointRows.isNotEmpty) {
+        final busyValue = (checkpointRows.first['busy'] as num?)?.toInt() ?? 0;
+        if (busyValue != 0) {
+          throw StateError('Database is busy; checkpoint failed before backup.');
+        }
+      }
 
       final fileName = _buildBackupFileName(now);
       final outputPath = p.join(folder.path, fileName);

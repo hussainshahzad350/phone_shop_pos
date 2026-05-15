@@ -17,13 +17,10 @@ class InventoryReportService with BaseRepositoryGuard {
     ReportFilterEntity filter,
   ) {
     return guard<List<StockReportRowEntity>>(() async {
-      final args = <Object?>[];
-      final productFilter = filter.productModelId?.trim();
-      final productWhere = StringBuffer('pm.is_active = 1');
-      if (productFilter != null && productFilter.isNotEmpty) {
-        productWhere.write(' AND pm.id = ?');
-        args.add(productFilter);
-      }
+      final productFilterValue = filter.productModelId?.trim();
+      final productFilter = productFilterValue == null || productFilterValue.isEmpty
+          ? null
+          : productFilterValue;
 
       final rows = await _appDatabase.database.rawQuery(
         '''
@@ -38,7 +35,7 @@ class InventoryReportService with BaseRepositoryGuard {
           CASE WHEN ist.quantity <= ist.min_quantity THEN 1 ELSE 0 END AS is_low_stock
         FROM ${TableNames.inventoryStock} ist
         JOIN ${TableNames.productModels} pm ON pm.id = ist.product_model_id
-        WHERE ${productWhere.toString()}
+        WHERE pm.is_active = 1 AND (? IS NULL OR pm.id = ?)
 
         UNION ALL
 
@@ -53,16 +50,19 @@ class InventoryReportService with BaseRepositoryGuard {
           0 AS is_low_stock
         FROM ${TableNames.serializedStock} ss
         JOIN ${TableNames.productModels} pm ON pm.id = ss.product_model_id
-        WHERE pm.is_active = 1 AND ss.stock_status = 'in_stock'
-        ${productFilter != null && productFilter.isNotEmpty ? 'AND pm.id = ?' : ''}
+        WHERE pm.is_active = 1
+          AND ss.stock_status = 'in_stock'
+          AND (? IS NULL OR pm.id = ?)
         GROUP BY pm.id, pm.name, pm.category
 
         ORDER BY product_name COLLATE NOCASE ASC
         LIMIT ? OFFSET ?
         ''',
         <Object?>[
-          ...args,
-          if (productFilter != null && productFilter.isNotEmpty) productFilter,
+          productFilter,
+          productFilter,
+          productFilter,
+          productFilter,
           filter.pageSize,
           filter.offset,
         ],
