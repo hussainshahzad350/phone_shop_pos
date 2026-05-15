@@ -181,7 +181,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
 
   void _debouncedProductSearch(String value) {
     _productSearchDebounce?.cancel();
-    _productSearchDebounce = Timer(const Duration(milliseconds: 180), () {
+    _productSearchDebounce = Timer(const Duration(milliseconds: 150), () {
       if (!mounted) {
         return;
       }
@@ -191,7 +191,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
 
   void _debouncedCustomerSearch(String value) {
     _customerSearchDebounce?.cancel();
-    _customerSearchDebounce = Timer(const Duration(milliseconds: 180), () {
+    _customerSearchDebounce = Timer(const Duration(milliseconds: 150), () {
       if (!mounted) {
         return;
       }
@@ -314,9 +314,10 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
       return;
     }
 
-    final message = result.asFailure!.error.message;
+    final error = result.asFailure!.error;
+    final message = error.message;
     final lowerMessage = message.toLowerCase();
-    final withRollbackSuffix = lowerMessage.contains('transaction') &&
+    final withRollbackSuffix = error.code.toLowerCase().contains('transaction') &&
             !lowerMessage.contains('rollback')
         ? '$message Rollback applied.'
         : message;

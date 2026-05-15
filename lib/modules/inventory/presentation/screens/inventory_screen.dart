@@ -43,7 +43,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
 
   void _debouncedSearch(String value) {
     _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 180), () {
+    _searchDebounce = Timer(const Duration(milliseconds: 150), () {
       if (!mounted) {
         return;
       }
