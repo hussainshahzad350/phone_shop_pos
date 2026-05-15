@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class AppDesktopScaffold extends StatelessWidget {
   const AppDesktopScaffold({
@@ -276,21 +277,52 @@ class AppConfirmationDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(title),
-      content: Text(message),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: Text(cancelLabel),
+    return Shortcuts(
+      shortcuts: const <ShortcutActivator, Intent>{
+        SingleActivator(LogicalKeyboardKey.escape): _DialogCancelIntent(),
+        SingleActivator(LogicalKeyboardKey.enter): _DialogConfirmIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          _DialogCancelIntent: CallbackAction<_DialogCancelIntent>(
+            onInvoke: (_) {
+              Navigator.of(context).pop(false);
+              return null;
+            },
+          ),
+          _DialogConfirmIntent: CallbackAction<_DialogConfirmIntent>(
+            onInvoke: (_) {
+              Navigator.of(context).pop(true);
+              return null;
+            },
+          ),
+        },
+        child: AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              autofocus: true,
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(cancelLabel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(confirmLabel),
+            ),
+          ],
         ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: Text(confirmLabel),
-        ),
-      ],
+      ),
     );
   }
+}
+
+class _DialogCancelIntent extends Intent {
+  const _DialogCancelIntent();
+}
+
+class _DialogConfirmIntent extends Intent {
+  const _DialogConfirmIntent();
 }
 
 class AppStatusBadge extends StatelessWidget {

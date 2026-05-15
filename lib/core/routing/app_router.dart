@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:phone_shop_pos/core/widgets/desktop_navigation_shell.dart';
-import 'package:phone_shop_pos/core/widgets/module_placeholder_screen.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/screens/inventory_screen.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/screens/purchase_screen.dart';
@@ -41,9 +40,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/customers',
-            builder: (context, state) => const ModulePlaceholderScreen(
-              title: 'Customers',
-            ),
+            redirect: (context, state) => '/sales',
           ),
           GoRoute(
             path: '/reports',

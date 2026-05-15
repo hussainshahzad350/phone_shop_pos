@@ -36,7 +36,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (result.isSuccess) {
       AppNotifier.success(message);
     } else {
-      AppNotifier.error(message);
+      AppNotifier.error(
+        message,
+        action: SnackBarAction(
+          label: 'Retry',
+          onPressed: _performBackup,
+        ),
+      );
     }
   }
 
@@ -83,7 +89,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (result.isSuccess) {
       AppNotifier.success(message);
     } else {
-      AppNotifier.error(message);
+      AppNotifier.error(
+        message,
+        action: SnackBarAction(
+          label: 'Retry',
+          onPressed: _performRestore,
+        ),
+      );
     }
   }
 
@@ -184,27 +196,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     child: Center(child: Text('Failed to load database health.')),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Card(
-              child: ListTile(
-                title: Text('Receipt Settings'),
-                subtitle: Text('Placeholder for future receipt configurations.'),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Card(
-              child: ListTile(
-                title: Text('Printer Settings'),
-                subtitle: Text('Placeholder for future printer setup and device mapping.'),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Card(
-              child: ListTile(
-                title: Text('App Preferences'),
-                subtitle: Text('Placeholder for theme, language, and shortcut preferences.'),
               ),
             ),
           ],
