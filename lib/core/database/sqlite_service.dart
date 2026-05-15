@@ -1,5 +1,6 @@
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:phone_shop_pos/core/database/database_constants.dart';
 
 abstract class LocalDatabaseService {
   Future<void> initialize();
@@ -9,7 +10,7 @@ abstract class LocalDatabaseService {
 
 class SqliteFfiDatabaseService implements LocalDatabaseService {
   SqliteFfiDatabaseService({required String rootDirectory})
-      : _databasePath = p.join(rootDirectory, 'phone_shop_pos.db');
+      : _databasePath = p.join(rootDirectory, DatabaseConstants.databaseName);
 
   final String _databasePath;
 
