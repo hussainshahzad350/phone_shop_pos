@@ -120,6 +120,8 @@ class SqlitePurchaseRepository with BaseRepositoryGuard implements PurchaseRepos
     String? notes,
   }) {
     return guard<PurchaseCompletionEntity>(() async {
+      _validatePurchaseItems(items);
+
       final now = DateTimeHelpers.nowUtc();
       final purchaseId = IdHelpers.newId(prefix: 'pur');
 
@@ -282,5 +284,47 @@ class SqlitePurchaseRepository with BaseRepositoryGuard implements PurchaseRepos
         quantityItemCount: quantityCount,
       );
     }, operation: 'create_purchase_transaction');
+  }
+
+  void _validatePurchaseItems(List<PurchaseFormItem> items) {
+    if (items.isEmpty) {
+      throw StateError('Purchase requires at least one item.');
+    }
+
+    for (final item in items) {
+      if (item.hasImei) {
+        if (item.imeiEntries.isEmpty) {
+          throw StateError('${item.productName} requires at least one IMEI entry.');
+        }
+
+        for (final entry in item.imeiEntries) {
+          final normalizedImei1 = entry.imei1.trim();
+          final normalizedImei2 = entry.imei2?.trim();
+
+          if (normalizedImei1.isEmpty) {
+            throw StateError('${item.productName} contains an empty IMEI.');
+          }
+          if (entry.costPrice < 0) {
+            throw StateError('${item.productName} contains a negative IMEI cost.');
+          }
+          if (normalizedImei2 != null &&
+              normalizedImei2.isNotEmpty &&
+              normalizedImei1 == normalizedImei2) {
+            throw StateError('${item.productName} has duplicate IMEI values.');
+          }
+        }
+        continue;
+      }
+
+      if (item.quantity <= 0) {
+        throw StateError('${item.productName} has invalid quantity.');
+      }
+      if (item.unitCost < 0) {
+        throw StateError('${item.productName} has invalid unit cost.');
+      }
+      if (item.imeiEntries.isNotEmpty) {
+        throw StateError('${item.productName} cannot mix quantity and IMEI stock.');
+      }
+    }
   }
 }

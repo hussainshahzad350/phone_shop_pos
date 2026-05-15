@@ -122,6 +122,7 @@ class DatabaseBackupService with BaseRepositoryGuard {
 
         // 3. Close the live database — no writes are possible after this point.
         await _appDatabase.close();
+        await _deleteDatabaseSidecars(targetDbPath);
 
         // 4. Atomic swap: rename live DB to .bak, then rename staged copy to
         //    live path.  If rename fails (cross-device etc.), fall back to
@@ -151,22 +152,15 @@ class DatabaseBackupService with BaseRepositoryGuard {
         // 5. Reopen and verify the restored database.
         try {
           await _appDatabase.initialize(seedDemoData: false);
-
-          final healthRows = await _appDatabase.database.rawQuery(
-            'PRAGMA integrity_check;',
-          );
-          final healthValue =
-              healthRows.isNotEmpty
-                  ? healthRows.first.values.first.toString().toLowerCase()
-                  : '';
-
-          if (healthValue != 'ok') {
+          final restoredValid = await _passesIntegrityChecks(_appDatabase.database);
+          if (!restoredValid) {
             throw StateError('Restored database failed integrity check.');
           }
         } catch (reopenError) {
           // Rollback: restore the pre-restore backup if available.
           await _appDatabase.close();
           if (await backupSafeFile.exists()) {
+            await _deleteDatabaseSidecars(targetDbPath);
             if (await targetDbFile.exists()) {
               await targetDbFile.delete();
             }
@@ -219,10 +213,6 @@ class DatabaseBackupService with BaseRepositoryGuard {
       final dbPath = _appDatabase.filePath;
       final dbFile = File(dbPath);
       final sizeBytes = await dbFile.length();
-      final integrityRows = await _appDatabase.database.rawQuery(
-        'PRAGMA integrity_check;',
-      );
-      final integrityValue = integrityRows.first.values.first.toString();
       final lastBackup = await _readLastBackupInfo(
         backupDirectoryPath:
             backupDirectoryPath ?? p.join(p.dirname(dbPath), 'backups'),
@@ -231,7 +221,7 @@ class DatabaseBackupService with BaseRepositoryGuard {
       return DatabaseHealthInfo(
         databasePath: dbPath,
         sizeBytes: sizeBytes,
-        integrityOk: integrityValue.toLowerCase() == 'ok',
+        integrityOk: await _passesIntegrityChecks(_appDatabase.database),
         lastBackup: lastBackup,
       );
     }, operation: 'database_health_check');
@@ -249,13 +239,33 @@ class DatabaseBackupService with BaseRepositoryGuard {
     );
 
     try {
-      final checkRows = await opened.rawQuery('PRAGMA integrity_check;');
-      if (checkRows.isEmpty) {
-        return false;
-      }
-      return checkRows.first.values.first.toString().toLowerCase() == 'ok';
+      return _passesIntegrityChecks(opened);
     } finally {
       await opened.close();
+    }
+  }
+
+  Future<bool> _passesIntegrityChecks(Database database) async {
+    final integrityRows = await database.rawQuery('PRAGMA integrity_check;');
+    if (integrityRows.isEmpty) {
+      return false;
+    }
+
+    final integrityValue = integrityRows.first.values.first.toString().toLowerCase();
+    if (integrityValue != 'ok') {
+      return false;
+    }
+
+    final foreignKeyRows = await database.rawQuery('PRAGMA foreign_key_check;');
+    return foreignKeyRows.isEmpty;
+  }
+
+  Future<void> _deleteDatabaseSidecars(String databasePath) async {
+    for (final suffix in <String>['-wal', '-shm', '-journal']) {
+      final sidecar = File('$databasePath$suffix');
+      if (await sidecar.exists()) {
+        await sidecar.delete();
+      }
     }
   }
 
