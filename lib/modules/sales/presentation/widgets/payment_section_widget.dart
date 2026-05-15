@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phone_shop_pos/core/constants/payment_method.dart';
 
 class PaymentSectionWidget extends StatelessWidget {
   const PaymentSectionWidget({
@@ -37,11 +38,14 @@ class PaymentSectionWidget extends StatelessWidget {
             DropdownButtonFormField<String>(
               focusNode: paymentMethodFocusNode,
               value: paymentMethod,
-              items: const <DropdownMenuItem<String>>[
-                DropdownMenuItem<String>(value: 'cash', child: Text('Cash')),
-                DropdownMenuItem<String>(value: 'card', child: Text('Card')),
-                DropdownMenuItem<String>(value: 'bank', child: Text('Bank Transfer')),
-              ],
+              items: PaymentMethod.values
+                  .map(
+                    (value) => DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(PaymentMethod.labels[value] ?? value),
+                    ),
+                  )
+                  .toList(growable: false),
               onChanged: (value) {
                 if (value != null) {
                   onPaymentMethodChanged(value);

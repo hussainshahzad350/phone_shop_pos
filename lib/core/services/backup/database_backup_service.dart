@@ -96,26 +96,117 @@ class DatabaseBackupService with BaseRepositoryGuard {
         throw StateError('Backup file not found.');
       }
 
+      // Validate the backup BEFORE touching the live database.
       final isValid = await _validateBackup(backupFilePath);
       if (!isValid) {
-        throw StateError('Selected backup file is invalid.');
+        throw StateError('Selected backup file is invalid or corrupted.');
       }
 
-      await _appDatabase.close();
-      final targetDbFile = File(_appDatabase.filePath);
-      if (await targetDbFile.exists()) {
-        await targetDbFile.delete();
-      }
-      await backupFile.copy(_appDatabase.filePath);
-      await _appDatabase.initialize(seedDemoData: false);
+      final targetDbPath = _appDatabase.filePath;
+      final targetDbFile = File(targetDbPath);
 
-      final info = BackupInfo(
-        path: backupFilePath,
-        createdAt: DateTimeHelpers.nowUtc(),
-        sizeBytes: await backupFile.length(),
-        valid: true,
-      );
-      await _writeLastBackupInfo(info);
+      // Stage the backup in a temp file so the live DB is never exposed to
+      // a partially-written copy if the process is interrupted.
+      final tempRestorePath = '$targetDbPath.restore_tmp';
+      final tempRestoreFile = File(tempRestorePath);
+
+      try {
+        // 1. Copy backup → temp staging file.
+        await backupFile.copy(tempRestorePath);
+
+        // 2. Validate the staged copy independently (catches copy-time errors).
+        final stagedValid = await _validateBackup(tempRestorePath);
+        if (!stagedValid) {
+          throw StateError('Staged restore copy failed integrity check.');
+        }
+
+        // 3. Close the live database — no writes are possible after this point.
+        await _appDatabase.close();
+
+        // 4. Atomic swap: rename live DB to .bak, then rename staged copy to
+        //    live path.  If rename fails (cross-device etc.), fall back to
+        //    copy + delete.
+        final backupSafePath = '$targetDbPath.pre_restore_bak';
+        final backupSafeFile = File(backupSafePath);
+        // Remove any stale pre-restore backup first.
+        if (await backupSafeFile.exists()) {
+          await backupSafeFile.delete();
+        }
+
+        try {
+          // Try atomic rename (same filesystem).
+          if (await targetDbFile.exists()) {
+            await targetDbFile.rename(backupSafePath);
+          }
+          await tempRestoreFile.rename(targetDbPath);
+        } catch (_) {
+          // Fallback: copy + delete (different filesystems / permissions).
+          if (await targetDbFile.exists()) {
+            await targetDbFile.copy(backupSafePath);
+            await targetDbFile.delete();
+          }
+          await tempRestoreFile.copy(targetDbPath);
+        }
+
+        // 5. Reopen and verify the restored database.
+        try {
+          await _appDatabase.initialize(seedDemoData: false);
+
+          final healthRows = await _appDatabase.database.rawQuery(
+            'PRAGMA integrity_check;',
+          );
+          final healthValue =
+              healthRows.isNotEmpty
+                  ? healthRows.first.values.first.toString().toLowerCase()
+                  : '';
+
+          if (healthValue != 'ok') {
+            throw StateError('Restored database failed integrity check.');
+          }
+        } catch (reopenError) {
+          // Rollback: restore the pre-restore backup if available.
+          await _appDatabase.close();
+          if (await backupSafeFile.exists()) {
+            if (await targetDbFile.exists()) {
+              await targetDbFile.delete();
+            }
+            await backupSafeFile.copy(targetDbPath);
+            await _appDatabase.initialize(seedDemoData: false);
+          }
+          throw StateError(
+            'Restore failed and was rolled back: $reopenError',
+          );
+        }
+
+        // 6. Cleanup: remove staging artifacts after a successful restore.
+        //    When atomic rename succeeded, tempRestoreFile no longer exists
+        //    (it was renamed); when fallback copy was used, it still exists.
+        //    Unconditionally check-and-delete covers both cases cleanly.
+        if (await backupSafeFile.exists()) {
+          await backupSafeFile.delete();
+        }
+        if (await tempRestoreFile.exists()) {
+          await tempRestoreFile.delete();
+        }
+
+        final info = BackupInfo(
+          path: backupFilePath,
+          createdAt: DateTimeHelpers.nowUtc(),
+          sizeBytes: await backupFile.length(),
+          valid: true,
+        );
+        await _writeLastBackupInfo(info);
+      } catch (_) {
+        // Best-effort cleanup of the temp staging file on any error.
+        if (await tempRestoreFile.exists()) {
+          try {
+            await tempRestoreFile.delete();
+          } catch (_) {
+            // Ignore cleanup errors.
+          }
+        }
+        rethrow;
+      }
     }, operation: 'restore_database_backup');
   }
 

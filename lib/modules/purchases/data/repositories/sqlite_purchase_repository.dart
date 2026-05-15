@@ -123,6 +123,41 @@ class SqlitePurchaseRepository with BaseRepositoryGuard implements PurchaseRepos
       final now = DateTimeHelpers.nowUtc();
       final purchaseId = IdHelpers.newId(prefix: 'pur');
 
+      // ── Phase 2: IMEI pre-transaction uniqueness validation ───────────────
+      // Collect and normalize all IMEI values across all items in the batch.
+      final allImeiValues = <String>[];
+      for (final item in items) {
+        if (!item.hasImei) continue;
+        for (final entry in item.imeiEntries) {
+          final i1 = entry.imei1.trim();
+          final i2 = entry.imei2?.trim();
+          if (i1.isNotEmpty) allImeiValues.add(i1);
+          if (i2 != null && i2.isNotEmpty) allImeiValues.add(i2);
+        }
+      }
+
+      // Check for duplicates within this batch itself.
+      final seen = <String>{};
+      for (final imei in allImeiValues) {
+        if (!seen.add(imei)) {
+          throw StateError('Duplicate IMEI in batch: $imei');
+        }
+      }
+
+      // Check each IMEI against the database before starting the transaction.
+      for (final imei in allImeiValues) {
+        final rows = await _appDatabase.queryTable(
+          TableNames.serializedStock,
+          where: 'imei1 = ? OR imei2 = ?',
+          whereArgs: <Object?>[imei, imei],
+          limit: 1,
+        );
+        if (rows.isNotEmpty) {
+          throw StateError('IMEI already exists in stock: $imei');
+        }
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
       final subtotal = items.fold<double>(0, (sum, item) => sum + item.lineTotal);
       final sanitizedDiscount = discount.clamp(0, subtotal);
       final sanitizedTax = tax < 0 ? 0 : tax;
@@ -153,13 +188,22 @@ class SqlitePurchaseRepository with BaseRepositoryGuard implements PurchaseRepos
         for (final item in items) {
           if (item.hasImei) {
             for (final entry in item.imeiEntries) {
+              // Normalize: trim all values once before using them.
+              final normalizedImei1 = entry.imei1.trim();
+              final rawImei2 = entry.imei2?.trim();
+              final normalizedImei2 =
+                  (rawImei2 == null || rawImei2.isEmpty) ? null : rawImei2;
+              final rawSerial = entry.serialNumber?.trim();
+              final normalizedSerial =
+                  (rawSerial == null || rawSerial.isEmpty) ? null : rawSerial;
+
               final stockId = IdHelpers.newId(prefix: 'ser');
               await transaction.insert(TableNames.serializedStock, <String, Object?>{
                 'id': stockId,
                 'product_model_id': item.productModelId,
-                'imei1': entry.imei1,
-                'imei2': entry.imei2,
-                'serial_number': entry.serialNumber,
+                'imei1': normalizedImei1,
+                'imei2': normalizedImei2,
+                'serial_number': normalizedSerial,
                 'cost_price': entry.costPrice,
                 'selling_price': entry.sellingPrice,
                 'stock_status': SerializedStockStatus.inStock.value,

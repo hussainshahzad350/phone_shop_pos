@@ -177,10 +177,21 @@ class PurchaseService {
       );
     }
 
+    // Phase 5: IMEI format validation — standard IMEIs are exactly 15 digits.
+    if (!RegExp(r'^\d{14,15}$').hasMatch(trimmed)) {
+      return const Failure<void>(
+        AppError(
+          code: 'invalid_imei_format',
+          message: 'IMEI must be 14–15 digits with no spaces or hyphens.',
+        ),
+      );
+    }
+
+    // Phase 2: check against both imei1 and imei2 in all current form entries.
     final duplicateInForm = currentItems
         .where((item) => item.hasImei)
         .expand((item) => item.imeiEntries)
-        .any((entry) => entry.imei1 == trimmed || entry.imei2 == trimmed);
+        .any((entry) => entry.imei1.trim() == trimmed || entry.imei2?.trim() == trimmed);
 
     if (duplicateInForm) {
       return const Failure<void>(

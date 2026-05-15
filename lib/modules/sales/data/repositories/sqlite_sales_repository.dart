@@ -15,6 +15,7 @@ import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_ent
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_completion_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/repositories/sales_repository.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository {
   SqliteSalesRepository({required AppDatabase appDatabase})
@@ -167,28 +168,7 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
   }
 
   @override
-  Future<Result<int>> getSalesCountForDate(DateTime date) {
-    return guard<int>(() async {
-      final start = DateTime.utc(date.year, date.month, date.day);
-      final end = start.add(const Duration(days: 1));
-      final rows = await _appDatabase.database.rawQuery(
-        '''
-        SELECT COUNT(*) as count
-        FROM ${TableNames.sales}
-        WHERE sale_date >= ? AND sale_date < ?
-        ''',
-        <Object?>[DateTimeHelpers.toSql(start), DateTimeHelpers.toSql(end)],
-      );
-      if (rows.isEmpty) {
-        return 0;
-      }
-      return (rows.first['count'] as num?)?.toInt() ?? 0;
-    }, operation: 'get_sales_count_for_date');
-  }
-
-  @override
   Future<Result<SaleCompletionEntity>> createSaleTransaction({
-    required String invoiceNumber,
     required List<CartItemEntity> items,
     required SaleTotalsEntity totals,
     required DateTime saleDate,
@@ -200,30 +180,66 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
     return guard<SaleCompletionEntity>(() async {
       final now = DateTimeHelpers.nowUtc();
       final saleId = IdHelpers.newId(prefix: 'sal');
-      final saleModel = SaleModel(
-        id: saleId,
-        invoiceNumber: invoiceNumber,
-        customerId: customerId,
-        userId: userId,
-        saleDate: saleDate,
-        subtotal: totals.subtotal,
-        discount: totals.discount,
-        tax: totals.tax,
-        total: totals.total,
-        paidAmount: totals.paidAmount,
-        paymentMethod: paymentMethod,
-        notes: notes,
-        createdAt: now,
-        updatedAt: now,
-      );
+
+      // Invoice number is generated atomically inside the transaction using
+      // the invoice_sequences table.  This eliminates the COUNT-based race
+      // condition that existed when the number was computed before the
+      // transaction began.
+      late String invoiceNumber;
 
       await _appDatabase.runInTransaction<void>((transaction) async {
+        // ── Phase 4: atomic invoice sequence ─────────────────────────────
+        final dateKey =
+            '${saleDate.year.toString().padLeft(4, '0')}'
+            '${saleDate.month.toString().padLeft(2, '0')}'
+            '${saleDate.day.toString().padLeft(2, '0')}';
+
+        await transaction.rawInsert(
+          'INSERT OR IGNORE INTO ${TableNames.invoiceSequences} '
+          '(date_key, last_seq) VALUES (?, 0)',
+          <Object?>[dateKey],
+        );
+        await transaction.rawUpdate(
+          'UPDATE ${TableNames.invoiceSequences} '
+          'SET last_seq = last_seq + 1 WHERE date_key = ?',
+          <Object?>[dateKey],
+        );
+        final seqRows = await transaction.rawQuery(
+          'SELECT last_seq FROM ${TableNames.invoiceSequences} WHERE date_key = ?',
+          <Object?>[dateKey],
+        );
+        final seq = (seqRows.first['last_seq'] as num).toInt();
+        invoiceNumber =
+            'INV-$dateKey-${seq.toString().padLeft(4, '0')}';
+
+        // ── Sale header ───────────────────────────────────────────────────
+        final saleModel = SaleModel(
+          id: saleId,
+          invoiceNumber: invoiceNumber,
+          customerId: customerId,
+          userId: userId,
+          saleDate: saleDate,
+          subtotal: totals.subtotal,
+          discount: totals.discount,
+          tax: totals.tax,
+          total: totals.total,
+          paidAmount: totals.paidAmount,
+          paymentMethod: paymentMethod,
+          notes: notes,
+          createdAt: now,
+          updatedAt: now,
+        );
         await transaction.insert(TableNames.sales, saleModel.toMap());
 
+        // ── Line items ────────────────────────────────────────────────────
         for (final item in items) {
+          double costPrice;
+
           if (item.serializedStockId != null) {
+            // Phase 2: re-confirm availability inside the transaction.
             final imeiRows = await transaction.query(
               TableNames.serializedStock,
+              columns: <String>['stock_status', 'cost_price'],
               where: 'id = ? AND stock_status = ?',
               whereArgs: <Object?>[
                 item.serializedStockId,
@@ -234,6 +250,11 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
             if (imeiRows.isEmpty) {
               throw StateError('IMEI already sold or unavailable.');
             }
+
+            // Phase 3: snapshot the serialized stock cost price at sale time.
+            costPrice =
+                (imeiRows.first['cost_price'] as num?)?.toDouble() ?? 0;
+
             await transaction.update(
               TableNames.serializedStock,
               <String, Object?>{
@@ -246,6 +267,7 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
           } else {
             final stockRows = await transaction.query(
               TableNames.inventoryStock,
+              columns: <String>['quantity', 'unit_cost'],
               where: 'product_model_id = ?',
               whereArgs: <Object?>[item.productModelId],
               limit: 1,
@@ -253,8 +275,17 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
             final available =
                 stockRows.isEmpty ? 0 : (stockRows.first['quantity'] as int);
             if (available < item.quantity) {
-              throw StateError('Insufficient quantity for ${item.productName}.');
+              throw StateError(
+                'Insufficient quantity for ${item.productName}.',
+              );
             }
+
+            // Phase 3: snapshot the per-unit cost from inventory at sale time.
+            costPrice =
+                (stockRows.isEmpty
+                    ? 0
+                    : (stockRows.first['unit_cost'] as num?)?.toDouble()) ??
+                0;
 
             await transaction.update(
               TableNames.inventoryStock,
@@ -276,6 +307,7 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
             unitPrice: item.unitPrice,
             discount: 0,
             lineTotal: item.lineTotal,
+            costPrice: costPrice,
             createdAt: now,
             updatedAt: now,
           );

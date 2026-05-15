@@ -256,5 +256,29 @@ class MigrationService {
       'CREATE INDEX idx_purchases_purchase_date ON ${TableNames.purchases}(purchase_date);',
       'CREATE INDEX idx_purchase_items_purchase_id ON ${TableNames.purchaseItems}(purchase_id);',
     ],
+
+    // ── v2: financial snapshot, invoice sequences, IMEI integrity, perf ──
+    2: <String>[
+      // Phase 3: cost_price snapshot — existing rows default to 0 (historical
+      // data will show zero cost; acceptable trade-off for migration safety).
+      '''
+      ALTER TABLE ${TableNames.saleItems}
+        ADD COLUMN cost_price REAL NOT NULL DEFAULT 0;
+      ''',
+
+      // Phase 4: atomic invoice number generation — avoids COUNT-based races.
+      '''
+      CREATE TABLE ${TableNames.invoiceSequences} (
+        date_key TEXT PRIMARY KEY NOT NULL,
+        last_seq INTEGER NOT NULL DEFAULT 0
+      );
+      ''',
+
+      // Phase 7: performance indexes missing from v1.
+      'CREATE INDEX IF NOT EXISTS idx_sale_items_product_model_id ON ${TableNames.saleItems}(product_model_id);',
+      'CREATE INDEX IF NOT EXISTS idx_sale_items_serialized_stock_id ON ${TableNames.saleItems}(serialized_stock_id);',
+      'CREATE INDEX IF NOT EXISTS idx_sales_created_at ON ${TableNames.sales}(created_at);',
+      'CREATE INDEX IF NOT EXISTS idx_purchases_created_at ON ${TableNames.purchases}(created_at);',
+    ],
   };
 }

@@ -1,14 +1,14 @@
 import 'package:phone_shop_pos/core/errors/result.dart';
-import 'package:phone_shop_pos/modules/inventory/data/repositories/sqlite_inventory_repository.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/inventory_summary_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/stock_row_entity.dart';
+import 'package:phone_shop_pos/modules/inventory/domain/repositories/inventory_repository.dart';
 
 class InventoryService {
-  const InventoryService({required SqliteInventoryRepository repository})
+  const InventoryService({required InventoryRepository repository})
       : _repository = repository;
 
-  final SqliteInventoryRepository _repository;
+  final InventoryRepository _repository;
 
   Future<Result<List<StockRowEntity>>> getStockRows({
     String? searchQuery,

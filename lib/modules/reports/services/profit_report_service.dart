@@ -20,17 +20,9 @@ class ProfitReportService with BaseRepositoryGuard {
         '''
         SELECT
           COALESCE(SUM(si.line_total), 0) AS total_revenue,
-          COALESCE(SUM(
-            CASE
-              WHEN si.serialized_stock_id IS NOT NULL THEN COALESCE(ss.cost_price, 0)
-              ELSE si.quantity * COALESCE(ist.unit_cost, pm.purchase_price, 0)
-            END
-          ), 0) AS total_cost
+          COALESCE(SUM(si.cost_price * si.quantity), 0) AS total_cost
         FROM ${TableNames.sales} s
         JOIN ${TableNames.saleItems} si ON si.sale_id = s.id
-        LEFT JOIN ${TableNames.productModels} pm ON pm.id = si.product_model_id
-        LEFT JOIN ${TableNames.serializedStock} ss ON ss.id = si.serialized_stock_id
-        LEFT JOIN ${TableNames.inventoryStock} ist ON ist.product_model_id = si.product_model_id
         WHERE $where
         ''',
         args,

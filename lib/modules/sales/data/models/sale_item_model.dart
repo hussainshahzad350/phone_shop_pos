@@ -11,6 +11,7 @@ class SaleItemModel extends BaseDbModel {
     required this.unitPrice,
     required this.discount,
     required this.lineTotal,
+    required this.costPrice,
     this.serializedStockId,
   });
 
@@ -22,6 +23,11 @@ class SaleItemModel extends BaseDbModel {
   final double discount;
   final double lineTotal;
 
+  /// Historical cost price snapshot captured at the moment of sale.
+  /// Used for profit calculations so that later stock-cost edits do not
+  /// retroactively change previously recorded profits.
+  final double costPrice;
+
   Map<String, Object?> toMap() {
     return <String, Object?>{
       ...toBaseMap(),
@@ -32,6 +38,7 @@ class SaleItemModel extends BaseDbModel {
       'unit_price': unitPrice,
       'discount': discount,
       'line_total': lineTotal,
+      'cost_price': costPrice,
     };
   }
 }
