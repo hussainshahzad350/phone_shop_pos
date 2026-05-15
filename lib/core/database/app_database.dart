@@ -119,8 +119,16 @@ class AppDatabase {
     final now = DateTimeHelpers.toSql(DateTimeHelpers.nowUtc());
 
     await runInTransaction<void>((transaction) async {
+      final userId = IdHelpers.newId(prefix: 'usr');
+      final customerWalkInId = IdHelpers.newId(prefix: 'cus');
+      final customerRegularId = IdHelpers.newId(prefix: 'cus');
+      final supplierId = IdHelpers.newId(prefix: 'sup');
+      final serializedProductId = IdHelpers.newId(prefix: 'prd');
+      final accessoryProductId = IdHelpers.newId(prefix: 'prd');
+      final chargerProductId = IdHelpers.newId(prefix: 'prd');
+
       await transaction.insert(TableNames.users, <String, Object?>{
-        'id': IdHelpers.newId(prefix: 'usr'),
+        'id': userId,
         'username': 'admin',
         'full_name': 'System Admin',
         'password_hash': null,
@@ -130,16 +138,131 @@ class AppDatabase {
         'updated_at': now,
       });
 
+      await transaction.insert(TableNames.suppliers, <String, Object?>{
+        'id': supplierId,
+        'name': 'Demo Mobile Distributor',
+        'contact_person': 'Ali Khan',
+        'phone': '03001234567',
+        'email': null,
+        'address': 'Hall Road, Lahore',
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.customers, <String, Object?>{
+        'id': customerWalkInId,
+        'name': 'Walk-in Customer',
+        'phone': null,
+        'email': null,
+        'address': null,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.customers, <String, Object?>{
+        'id': customerRegularId,
+        'name': 'Usman Retail',
+        'phone': '03111222333',
+        'email': null,
+        'address': 'Model Town, Lahore',
+        'created_at': now,
+        'updated_at': now,
+      });
+
       await transaction.insert(TableNames.productModels, <String, Object?>{
-        'id': IdHelpers.newId(prefix: 'prd'),
-        'name': 'Demo Accessory',
-        'brand': 'Demo',
+        'id': serializedProductId,
+        'name': 'Samsung Galaxy A54 8/256',
+        'brand': 'Samsung',
+        'category': 'Phones',
+        'sku': 'SAM-A54-8256',
+        'purchase_price': 98000,
+        'sale_price': 105000,
+        'has_imei': 1,
+        'is_active': 1,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.productModels, <String, Object?>{
+        'id': accessoryProductId,
+        'name': 'Type-C Data Cable',
+        'brand': 'Anker',
         'category': 'Accessories',
-        'sku': 'DEMO-ACC-001',
-        'purchase_price': 500,
-        'sale_price': 700,
+        'sku': 'ACC-CABLE-001',
+        'purchase_price': 300,
+        'sale_price': 500,
         'has_imei': 0,
         'is_active': 1,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.productModels, <String, Object?>{
+        'id': chargerProductId,
+        'name': 'Fast Charger 25W',
+        'brand': 'Baseus',
+        'category': 'Accessories',
+        'sku': 'ACC-CHARGER-025',
+        'purchase_price': 1200,
+        'sale_price': 1800,
+        'has_imei': 0,
+        'is_active': 1,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.inventoryStock, <String, Object?>{
+        'id': IdHelpers.newId(prefix: 'stk'),
+        'product_model_id': accessoryProductId,
+        'quantity': 45,
+        'min_quantity': 5,
+        'max_quantity': 200,
+        'unit_cost': 300,
+        'unit_price': 500,
+        'location': 'Rack A',
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.inventoryStock, <String, Object?>{
+        'id': IdHelpers.newId(prefix: 'stk'),
+        'product_model_id': chargerProductId,
+        'quantity': 30,
+        'min_quantity': 4,
+        'max_quantity': 100,
+        'unit_cost': 1200,
+        'unit_price': 1800,
+        'location': 'Rack B',
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.serializedStock, <String, Object?>{
+        'id': IdHelpers.newId(prefix: 'ser'),
+        'product_model_id': serializedProductId,
+        'imei1': '356789101234561',
+        'imei2': '356789101234579',
+        'serial_number': 'SAMA54A001',
+        'cost_price': 98000,
+        'selling_price': 105000,
+        'stock_status': 'in_stock',
+        'supplier_id': supplierId,
+        'notes': null,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.serializedStock, <String, Object?>{
+        'id': IdHelpers.newId(prefix: 'ser'),
+        'product_model_id': serializedProductId,
+        'imei1': '356789101234587',
+        'imei2': '356789101234595',
+        'serial_number': 'SAMA54A002',
+        'cost_price': 98000,
+        'selling_price': 105000,
+        'stock_status': 'in_stock',
+        'supplier_id': supplierId,
+        'notes': null,
         'created_at': now,
         'updated_at': now,
       });
