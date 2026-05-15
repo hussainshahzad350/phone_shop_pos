@@ -25,13 +25,17 @@ class PurchaseScreen extends ConsumerStatefulWidget {
 }
 
 class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
-  final TextEditingController _productSearchController = TextEditingController();
+  final TextEditingController _productSearchController =
+      TextEditingController();
   final FocusNode _productSearchFocus = FocusNode();
-  final TextEditingController _supplierSearchController = TextEditingController();
+  final TextEditingController _supplierSearchController =
+      TextEditingController();
   final TextEditingController _invoiceController = TextEditingController();
-  final TextEditingController _discountController = TextEditingController(text: '0');
+  final TextEditingController _discountController =
+      TextEditingController(text: '0');
   final TextEditingController _taxController = TextEditingController(text: '0');
-  final TextEditingController _paidController = TextEditingController(text: '0');
+  final TextEditingController _paidController =
+      TextEditingController(text: '0');
   final TextEditingController _notesController = TextEditingController();
   bool _isSubmitting = false;
   int _handledShortcutToken = 0;
@@ -68,9 +72,9 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
 
     for (final entry in entries) {
       await ref.read(purchaseFormStateProvider.notifier).addImeiEntry(
-        index: itemIndex,
-        entry: entry,
-      );
+            index: itemIndex,
+            entry: entry,
+          );
     }
   }
 
@@ -86,9 +90,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     final formState = ref.read(purchaseFormStateProvider);
     final service = await ref.read(purchaseServiceProvider.future);
 
-    final result = await ref
-        .read(operationManagerProvider.notifier)
-        .track(
+    final result = await ref.read(operationManagerProvider.notifier).track(
           code: 'save_purchase',
           label: 'Saving purchase',
           progressLabel: 'Saving purchase and updating stock',
@@ -166,7 +168,8 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AppShortcutEventState>(appShortcutEventBusProvider, (previous, next) {
+    ref.listen<AppShortcutEventState>(appShortcutEventBusProvider,
+        (previous, next) {
       _handleGlobalShortcut(next);
     });
 
@@ -176,8 +179,8 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     final totals = ref.watch(purchaseTotalsProvider);
 
     return Shortcuts(
-      shortcuts: <ShortcutActivator, Intent>{
-        const SingleActivator(LogicalKeyboardKey.f10): const _SavePurchaseIntent(),
+      shortcuts: const <ShortcutActivator, Intent>{
+        SingleActivator(LogicalKeyboardKey.f10): _SavePurchaseIntent(),
       },
       child: Actions(
         actions: <Type, Action<Intent>>{
@@ -196,65 +199,67 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
               padding: const EdgeInsets.all(12),
               child: Column(
                 children: <Widget>[
-                _buildTopBar(formState, suppliersAsync),
-                const SizedBox(height: 8),
-                _buildProductSearch(formState, productsAsync),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Expanded(
-                        flex: 3,
-                        child: Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: PurchaseItemsTable(
-                              items: formState.items,
-                              onRemoveItem: (index) {
-                                ref
-                                    .read(purchaseFormStateProvider.notifier)
-                                    .removeItem(index);
-                              },
-                              onUpdateQuantity: (index, qty) {
-                                ref
-                                    .read(purchaseFormStateProvider.notifier)
-                                    .updateQuantity(index: index, quantity: qty);
-                              },
-                              onUpdateUnitCost: (index, cost) {
-                                ref
-                                    .read(purchaseFormStateProvider.notifier)
-                                    .updateUnitCost(index: index, cost: cost);
-                              },
-                              onAddImeiEntries: _handleAddImeiEntries,
-                              onRemoveImeiEntry: (itemIdx, imeiIdx) {
-                                ref
-                                    .read(purchaseFormStateProvider.notifier)
-                                    .removeImeiEntry(
-                                      itemIndex: itemIdx,
-                                      imeiIndex: imeiIdx,
-                                    );
-                              },
+                  _buildTopBar(formState, suppliersAsync),
+                  const SizedBox(height: 8),
+                  _buildProductSearch(formState, productsAsync),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Expanded(
+                          flex: 3,
+                          child: Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: PurchaseItemsTable(
+                                items: formState.items,
+                                onRemoveItem: (index) {
+                                  ref
+                                      .read(purchaseFormStateProvider.notifier)
+                                      .removeItem(index);
+                                },
+                                onUpdateQuantity: (index, qty) {
+                                  ref
+                                      .read(purchaseFormStateProvider.notifier)
+                                      .updateQuantity(
+                                          index: index, quantity: qty);
+                                },
+                                onUpdateUnitCost: (index, cost) {
+                                  ref
+                                      .read(purchaseFormStateProvider.notifier)
+                                      .updateUnitCost(index: index, cost: cost);
+                                },
+                                onAddImeiEntries: _handleAddImeiEntries,
+                                onRemoveImeiEntry: (itemIdx, imeiIdx) {
+                                  ref
+                                      .read(purchaseFormStateProvider.notifier)
+                                      .removeImeiEntry(
+                                        itemIndex: itemIdx,
+                                        imeiIndex: imeiIdx,
+                                      );
+                                },
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 280,
-                        child: _buildRightPanel(formState, totals),
-                      ),
-                    ],
-                  ),
-                ),
-                if (formState.errorMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      formState.errorMessage!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          width: 280,
+                          child: _buildRightPanel(formState, totals),
+                        ),
+                      ],
                     ),
                   ),
+                  if (formState.errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        formState.errorMessage!,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.error),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -366,7 +371,9 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                                 style: const TextStyle(fontSize: 11),
                               ),
                               Text(
-                                product.hasImei ? 'Serialized (IMEI)' : 'Qty-based',
+                                product.hasImei
+                                    ? 'Serialized (IMEI)'
+                                    : 'Qty-based',
                                 style: const TextStyle(fontSize: 11),
                               ),
                             ],
@@ -377,7 +384,8 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                   },
                 );
               },
-              error: (_, __) => const Center(child: Text('Failed to load products')),
+              error: (_, __) =>
+                  const Center(child: Text('Failed to load products')),
               loading: () => const Center(child: CircularProgressIndicator()),
             ),
           ),
@@ -415,10 +423,13 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                     border: OutlineInputBorder(),
                     labelText: 'Discount',
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   onChanged: (v) {
                     final val = FormattingHelpers.parseLocaleDecimal(v);
-                    ref.read(purchaseFormStateProvider.notifier).setDiscount(val);
+                    ref
+                        .read(purchaseFormStateProvider.notifier)
+                        .setDiscount(val);
                   },
                 ),
                 const SizedBox(height: 8),
@@ -429,7 +440,8 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                     border: OutlineInputBorder(),
                     labelText: 'Tax',
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   onChanged: (v) {
                     final val = FormattingHelpers.parseLocaleDecimal(v);
                     ref.read(purchaseFormStateProvider.notifier).setTax(val);
@@ -449,10 +461,13 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                     border: OutlineInputBorder(),
                     labelText: 'Paid Amount',
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   onChanged: (v) {
                     final val = FormattingHelpers.parseLocaleDecimal(v);
-                    ref.read(purchaseFormStateProvider.notifier).setPaidAmount(val);
+                    ref
+                        .read(purchaseFormStateProvider.notifier)
+                        .setPaidAmount(val);
                   },
                 ),
                 const SizedBox(height: 8),
@@ -546,7 +561,8 @@ class _SupplierSearchDropdown extends StatefulWidget {
   final void Function(String? supplierId) onSelected;
 
   @override
-  State<_SupplierSearchDropdown> createState() => _SupplierSearchDropdownState();
+  State<_SupplierSearchDropdown> createState() =>
+      _SupplierSearchDropdownState();
 }
 
 class _SupplierSearchDropdownState extends State<_SupplierSearchDropdown> {
@@ -584,7 +600,8 @@ class _SupplierSearchDropdownState extends State<_SupplierSearchDropdown> {
                   return ListTile(
                     dense: true,
                     title: Text(supplier.name),
-                    subtitle: supplier.phone != null ? Text(supplier.phone!) : null,
+                    subtitle:
+                        supplier.phone != null ? Text(supplier.phone!) : null,
                     onTap: () {
                       widget.searchController.text = supplier.name;
                       widget.onSelected(supplier.id);

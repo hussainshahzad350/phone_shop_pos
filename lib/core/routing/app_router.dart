@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_navigation_shell.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/screens/inventory_screen.dart';
+import 'package:phone_shop_pos/modules/master_data/presentation/screens/master_data_screen.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/screens/purchase_screen.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/screens/reports_screen.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/screens/sales_billing_screen.dart';
@@ -55,6 +56,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/inventory',
             builder: (context, state) => const InventoryScreen(),
+          ),
+          GoRoute(
+            path: '/master-data',
+            builder: (context, state) => const MasterDataScreen(),
           ),
           GoRoute(
             path: '/customers',

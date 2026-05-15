@@ -25,12 +25,13 @@ class ReportsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tab = ref.watch(selectedReportsTabProvider);
     final filter = ref.watch(reportFilterProvider);
-    final customers = ref.watch(reportCustomerOptionsProvider).value ?? const [];
+    final customers =
+        ref.watch(reportCustomerOptionsProvider).value ?? const [];
     final products = ref.watch(reportProductOptionsProvider).value ?? const [];
 
     return Shortcuts(
-      shortcuts: <ShortcutActivator, Intent>{
-        const SingleActivator(LogicalKeyboardKey.f5): const _RefreshReportsIntent(),
+      shortcuts: const <ShortcutActivator, Intent>{
+        SingleActivator(LogicalKeyboardKey.f5): _RefreshReportsIntent(),
       },
       child: Actions(
         actions: <Type, Action<Intent>>{
@@ -66,20 +67,24 @@ class ReportsScreen extends ConsumerWidget {
                   filter: filter,
                   customerOptions: customers,
                   productOptions: products,
-                  onStartDate: (date) =>
-                      ref.read(reportFilterProvider.notifier).setStartDate(date),
+                  onStartDate: (date) => ref
+                      .read(reportFilterProvider.notifier)
+                      .setStartDate(date),
                   onEndDate: (date) =>
                       ref.read(reportFilterProvider.notifier).setEndDate(date),
-                  onCustomer: (value) =>
-                      ref.read(reportFilterProvider.notifier).setCustomerId(value),
-                  onProduct: (value) =>
-                      ref.read(reportFilterProvider.notifier).setProductModelId(value),
+                  onCustomer: (value) => ref
+                      .read(reportFilterProvider.notifier)
+                      .setCustomerId(value),
+                  onProduct: (value) => ref
+                      .read(reportFilterProvider.notifier)
+                      .setProductModelId(value),
                   onStatus: (value) =>
                       ref.read(reportFilterProvider.notifier).setStatus(value),
                   onPaymentMethod: (value) => ref
                       .read(reportFilterProvider.notifier)
                       .setPaymentMethod(value),
-                  onClear: () => ref.read(reportFilterProvider.notifier).clearAll(),
+                  onClear: () =>
+                      ref.read(reportFilterProvider.notifier).clearAll(),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -90,8 +95,9 @@ class ReportsScreen extends ConsumerWidget {
                         (item) => ChoiceChip(
                           label: Text(_tabLabel(item)),
                           selected: item == tab,
-                          onSelected: (_) =>
-                              ref.read(selectedReportsTabProvider.notifier).state = item,
+                          onSelected: (_) => ref
+                              .read(selectedReportsTabProvider.notifier)
+                              .state = item,
                         ),
                       )
                       .toList(growable: false),
@@ -106,14 +112,16 @@ class ReportsScreen extends ConsumerWidget {
                     OutlinedButton.icon(
                       onPressed: filter.page <= 1
                           ? null
-                          : () =>
-                              ref.read(reportFilterProvider.notifier).previousPage(),
+                          : () => ref
+                              .read(reportFilterProvider.notifier)
+                              .previousPage(),
                       icon: const Icon(Icons.chevron_left),
                       label: const Text('Previous'),
                     ),
                     const SizedBox(width: 8),
                     OutlinedButton.icon(
-                      onPressed: () => ref.read(reportFilterProvider.notifier).nextPage(),
+                      onPressed: () =>
+                          ref.read(reportFilterProvider.notifier).nextPage(),
                       icon: const Icon(Icons.chevron_right),
                       label: const Text('Next'),
                     ),
@@ -124,13 +132,19 @@ class ReportsScreen extends ConsumerWidget {
                         if (value == null) {
                           return;
                         }
-                        ref.read(reportFilterProvider.notifier).setPageSize(value);
+                        ref
+                            .read(reportFilterProvider.notifier)
+                            .setPageSize(value);
                       },
                       items: const <DropdownMenuItem<int>>[
-                        DropdownMenuItem<int>(value: 25, child: Text('25 / page')),
-                        DropdownMenuItem<int>(value: 50, child: Text('50 / page')),
-                        DropdownMenuItem<int>(value: 100, child: Text('100 / page')),
-                        DropdownMenuItem<int>(value: 200, child: Text('200 / page')),
+                        DropdownMenuItem<int>(
+                            value: 25, child: Text('25 / page')),
+                        DropdownMenuItem<int>(
+                            value: 50, child: Text('50 / page')),
+                        DropdownMenuItem<int>(
+                            value: 100, child: Text('100 / page')),
+                        DropdownMenuItem<int>(
+                            value: 200, child: Text('200 / page')),
                       ],
                     ),
                     const SizedBox(width: 12),
@@ -197,7 +211,8 @@ class _DailySalesView extends ConsumerWidget {
             )
             .toList(growable: false);
 
-        final totalSales = rows.fold<double>(0, (sum, row) => sum + row.totalSales);
+        final totalSales =
+            rows.fold<double>(0, (sum, row) => sum + row.totalSales);
 
         return Column(
           children: <Widget>[
@@ -252,7 +267,8 @@ class _DailySalesView extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const Center(child: Text('Failed to load daily sales report.')),
+      error: (_, __) =>
+          const Center(child: Text('Failed to load daily sales report.')),
     );
   }
 }
@@ -380,7 +396,8 @@ class _ProfitView extends ConsumerWidget {
         ],
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const Center(child: Text('Failed to load profit report.')),
+      error: (_, __) =>
+          const Center(child: Text('Failed to load profit report.')),
     );
   }
 }
@@ -458,7 +475,8 @@ class _SoldPhonesView extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const Center(child: Text('Failed to load sold phones report.')),
+      error: (_, __) =>
+          const Center(child: Text('Failed to load sold phones report.')),
     );
   }
 }
@@ -507,7 +525,8 @@ class _CurrentStockView extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const Center(child: Text('Failed to load current stock report.')),
+      error: (_, __) =>
+          const Center(child: Text('Failed to load current stock report.')),
     );
   }
 }
@@ -590,7 +609,8 @@ class _LowStockView extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const Center(child: Text('Failed to load low stock report.')),
+      error: (_, __) =>
+          const Center(child: Text('Failed to load low stock report.')),
     );
   }
 }

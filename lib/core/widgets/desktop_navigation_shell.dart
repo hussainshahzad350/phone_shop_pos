@@ -22,6 +22,7 @@ class DesktopNavigationShell extends ConsumerWidget {
     _NavItem(label: 'Sales', icon: Icons.point_of_sale_outlined, route: '/sales'),
     _NavItem(label: 'Purchases', icon: Icons.shopping_cart_outlined, route: '/purchases'),
     _NavItem(label: 'Inventory', icon: Icons.inventory_2_outlined, route: '/inventory'),
+    _NavItem(label: 'Master Data', icon: Icons.dataset_outlined, route: '/master-data'),
     _NavItem(label: 'Reports', icon: Icons.bar_chart_outlined, route: '/reports'),
     _NavItem(label: 'Settings', icon: Icons.settings_outlined, route: '/settings'),
   ];

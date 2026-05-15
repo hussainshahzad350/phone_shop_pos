@@ -12,10 +12,10 @@ class SalesCalculator {
   }) {
     final subtotal = items.fold<double>(0, (sum, item) => sum + item.lineTotal);
 
-    final sanitizedDiscount = discount.clamp(0, subtotal);
-    final sanitizedTax = tax < 0 ? 0 : tax;
+    final sanitizedDiscount = discount.clamp(0, subtotal).toDouble();
+    final sanitizedTax = tax < 0 ? 0.0 : tax;
     final total = (subtotal - sanitizedDiscount) + sanitizedTax;
-    final sanitizedPaidAmount = paidAmount < 0 ? 0 : paidAmount;
+    final sanitizedPaidAmount = paidAmount < 0 ? 0.0 : paidAmount;
 
     return SaleTotalsEntity(
       subtotal: subtotal,

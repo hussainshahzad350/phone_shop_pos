@@ -2,6 +2,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
+import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/services/backup/database_backup_service.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
@@ -74,8 +75,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (context) => AppConfirmationDialog(
         title: 'Restore Backup',
-        message:
-            'Restore database from ${p.basename(file.path)}?\n\n'
+        message: 'Restore database from ${p.basename(file.path)}?\n\n'
             'This will replace the live shop data with the selected backup.\n'
             'Before continuing:\n'
             '• Make a fresh backup of the current shop data\n'
@@ -91,14 +91,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     setState(() => _isProcessing = true);
     final service = await ref.read(databaseBackupServiceProvider.future);
-    final result = await ref
-        .read(operationManagerProvider.notifier)
-        .track<Result<void>>(
-          code: 'restore_database',
-          label: 'Restoring backup',
-          progressLabel: 'Replacing live database with selected backup',
-          action: (_) => service.restoreBackup(file.path),
-        );
+    final result =
+        await ref.read(operationManagerProvider.notifier).track<Result<void>>(
+              code: 'restore_database',
+              label: 'Restoring backup',
+              progressLabel: 'Replacing live database with selected backup',
+              action: (_) => service.restoreBackup(file.path),
+            );
 
     if (!mounted) {
       return;
@@ -147,7 +146,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _cancelPrintJob(InvoicePrintJob job) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AppConfirmationDialog(
+      builder: (context) => const AppConfirmationDialog(
         title: 'Cancel queued receipt?',
         message:
             'This will remove the receipt from the active print queue. Use this only if the receipt is no longer needed.',
@@ -157,7 +156,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (confirmed != true || !mounted) {
       return;
     }
-    final result = await ref.read(invoicePrintQueueProvider.notifier).cancel(job.id);
+    final result =
+        await ref.read(invoicePrintQueueProvider.notifier).cancel(job.id);
     if (!mounted) {
       return;
     }
@@ -185,7 +185,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: <Widget>[
               Row(
                 children: <Widget>[
-                  Text('Settings', style: Theme.of(context).textTheme.headlineSmall),
+                  Text('Settings',
+                      style: Theme.of(context).textTheme.headlineSmall),
                   const Spacer(),
                   OutlinedButton.icon(
                     onPressed: _showAboutDialog,
@@ -207,7 +208,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text('Version: ${AppRuntimeConfig.fullVersion}'),
-                      Text('Channel: ${AppRuntimeConfig.releaseChannel}'),
+                      const Text('Channel: ${AppRuntimeConfig.releaseChannel}'),
                     ],
                   ),
                 ),
@@ -227,7 +228,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         const SizedBox(height: 8),
                         AppStatusBadge(
                           label: status.summary,
-                          color: status.isHealthy ? Colors.green : Colors.orange,
+                          color:
+                              status.isHealthy ? Colors.green : Colors.orange,
                         ),
                         const SizedBox(height: 8),
                         Text('DB location: ${status.databasePath}'),
@@ -249,7 +251,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     error: (_, __) => const SizedBox(
                       height: 90,
-                      child: Center(child: Text('Failed to load startup health.')),
+                      child:
+                          Center(child: Text('Failed to load startup health.')),
                     ),
                   ),
                 ),
@@ -324,7 +327,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text('Database path: ${health.databasePath}'),
-                          Text('Database size: ${_formatBytes(health.sizeBytes)}'),
+                          Text(
+                              'Database size: ${_formatBytes(health.sizeBytes)}'),
                           Text(
                             'Integrity check: ${health.integrityOk ? 'OK' : 'FAILED'}',
                           ),
@@ -343,7 +347,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     error: (_, __) => const SizedBox(
                       height: 90,
-                      child: Center(child: Text('Failed to load database health.')),
+                      child: Center(
+                          child: Text('Failed to load database health.')),
                     ),
                   ),
                 ),
@@ -355,83 +360,93 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                       Row(
-                         children: <Widget>[
-                           Text(
-                             'Invoice Print Queue',
-                             style: Theme.of(context).textTheme.titleMedium,
-                           ),
-                           const Spacer(),
-                           if (printQueue.isNotEmpty)
-                             Text(
-                               '${printQueue.where((job) => job.status.canRetry).length} need attention',
-                               style: Theme.of(context).textTheme.bodySmall,
-                             ),
-                         ],
-                       ),
-                       const SizedBox(height: 8),
-                       if (printQueue.isEmpty)
-                         const Text('No queued or failed receipts.')
-                       else
-                         ...printQueue.map(
-                           (job) => ListTile(
-                             dense: true,
-                             contentPadding: EdgeInsets.zero,
-                              title: Text(job.invoiceNumber),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  const SizedBox(height: 2),
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 4,
-                                    children: <Widget>[
-                                      AppStatusBadge(
-                                        label: job.status.label,
-                                        color: switch (job.status) {
-                                          InvoicePrintJobStatus.pending => Colors.blueGrey,
-                                          InvoicePrintJobStatus.processing => Colors.blue,
-                                          InvoicePrintJobStatus.completed => Colors.green,
-                                          InvoicePrintJobStatus.failed => Colors.orange,
-                                          InvoicePrintJobStatus.cancelled => Colors.grey,
-                                        },
-                                      ),
-                                      Text(
-                                        'Retries: ${job.retryCount}/${PrintJobRepository.retryLimit}',
-                                      ),
-                                    ],
-                                  ),
-                                  Text(
-                                   'Queued: ${FormattingHelpers.dateYmdHm(job.createdAt)} • '
-                                   'Updated: ${FormattingHelpers.dateYmdHm(job.updatedAt)}',
-                                 ),
-                                 if (job.lastError != null)
-                                   Text('Operator note: ${job.lastError}'),
-                                ],
-                              ),
-                             trailing: Wrap(
-                               spacing: 4,
-                               children: <Widget>[
-                                 IconButton(
-                                   tooltip: 'Retry print',
-                                   onPressed: !job.status.canRetry || job.retryLimitReached
-                                       ? null
-                                       : () => _retryPrintJob(job),
-                                   icon: const Icon(Icons.print_outlined),
-                                 ),
-                                 IconButton(
-                                   tooltip: 'Cancel queued receipt',
-                                   onPressed: job.status == InvoicePrintJobStatus.processing ||
-                                           job.status == InvoicePrintJobStatus.completed ||
-                                           job.status == InvoicePrintJobStatus.cancelled
-                                       ? null
-                                       : () => _cancelPrintJob(job),
-                                   icon: const Icon(Icons.cancel_outlined),
-                                 ),
-                               ],
-                             ),
-                           ),
-                         ),
+                      Row(
+                        children: <Widget>[
+                          Text(
+                            'Invoice Print Queue',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const Spacer(),
+                          if (printQueue.isNotEmpty)
+                            Text(
+                              '${printQueue.where((job) => job.status.canRetry).length} need attention',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (printQueue.isEmpty)
+                        const Text('No queued or failed receipts.')
+                      else
+                        ...printQueue.map(
+                          (job) => ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(job.invoiceNumber),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                const SizedBox(height: 2),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 4,
+                                  children: <Widget>[
+                                    AppStatusBadge(
+                                      label: job.status.label,
+                                      color: switch (job.status) {
+                                        InvoicePrintJobStatus.pending =>
+                                          Colors.blueGrey,
+                                        InvoicePrintJobStatus.processing =>
+                                          Colors.blue,
+                                        InvoicePrintJobStatus.completed =>
+                                          Colors.green,
+                                        InvoicePrintJobStatus.failed =>
+                                          Colors.orange,
+                                        InvoicePrintJobStatus.cancelled =>
+                                          Colors.grey,
+                                      },
+                                    ),
+                                    Text(
+                                      'Retries: ${job.retryCount}/${PrintJobRepository.retryLimit}',
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  'Queued: ${FormattingHelpers.dateYmdHm(job.createdAt)} • '
+                                  'Updated: ${FormattingHelpers.dateYmdHm(job.updatedAt)}',
+                                ),
+                                if (job.lastError != null)
+                                  Text('Operator note: ${job.lastError}'),
+                              ],
+                            ),
+                            trailing: Wrap(
+                              spacing: 4,
+                              children: <Widget>[
+                                IconButton(
+                                  tooltip: 'Retry print',
+                                  onPressed: !job.status.canRetry ||
+                                          job.retryLimitReached
+                                      ? null
+                                      : () => _retryPrintJob(job),
+                                  icon: const Icon(Icons.print_outlined),
+                                ),
+                                IconButton(
+                                  tooltip: 'Cancel queued receipt',
+                                  onPressed: job.status ==
+                                              InvoicePrintJobStatus
+                                                  .processing ||
+                                          job.status ==
+                                              InvoicePrintJobStatus.completed ||
+                                          job.status ==
+                                              InvoicePrintJobStatus.cancelled
+                                      ? null
+                                      : () => _cancelPrintJob(job),
+                                  icon: const Icon(Icons.cancel_outlined),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),

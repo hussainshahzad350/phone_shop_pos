@@ -51,7 +51,7 @@ class FormattingHelpers {
     final dd = dateTime.day.toString().padLeft(2, '0');
     final hh = dateTime.hour.toString().padLeft(2, '0');
     final min = dateTime.minute.toString().padLeft(2, '0');
-    return '${yyyy}_${mm}_${dd}_${hh}_${min}';
+    return '${yyyy}_${mm}_${dd}_${hh}_$min';
   }
 
   static String _groupDigits(String digits) {

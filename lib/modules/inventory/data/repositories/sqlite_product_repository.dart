@@ -27,6 +27,8 @@ class SqliteProductRepository
         brand: product.brand,
         category: product.category,
         sku: product.sku,
+        barcode: product.barcode,
+        minStockAlert: product.minStockAlert,
         purchasePrice: product.purchasePrice,
         salePrice: product.salePrice,
         hasImei: product.hasImei,
@@ -48,9 +50,7 @@ class SqliteProductRepository
         whereArgs: <Object?>[id],
         limit: 1,
       );
-      if (rows.isEmpty) {
-        return null;
-      }
+      if (rows.isEmpty) return null;
       return ProductModel.fromMap(rows.first).toEntity();
     }, operation: 'get_product_by_id');
   }
@@ -59,31 +59,35 @@ class SqliteProductRepository
   Future<Result<List<ProductEntity>>> searchProducts(
     String query, {
     bool? hasImei,
+    bool? isActive,
     int limit = 50,
   }) {
     return guard<List<ProductEntity>>(() async {
       final trimmed = query.trim();
       final args = <Object?>[];
-      final where = StringBuffer('is_active = 1');
-
+      final where = StringBuffer();
+      if (isActive != null) {
+        where.write('is_active = ?');
+        args.add(isActive ? 1 : 0);
+      } else {
+        where.write('is_active = 1');
+      }
       if (trimmed.isNotEmpty) {
         where.write(
-          ' AND (name LIKE ? OR sku LIKE ? OR brand LIKE ? OR category LIKE ?)',
-        );
-        final prefixQuery = '$trimmed%';
-        final likeQuery = '%$trimmed%';
+            ' AND (name LIKE ? OR sku LIKE ? OR brand LIKE ? OR category LIKE ? OR barcode LIKE ?)');
+        final pq = '$trimmed%';
+        final lq = '%$trimmed%';
         args
-          ..add(prefixQuery)
-          ..add(prefixQuery)
-          ..add(likeQuery)
-          ..add(likeQuery);
+          ..add(pq)
+          ..add(pq)
+          ..add(lq)
+          ..add(lq)
+          ..add(lq);
       }
-
       if (hasImei != null) {
         where.write(' AND has_imei = ?');
         args.add(hasImei ? 1 : 0);
       }
-
       final rows = await QueryDiagnostics.trace(
         label: 'inventory.search_products',
         action: () => _appDatabase.queryTable(
@@ -94,7 +98,6 @@ class SqliteProductRepository
           limit: limit,
         ),
       );
-
       return rows
           .map(ProductModel.fromMap)
           .map((m) => m.toEntity())
@@ -113,6 +116,8 @@ class SqliteProductRepository
           'brand': product.brand,
           'category': product.category,
           'sku': product.sku,
+          'barcode': product.barcode,
+          'min_stock_alert': product.minStockAlert,
           'purchase_price': product.purchasePrice,
           'sale_price': product.salePrice,
           'has_imei': product.hasImei ? 1 : 0,
@@ -133,11 +138,46 @@ class SqliteProductRepository
         TableNames.productModels,
         <String, Object?>{
           'is_active': 0,
-          'updated_at': DateTimeHelpers.toSql(now),
+          'updated_at': DateTimeHelpers.toSql(now)
         },
         where: 'id = ?',
         whereArgs: <Object?>[id],
       );
     }, operation: 'deactivate_product');
+  }
+
+  @override
+  Future<Result<void>> activateProduct(String id) {
+    return guard<void>(() async {
+      final now = DateTimeHelpers.nowUtc();
+      await _appDatabase.update(
+        TableNames.productModels,
+        <String, Object?>{
+          'is_active': 1,
+          'updated_at': DateTimeHelpers.toSql(now)
+        },
+        where: 'id = ?',
+        whereArgs: <Object?>[id],
+      );
+    }, operation: 'activate_product');
+  }
+
+  @override
+  Future<Result<bool>> isSkuUnique(String sku, {String? excludeId}) {
+    return guard<bool>(() async {
+      final trimmed = sku.trim();
+      if (trimmed.isEmpty) return true;
+      final where = excludeId != null ? 'sku = ? AND id != ?' : 'sku = ?';
+      final args = excludeId != null
+          ? <Object?>[trimmed, excludeId]
+          : <Object?>[trimmed];
+      final rows = await _appDatabase.queryTable(
+        TableNames.productModels,
+        where: where,
+        whereArgs: args,
+        limit: 1,
+      );
+      return rows.isEmpty;
+    }, operation: 'is_sku_unique');
   }
 }

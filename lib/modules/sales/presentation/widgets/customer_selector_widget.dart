@@ -24,7 +24,8 @@ class CustomerSelectorWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text('Customer', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Customer',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             TextField(
               decoration: const InputDecoration(
@@ -36,7 +37,7 @@ class CustomerSelectorWidget extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String?>(
-              value: selectedCustomerId,
+              initialValue: selectedCustomerId,
               items: <DropdownMenuItem<String?>>[
                 const DropdownMenuItem<String?>(
                   value: null,

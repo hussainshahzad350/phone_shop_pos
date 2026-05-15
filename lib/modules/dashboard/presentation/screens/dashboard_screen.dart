@@ -25,8 +25,8 @@ class DashboardScreen extends ConsumerWidget {
     final lowStockAsync = ref.watch(dashboardLowStockProvider);
 
     return Shortcuts(
-      shortcuts: <ShortcutActivator, Intent>{
-        const SingleActivator(LogicalKeyboardKey.f5): const _RefreshDashboardIntent(),
+      shortcuts: const <ShortcutActivator, Intent>{
+        SingleActivator(LogicalKeyboardKey.f5): _RefreshDashboardIntent(),
       },
       child: Actions(
         actions: <Type, Action<Intent>>{
@@ -66,7 +66,8 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                   error: (_, __) => const SizedBox(
                     height: 160,
-                    child: Center(child: Text('Failed to load dashboard metrics.')),
+                    child: Center(
+                        child: Text('Failed to load dashboard metrics.')),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -179,8 +180,8 @@ class _KpiGrid extends StatelessWidget {
         final crossAxisCount = width >= 1600
             ? 4
             : width >= 1200
-            ? 3
-            : 2;
+                ? 3
+                : 2;
 
         return GridView.builder(
           shrinkWrap: true,
@@ -228,11 +229,14 @@ class _RecentSalesTable extends StatelessWidget {
                         (row) => DataRow(
                           cells: <DataCell>[
                             DataCell(Text(row.invoiceNumber)),
-                            DataCell(Text(FormattingHelpers.dateYmdHm(row.saleDate))),
+                            DataCell(Text(
+                                FormattingHelpers.dateYmdHm(row.saleDate))),
                             DataCell(Text(row.customerName)),
-                            DataCell(Text(FormattingHelpers.currencyPkr(row.total))),
                             DataCell(
-                              Text(FormattingHelpers.currencyPkr(row.pendingAmount)),
+                                Text(FormattingHelpers.currencyPkr(row.total))),
+                            DataCell(
+                              Text(FormattingHelpers.currencyPkr(
+                                  row.pendingAmount)),
                             ),
                             DataCell(Text(row.paymentMethod ?? '-')),
                           ],
@@ -256,7 +260,8 @@ class _LowStockPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text('Low Stock Warnings', style: Theme.of(context).textTheme.titleMedium),
+        Text('Low Stock Warnings',
+            style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         Expanded(
           child: rows.isEmpty
@@ -268,7 +273,8 @@ class _LowStockPanel extends StatelessWidget {
                     final row = rows[index];
                     return ListTile(
                       dense: true,
-                      leading: const Icon(Icons.warning_amber, color: Colors.orange),
+                      leading:
+                          const Icon(Icons.warning_amber, color: Colors.orange),
                       title: Text(row.productName),
                       subtitle: Text(
                         'Qty ${row.quantity} / Min ${row.minQuantity}${row.location == null ? '' : ' • ${row.location}'}',

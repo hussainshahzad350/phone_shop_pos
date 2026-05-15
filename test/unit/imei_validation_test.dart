@@ -1,9 +1,11 @@
 // ignore_for_file: avoid_relative_lib_imports
 import 'package:flutter_test/flutter_test.dart';
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
-import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
+import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
+import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_completion_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
+import 'package:phone_shop_pos/modules/purchases/domain/entities/supplier_option_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/repositories/purchase_repository.dart';
 import 'package:phone_shop_pos/modules/purchases/services/purchase_service.dart';
 
@@ -20,21 +22,28 @@ class _StubPurchaseRepository implements PurchaseRepository {
 
   // ── Unused stubs ─────────────────────────────────────────────────────────
   @override
-  Future<Result<dynamic>> guard<T>(
+  Future<Result<T>> guard<T>(
     Future<T> Function() action, {
     String operation = 'repository_operation',
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Result<dynamic>> searchProducts(String query, {int limit = 20}) =>
+  }) async =>
       throw UnimplementedError();
 
   @override
-  Future<Result<dynamic>> searchSuppliers(String query, {int limit = 20}) =>
+  Future<Result<List<ProductEntity>>> searchProducts(
+    String query, {
+    int limit = 20,
+  }) =>
       throw UnimplementedError();
 
   @override
-  Future<Result<dynamic>> createPurchaseTransaction({
+  Future<Result<List<SupplierOptionEntity>>> searchSuppliers(
+    String query, {
+    int limit = 20,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Result<PurchaseCompletionEntity>> createPurchaseTransaction({
     required List<PurchaseFormItem> items,
     required double discount,
     required double tax,
@@ -42,7 +51,8 @@ class _StubPurchaseRepository implements PurchaseRepository {
     String? supplierId,
     String? invoiceNumber,
     String? notes,
-  }) => throw UnimplementedError();
+  }) =>
+      throw UnimplementedError();
 }
 
 void main() {
@@ -61,7 +71,7 @@ void main() {
         currentItems: const <PurchaseFormItem>[],
       );
       expect(result.isFailure, isTrue);
-      expect((result.asFailure!.error as AppError).code, 'empty_imei');
+      expect((result.asFailure!.error).code, 'empty_imei');
     });
 
     test('rejects IMEI shorter than 14 digits', () async {
@@ -71,7 +81,7 @@ void main() {
       );
       expect(result.isFailure, isTrue);
       expect(
-        (result.asFailure!.error as AppError).code,
+        (result.asFailure!.error).code,
         'invalid_imei_format',
       );
     });
@@ -83,7 +93,7 @@ void main() {
       );
       expect(result.isFailure, isTrue);
       expect(
-        (result.asFailure!.error as AppError).code,
+        (result.asFailure!.error).code,
         'invalid_imei_format',
       );
     });
@@ -110,7 +120,7 @@ void main() {
         currentItems: const <PurchaseFormItem>[],
       );
       expect(result.isFailure, isTrue);
-      expect((result.asFailure!.error as AppError).code, 'imei_exists');
+      expect((result.asFailure!.error).code, 'imei_exists');
     });
 
     test('rejects IMEI duplicate in current form (imei1)', () async {
@@ -118,7 +128,7 @@ void main() {
         imei1: '356789101234561',
         costPrice: 1000,
       );
-      final item = PurchaseFormItem(
+      const item = PurchaseFormItem(
         productModelId: 'prd-001',
         productName: 'Test Phone',
         hasImei: true,
@@ -131,18 +141,19 @@ void main() {
       );
       expect(result.isFailure, isTrue);
       expect(
-        (result.asFailure!.error as AppError).code,
+        (result.asFailure!.error).code,
         'duplicate_imei_form',
       );
     });
 
-    test('rejects IMEI duplicate in current form (imei2 cross-field)', () async {
+    test('rejects IMEI duplicate in current form (imei2 cross-field)',
+        () async {
       const existingEntry = ImeiEntry(
         imei1: '356789101234561',
         imei2: '356789101234562',
         costPrice: 1000,
       );
-      final item = PurchaseFormItem(
+      const item = PurchaseFormItem(
         productModelId: 'prd-001',
         productName: 'Test Phone',
         hasImei: true,
@@ -156,7 +167,7 @@ void main() {
       );
       expect(result.isFailure, isTrue);
       expect(
-        (result.asFailure!.error as AppError).code,
+        (result.asFailure!.error).code,
         'duplicate_imei_form',
       );
     });
@@ -168,7 +179,7 @@ void main() {
         currentItems: const <PurchaseFormItem>[],
       );
       expect(result.isFailure, isTrue);
-      expect((result.asFailure!.error as AppError).code, 'imei_exists');
+      expect((result.asFailure!.error).code, 'imei_exists');
     });
   });
 
@@ -183,7 +194,7 @@ void main() {
 
     test('prevents adding duplicate imei1 within same item', () {
       const entry = ImeiEntry(imei1: '356789101234561', costPrice: 1000);
-      final item = PurchaseFormItem(
+      const item = PurchaseFormItem(
         productModelId: 'prd-001',
         productName: 'Test Phone',
         hasImei: true,
@@ -196,7 +207,7 @@ void main() {
         entry: entry, // same imei1
       );
       expect(result.isFailure, isTrue);
-      expect((result.asFailure!.error as AppError).code, 'duplicate_imei');
+      expect((result.asFailure!.error).code, 'duplicate_imei');
     });
   });
 

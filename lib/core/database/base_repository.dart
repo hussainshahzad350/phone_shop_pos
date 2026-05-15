@@ -10,7 +10,7 @@ abstract class BaseRepository {
   });
 }
 
-mixin BaseRepositoryGuard on BaseRepository {
+mixin BaseRepositoryGuard implements BaseRepository {
   @override
   Future<Result<T>> guard<T>(
     Future<T> Function() action, {

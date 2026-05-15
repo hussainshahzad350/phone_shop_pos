@@ -41,7 +41,8 @@ class SqliteInventoryRepository
   }) {
     return guard<List<SerializedStockEntity>>(() async {
       final trimmed = imei.trim();
-      final usePrefix = trimmed.isNotEmpty && _digitsOnlyPattern.hasMatch(trimmed);
+      final usePrefix =
+          trimmed.isNotEmpty && _digitsOnlyPattern.hasMatch(trimmed);
       final searchQuery = usePrefix ? '$trimmed%' : '%$trimmed%';
       final rows = await QueryDiagnostics.trace(
         label: 'inventory.search_serialized_by_imei',
@@ -161,6 +162,7 @@ class SqliteInventoryRepository
     }, operation: 'adjust_inventory_quantity');
   }
 
+  @override
   Future<Result<List<StockRowEntity>>> getStockRows({
     String? searchQuery,
     SerializedStockStatus? serializedStatusFilter,
@@ -174,7 +176,6 @@ class SqliteInventoryRepository
 
       final trimmed = searchQuery?.trim() ?? '';
       if (trimmed.isNotEmpty) {
-        final likeQuery = '%$trimmed%';
         serializedWhere.write(
           ' AND (pm.name LIKE ? OR pm.sku LIKE ? OR pm.brand LIKE ?'
           ' OR ss.imei1 LIKE ? OR ss.imei2 LIKE ?)',
@@ -283,6 +284,7 @@ WHERE ${quantityWhere.toString()}''');
     }, operation: 'get_stock_rows');
   }
 
+  @override
   Future<Result<InventorySummaryEntity>> getInventorySummary() {
     return guard<InventorySummaryEntity>(() async {
       final db = _appDatabase.database;
@@ -328,6 +330,7 @@ WHERE ${quantityWhere.toString()}''');
     }, operation: 'get_inventory_summary');
   }
 
+  @override
   Future<Result<List<StockRowEntity>>> getLowStockRows() {
     return guard<List<StockRowEntity>>(() async {
       final rows = await _appDatabase.database.rawQuery('''

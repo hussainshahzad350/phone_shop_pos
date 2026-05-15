@@ -110,14 +110,16 @@ void main() {
         ),
       );
 
-      expect((await context.fetchSerializedStock(phone.id))['stock_status'], 'sold');
+      expect((await context.fetchSerializedStock(phone.id))['stock_status'],
+          'sold');
       expect(await context.fetchInventoryQuantity(accessory.id), 3);
       expect(await context.countRows(TableNames.sales), 1);
       expect(await context.countRows(TableNames.saleItems), 2);
 
       _expectSuccess(await context.backupService.restoreBackup(backup.path));
 
-      expect((await context.fetchSerializedStock(phone.id))['stock_status'], 'in_stock');
+      expect((await context.fetchSerializedStock(phone.id))['stock_status'],
+          'in_stock');
       expect(await context.fetchInventoryQuantity(accessory.id), 5);
       expect(await context.countRows(TableNames.sales), 0);
       expect(await context.countRows(TableNames.saleItems), 0);
@@ -206,13 +208,15 @@ void main() {
       );
 
       expect(failedSale.isFailure, isTrue);
-      expect((await context.fetchSerializedStock(phone.id))['stock_status'], 'in_stock');
+      expect((await context.fetchSerializedStock(phone.id))['stock_status'],
+          'in_stock');
       expect(await context.fetchInventoryQuantity(accessory.id), 1);
       expect(await context.countRows(TableNames.sales), 0);
       expect(await context.countRows(TableNames.saleItems), 0);
     });
 
-    test('preserves stock invariants under concurrent sale contention', () async {
+    test('preserves stock invariants under concurrent sale contention',
+        () async {
       final rootDirectory = await Directory.systemTemp.createTemp(
         'phone_shop_pos_concurrency_',
       );
@@ -249,7 +253,8 @@ void main() {
         ),
       );
 
-      final results = await Future.wait<Result<dynamic>>(<Future<Result<dynamic>>>[
+      final results =
+          await Future.wait<Result<dynamic>>(<Future<Result<dynamic>>>[
         primaryContext.salesRepository.createSaleTransaction(
           items: <CartItemEntity>[
             CartItemEntity(
@@ -300,7 +305,8 @@ void main() {
       expect(await primaryContext.countRows(TableNames.saleItems), 1);
     });
 
-    test('rejects corrupted restore input without touching live data', () async {
+    test('rejects corrupted restore input without touching live data',
+        () async {
       final context = await _TestContext.createTemporary();
       addTearDown(context.dispose);
 
@@ -360,7 +366,8 @@ void main() {
         ),
       );
 
-      final corruptBackupPath = '${context.rootDirectory.path}/corrupt_backup.db';
+      final corruptBackupPath =
+          '${context.rootDirectory.path}/corrupt_backup.db';
       await File(corruptBackupPath).writeAsBytes(<int>[1, 2, 3, 4, 5]);
 
       final restoreResult = await context.backupService.restoreBackup(
@@ -368,7 +375,8 @@ void main() {
       );
 
       expect(restoreResult.isFailure, isTrue);
-      expect((await context.fetchSerializedStock(phone.id))['stock_status'], 'sold');
+      expect((await context.fetchSerializedStock(phone.id))['stock_status'],
+          'sold');
       expect(await context.countRows(TableNames.sales), 1);
       expect(await context.countRows(TableNames.saleItems), 1);
     });
@@ -379,10 +387,10 @@ class _TestContext {
   _TestContext._({
     required this.rootDirectory,
     required this.appDatabase,
-  }) : productRepository = SqliteProductRepository(appDatabase: appDatabase),
-       purchaseRepository = SqlitePurchaseRepository(appDatabase: appDatabase),
-       salesRepository = SqliteSalesRepository(appDatabase: appDatabase),
-       backupService = DatabaseBackupService(appDatabase: appDatabase);
+  })  : productRepository = SqliteProductRepository(appDatabase: appDatabase),
+        purchaseRepository = SqlitePurchaseRepository(appDatabase: appDatabase),
+        salesRepository = SqliteSalesRepository(appDatabase: appDatabase),
+        backupService = DatabaseBackupService(appDatabase: appDatabase);
 
   final Directory rootDirectory;
   final AppDatabase appDatabase;
@@ -445,7 +453,8 @@ class _TestContext {
     );
   }
 
-  Future<Map<String, Object?>> fetchSerializedStock(String productModelId) async {
+  Future<Map<String, Object?>> fetchSerializedStock(
+      String productModelId) async {
     final rows = await appDatabase.queryTable(
       TableNames.serializedStock,
       where: 'product_model_id = ?',
@@ -479,7 +488,7 @@ T _expectSuccess<T>(Result<T> result) {
   expect(
     result.isSuccess,
     isTrue,
-    reason: result.asFailure == null ? null : result.asFailure!.error.message,
+    reason: result.asFailure?.error.message,
   );
   return result.asSuccess!.value;
 }
