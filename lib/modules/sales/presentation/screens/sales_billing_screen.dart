@@ -199,7 +199,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'PKR ${product.salePrice.toStringAsFixed(0)}',
+                                      'PKR ${product.salePrice.toStringAsFixed(2)}',
                                     ),
                                     const SizedBox(height: 4),
                                     Text(

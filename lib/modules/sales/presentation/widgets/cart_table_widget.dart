@@ -59,8 +59,8 @@ class CartTableWidget extends StatelessWidget {
                         ],
                       ),
               ),
-              DataCell(Text(item.unitPrice.toStringAsFixed(0))),
-              DataCell(Text(item.lineTotal.toStringAsFixed(0))),
+              DataCell(Text(item.unitPrice.toStringAsFixed(2))),
+              DataCell(Text(item.lineTotal.toStringAsFixed(2))),
               DataCell(
                 IconButton(
                   icon: const Icon(Icons.delete_outline),

@@ -63,7 +63,7 @@ class TotalsPanelWidget extends StatelessWidget {
       children: <Widget>[
         Text(label),
         Text(
-          value.toStringAsFixed(0),
+          value.toStringAsFixed(2),
           style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal),
         ),
       ],
