@@ -73,6 +73,8 @@ class _PurchaseItemRow extends StatefulWidget {
 class _PurchaseItemRowState extends State<_PurchaseItemRow> {
   late TextEditingController _qtyController;
   late TextEditingController _costController;
+  final FocusNode _qtyFocus = FocusNode();
+  final FocusNode _costFocus = FocusNode();
   bool _imeiExpanded = true;
 
   @override
@@ -90,13 +92,17 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
   void didUpdateWidget(_PurchaseItemRow oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!widget.item.hasImei) {
-      final newQty = widget.item.quantity.toString();
-      if (_qtyController.text != newQty) {
-        _qtyController.text = newQty;
+      if (!_qtyFocus.hasFocus) {
+        final newQty = widget.item.quantity.toString();
+        if (_qtyController.text != newQty) {
+          _qtyController.text = newQty;
+        }
       }
-      final newCost = widget.item.unitCost.toStringAsFixed(2);
-      if (_costController.text != newCost) {
-        _costController.text = newCost;
+      if (!_costFocus.hasFocus) {
+        final newCost = widget.item.unitCost.toStringAsFixed(2);
+        if (_costController.text != newCost) {
+          _costController.text = newCost;
+        }
       }
     }
   }
@@ -105,6 +111,8 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
   void dispose() {
     _qtyController.dispose();
     _costController.dispose();
+    _qtyFocus.dispose();
+    _costFocus.dispose();
     super.dispose();
   }
 
@@ -149,6 +157,7 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
                     width: 80,
                     child: TextFormField(
                       controller: _qtyController,
+                      focusNode: _qtyFocus,
                       decoration: const InputDecoration(
                         isDense: true,
                         border: OutlineInputBorder(),
@@ -171,6 +180,7 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
                     width: 120,
                     child: TextFormField(
                       controller: _costController,
+                      focusNode: _costFocus,
                       decoration: const InputDecoration(
                         isDense: true,
                         border: OutlineInputBorder(),

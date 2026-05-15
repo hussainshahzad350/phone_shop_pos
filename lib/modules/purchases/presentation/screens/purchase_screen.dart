@@ -443,7 +443,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.save),
-          label: const Text('Save Purchase  (F10)'),
+          label: const Text('Save Purchase (F10)'),
           style: FilledButton.styleFrom(
             minimumSize: const Size(double.infinity, 48),
           ),
