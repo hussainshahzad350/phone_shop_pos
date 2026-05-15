@@ -594,7 +594,7 @@ class _ImeiPickerDialog extends StatefulWidget {
 
 class _ImeiPickerDialogState extends State<_ImeiPickerDialog> {
   static const int _kMaxImeiResults = 120;
-  static const Duration _kImeiSearchDebounce = Duration(milliseconds: 120);
+  static const Duration _kImeiSearchDebounce = Duration(milliseconds: 150);
 
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
