@@ -597,8 +597,8 @@ class _ImeiPickerDialog extends StatefulWidget {
 }
 
 class _ImeiPickerDialogState extends State<_ImeiPickerDialog> {
-  static const int _kImeiSearchLimit = 120;
-  static const Duration _kSearchDebounce = Duration(milliseconds: 120);
+  static const int _kMaxImeiResults = 120;
+  static const Duration _kImeiSearchDebounce = Duration(milliseconds: 120);
 
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
@@ -628,7 +628,7 @@ class _ImeiPickerDialogState extends State<_ImeiPickerDialog> {
     final result = await widget.repository.getAvailableImeis(
       widget.productModelId,
       query: query,
-      limit: _kImeiSearchLimit,
+      limit: _kMaxImeiResults,
     );
     if (!mounted) {
       return;
@@ -652,7 +652,7 @@ class _ImeiPickerDialogState extends State<_ImeiPickerDialog> {
 
   void _onSearchChanged(String value) {
     _debounce?.cancel();
-    _debounce = Timer(_kSearchDebounce, () {
+    _debounce = Timer(_kImeiSearchDebounce, () {
       _runSearch(query: value.trim());
     });
   }
