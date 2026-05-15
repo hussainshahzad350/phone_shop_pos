@@ -51,7 +51,8 @@ class FileSpoolPrinterService implements PrinterService {
         await directory.create(recursive: true);
       }
 
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final nowUtc = DateTime.now().toUtc();
+      final timestamp = nowUtc.millisecondsSinceEpoch;
       final filePath = p.join(
         spoolDirectoryPath,
         '${job.invoiceNumber}_${paperSize.name}_$timestamp.txt',
@@ -60,7 +61,7 @@ class FileSpoolPrinterService implements PrinterService {
       await file.writeAsString(renderedPayload);
 
       return Success<PrinterReceiptArtifact>(
-        PrinterReceiptArtifact(path: filePath, createdAt: DateTime.now()),
+        PrinterReceiptArtifact(path: filePath, createdAt: nowUtc),
       );
     } catch (error) {
       return Failure<PrinterReceiptArtifact>(

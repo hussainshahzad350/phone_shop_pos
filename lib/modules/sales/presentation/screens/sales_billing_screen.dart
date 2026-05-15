@@ -267,15 +267,13 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
       final document = InvoicePrintDocument(
         saleId: completion.saleId,
         invoiceNumber: completion.invoiceNumber,
-        saleDate: DateTime.now(),
+        saleDate: DateTime.now().toUtc(),
         items: saleItemsSnapshot,
         totals: completion.totals,
         paymentMethod: billing.paymentMethod,
-        customerLabel: _resolveCustomerLabel(
-          billing.selectedCustomerId,
-          customers: ref.read(customerSearchResultsProvider).value ??
-              const <CustomerOptionEntity>[],
-        ),
+        customerLabel: billing.selectedCustomerId == null
+            ? 'Walk-in Customer'
+            : 'Customer',
         notes: billing.notes.trim().isEmpty ? null : billing.notes.trim(),
       );
       final jobId = ref.read(invoicePrintQueueProvider.notifier).enqueue(document);
@@ -289,7 +287,6 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
           onPressed: () => _openPrintPreview(jobId),
         ),
       );
-      unawaited(_openPrintPreview(jobId));
       _focusSearchAfterAdd();
       return;
     }
@@ -308,21 +305,6 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
         onPressed: _completeSale,
       ),
     );
-  }
-
-  String _resolveCustomerLabel(
-    String? customerId, {
-    required List<CustomerOptionEntity> customers,
-  }) {
-    if (customerId == null || customerId.isEmpty) {
-      return 'Walk-in Customer';
-    }
-    for (final customer in customers) {
-      if (customer.id == customerId) {
-        return customer.name;
-      }
-    }
-    return 'Customer';
   }
 
   Future<void> _openPrintPreview(String jobId) async {

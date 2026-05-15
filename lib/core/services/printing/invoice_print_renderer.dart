@@ -16,11 +16,13 @@ class InvoicePrintRenderer {
       ..writeln('Date: ${FormattingHelpers.dateYmdHm(document.saleDate.toLocal())}')
       ..writeln('Payment: ${document.paymentMethod}');
 
-    if (document.customerLabel != null && document.customerLabel!.trim().isNotEmpty) {
-      buffer.writeln('Customer: ${document.customerLabel}');
+    final customerLabel = document.customerLabel?.trim();
+    if (customerLabel != null && customerLabel.isNotEmpty) {
+      buffer.writeln('Customer: $customerLabel');
     }
-    if (document.cashierName != null && document.cashierName!.trim().isNotEmpty) {
-      buffer.writeln('Cashier: ${document.cashierName}');
+    final cashierName = document.cashierName?.trim();
+    if (cashierName != null && cashierName.isNotEmpty) {
+      buffer.writeln('Cashier: $cashierName');
     }
 
     buffer.writeln('-' * width);
@@ -46,12 +48,12 @@ class InvoicePrintRenderer {
       ..writeln('Paid: ${FormattingHelpers.currencyPkr(document.totals.paidAmount)}')
       ..writeln('Balance: ${FormattingHelpers.currencyPkr(document.totals.remaining)}');
 
-    final trimmedNotes = document.notes?.trim();
-    if (trimmedNotes != null && trimmedNotes.isNotEmpty) {
+    final notes = document.notes?.trim();
+    if (notes != null && notes.isNotEmpty) {
       buffer
         ..writeln('-' * width)
         ..writeln('Notes:')
-        ..writeln(_truncate(trimmedNotes, width));
+        ..writeln(_truncate(notes, width));
     }
 
     buffer

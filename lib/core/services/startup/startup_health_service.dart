@@ -85,7 +85,7 @@ class StartupHealthService {
       backupWritable: backupWritable,
       pathLengthSafe: pathLengthSafe,
       warnings: warnings,
-      checkedAt: DateTime.now(),
+      checkedAt: DateTime.now().toUtc(),
     );
   }
 
@@ -96,7 +96,10 @@ class StartupHealthService {
         await directory.create(recursive: true);
       }
       final probe = File(
-        p.join(directory.path, '.write_probe_${DateTime.now().microsecondsSinceEpoch}'),
+        p.join(
+          directory.path,
+          '.write_probe_${DateTime.now().toUtc().microsecondsSinceEpoch}',
+        ),
       );
       await probe.writeAsString('ok');
       await probe.delete();

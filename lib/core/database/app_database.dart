@@ -20,6 +20,7 @@ class AppDatabase {
 
   final LocalDatabaseService _localDatabaseService;
   final MigrationService _migrationService;
+  static const int _baseRetryDelayMs = 150;
 
   Database? _database;
 
@@ -61,7 +62,9 @@ class AppDatabase {
           rethrow;
         }
         await _clearStaleSidecars(databasePath);
-        await Future<void>.delayed(Duration(milliseconds: 150 * attempt));
+        await Future<void>.delayed(
+          Duration(milliseconds: _baseRetryDelayMs * attempt),
+        );
       }
     }
 

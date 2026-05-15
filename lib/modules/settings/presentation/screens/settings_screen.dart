@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
+import 'package:phone_shop_pos/core/services/backup/database_backup_service.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
@@ -31,8 +32,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
 
     setState(() => _isProcessing = false);
-    ref.invalidate(databaseHealthProvider);
-    ref.invalidate(startupHealthFromSettingsProvider);
+    _refreshHealthProviders();
 
     final message = result.fold(
       onSuccess: (value) => 'Backup completed: ${value.path}',
@@ -68,7 +68,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         message:
             'Restore database from ${p.basename(file.path)}?\n\n'
             'This is destructive and will overwrite current sales history. '
-            'Always keep a fresh backup before restore.',
+            'Always keep a fresh backup before attempting a restore.',
         confirmLabel: 'Restore',
       ),
     );
@@ -86,8 +86,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
 
     setState(() => _isProcessing = false);
-    ref.invalidate(databaseHealthProvider);
-    ref.invalidate(startupHealthFromSettingsProvider);
+    _refreshHealthProviders();
     ref.invalidate(databaseBackupServiceProvider);
 
     final message = result.fold(
@@ -222,8 +221,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     ref
                                         .read(backupSettingsProvider.notifier)
                                         .setBackupDirectory(path);
-                                    ref.invalidate(databaseHealthProvider);
-                                    ref.invalidate(startupHealthFromSettingsProvider);
+                                    _refreshHealthProviders();
                                   },
                             icon: const Icon(Icons.folder_open),
                             label: const Text('Select Backup Folder'),
@@ -253,27 +251,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: healthAsync.when(
-                    data: (health) => Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          'Database Health',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        Text('Database path: ${health.databasePath}'),
-                        Text('Database size: ${_formatBytes(health.sizeBytes)}'),
-                        Text(
-                          'Integrity check: ${health.integrityOk ? 'OK' : 'FAILED'}',
-                        ),
-                        Text(
-                          'Last backup: ${health.lastBackup == null ? 'No backups yet' : health.lastBackup!.path}',
-                        ),
-                        Text(
-                          'Last backup time: ${health.lastBackup == null ? '-' : FormattingHelpers.dateYmdHm(health.lastBackup!.createdAt)}',
-                        ),
-                      ],
-                    ),
+                    data: (health) {
+                      final lastBackup = health.lastBackup;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            'Database Health',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          Text('Database path: ${health.databasePath}'),
+                          Text('Database size: ${_formatBytes(health.sizeBytes)}'),
+                          Text(
+                            'Integrity check: ${health.integrityOk ? 'OK' : 'FAILED'}',
+                          ),
+                          Text(
+                            'Last backup: ${_backupPathText(lastBackup)}',
+                          ),
+                          Text(
+                            'Last backup time: ${_backupTimeText(lastBackup)}',
+                          ),
+                        ],
+                      );
+                    },
                     loading: () => const SizedBox(
                       height: 90,
                       child: Center(child: CircularProgressIndicator()),
@@ -305,10 +306,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             dense: true,
                             contentPadding: EdgeInsets.zero,
                             title: Text(job.invoiceNumber),
-                            subtitle: Text(
-                              'Attempts: ${job.attempts} • '
-                              'Queued: ${FormattingHelpers.dateYmdHm(job.createdAt)}'
-                              '${job.lastError == null ? '' : '\nLast error: ${job.lastError}'}',
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  'Attempts: ${job.attempts} • '
+                                  'Queued: ${FormattingHelpers.dateYmdHm(job.createdAt)}',
+                                ),
+                                if (job.lastError != null)
+                                  Text('Last error: ${job.lastError}'),
+                              ],
                             ),
                             trailing: IconButton(
                               tooltip: 'Retry print',
@@ -370,5 +377,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         Text('Desktop-first offline POS for mobile shops.'),
       ],
     );
+  }
+
+  void _refreshHealthProviders() {
+    ref.invalidate(databaseHealthProvider);
+    ref.invalidate(startupHealthFromSettingsProvider);
+  }
+
+  String _backupPathText(BackupInfo? backup) {
+    if (backup == null) {
+      return 'No backups yet';
+    }
+    return backup.path;
+  }
+
+  String _backupTimeText(BackupInfo? backup) {
+    if (backup == null) {
+      return '-';
+    }
+    return FormattingHelpers.dateYmdHm(backup.createdAt);
   }
 }

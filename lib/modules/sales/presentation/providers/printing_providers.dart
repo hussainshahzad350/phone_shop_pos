@@ -13,12 +13,13 @@ class InvoicePrintQueueNotifier extends StateNotifier<List<InvoicePrintJob>> {
   final Ref _ref;
 
   String enqueue(InvoicePrintDocument document) {
-    final id = '${document.saleId}_${DateTime.now().microsecondsSinceEpoch}';
+    final nowUtc = DateTime.now().toUtc();
+    final id = '${document.saleId}_${nowUtc.microsecondsSinceEpoch}';
     final job = InvoicePrintJob(
       id: id,
       invoiceNumber: document.invoiceNumber,
       document: document,
-      createdAt: DateTime.now(),
+      createdAt: nowUtc,
     );
     state = <InvoicePrintJob>[job, ...state];
     return id;
@@ -28,13 +29,7 @@ class InvoicePrintQueueNotifier extends StateNotifier<List<InvoicePrintJob>> {
     required String jobId,
     required InvoicePaperSize paperSize,
   }) async {
-    InvoicePrintJob? job;
-    for (final item in state) {
-      if (item.id == jobId) {
-        job = item;
-        break;
-      }
-    }
+    final job = findById(jobId);
     if (job == null) {
       return const Failure<PrinterReceiptArtifact>(
         AppError(code: 'print_job_not_found', message: 'Print job not found.'),
