@@ -12,7 +12,7 @@ class DesktopNavigationShell extends StatelessWidget {
   final String currentPath;
 
   static const List<_NavItem> _items = <_NavItem>[
-    _NavItem(label: 'Dashboard', icon: Icons.dashboard_outlined, route: '/'),
+    _NavItem(label: 'Dashboard', icon: Icons.dashboard_outlined, route: '/dashboard'),
     _NavItem(label: 'Sales', icon: Icons.point_of_sale_outlined, route: '/sales'),
     _NavItem(label: 'Purchases', icon: Icons.shopping_cart_outlined, route: '/purchases'),
     _NavItem(label: 'Inventory', icon: Icons.inventory_2_outlined, route: '/inventory'),
