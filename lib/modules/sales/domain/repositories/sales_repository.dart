@@ -1,0 +1,43 @@
+import 'package:phone_shop_pos/core/database/base_repository.dart';
+import 'package:phone_shop_pos/core/errors/result.dart';
+import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
+import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
+import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
+import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_entity.dart';
+import 'package:phone_shop_pos/modules/sales/domain/entities/sale_completion_entity.dart';
+import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.dart';
+
+abstract class SalesRepository extends BaseRepository {
+  Future<Result<List<ProductEntity>>> searchSellableProducts(
+    String query, {
+    int limit = 20,
+  });
+
+  Future<Result<List<CustomerOptionEntity>>> searchCustomers(
+    String query, {
+    int limit = 20,
+  });
+
+  Future<Result<List<SerializedStockEntity>>> getAvailableImeis(
+    String productModelId, {
+    String query = '',
+    int limit = 20,
+  });
+
+  Future<Result<int>> getAvailableQuantity(String productModelId);
+
+  Future<Result<bool>> isImeiAvailable(String serializedStockId);
+
+  Future<Result<int>> getSalesCountForDate(DateTime date);
+
+  Future<Result<SaleCompletionEntity>> createSaleTransaction({
+    required String invoiceNumber,
+    required List<CartItemEntity> items,
+    required SaleTotalsEntity totals,
+    required DateTime saleDate,
+    String? customerId,
+    String? userId,
+    String? paymentMethod,
+    String? notes,
+  });
+}

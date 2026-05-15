@@ -27,7 +27,7 @@ final appDatabaseProvider = FutureProvider<AppDatabase>((ref) async {
     migrationService: migrationService,
   );
 
-  await appDatabase.initialize();
+  await appDatabase.initialize(seedDemoData: true);
   ref.onDispose(appDatabase.close);
   return appDatabase;
 });
