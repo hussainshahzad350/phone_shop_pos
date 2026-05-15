@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
+import 'package:phone_shop_pos/core/services/printing/invoice_print_renderer.dart';
 
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
@@ -15,6 +17,7 @@ import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.da
 import 'package:phone_shop_pos/modules/sales/domain/repositories/sales_repository.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/billing_state_provider.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/cart_state_provider.dart';
+import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_query_providers.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_repository_provider.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/totals_provider.dart';
@@ -238,6 +241,9 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
 
     final totals = ref.read(totalsProvider);
     final billing = ref.read(billingStateProvider);
+    final saleItemsSnapshot = List<CartItemEntity>.from(
+      ref.read(cartStateProvider),
+    );
 
     final result = await ref
         .read(cartStateProvider.notifier)
@@ -257,10 +263,29 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     });
 
     if (result.isSuccess) {
+      final completion = result.asSuccess!.value;
+      final document = InvoicePrintDocument(
+        saleId: completion.saleId,
+        invoiceNumber: completion.invoiceNumber,
+        saleDate: DateTime.now().toUtc(),
+        items: saleItemsSnapshot,
+        totals: completion.totals,
+        paymentMethod: billing.paymentMethod,
+        customerLabel: billing.selectedCustomerId == null
+            ? 'Walk-in Customer'
+            : 'Customer',
+        notes: billing.notes.trim().isEmpty ? null : billing.notes.trim(),
+      );
+      final jobId = ref.read(invoicePrintQueueProvider.notifier).enqueue(document);
+
       ref.read(billingStateProvider.notifier).resetAfterSale();
       _productSearchController.clear();
       AppNotifier.success(
-        'Sale completed. Invoice: ${result.asSuccess!.value.invoiceNumber}',
+        'Sale completed. Invoice: ${completion.invoiceNumber}',
+        action: SnackBarAction(
+          label: 'Print Preview',
+          onPressed: () => _openPrintPreview(jobId),
+        ),
       );
       _focusSearchAfterAdd();
       return;
@@ -279,6 +304,18 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
         label: 'Retry',
         onPressed: _completeSale,
       ),
+    );
+  }
+
+  Future<void> _openPrintPreview(String jobId) async {
+    final notifier = ref.read(invoicePrintQueueProvider.notifier);
+    final job = notifier.findById(jobId);
+    if (job == null || !mounted) {
+      return;
+    }
+    await showDialog<void>(
+      context: context,
+      builder: (context) => _InvoicePrintPreviewDialog(jobId: jobId, job: job),
     );
   }
 
@@ -548,6 +585,145 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _InvoicePrintPreviewDialog extends ConsumerStatefulWidget {
+  const _InvoicePrintPreviewDialog({
+    required this.jobId,
+    required this.job,
+  });
+
+  final String jobId;
+  final InvoicePrintJob job;
+
+  @override
+  ConsumerState<_InvoicePrintPreviewDialog> createState() =>
+      _InvoicePrintPreviewDialogState();
+}
+
+class _InvoicePrintPreviewDialogState
+    extends ConsumerState<_InvoicePrintPreviewDialog> {
+  InvoicePaperSize _paperSize = InvoicePaperSize.thermal80;
+  bool _isPrinting = false;
+
+  @override
+  Widget build(BuildContext context) {
+    InvoicePrintJob? latestJob;
+    for (final item in ref.watch(invoicePrintQueueProvider)) {
+      if (item.id == widget.jobId) {
+        latestJob = item;
+        break;
+      }
+    }
+    final job = latestJob ?? widget.job;
+    final renderer = ref.watch(invoicePrintRendererProvider);
+    final preview = renderer.render(
+      document: job.document,
+      paperSize: _paperSize,
+    );
+
+    return AlertDialog(
+      title: Text('Invoice Preview - ${job.invoiceNumber}'),
+      content: SizedBox(
+        width: 820,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                const Text('Layout'),
+                const SizedBox(width: 8),
+                DropdownButton<InvoicePaperSize>(
+                  value: _paperSize,
+                  onChanged: _isPrinting
+                      ? null
+                      : (value) {
+                          if (value == null) {
+                            return;
+                          }
+                          setState(() => _paperSize = value);
+                        },
+                  items: InvoicePaperSize.values
+                      .map(
+                        (size) => DropdownMenuItem<InvoicePaperSize>(
+                          value: size,
+                          child: Text(size.label),
+                        ),
+                      )
+                      .toList(growable: false),
+                ),
+                const Spacer(),
+                if (job.lastError != null)
+                  Tooltip(
+                    message: job.lastError!,
+                    child: const Icon(Icons.warning_amber, color: Colors.orange),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: SingleChildScrollView(
+                  child: SelectableText(
+                    preview,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: _isPrinting ? null : () => Navigator.of(context).pop(),
+          child: const Text('Print Later'),
+        ),
+        FilledButton.icon(
+          onPressed: _isPrinting ? null : _printNow,
+          icon: const Icon(Icons.print_outlined),
+          label: Text(_isPrinting ? 'Printing...' : 'Print'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _printNow() async {
+    setState(() => _isPrinting = true);
+    final result = await ref.read(invoicePrintQueueProvider.notifier).printJob(
+          jobId: widget.jobId,
+          paperSize: _paperSize,
+        );
+    if (!mounted) {
+      return;
+    }
+    setState(() => _isPrinting = false);
+    if (result.isSuccess) {
+      AppNotifier.success(
+        'Print job spooled: ${result.asSuccess!.value.path}',
+      );
+      Navigator.of(context).pop();
+      return;
+    }
+    final error = result.asFailure!.error;
+    AppNotifier.error(
+      'Printing failed: ${error.message}',
+      action: SnackBarAction(
+        label: 'Retry',
+        onPressed: _printNow,
       ),
     );
   }

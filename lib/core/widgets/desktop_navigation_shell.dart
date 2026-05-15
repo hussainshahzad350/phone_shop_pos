@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
@@ -51,12 +52,20 @@ class DesktopNavigationShell extends ConsumerWidget {
         ),
         topBar: AppTopBar(
           title: currentLabel,
-          trailing: const Wrap(
+          trailing: Wrap(
             spacing: 6,
             children: <Widget>[
-              AppShortcutHint(label: 'Search', shortcut: 'F1 / Ctrl+F'),
-              AppShortcutHint(label: 'Refresh', shortcut: 'F5'),
-              AppShortcutHint(label: 'Save', shortcut: 'F10'),
+              const AppShortcutHint(label: 'Search', shortcut: 'F1 / Ctrl+F'),
+              const AppShortcutHint(label: 'Refresh', shortcut: 'F5'),
+              const AppShortcutHint(label: 'Save', shortcut: 'F10'),
+              Chip(
+                label: Text(
+                  'v${AppRuntimeConfig.fullVersion}',
+                  style: const TextStyle(fontSize: 11),
+                ),
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
             ],
           ),
         ),

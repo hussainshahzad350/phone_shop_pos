@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:phone_shop_pos/core/database/database_constants.dart';
@@ -16,6 +20,7 @@ class AppDatabase {
 
   final LocalDatabaseService _localDatabaseService;
   final MigrationService _migrationService;
+  static const int _baseRetryDelayMs = 150;
 
   Database? _database;
 
@@ -25,15 +30,7 @@ class AppDatabase {
     }
 
     await _localDatabaseService.initialize();
-    final opened = await _localDatabaseService.factory.openDatabase(
-      _localDatabaseService.databasePath,
-      options: OpenDatabaseOptions(
-        version: _migrationService.latestVersion,
-        onConfigure: _migrationService.onConfigure,
-        onCreate: _migrationService.onCreate,
-        onUpgrade: _migrationService.onUpgrade,
-      ),
-    );
+    final opened = await _openWithRecovery();
 
     _database = opened;
 
@@ -41,6 +38,69 @@ class AppDatabase {
       await seedDemoDataIfEmpty();
     }
     return opened;
+  }
+
+  Future<Database> _openWithRecovery() async {
+    final databasePath = _localDatabaseService.databasePath;
+    Object? lastError;
+
+    for (var attempt = 1; attempt <= 3; attempt++) {
+      try {
+        return await _localDatabaseService.factory.openDatabase(
+          databasePath,
+          options: OpenDatabaseOptions(
+            version: _migrationService.latestVersion,
+            singleInstance: true,
+            onConfigure: _migrationService.onConfigure,
+            onCreate: _migrationService.onCreate,
+            onUpgrade: _migrationService.onUpgrade,
+          ),
+        );
+      } on DatabaseException catch (error) {
+        lastError = error;
+        if (!_isRecoverableLockError(error)) {
+          rethrow;
+        }
+        await _clearStaleSidecars(databasePath);
+        await Future<void>.delayed(
+          Duration(milliseconds: _baseRetryDelayMs * attempt),
+        );
+      }
+    }
+
+    throw StateError(
+      'Failed to open database after retrying lock recovery: $lastError',
+    );
+  }
+
+  bool _isRecoverableLockError(DatabaseException error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('database is locked') ||
+        message.contains('database is busy') ||
+        message.contains('cannot open database');
+  }
+
+  Future<void> _clearStaleSidecars(String databasePath) async {
+    final databaseFile = File(databasePath);
+    if (!await databaseFile.exists()) {
+      final parent = Directory(p.dirname(databasePath));
+      if (!await parent.exists()) {
+        await parent.create(recursive: true);
+      }
+      return;
+    }
+
+    for (final suffix in <String>['-wal', '-shm', '-journal']) {
+      final sidecar = File('$databasePath$suffix');
+      if (!await sidecar.exists()) {
+        continue;
+      }
+      try {
+        await sidecar.delete();
+      } catch (_) {
+        // Best effort only; startup retry still continues.
+      }
+    }
   }
 
   Database get database {

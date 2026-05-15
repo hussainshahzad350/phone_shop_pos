@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 import 'package:phone_shop_pos/core/database/database_provider.dart';
 import 'package:phone_shop_pos/core/services/backup/database_backup_service.dart';
+import 'package:phone_shop_pos/core/services/startup/startup_health_service.dart';
 
 class BackupSettingsState {
   const BackupSettingsState({this.backupDirectoryPath});
@@ -55,5 +57,21 @@ final databaseHealthProvider = FutureProvider<DatabaseHealthInfo>((ref) async {
       sizeBytes: 0,
       integrityOk: false,
     ),
+  );
+});
+
+final startupHealthFromSettingsProvider = FutureProvider<StartupHealthStatus>((
+  ref,
+) async {
+  final appDatabase = await ref.watch(appDatabaseProvider.future);
+  final backupSettings = ref.watch(backupSettingsProvider);
+  final startupHealthService = ref.watch(startupHealthServiceProvider);
+  final backupPath =
+      backupSettings.backupDirectoryPath ??
+      p.join(p.dirname(appDatabase.filePath), 'backups');
+
+  return startupHealthService.check(
+    appDatabase: appDatabase,
+    backupDirectoryPath: backupPath,
   );
 });

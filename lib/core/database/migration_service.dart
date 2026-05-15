@@ -11,6 +11,9 @@ class MigrationService {
   Future<void> onConfigure(Database database) async {
     await database.execute(DatabaseConstants.sqliteForeignKeysOn);
     await database.execute(DatabaseConstants.sqliteJournalModeWal);
+    await database.execute(
+      'PRAGMA busy_timeout = ${DatabaseConstants.sqliteBusyTimeoutMs};',
+    );
   }
 
   Future<void> onCreate(Database database, int version) async {
@@ -292,6 +295,11 @@ class MigrationService {
       'CREATE INDEX IF NOT EXISTS idx_serialized_stock_serial_number ON ${TableNames.serializedStock}(serial_number);',
       // Supports getAvailableImeis filtering and created_at ordering.
       'CREATE INDEX IF NOT EXISTS idx_serialized_stock_product_status_created ON ${TableNames.serializedStock}(product_model_id, stock_status, created_at);',
+    ],
+    4: <String>[
+      'CREATE INDEX IF NOT EXISTS idx_inventory_stock_low_threshold ON ${TableNames.inventoryStock}(quantity, min_quantity);',
+      'CREATE INDEX IF NOT EXISTS idx_sale_items_serialized_stock_id ON ${TableNames.saleItems}(serialized_stock_id);',
+      'CREATE INDEX IF NOT EXISTS idx_sales_pending_balance ON ${TableNames.sales}(total, paid_amount);',
     ],
   };
 }
