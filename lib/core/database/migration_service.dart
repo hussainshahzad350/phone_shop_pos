@@ -286,7 +286,7 @@ class MigrationService {
       'CREATE INDEX IF NOT EXISTS idx_sales_customer_sale_date ON ${TableNames.sales}(customer_id, sale_date);',
       'CREATE INDEX IF NOT EXISTS idx_sales_payment_method_sale_date ON ${TableNames.sales}(payment_method, sale_date);',
       'CREATE INDEX IF NOT EXISTS idx_sale_items_sale_product ON ${TableNames.saleItems}(sale_id, product_model_id);',
-      'CREATE INDEX IF NOT EXISTS idx_customers_name ON ${TableNames.customers}(name COLLATE NOCASE);',
+      'CREATE INDEX IF NOT EXISTS idx_customers_name ON ${TableNames.customers}(name);',
       'CREATE INDEX IF NOT EXISTS idx_product_models_sku ON ${TableNames.productModels}(sku);',
       'CREATE INDEX IF NOT EXISTS idx_product_models_brand ON ${TableNames.productModels}(brand);',
       'CREATE INDEX IF NOT EXISTS idx_serialized_stock_serial_number ON ${TableNames.serializedStock}(serial_number);',

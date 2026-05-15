@@ -35,12 +35,11 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
 
       if (trimmedQuery.isNotEmpty) {
         whereBuffer.write(
-          ' AND (sku = ? OR sku LIKE ? OR name LIKE ? OR brand LIKE ? OR category LIKE ?)',
+          ' AND (sku LIKE ? OR name LIKE ? OR brand LIKE ? OR category LIKE ?)',
         );
         final prefixQuery = '$trimmedQuery%';
         final containsQuery = '%$trimmedQuery%';
         args
-          ..add(trimmedQuery)
           ..add(prefixQuery)
           ..add(containsQuery)
           ..add(containsQuery)
@@ -73,11 +72,10 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
       String? where;
 
       if (trimmedQuery.isNotEmpty) {
-        where = 'phone = ? OR phone LIKE ? OR name LIKE ?';
+        where = 'phone LIKE ? OR name LIKE ?';
         final prefixQuery = '$trimmedQuery%';
         final containsQuery = '%$trimmedQuery%';
         args
-          ..add(trimmedQuery)
           ..add(prefixQuery)
           ..add(containsQuery);
       }
@@ -117,12 +115,9 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
         final prefixQuery = '$trimmedQuery%';
         if (RegExp(r'^\d+$').hasMatch(trimmedQuery)) {
           whereBuffer.write(
-            ' AND (imei1 = ? OR imei2 = ? OR serial_number = ? OR imei1 LIKE ? OR imei2 LIKE ? OR serial_number LIKE ?)',
+            ' AND (imei1 LIKE ? OR imei2 LIKE ? OR serial_number LIKE ?)',
           );
           args
-            ..add(trimmedQuery)
-            ..add(trimmedQuery)
-            ..add(trimmedQuery)
             ..add(prefixQuery)
             ..add(prefixQuery)
             ..add(prefixQuery);

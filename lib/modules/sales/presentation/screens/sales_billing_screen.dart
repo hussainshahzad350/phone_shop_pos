@@ -69,10 +69,6 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     }
 
     final selected = await _showImeiPickerDialog(product);
-    if (!mounted) {
-      return;
-    }
-
     if (selected == null) {
       return;
     }
