@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
+import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/supplier_option_entity.dart';
@@ -21,6 +24,7 @@ class PurchaseScreen extends ConsumerStatefulWidget {
 
 class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   final TextEditingController _productSearchController = TextEditingController();
+  final FocusNode _productSearchFocus = FocusNode();
   final TextEditingController _supplierSearchController = TextEditingController();
   final TextEditingController _invoiceController = TextEditingController();
   final TextEditingController _discountController = TextEditingController(text: '0');
@@ -28,10 +32,12 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   final TextEditingController _paidController = TextEditingController(text: '0');
   final TextEditingController _notesController = TextEditingController();
   bool _isSubmitting = false;
+  int _handledShortcutToken = 0;
 
   @override
   void dispose() {
     _productSearchController.dispose();
+    _productSearchFocus.dispose();
     _supplierSearchController.dispose();
     _invoiceController.dispose();
     _discountController.dispose();
@@ -118,13 +124,43 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   }
 
   void _showSnack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), duration: const Duration(seconds: 4)),
-    );
+    final lowered = message.toLowerCase();
+    if (lowered.contains('duplicate imei')) {
+      AppNotifier.warning(message);
+      return;
+    }
+    if (lowered.contains('failed') || lowered.contains('error')) {
+      AppNotifier.error(message);
+      return;
+    }
+    AppNotifier.success(message);
+  }
+
+  void _handleGlobalShortcut(AppShortcutEventState state) {
+    if (!mounted || state.token == 0 || state.token == _handledShortcutToken) {
+      return;
+    }
+    _handledShortcutToken = state.token;
+    switch (state.event) {
+      case AppShortcutEvent.focusSearch:
+        _productSearchFocus.requestFocus();
+        break;
+      case AppShortcutEvent.saveOrComplete:
+        _savePurchase();
+        break;
+      case AppShortcutEvent.focusPayment:
+      case AppShortcutEvent.refreshCurrentScreen:
+      case null:
+        break;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AppShortcutEventState>(appShortcutEventBusProvider, (previous, next) {
+      _handleGlobalShortcut(next);
+    });
+
     final formState = ref.watch(purchaseFormStateProvider);
     final productsAsync = ref.watch(purchaseProductSearchResultsProvider);
     final suppliersAsync = ref.watch(supplierSearchResultsProvider);
@@ -144,10 +180,13 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
           ),
         },
         child: Scaffold(
-          body: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: <Widget>[
+          body: AppLoadingOverlay(
+            isLoading: _isSubmitting,
+            label: 'Saving purchase...',
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: <Widget>[
                 _buildTopBar(formState, suppliersAsync),
                 const SizedBox(height: 8),
                 _buildProductSearch(formState, productsAsync),
@@ -207,7 +246,8 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                       style: TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
                   ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -268,6 +308,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
       children: <Widget>[
         TextField(
           controller: _productSearchController,
+          focusNode: _productSearchFocus,
           decoration: const InputDecoration(
             isDense: true,
             border: OutlineInputBorder(),

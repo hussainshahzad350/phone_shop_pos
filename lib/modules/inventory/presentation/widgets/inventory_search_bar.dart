@@ -1,42 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class InventorySearchBar extends StatelessWidget {
   const InventorySearchBar({
     super.key,
     required this.controller,
     required this.onChanged,
+    this.focusNode,
+    this.autofocus = false,
   });
 
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
+  final FocusNode? focusNode;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return AppSearchField(
       controller: controller,
+      focusNode: focusNode,
+      autofocus: autofocus,
       onChanged: onChanged,
-      decoration: InputDecoration(
-        hintText: 'Search by name, IMEI, SKU, brand...',
-        prefixIcon: const Icon(Icons.search),
-        suffixIcon: ValueListenableBuilder<TextEditingValue>(
-          valueListenable: controller,
-          builder: (context, value, child) {
-            if (value.text.isEmpty) {
-              return const SizedBox.shrink();
-            }
-            return IconButton(
-              icon: const Icon(Icons.clear),
-              onPressed: () {
-                controller.clear();
-                onChanged('');
-              },
-            );
-          },
-        ),
-        border: const OutlineInputBorder(),
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(vertical: 10),
-      ),
+      hintText: 'Search by name, IMEI, SKU, brand...',
     );
   }
 }
