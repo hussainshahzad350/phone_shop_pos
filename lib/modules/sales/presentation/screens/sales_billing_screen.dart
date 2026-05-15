@@ -593,6 +593,7 @@ class _ImeiPickerDialog extends StatefulWidget {
 }
 
 class _ImeiPickerDialogState extends State<_ImeiPickerDialog> {
+  // Keep the candidate list bounded for smooth keyboard navigation on desktop.
   static const int _kMaxImeiResults = 120;
   static const Duration _kImeiSearchDebounce = Duration(milliseconds: 150);
 
@@ -748,10 +749,10 @@ class _ImeiPickerDialogState extends State<_ImeiPickerDialog> {
                                 child: ListTile(
                                   dense: true,
                                   selected: selected,
-                                  title: Text(stock.imei1),
+                                  title: Text('IMEI 1: ${stock.imei1}'),
                                   subtitle: stock.imei2 == null
                                       ? null
-                                      : Text(stock.imei2!),
+                                      : Text('IMEI 2: ${stock.imei2!}'),
                                   onTap: () {
                                     setState(() {
                                       _selectedIndex = index;
