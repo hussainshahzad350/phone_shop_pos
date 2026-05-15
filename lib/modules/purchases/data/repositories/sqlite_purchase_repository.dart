@@ -188,10 +188,14 @@ class SqlitePurchaseRepository with BaseRepositoryGuard implements PurchaseRepos
         for (final item in items) {
           if (item.hasImei) {
             for (final entry in item.imeiEntries) {
-              // Normalize: trim all IMEI values before persisting.
+              // Normalize: trim all values once before using them.
               final normalizedImei1 = entry.imei1.trim();
+              final rawImei2 = entry.imei2?.trim();
               final normalizedImei2 =
-                  entry.imei2?.trim().isEmpty == true ? null : entry.imei2?.trim();
+                  (rawImei2 == null || rawImei2.isEmpty) ? null : rawImei2;
+              final rawSerial = entry.serialNumber?.trim();
+              final normalizedSerial =
+                  (rawSerial == null || rawSerial.isEmpty) ? null : rawSerial;
 
               final stockId = IdHelpers.newId(prefix: 'ser');
               await transaction.insert(TableNames.serializedStock, <String, Object?>{
@@ -199,9 +203,7 @@ class SqlitePurchaseRepository with BaseRepositoryGuard implements PurchaseRepos
                 'product_model_id': item.productModelId,
                 'imei1': normalizedImei1,
                 'imei2': normalizedImei2,
-                'serial_number': entry.serialNumber?.trim().isEmpty == true
-                    ? null
-                    : entry.serialNumber?.trim(),
+                'serial_number': normalizedSerial,
                 'cost_price': entry.costPrice,
                 'selling_price': entry.sellingPrice,
                 'stock_status': SerializedStockStatus.inStock.value,

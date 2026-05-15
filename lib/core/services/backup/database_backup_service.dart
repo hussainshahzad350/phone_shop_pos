@@ -133,14 +133,12 @@ class DatabaseBackupService with BaseRepositoryGuard {
           await backupSafeFile.delete();
         }
 
-        bool swapSucceeded = false;
         try {
           // Try atomic rename (same filesystem).
           if (await targetDbFile.exists()) {
             await targetDbFile.rename(backupSafePath);
           }
           await tempRestoreFile.rename(targetDbPath);
-          swapSucceeded = true;
         } catch (_) {
           // Fallback: copy + delete (different filesystems / permissions).
           if (await targetDbFile.exists()) {
@@ -180,11 +178,14 @@ class DatabaseBackupService with BaseRepositoryGuard {
           );
         }
 
-        // 6. Cleanup: remove the pre-restore backup only after success.
+        // 6. Cleanup: remove staging artifacts after a successful restore.
+        //    When atomic rename succeeded, tempRestoreFile no longer exists
+        //    (it was renamed); when fallback copy was used, it still exists.
+        //    Unconditionally check-and-delete covers both cases cleanly.
         if (await backupSafeFile.exists()) {
           await backupSafeFile.delete();
         }
-        if (!swapSucceeded && await tempRestoreFile.exists()) {
+        if (await tempRestoreFile.exists()) {
           await tempRestoreFile.delete();
         }
 
