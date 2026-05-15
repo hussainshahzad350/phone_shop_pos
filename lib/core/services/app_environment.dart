@@ -1,0 +1,4 @@
+enum AppPlatformTarget {
+  windowsDesktop,
+  futureAndroidCompanion,
+}
