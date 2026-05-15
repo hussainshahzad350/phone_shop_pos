@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/core/database/app_database.dart';
 import 'package:phone_shop_pos/core/database/base_repository.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
+import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class BackupInfo {
@@ -160,12 +161,8 @@ class DatabaseBackupService with BaseRepositoryGuard {
   }
 
   String _buildBackupFileName(DateTime dateTime) {
-    final yyyy = dateTime.year.toString().padLeft(4, '0');
-    final mm = dateTime.month.toString().padLeft(2, '0');
-    final dd = dateTime.day.toString().padLeft(2, '0');
-    final hh = dateTime.hour.toString().padLeft(2, '0');
-    final min = dateTime.minute.toString().padLeft(2, '0');
-    return 'backup_${yyyy}_${mm}_${dd}_${hh}_${min}.db';
+    final suffix = FormattingHelpers.backupTimestamp(dateTime);
+    return 'backup_$suffix.db';
   }
 
   Future<void> _writeLastBackupInfo(BackupInfo info) async {

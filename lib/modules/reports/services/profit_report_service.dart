@@ -14,7 +14,7 @@ class ProfitReportService with BaseRepositoryGuard {
   Future<Result<ProfitReportEntity>> getProfitReport(ReportFilterEntity filter) {
     return guard<ProfitReportEntity>(() async {
       final args = <Object?>[];
-      final where = _buildWhere(filter, args: args);
+      final where = _buildWhereClause(filter, args: args);
 
       final rows = await _appDatabase.database.rawQuery(
         '''
@@ -48,7 +48,7 @@ class ProfitReportService with BaseRepositoryGuard {
     }, operation: 'profit_report');
   }
 
-  String _buildWhere(ReportFilterEntity filter, {required List<Object?> args}) {
+  String _buildWhereClause(ReportFilterEntity filter, {required List<Object?> args}) {
     final clauses = <String>['1 = 1'];
 
     final start = filter.startDate;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_export_action_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_filter_bar_widget.dart';
@@ -171,11 +172,11 @@ class _DailySalesView extends ConsumerWidget {
               (row) => <String>[
                 row.day,
                 row.invoiceCount.toString(),
-                _currency(row.totalSales),
-                _currency(row.totalProfit),
+                FormattingHelpers.currencyPkr(row.totalSales),
+                FormattingHelpers.currencyPkr(row.totalProfit),
                 row.phonesSold.toString(),
                 row.accessoriesSold.toString(),
-                _currency(row.pendingBalances),
+                FormattingHelpers.currencyPkr(row.pendingBalances),
               ],
             )
             .toList(growable: false);
@@ -189,7 +190,7 @@ class _DailySalesView extends ConsumerWidget {
                 Expanded(
                   child: ReportSummaryCardWidget(
                     label: 'Total Sales (page)',
-                    value: _currency(totalSales),
+                    value: FormattingHelpers.currencyPkr(totalSales),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -255,11 +256,11 @@ class _DateRangeSalesView extends ConsumerWidget {
             .map(
               (row) => <String>[
                 row.invoiceNumber,
-                _date(row.saleDate),
+                FormattingHelpers.dateYmd(row.saleDate),
                 row.customerName,
-                _currency(row.total),
-                _currency(row.paidAmount),
-                _currency(row.balance),
+                FormattingHelpers.currencyPkr(row.total),
+                FormattingHelpers.currencyPkr(row.paidAmount),
+                FormattingHelpers.currencyPkr(row.balance),
                 row.paymentMethod ?? '-',
                 row.status,
               ],
@@ -332,7 +333,7 @@ class _ProfitView extends ConsumerWidget {
           Expanded(
             child: ReportSummaryCardWidget(
               label: 'Revenue',
-              value: _currency(report.totalRevenue),
+              value: FormattingHelpers.currencyPkr(report.totalRevenue),
               color: Colors.blue,
             ),
           ),
@@ -340,7 +341,7 @@ class _ProfitView extends ConsumerWidget {
           Expanded(
             child: ReportSummaryCardWidget(
               label: 'Cost',
-              value: _currency(report.totalCost),
+              value: FormattingHelpers.currencyPkr(report.totalCost),
               color: Colors.orange,
             ),
           ),
@@ -348,7 +349,7 @@ class _ProfitView extends ConsumerWidget {
           Expanded(
             child: ReportSummaryCardWidget(
               label: 'Profit',
-              value: _currency(report.totalProfit),
+              value: FormattingHelpers.currencyPkr(report.totalProfit),
               color: report.totalProfit >= 0 ? Colors.green : Colors.red,
             ),
           ),
@@ -383,13 +384,13 @@ class _SoldPhonesView extends ConsumerWidget {
             .map(
               (row) => <String>[
                 row.invoiceNumber,
-                _date(row.saleDate),
+                FormattingHelpers.dateYmd(row.saleDate),
                 row.productName,
                 row.imei,
                 row.customerName,
-                _currency(row.salePrice),
-                _currency(row.costPrice),
-                _currency(row.profit),
+                FormattingHelpers.currencyPkr(row.salePrice),
+                FormattingHelpers.currencyPkr(row.costPrice),
+                FormattingHelpers.currencyPkr(row.profit),
               ],
             )
             .toList(growable: false);
@@ -462,9 +463,9 @@ class _CurrentStockView extends ConsumerWidget {
                 row.category,
                 row.availableQuantity.toString(),
                 row.minQuantity.toString(),
-                _currency(row.unitCost),
-                _currency(row.unitPrice),
-                _currency(row.stockValue),
+                FormattingHelpers.currencyPkr(row.unitCost),
+                FormattingHelpers.currencyPkr(row.unitPrice),
+                FormattingHelpers.currencyPkr(row.stockValue),
                 row.isLowStock ? 'Low' : 'OK',
               ],
             )
@@ -508,9 +509,9 @@ class _CustomerBalanceView extends ConsumerWidget {
             .map(
               (row) => <String>[
                 row.customerName,
-                _currency(row.totalSales),
-                _currency(row.totalPaid),
-                _currency(row.pendingBalance),
+                FormattingHelpers.currencyPkr(row.totalSales),
+                FormattingHelpers.currencyPkr(row.totalPaid),
+                FormattingHelpers.currencyPkr(row.pendingBalance),
               ],
             )
             .toList(growable: false);
@@ -599,13 +600,4 @@ String _tabLabel(ReportsTab tab) {
     case ReportsTab.lowStock:
       return 'Low Stock';
   }
-}
-
-String _currency(double amount) => 'PKR ${amount.toStringAsFixed(2)}';
-
-String _date(DateTime dateTime) {
-  final local = dateTime.toLocal();
-  final month = local.month.toString().padLeft(2, '0');
-  final day = local.day.toString().padLeft(2, '0');
-  return '${local.year}-$month-$day';
 }

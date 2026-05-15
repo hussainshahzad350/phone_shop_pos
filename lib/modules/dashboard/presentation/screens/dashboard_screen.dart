@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_kpis_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_low_stock_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_recent_sale_entity.dart';
@@ -129,13 +130,13 @@ class _KpiGrid extends StatelessWidget {
     final cards = <Widget>[
       DashboardKpiCardWidget(
         label: 'Today Sales',
-        value: _currency(kpis.todaySales),
+        value: FormattingHelpers.currencyPkr(kpis.todaySales),
         icon: Icons.payments_outlined,
         color: Colors.blue,
       ),
       DashboardKpiCardWidget(
         label: 'Today Profit',
-        value: _currency(kpis.todayProfit),
+        value: FormattingHelpers.currencyPkr(kpis.todayProfit),
         icon: Icons.trending_up,
         color: kpis.todayProfit >= 0 ? Colors.green : Colors.red,
       ),
@@ -165,7 +166,7 @@ class _KpiGrid extends StatelessWidget {
       ),
       DashboardKpiCardWidget(
         label: 'Pending Balances',
-        value: _currency(kpis.pendingBalances),
+        value: FormattingHelpers.currencyPkr(kpis.pendingBalances),
         icon: Icons.account_balance_wallet_outlined,
         color: Colors.red,
       ),
@@ -227,10 +228,12 @@ class _RecentSalesTable extends StatelessWidget {
                           (row) => DataRow(
                             cells: <DataCell>[
                               DataCell(Text(row.invoiceNumber)),
-                              DataCell(Text(_date(row.saleDate))),
+                              DataCell(Text(FormattingHelpers.dateYmdHm(row.saleDate))),
                               DataCell(Text(row.customerName)),
-                              DataCell(Text(_currency(row.total))),
-                              DataCell(Text(_currency(row.pendingAmount))),
+                              DataCell(Text(FormattingHelpers.currencyPkr(row.total))),
+                              DataCell(
+                                Text(FormattingHelpers.currencyPkr(row.pendingAmount)),
+                              ),
                               DataCell(Text(row.paymentMethod ?? '-')),
                             ],
                           ),
@@ -282,15 +285,4 @@ class _LowStockPanel extends StatelessWidget {
 
 class _RefreshDashboardIntent extends Intent {
   const _RefreshDashboardIntent();
-}
-
-String _currency(double amount) => 'PKR ${amount.toStringAsFixed(2)}';
-
-String _date(DateTime dateTime) {
-  final local = dateTime.toLocal();
-  final month = local.month.toString().padLeft(2, '0');
-  final day = local.day.toString().padLeft(2, '0');
-  final hour = local.hour.toString().padLeft(2, '0');
-  final minute = local.minute.toString().padLeft(2, '0');
-  return '${local.year}-$month-$day $hour:$minute';
 }
