@@ -744,19 +744,21 @@ class _ImeiPickerDialogState extends State<_ImeiPickerDialog> {
                               label: secondImei == null || secondImei.isEmpty
                                   ? 'IMEI 1 ${stock.imei1}'
                                   : 'IMEI 1 ${stock.imei1}, IMEI 2 $secondImei',
-                              child: ListTile(
-                                dense: true,
-                                selected: selected,
-                                title: Text(stock.imei1),
-                                subtitle: stock.imei2 == null
-                                    ? null
-                                    : Text(stock.imei2!),
-                                onTap: () {
-                                  setState(() {
-                                    _selectedIndex = index;
-                                  });
-                                  _selectCurrent();
-                                },
+                              child: ExcludeSemantics(
+                                child: ListTile(
+                                  dense: true,
+                                  selected: selected,
+                                  title: Text(stock.imei1),
+                                  subtitle: stock.imei2 == null
+                                      ? null
+                                      : Text(stock.imei2!),
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedIndex = index;
+                                    });
+                                    _selectCurrent();
+                                  },
+                                ),
                               ),
                             );
                           },

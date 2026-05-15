@@ -302,11 +302,11 @@ class AppConfirmationDialog extends StatelessWidget {
           content: Text(message),
           actions: <Widget>[
             TextButton(
-              autofocus: true,
               onPressed: () => Navigator.of(context).pop(false),
               child: Text(cancelLabel),
             ),
             FilledButton(
+              autofocus: true,
               onPressed: () => Navigator.of(context).pop(true),
               child: Text(confirmLabel),
             ),
