@@ -5,13 +5,14 @@
 - SQLite operational stability
 - Backup/restore safety
 - Invoice print foundation and retry workflow
+- Durable receipt queue recovery and critical-operation exit protection
 
 ## Real-Shop Operator Instructions
 1. Start app and verify **Startup Health = Healthy** in Settings.
 2. Confirm DB location and backup location are on writable local disk.
 3. Run **One-Click Backup** at start-of-day and end-of-day.
 4. Complete sale; use **Print Preview** action to print or defer.
-5. If printing fails, retry from **Settings → Pending Invoice Print Queue**.
+5. If printing fails or the app restarts mid-print, retry from **Settings → Invoice Print Queue**.
 6. Before restoring backup, create a fresh backup first.
 
 ## Deployment Checklist (Windows)
@@ -24,7 +25,8 @@
 - [ ] Startup Health reports DB + backup paths writable.
 - [ ] Backup creation and restore tested once on target machine.
 - [ ] Print preview opens and spool files are created in `print_spool`.
-- [ ] Pending print retry tested from Settings.
+- [ ] Pending or failed print retry tested from Settings after app restart.
+- [ ] Window close warning appears during save, backup, restore, or print work.
 
 ## Known Limitations
 - Current print service is a **file-spool foundation** (text output) and not a direct hardware driver integration.
