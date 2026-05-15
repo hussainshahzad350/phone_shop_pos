@@ -138,24 +138,26 @@ class _ReportContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     switch (tab) {
       case ReportsTab.dailySales:
-        return _DailySalesView();
+        return const _DailySalesView();
       case ReportsTab.dateRangeSales:
-        return _DateRangeSalesView();
+        return const _DateRangeSalesView();
       case ReportsTab.profit:
-        return _ProfitView();
+        return const _ProfitView();
       case ReportsTab.soldPhones:
-        return _SoldPhonesView();
+        return const _SoldPhonesView();
       case ReportsTab.currentStock:
-        return _CurrentStockView();
+        return const _CurrentStockView();
       case ReportsTab.customerBalance:
-        return _CustomerBalanceView();
+        return const _CustomerBalanceView();
       case ReportsTab.lowStock:
-        return _LowStockView();
+        return const _LowStockView();
     }
   }
 }
 
 class _DailySalesView extends ConsumerWidget {
+  const _DailySalesView();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(dailySalesReportProvider);
@@ -239,6 +241,8 @@ class _DailySalesView extends ConsumerWidget {
 }
 
 class _DateRangeSalesView extends ConsumerWidget {
+  const _DateRangeSalesView();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(dateRangeSalesReportProvider);
@@ -316,6 +320,8 @@ class _DateRangeSalesView extends ConsumerWidget {
 }
 
 class _ProfitView extends ConsumerWidget {
+  const _ProfitView();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(profitReportProvider);
@@ -363,6 +369,8 @@ class _ProfitView extends ConsumerWidget {
 }
 
 class _SoldPhonesView extends ConsumerWidget {
+  const _SoldPhonesView();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(soldPhonesReportProvider);
@@ -439,6 +447,8 @@ class _SoldPhonesView extends ConsumerWidget {
 }
 
 class _CurrentStockView extends ConsumerWidget {
+  const _CurrentStockView();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(currentStockReportProvider);
@@ -486,6 +496,8 @@ class _CurrentStockView extends ConsumerWidget {
 }
 
 class _CustomerBalanceView extends ConsumerWidget {
+  const _CustomerBalanceView();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(customerBalanceReportProvider);
@@ -526,6 +538,8 @@ class _CustomerBalanceView extends ConsumerWidget {
 }
 
 class _LowStockView extends ConsumerWidget {
+  const _LowStockView();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(lowStockReportProvider);
