@@ -424,8 +424,9 @@ class AppDatabase {
         'created_at': now,
         'updated_at': now,
       });
+      final soldA54StockId = IdHelpers.newId(prefix: 'ser');
       await transaction.insert(TableNames.serializedStock, <String, Object?>{
-        'id': IdHelpers.newId(prefix: 'ser'),
+        'id': soldA54StockId,
         'product_model_id': prdA54Id,
         'imei1': '356789101234611',
         'imei2': '356789101234629',
@@ -498,8 +499,9 @@ class AppDatabase {
         'created_at': now,
         'updated_at': now,
       });
+      final soldIphoneStockId = IdHelpers.newId(prefix: 'ser');
       await transaction.insert(TableNames.serializedStock, <String, Object?>{
-        'id': IdHelpers.newId(prefix: 'ser'),
+        'id': soldIphoneStockId,
         'product_model_id': prdIphone14Id,
         'imei1': '353879100123464',
         'imei2': null,
@@ -509,6 +511,249 @@ class AppDatabase {
         'stock_status': 'sold',
         'supplier_id': supplier2Id,
         'notes': null,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      // ── Sales History (realistic demo for dashboard/reports) ─────────────
+      final saleToday1Id = IdHelpers.newId(prefix: 'sal');
+      final saleToday2Id = IdHelpers.newId(prefix: 'sal');
+      final saleYesterdayId = IdHelpers.newId(prefix: 'sal');
+      final saleTwoDaysAgoId = IdHelpers.newId(prefix: 'sal');
+      final saleThreeDaysAgoId = IdHelpers.newId(prefix: 'sal');
+      final saleFiveDaysAgoId = IdHelpers.newId(prefix: 'sal');
+
+      final todayAt1030 = DateTimeHelpers.toSql(
+        DateTimeHelpers.nowUtc().subtract(const Duration(hours: 2)),
+      );
+      final todayAt1400 = DateTimeHelpers.toSql(
+        DateTimeHelpers.nowUtc().subtract(const Duration(hours: 1)),
+      );
+      final yesterday = DateTimeHelpers.toSql(
+        DateTimeHelpers.nowUtc().subtract(const Duration(days: 1)),
+      );
+      final twoDaysAgo = DateTimeHelpers.toSql(
+        DateTimeHelpers.nowUtc().subtract(const Duration(days: 2)),
+      );
+      final threeDaysAgo = DateTimeHelpers.toSql(
+        DateTimeHelpers.nowUtc().subtract(const Duration(days: 3)),
+      );
+      final fiveDaysAgo = DateTimeHelpers.toSql(
+        DateTimeHelpers.nowUtc().subtract(const Duration(days: 5)),
+      );
+
+      await transaction.insert(TableNames.sales, <String, Object?>{
+        'id': saleToday1Id,
+        'invoice_number': 'SAL-${DateTime.now().year}-0001',
+        'customer_id': customerRegularId,
+        'user_id': userId,
+        'sale_date': todayAt1030,
+        'subtotal': 105800,
+        'discount': 0,
+        'tax': 0,
+        'total': 105800,
+        'paid_amount': 100000,
+        'payment_method': 'cash',
+        'notes': 'Partial payment from regular customer',
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.saleItems, <String, Object?>{
+        'id': IdHelpers.newId(prefix: 'sli'),
+        'sale_id': saleToday1Id,
+        'product_model_id': prdA54Id,
+        'serialized_stock_id': soldA54StockId,
+        'quantity': 1,
+        'unit_price': 104000,
+        'discount': 0,
+        'line_total': 104000,
+        'created_at': now,
+        'updated_at': now,
+      });
+      await transaction.insert(TableNames.saleItems, <String, Object?>{
+        'id': IdHelpers.newId(prefix: 'sli'),
+        'sale_id': saleToday1Id,
+        'product_model_id': prdCharger25Id,
+        'serialized_stock_id': null,
+        'quantity': 1,
+        'unit_price': 1800,
+        'discount': 0,
+        'line_total': 1800,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.sales, <String, Object?>{
+        'id': saleToday2Id,
+        'invoice_number': 'SAL-${DateTime.now().year}-0002',
+        'customer_id': customerWalkInId,
+        'user_id': userId,
+        'sale_date': todayAt1400,
+        'subtotal': 1300,
+        'discount': 0,
+        'tax': 0,
+        'total': 1300,
+        'paid_amount': 1300,
+        'payment_method': 'card',
+        'notes': 'Walk-in accessories sale',
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.saleItems, <String, Object?>{
+        'id': IdHelpers.newId(prefix: 'sli'),
+        'sale_id': saleToday2Id,
+        'product_model_id': prdCableId,
+        'serialized_stock_id': null,
+        'quantity': 2,
+        'unit_price': 500,
+        'discount': 0,
+        'line_total': 1000,
+        'created_at': now,
+        'updated_at': now,
+      });
+      await transaction.insert(TableNames.saleItems, <String, Object?>{
+        'id': IdHelpers.newId(prefix: 'sli'),
+        'sale_id': saleToday2Id,
+        'product_model_id': prdScreenGuardId,
+        'serialized_stock_id': null,
+        'quantity': 1,
+        'unit_price': 300,
+        'discount': 0,
+        'line_total': 300,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.sales, <String, Object?>{
+        'id': saleYesterdayId,
+        'invoice_number': 'SAL-${DateTime.now().year}-0003',
+        'customer_id': customerWholesaleId,
+        'user_id': userId,
+        'sale_date': yesterday,
+        'subtotal': 5000,
+        'discount': 0,
+        'tax': 0,
+        'total': 5000,
+        'paid_amount': 2500,
+        'payment_method': 'bank_transfer',
+        'notes': 'Wholesale order, remaining due',
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.saleItems, <String, Object?>{
+        'id': IdHelpers.newId(prefix: 'sli'),
+        'sale_id': saleYesterdayId,
+        'product_model_id': prdEarbudsId,
+        'serialized_stock_id': null,
+        'quantity': 2,
+        'unit_price': 2500,
+        'discount': 0,
+        'line_total': 5000,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.sales, <String, Object?>{
+        'id': saleTwoDaysAgoId,
+        'invoice_number': 'SAL-${DateTime.now().year}-0004',
+        'customer_id': customerRegularId,
+        'user_id': userId,
+        'sale_date': twoDaysAgo,
+        'subtotal': 232000,
+        'discount': 0,
+        'tax': 0,
+        'total': 232000,
+        'paid_amount': 232000,
+        'payment_method': 'cash',
+        'notes': 'High-value phone sale',
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.saleItems, <String, Object?>{
+        'id': IdHelpers.newId(prefix: 'sli'),
+        'sale_id': saleTwoDaysAgoId,
+        'product_model_id': prdIphone14Id,
+        'serialized_stock_id': soldIphoneStockId,
+        'quantity': 1,
+        'unit_price': 232000,
+        'discount': 0,
+        'line_total': 232000,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.sales, <String, Object?>{
+        'id': saleThreeDaysAgoId,
+        'invoice_number': 'SAL-${DateTime.now().year}-0005',
+        'customer_id': customerRegularId,
+        'user_id': userId,
+        'sale_date': threeDaysAgo,
+        'subtotal': 2550,
+        'discount': 0,
+        'tax': 0,
+        'total': 2550,
+        'paid_amount': 2000,
+        'payment_method': 'cash',
+        'notes': 'Small mixed sale',
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.saleItems, <String, Object?>{
+        'id': IdHelpers.newId(prefix: 'sli'),
+        'sale_id': saleThreeDaysAgoId,
+        'product_model_id': prdCoverId,
+        'serialized_stock_id': null,
+        'quantity': 5,
+        'unit_price': 150,
+        'discount': 0,
+        'line_total': 750,
+        'created_at': now,
+        'updated_at': now,
+      });
+      await transaction.insert(TableNames.saleItems, <String, Object?>{
+        'id': IdHelpers.newId(prefix: 'sli'),
+        'sale_id': saleThreeDaysAgoId,
+        'product_model_id': prdCharger25Id,
+        'serialized_stock_id': null,
+        'quantity': 1,
+        'unit_price': 1800,
+        'discount': 0,
+        'line_total': 1800,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.sales, <String, Object?>{
+        'id': saleFiveDaysAgoId,
+        'invoice_number': 'SAL-${DateTime.now().year}-0006',
+        'customer_id': customerWalkInId,
+        'user_id': userId,
+        'sale_date': fiveDaysAgo,
+        'subtotal': 5000,
+        'discount': 500,
+        'tax': 0,
+        'total': 4500,
+        'paid_amount': 4500,
+        'payment_method': 'cash',
+        'notes': 'Promotional accessories bundle',
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      await transaction.insert(TableNames.saleItems, <String, Object?>{
+        'id': IdHelpers.newId(prefix: 'sli'),
+        'sale_id': saleFiveDaysAgoId,
+        'product_model_id': prdCableId,
+        'serialized_stock_id': null,
+        'quantity': 10,
+        'unit_price': 500,
+        'discount': 500,
+        'line_total': 4500,
         'created_at': now,
         'updated_at': now,
       });

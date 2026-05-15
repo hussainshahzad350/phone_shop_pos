@@ -3,9 +3,12 @@ import 'package:go_router/go_router.dart';
 
 import 'package:phone_shop_pos/core/widgets/desktop_navigation_shell.dart';
 import 'package:phone_shop_pos/core/widgets/module_placeholder_screen.dart';
+import 'package:phone_shop_pos/modules/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/screens/inventory_screen.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/screens/purchase_screen.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/screens/reports_screen.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/screens/sales_billing_screen.dart';
+import 'package:phone_shop_pos/modules/settings/presentation/screens/settings_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -18,9 +21,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         routes: <RouteBase>[
           GoRoute(
             path: '/',
-            builder: (context, state) => const ModulePlaceholderScreen(
-              title: 'Dashboard',
-            ),
+            redirect: (context, state) => '/dashboard',
+          ),
+          GoRoute(
+            path: '/dashboard',
+            builder: (context, state) => const DashboardScreen(),
           ),
           GoRoute(
             path: '/sales',
@@ -42,15 +47,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/reports',
-            builder: (context, state) => const ModulePlaceholderScreen(
-              title: 'Reports',
-            ),
+            builder: (context, state) => const ReportsScreen(),
           ),
           GoRoute(
             path: '/settings',
-            builder: (context, state) => const ModulePlaceholderScreen(
-              title: 'Settings',
-            ),
+            builder: (context, state) => const SettingsScreen(),
           ),
         ],
       ),
