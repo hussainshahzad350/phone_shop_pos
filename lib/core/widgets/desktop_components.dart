@@ -305,10 +305,12 @@ class AppStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brightness = ThemeData.estimateBrightnessForColor(color);
+    final foreground = brightness == Brightness.dark ? Colors.white : Colors.black87;
     return Chip(
       label: Text(
         label,
-        style: const TextStyle(fontSize: 11, color: Colors.white),
+        style: TextStyle(fontSize: 11, color: foreground),
       ),
       backgroundColor: color,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
