@@ -116,7 +116,8 @@ class AppDatabase {
       return;
     }
 
-    final now = DateTimeHelpers.toSql(DateTimeHelpers.nowUtc());
+    final nowUtc = DateTimeHelpers.nowUtc();
+    final now = DateTimeHelpers.toSql(nowUtc);
 
     await runInTransaction<void>((transaction) async {
       // ── Users ────────────────────────────────────────────────────────────
@@ -524,27 +525,27 @@ class AppDatabase {
       final saleFiveDaysAgoId = IdHelpers.newId(prefix: 'sal');
 
       final todayAt1030 = DateTimeHelpers.toSql(
-        DateTimeHelpers.nowUtc().subtract(const Duration(hours: 2)),
+        nowUtc.subtract(const Duration(hours: 2)),
       );
       final todayAt1400 = DateTimeHelpers.toSql(
-        DateTimeHelpers.nowUtc().subtract(const Duration(hours: 1)),
+        nowUtc.subtract(const Duration(hours: 1)),
       );
       final yesterday = DateTimeHelpers.toSql(
-        DateTimeHelpers.nowUtc().subtract(const Duration(days: 1)),
+        nowUtc.subtract(const Duration(days: 1)),
       );
       final twoDaysAgo = DateTimeHelpers.toSql(
-        DateTimeHelpers.nowUtc().subtract(const Duration(days: 2)),
+        nowUtc.subtract(const Duration(days: 2)),
       );
       final threeDaysAgo = DateTimeHelpers.toSql(
-        DateTimeHelpers.nowUtc().subtract(const Duration(days: 3)),
+        nowUtc.subtract(const Duration(days: 3)),
       );
       final fiveDaysAgo = DateTimeHelpers.toSql(
-        DateTimeHelpers.nowUtc().subtract(const Duration(days: 5)),
+        nowUtc.subtract(const Duration(days: 5)),
       );
 
       await transaction.insert(TableNames.sales, <String, Object?>{
         'id': saleToday1Id,
-        'invoice_number': 'SAL-${DateTime.now().year}-0001',
+        'invoice_number': 'SAL-${nowUtc.year}-0001',
         'customer_id': customerRegularId,
         'user_id': userId,
         'sale_date': todayAt1030,
@@ -586,7 +587,7 @@ class AppDatabase {
 
       await transaction.insert(TableNames.sales, <String, Object?>{
         'id': saleToday2Id,
-        'invoice_number': 'SAL-${DateTime.now().year}-0002',
+        'invoice_number': 'SAL-${nowUtc.year}-0002',
         'customer_id': customerWalkInId,
         'user_id': userId,
         'sale_date': todayAt1400,
@@ -628,7 +629,7 @@ class AppDatabase {
 
       await transaction.insert(TableNames.sales, <String, Object?>{
         'id': saleYesterdayId,
-        'invoice_number': 'SAL-${DateTime.now().year}-0003',
+        'invoice_number': 'SAL-${nowUtc.year}-0003',
         'customer_id': customerWholesaleId,
         'user_id': userId,
         'sale_date': yesterday,
@@ -658,7 +659,7 @@ class AppDatabase {
 
       await transaction.insert(TableNames.sales, <String, Object?>{
         'id': saleTwoDaysAgoId,
-        'invoice_number': 'SAL-${DateTime.now().year}-0004',
+        'invoice_number': 'SAL-${nowUtc.year}-0004',
         'customer_id': customerRegularId,
         'user_id': userId,
         'sale_date': twoDaysAgo,
@@ -688,7 +689,7 @@ class AppDatabase {
 
       await transaction.insert(TableNames.sales, <String, Object?>{
         'id': saleThreeDaysAgoId,
-        'invoice_number': 'SAL-${DateTime.now().year}-0005',
+        'invoice_number': 'SAL-${nowUtc.year}-0005',
         'customer_id': customerRegularId,
         'user_id': userId,
         'sale_date': threeDaysAgo,
@@ -730,7 +731,7 @@ class AppDatabase {
 
       await transaction.insert(TableNames.sales, <String, Object?>{
         'id': saleFiveDaysAgoId,
-        'invoice_number': 'SAL-${DateTime.now().year}-0006',
+        'invoice_number': 'SAL-${nowUtc.year}-0006',
         'customer_id': customerWalkInId,
         'user_id': userId,
         'sale_date': fiveDaysAgo,

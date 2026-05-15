@@ -38,8 +38,8 @@ class ReportFilterBarWidget extends StatelessWidget {
           onPressed: () async {
             final picked = await showDatePicker(
               context: context,
-              firstDate: DateTime(2020),
-              lastDate: DateTime(2100),
+              firstDate: DateTime(DateTime.now().year - 5),
+              lastDate: DateTime(DateTime.now().year + 1),
               initialDate: filter.startDate ?? DateTime.now(),
             );
             onStartDate(picked);
@@ -55,8 +55,8 @@ class ReportFilterBarWidget extends StatelessWidget {
           onPressed: () async {
             final picked = await showDatePicker(
               context: context,
-              firstDate: DateTime(2020),
-              lastDate: DateTime(2100),
+              firstDate: DateTime(DateTime.now().year - 5),
+              lastDate: DateTime(DateTime.now().year + 1),
               initialDate: filter.endDate ?? DateTime.now(),
             );
             onEndDate(picked);

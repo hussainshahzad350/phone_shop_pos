@@ -23,7 +23,7 @@ class SalesReportService with BaseRepositoryGuard {
       final rows = await _appDatabase.database.rawQuery(
         '''
         SELECT
-          substr(s.sale_date, 1, 10) AS sale_day,
+          date(s.sale_date) AS sale_day,
           COUNT(DISTINCT s.id) AS invoice_count,
           COALESCE(SUM(s.total), 0) AS total_sales,
           COALESCE(SUM(
