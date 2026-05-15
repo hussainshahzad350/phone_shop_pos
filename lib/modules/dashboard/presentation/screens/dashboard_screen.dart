@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_kpis_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_low_stock_entity.dart';
@@ -213,33 +214,31 @@ class _RecentSalesTable extends StatelessWidget {
         Expanded(
           child: rows.isEmpty
               ? const Center(child: Text('No sales found.'))
-              : SingleChildScrollView(
-                  child: DataTable(
-                    columns: const <DataColumn>[
-                      DataColumn(label: Text('Invoice')),
-                      DataColumn(label: Text('Date')),
-                      DataColumn(label: Text('Customer')),
-                      DataColumn(label: Text('Total')),
-                      DataColumn(label: Text('Pending')),
-                      DataColumn(label: Text('Payment')),
-                    ],
-                    rows: rows
-                        .map(
-                          (row) => DataRow(
-                            cells: <DataCell>[
-                              DataCell(Text(row.invoiceNumber)),
-                              DataCell(Text(FormattingHelpers.dateYmdHm(row.saleDate))),
-                              DataCell(Text(row.customerName)),
-                              DataCell(Text(FormattingHelpers.currencyPkr(row.total))),
-                              DataCell(
-                                Text(FormattingHelpers.currencyPkr(row.pendingAmount)),
-                              ),
-                              DataCell(Text(row.paymentMethod ?? '-')),
-                            ],
-                          ),
-                        )
-                        .toList(growable: false),
-                  ),
+              : AppDataTable(
+                  columns: const <DataColumn>[
+                    DataColumn(label: Text('Invoice')),
+                    DataColumn(label: Text('Date')),
+                    DataColumn(label: Text('Customer')),
+                    DataColumn(label: Text('Total')),
+                    DataColumn(label: Text('Pending')),
+                    DataColumn(label: Text('Payment')),
+                  ],
+                  rows: rows
+                      .map(
+                        (row) => DataRow(
+                          cells: <DataCell>[
+                            DataCell(Text(row.invoiceNumber)),
+                            DataCell(Text(FormattingHelpers.dateYmdHm(row.saleDate))),
+                            DataCell(Text(row.customerName)),
+                            DataCell(Text(FormattingHelpers.currencyPkr(row.total))),
+                            DataCell(
+                              Text(FormattingHelpers.currencyPkr(row.pendingAmount)),
+                            ),
+                            DataCell(Text(row.paymentMethod ?? '-')),
+                          ],
+                        ),
+                      )
+                      .toList(growable: false),
                 ),
         ),
       ],

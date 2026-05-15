@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class ReportTableColumn {
   const ReportTableColumn({required this.label});
@@ -24,21 +25,21 @@ class ReportTableWidget extends StatelessWidget {
       return Center(child: Text(emptyMessage));
     }
 
-    return SingleChildScrollView(
-      child: DataTable(
-        columns: columns
-            .map((col) => DataColumn(label: Text(col.label)))
-            .toList(growable: false),
-        rows: rows
-            .map(
-              (row) => DataRow(
-                cells: row
-                    .map((cell) => DataCell(Text(cell)))
-                    .toList(growable: false),
-              ),
-            )
-            .toList(growable: false),
-      ),
+    return AppDataTable(
+      rowsPerPage: 50,
+      paginateThreshold: 200,
+      columns: columns
+          .map((col) => DataColumn(label: Text(col.label)))
+          .toList(growable: false),
+      rows: rows
+          .map(
+            (row) => DataRow(
+              cells: row
+                  .map((cell) => DataCell(Text(cell)))
+                  .toList(growable: false),
+            ),
+          )
+          .toList(growable: false),
     );
   }
 }

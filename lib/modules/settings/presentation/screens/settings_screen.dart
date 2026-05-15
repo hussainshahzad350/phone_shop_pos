@@ -2,6 +2,8 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
+import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/settings/presentation/providers/settings_providers.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -31,7 +33,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       onSuccess: (value) => 'Backup completed: ${value.path}',
       onFailure: (error) => 'Backup failed: ${error.message}',
     );
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    if (result.isSuccess) {
+      AppNotifier.success(message);
+    } else {
+      AppNotifier.error(message);
+    }
   }
 
   Future<void> _performRestore() async {
@@ -46,21 +52,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Restore Backup'),
-        content: Text(
-          'Restore database from ${p.basename(file.path)}? This will overwrite current data.',
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Restore'),
-          ),
-        ],
+      builder: (context) => AppConfirmationDialog(
+        title: 'Restore Backup',
+        message:
+            'Restore database from ${p.basename(file.path)}? This will overwrite current data.',
+        confirmLabel: 'Restore',
       ),
     );
 
@@ -84,7 +80,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       onSuccess: (_) => 'Restore completed successfully.',
       onFailure: (error) => 'Restore failed: ${error.message}',
     );
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    if (result.isSuccess) {
+      AppNotifier.success(message);
+    } else {
+      AppNotifier.error(message);
+    }
   }
 
   @override

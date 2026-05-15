@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
-class DesktopNavigationShell extends StatelessWidget {
+class DesktopNavigationShell extends ConsumerWidget {
   const DesktopNavigationShell({
     super.key,
     required this.child,
@@ -22,30 +25,43 @@ class DesktopNavigationShell extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = _items.indexWhere((item) => currentPath == item.route);
+    final currentLabel = _items
+        .firstWhere(
+          (item) => item.route == currentPath,
+          orElse: () => _items.first,
+        )
+        .label;
 
-    return Scaffold(
-      body: Row(
-        children: <Widget>[
-          NavigationRail(
-            selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
-            onDestinationSelected: (index) {
-              context.go(_items[index].route);
-            },
-            labelType: NavigationRailLabelType.all,
-            destinations: _items
-                .map(
-                  (item) => NavigationRailDestination(
-                    icon: Icon(item.icon),
-                    label: Text(item.label),
-                  ),
-                )
-                .toList(growable: false),
+    return AppShortcutManager(
+      child: AppDesktopScaffold(
+        sidebar: AppSidebar(
+          selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+          onDestinationSelected: (index) {
+            context.go(_items[index].route);
+          },
+          destinations: _items
+              .map(
+                (item) => NavigationRailDestination(
+                  icon: Icon(item.icon),
+                  label: Text(item.label),
+                ),
+              )
+              .toList(growable: false),
+        ),
+        topBar: AppTopBar(
+          title: currentLabel,
+          trailing: const Wrap(
+            spacing: 6,
+            children: <Widget>[
+              AppShortcutHint(label: 'Search', shortcut: 'F1 / Ctrl+F'),
+              AppShortcutHint(label: 'Refresh', shortcut: 'F5'),
+              AppShortcutHint(label: 'Save', shortcut: 'F10'),
+            ],
           ),
-          const VerticalDivider(width: 1),
-          Expanded(child: child),
-        ],
+        ),
+        child: child,
       ),
     );
   }

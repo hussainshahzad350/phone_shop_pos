@@ -1,5 +1,6 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/services/export/csv_export_service.dart';
 import 'package:phone_shop_pos/core/services/export/printable_report_service.dart';
 
@@ -44,9 +45,7 @@ class ReportExportActionWidget extends StatelessWidget {
                   if (!context.mounted) {
                     return;
                   }
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('CSV exported: ${file.path}')),
-                  );
+                  AppNotifier.success('CSV exported: ${file.path}');
                 },
           icon: const Icon(Icons.download),
           label: const Text('Export CSV'),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/stock_row_entity.dart';
 
@@ -14,29 +15,24 @@ class StockTableWidget extends StatelessWidget {
       return const Center(child: Text('No stock records found.'));
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.vertical,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          columnSpacing: 16,
-          headingRowHeight: 40,
-          dataRowMinHeight: 36,
-          dataRowMaxHeight: 44,
-          columns: const <DataColumn>[
-            DataColumn(label: Text('Type')),
-            DataColumn(label: Text('Product')),
-            DataColumn(label: Text('Brand')),
-            DataColumn(label: Text('Category')),
-            DataColumn(label: Text('IMEI / Qty')),
-            DataColumn(label: Text('Status / Stock')),
-            DataColumn(label: Text('Cost'), numeric: true),
-            DataColumn(label: Text('Price'), numeric: true),
-            DataColumn(label: Text('Location')),
-          ],
-          rows: rows.map(_buildRow).toList(growable: false),
-        ),
-      ),
+    return AppDataTable(
+      columnSpacing: 16,
+      dataRowMinHeight: 36,
+      dataRowMaxHeight: 44,
+      rowsPerPage: 50,
+      paginateThreshold: 120,
+      columns: const <DataColumn>[
+        DataColumn(label: Text('Type')),
+        DataColumn(label: Text('Product')),
+        DataColumn(label: Text('Brand')),
+        DataColumn(label: Text('Category')),
+        DataColumn(label: Text('IMEI / Qty')),
+        DataColumn(label: Text('Status / Stock')),
+        DataColumn(label: Text('Cost'), numeric: true),
+        DataColumn(label: Text('Price'), numeric: true),
+        DataColumn(label: Text('Location')),
+      ],
+      rows: rows.map(_buildRow).toList(growable: false),
     );
   }
 
@@ -123,32 +119,31 @@ class StockTableWidget extends StatelessWidget {
       case SerializedStockStatus.inStock:
         color = Colors.green;
         label = 'In Stock';
+        break;
       case SerializedStockStatus.sold:
         color = Colors.grey;
         label = 'Sold';
+        break;
       case SerializedStockStatus.reserved:
         color = Colors.amber;
         label = 'Reserved';
+        break;
       case SerializedStockStatus.returned:
         color = Colors.blue;
         label = 'Returned';
+        break;
       case SerializedStockStatus.damaged:
         color = Colors.red;
         label = 'Damaged';
+        break;
     }
     return _chipLabel(label, color);
   }
 
   Widget _chipLabel(String label, Color color) {
-    return Chip(
-      label: Text(
-        label,
-        style: const TextStyle(fontSize: 11, color: Colors.white),
-      ),
-      backgroundColor: color,
-      padding: EdgeInsets.zero,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      visualDensity: VisualDensity.compact,
+    return AppStatusBadge(
+      label: label,
+      color: color,
     );
   }
 }

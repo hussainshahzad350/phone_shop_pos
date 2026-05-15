@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
+import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/inventory_summary_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_query_providers.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_state_provider.dart';
@@ -18,10 +22,15 @@ class InventoryScreen extends ConsumerStatefulWidget {
 
 class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+  Timer? _searchDebounce;
+  int _handledShortcutToken = 0;
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -29,10 +38,45 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     ref.invalidate(stockRowsProvider);
     ref.invalidate(inventorySummaryProvider);
     ref.invalidate(lowStockProvider);
+    AppNotifier.info('Inventory refreshed.');
+  }
+
+  void _debouncedSearch(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 150), () {
+      if (!mounted) {
+        return;
+      }
+      ref.read(inventoryFilterProvider.notifier).setSearch(value);
+    });
+  }
+
+  void _handleGlobalShortcut(AppShortcutEventState state) {
+    if (!mounted || state.token == 0 || state.token == _handledShortcutToken) {
+      return;
+    }
+    _handledShortcutToken = state.token;
+
+    switch (state.event) {
+      case AppShortcutEvent.focusSearch:
+        _searchFocus.requestFocus();
+        break;
+      case AppShortcutEvent.refreshCurrentScreen:
+        _refresh();
+        break;
+      case AppShortcutEvent.focusPayment:
+      case AppShortcutEvent.saveOrComplete:
+      case null:
+        break;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AppShortcutEventState>(appShortcutEventBusProvider, (previous, next) {
+      _handleGlobalShortcut(next);
+    });
+
     final filter = ref.watch(inventoryFilterProvider);
     final summaryAsync = ref.watch(inventorySummaryProvider);
     final stockAsync = ref.watch(stockRowsProvider);
@@ -85,9 +129,9 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 const SizedBox(height: 12),
                 InventorySearchBar(
                   controller: _searchController,
-                  onChanged: (value) {
-                    ref.read(inventoryFilterProvider.notifier).setSearch(value);
-                  },
+                  focusNode: _searchFocus,
+                  autofocus: true,
+                  onChanged: _debouncedSearch,
                 ),
                 const SizedBox(height: 8),
                 InventoryFilterChips(
@@ -111,10 +155,22 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                       padding: const EdgeInsets.all(8),
                       child: stockAsync.when(
                         data: (rows) => StockTableWidget(rows: rows),
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
+                        loading: () => const Center(
+                          child: CircularProgressIndicator(),
+                        ),
                         error: (error, _) => Center(
-                          child: Text('Error loading stock: $error'),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: <Widget>[
+                              Text('Error loading stock: $error'),
+                              const SizedBox(height: 8),
+                              FilledButton.icon(
+                                onPressed: _refresh,
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Retry'),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

@@ -9,6 +9,9 @@ class PaymentSectionWidget extends StatelessWidget {
     required this.onNotesChanged,
     required this.onCompleteSale,
     required this.isProcessing,
+    this.paymentMethodFocusNode,
+    this.paidAmountFocusNode,
+    this.notesFocusNode,
   });
 
   final String paymentMethod;
@@ -17,6 +20,9 @@ class PaymentSectionWidget extends StatelessWidget {
   final ValueChanged<String> onNotesChanged;
   final VoidCallback onCompleteSale;
   final bool isProcessing;
+  final FocusNode? paymentMethodFocusNode;
+  final FocusNode? paidAmountFocusNode;
+  final FocusNode? notesFocusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +35,7 @@ class PaymentSectionWidget extends StatelessWidget {
             const Text('Payment', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
+              focusNode: paymentMethodFocusNode,
               value: paymentMethod,
               items: const <DropdownMenuItem<String>>[
                 DropdownMenuItem<String>(value: 'cash', child: Text('Cash')),
@@ -47,6 +54,7 @@ class PaymentSectionWidget extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             TextField(
+              focusNode: paidAmountFocusNode,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
                 labelText: 'Paid Amount',
@@ -57,6 +65,7 @@ class PaymentSectionWidget extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             TextField(
+              focusNode: notesFocusNode,
               maxLines: 2,
               decoration: const InputDecoration(
                 labelText: 'Notes',
@@ -72,7 +81,7 @@ class PaymentSectionWidget extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: isProcessing ? null : onCompleteSale,
                 icon: const Icon(Icons.point_of_sale_outlined),
-                label: Text(isProcessing ? 'Processing...' : 'Complete Sale (F9)'),
+                label: Text(isProcessing ? 'Processing...' : 'Complete Sale (F10)'),
               ),
             ),
           ],
