@@ -1,0 +1,154 @@
+import 'package:flutter/material.dart';
+
+import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
+import 'package:phone_shop_pos/modules/inventory/domain/entities/stock_row_entity.dart';
+
+class StockTableWidget extends StatelessWidget {
+  const StockTableWidget({super.key, required this.rows});
+
+  final List<StockRowEntity> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    if (rows.isEmpty) {
+      return const Center(child: Text('No stock records found.'));
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.vertical,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columnSpacing: 16,
+          headingRowHeight: 40,
+          dataRowMinHeight: 36,
+          dataRowMaxHeight: 44,
+          columns: const <DataColumn>[
+            DataColumn(label: Text('Type')),
+            DataColumn(label: Text('Product')),
+            DataColumn(label: Text('Brand')),
+            DataColumn(label: Text('Category')),
+            DataColumn(label: Text('IMEI / Qty')),
+            DataColumn(label: Text('Status / Stock')),
+            DataColumn(label: Text('Cost'), numeric: true),
+            DataColumn(label: Text('Price'), numeric: true),
+            DataColumn(label: Text('Location')),
+          ],
+          rows: rows.map(_buildRow).toList(growable: false),
+        ),
+      ),
+    );
+  }
+
+  DataRow _buildRow(StockRowEntity row) {
+    if (row.type == StockRowType.serialized) {
+      return DataRow(
+        cells: <DataCell>[
+          const DataCell(Text('Phone')),
+          DataCell(Text(row.productName)),
+          DataCell(Text(row.brand ?? '')),
+          DataCell(Text(row.category ?? '')),
+          DataCell(
+            Text(
+              row.imei1 != null && row.imei1!.length > 10
+                  ? '${row.imei1!.substring(0, 10)}…'
+                  : (row.imei1 ?? '—'),
+            ),
+          ),
+          DataCell(_statusBadge(row.serializedStatus)),
+          DataCell(
+            Text(
+              row.costPrice != null
+                  ? row.costPrice!.toStringAsFixed(0)
+                  : '—',
+            ),
+          ),
+          DataCell(
+            Text(
+              row.sellingPrice != null
+                  ? row.sellingPrice!.toStringAsFixed(0)
+                  : '—',
+            ),
+          ),
+          const DataCell(Text('—')),
+        ],
+      );
+    }
+
+    final isLow = row.isLowStock;
+    return DataRow(
+      cells: <DataCell>[
+        const DataCell(Text('Accessory')),
+        DataCell(Text(row.productName)),
+        DataCell(Text(row.brand ?? '')),
+        DataCell(Text(row.category ?? '')),
+        DataCell(
+          Text(
+            row.quantity?.toString() ?? '—',
+            style: isLow
+                ? const TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  )
+                : null,
+          ),
+        ),
+        DataCell(
+          isLow
+              ? _chipLabel('Low Stock', Colors.red)
+              : _chipLabel('In Stock', Colors.green),
+        ),
+        DataCell(
+          Text(
+            row.unitCost != null ? row.unitCost!.toStringAsFixed(0) : '—',
+          ),
+        ),
+        DataCell(
+          Text(
+            row.unitPrice != null ? row.unitPrice!.toStringAsFixed(0) : '—',
+          ),
+        ),
+        DataCell(Text(row.location ?? '—')),
+      ],
+    );
+  }
+
+  Widget _statusBadge(SerializedStockStatus? status) {
+    if (status == null) {
+      return const Text('—');
+    }
+    Color color;
+    String label;
+    switch (status) {
+      case SerializedStockStatus.inStock:
+        color = Colors.green;
+        label = 'In Stock';
+      case SerializedStockStatus.sold:
+        color = Colors.grey;
+        label = 'Sold';
+      case SerializedStockStatus.reserved:
+        color = Colors.amber;
+        label = 'Reserved';
+      case SerializedStockStatus.returned:
+        color = Colors.blue;
+        label = 'Returned';
+      case SerializedStockStatus.damaged:
+        color = Colors.red;
+        label = 'Damaged';
+    }
+    return _chipLabel(label, color);
+  }
+
+  Widget _chipLabel(String label, Color color) {
+    return Chip(
+      label: Text(
+        label,
+        style: const TextStyle(fontSize: 11, color: Colors.white),
+      ),
+      backgroundColor: color,
+      padding: EdgeInsets.zero,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: VisualDensity.compact,
+    );
+  }
+}
