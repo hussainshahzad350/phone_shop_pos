@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:phone_shop_pos/core/services/export/csv_export_service.dart';
-import 'package:phone_shop_pos/core/services/export/printable_report_service.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_export_action_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_filter_bar_widget.dart';
@@ -158,12 +156,11 @@ class _ReportContent extends ConsumerWidget {
 }
 
 class _DailySalesView extends ConsumerWidget {
-  final CsvExportService _csv = const FileCsvExportService();
-  final PrintableReportService _printable = const PlainTextPrintableReportService();
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(dailySalesReportProvider);
+    final csvService = ref.watch(csvExportServiceProvider);
+    final printableService = ref.watch(printableReportServiceProvider);
 
     return async.when(
       data: (rows) {
@@ -207,8 +204,8 @@ class _DailySalesView extends ConsumerWidget {
                     'Pending',
                   ],
                   rows: tableRows,
-                  csvExportService: _csv,
-                  printableReportService: _printable,
+                  csvExportService: csvService,
+                  printableReportService: printableService,
                 ),
               ],
             ),
@@ -242,12 +239,11 @@ class _DailySalesView extends ConsumerWidget {
 }
 
 class _DateRangeSalesView extends ConsumerWidget {
-  final CsvExportService _csv = const FileCsvExportService();
-  final PrintableReportService _printable = const PlainTextPrintableReportService();
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(dateRangeSalesReportProvider);
+    final csvService = ref.watch(csvExportServiceProvider);
+    final printableService = ref.watch(printableReportServiceProvider);
 
     return async.when(
       data: (rows) {
@@ -287,8 +283,8 @@ class _DateRangeSalesView extends ConsumerWidget {
                       'Status',
                     ],
                     rows: tableRows,
-                    csvExportService: _csv,
-                    printableReportService: _printable,
+                    csvExportService: csvService,
+                    printableReportService: printableService,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -367,12 +363,11 @@ class _ProfitView extends ConsumerWidget {
 }
 
 class _SoldPhonesView extends ConsumerWidget {
-  final CsvExportService _csv = const FileCsvExportService();
-  final PrintableReportService _printable = const PlainTextPrintableReportService();
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(soldPhonesReportProvider);
+    final csvService = ref.watch(csvExportServiceProvider);
+    final printableService = ref.watch(printableReportServiceProvider);
 
     return async.when(
       data: (rows) {
@@ -412,8 +407,8 @@ class _SoldPhonesView extends ConsumerWidget {
                       'Profit',
                     ],
                     rows: tableRows,
-                    csvExportService: _csv,
-                    printableReportService: _printable,
+                    csvExportService: csvService,
+                    printableReportService: printableService,
                   ),
                 ),
                 const SizedBox(height: 8),

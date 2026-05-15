@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phone_shop_pos/core/services/export/csv_export_service.dart';
+import 'package:phone_shop_pos/core/services/export/printable_report_service.dart';
 import 'package:phone_shop_pos/core/database/database_provider.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/customer_balance_report_row_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/daily_sales_report_row_entity.dart';
@@ -87,6 +89,14 @@ class ReportFilterNotifier extends StateNotifier<ReportFilterEntity> {
 
 final selectedReportsTabProvider = StateProvider<ReportsTab>(
   (ref) => ReportsTab.dailySales,
+);
+
+final csvExportServiceProvider = Provider<CsvExportService>(
+  (ref) => const FileCsvExportService(),
+);
+
+final printableReportServiceProvider = Provider<PrintableReportService>(
+  (ref) => const PlainTextPrintableReportService(),
 );
 
 final reportFilterProvider =
