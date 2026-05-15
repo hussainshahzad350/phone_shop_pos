@@ -21,6 +21,8 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
   SqliteSalesRepository({required AppDatabase appDatabase})
     : _appDatabase = appDatabase;
 
+  static final RegExp _digitsOnlyPattern = RegExp(r'^\d+$');
+
   final AppDatabase _appDatabase;
 
   @override
@@ -113,7 +115,7 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
 
       if (trimmedQuery.isNotEmpty) {
         final prefixQuery = '$trimmedQuery%';
-        if (RegExp(r'^\d+$').hasMatch(trimmedQuery)) {
+        if (_digitsOnlyPattern.hasMatch(trimmedQuery)) {
           whereBuffer.write(
             ' AND (imei1 LIKE ? OR imei2 LIKE ? OR serial_number LIKE ?)',
           );
