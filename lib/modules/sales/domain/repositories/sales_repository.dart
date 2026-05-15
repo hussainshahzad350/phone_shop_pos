@@ -28,10 +28,10 @@ abstract class SalesRepository extends BaseRepository {
 
   Future<Result<bool>> isImeiAvailable(String serializedStockId);
 
-  Future<Result<int>> getSalesCountForDate(DateTime date);
-
+  /// Creates a sale transaction.  The invoice number is generated atomically
+  /// inside the transaction using the DB-backed sequence table to prevent
+  /// collisions under rapid consecutive saves.
   Future<Result<SaleCompletionEntity>> createSaleTransaction({
-    required String invoiceNumber,
     required List<CartItemEntity> items,
     required SaleTotalsEntity totals,
     required DateTime saleDate,

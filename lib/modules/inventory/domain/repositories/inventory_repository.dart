@@ -1,7 +1,9 @@
 import 'package:phone_shop_pos/core/database/base_repository.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/modules/inventory/data/models/inventory_stock_model.dart';
+import 'package:phone_shop_pos/modules/inventory/domain/entities/inventory_summary_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
+import 'package:phone_shop_pos/modules/inventory/domain/entities/stock_row_entity.dart';
 
 abstract class InventoryRepository extends BaseRepository {
   Future<Result<SerializedStockEntity>> addSerializedStock(
@@ -28,4 +30,15 @@ abstract class InventoryRepository extends BaseRepository {
     required String productModelId,
     required int delta,
   });
+
+  Future<Result<List<StockRowEntity>>> getStockRows({
+    String? searchQuery,
+    SerializedStockStatus? serializedStatusFilter,
+    bool? hasImeiFilter,
+    int limit = 200,
+  });
+
+  Future<Result<InventorySummaryEntity>> getInventorySummary();
+
+  Future<Result<List<StockRowEntity>>> getLowStockRows();
 }

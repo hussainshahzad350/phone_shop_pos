@@ -5,17 +5,13 @@ import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.da
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_completion_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/repositories/sales_repository.dart';
-import 'package:phone_shop_pos/modules/sales/services/invoice_number_generator.dart';
 
 class SalesService {
   const SalesService({
     required SalesRepository repository,
-    required InvoiceNumberGenerator invoiceNumberGenerator,
-  }) : _repository = repository,
-       _invoiceNumberGenerator = invoiceNumberGenerator;
+  }) : _repository = repository;
 
   final SalesRepository _repository;
-  final InvoiceNumberGenerator _invoiceNumberGenerator;
 
   Result<List<CartItemEntity>> addToCart({
     required List<CartItemEntity> items,
@@ -198,22 +194,12 @@ class SalesService {
       return Failure<SaleCompletionEntity>(validationResult.asFailure!.error);
     }
 
-    final now = DateTime.now().toUtc();
-    final countResult = await _repository.getSalesCountForDate(now);
-    if (countResult.isFailure) {
-      return Failure<SaleCompletionEntity>(countResult.asFailure!.error);
-    }
-
-    final invoiceNumber = _invoiceNumberGenerator.generate(
-      date: now,
-      sequence: (countResult.asSuccess?.value ?? 0) + 1,
-    );
-
+    // Invoice number is generated atomically inside the transaction by the
+    // repository; no pre-generation here avoids sequence collisions.
     return _repository.createSaleTransaction(
-      invoiceNumber: invoiceNumber,
       items: items,
       totals: totals,
-      saleDate: now,
+      saleDate: DateTime.now().toUtc(),
       customerId: customerId,
       userId: userId,
       paymentMethod: paymentMethod,

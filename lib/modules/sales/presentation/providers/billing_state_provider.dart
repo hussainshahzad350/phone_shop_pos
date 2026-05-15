@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phone_shop_pos/core/constants/payment_method.dart';
 
 class BillingState {
   const BillingState({
@@ -8,7 +9,7 @@ class BillingState {
     this.discount = 0,
     this.tax = 0,
     this.paidAmount = 0,
-    this.paymentMethod = 'cash',
+    this.paymentMethod = PaymentMethod.cash,
     this.notes = '',
   });
 
