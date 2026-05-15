@@ -315,8 +315,13 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     }
 
     final message = result.asFailure!.error.message;
+    final lowerMessage = message.toLowerCase();
+    final withRollbackSuffix = lowerMessage.contains('transaction') &&
+            !lowerMessage.contains('rollback')
+        ? '$message Rollback applied.'
+        : message;
     AppNotifier.error(
-      'Transaction failed. ${message.contains('transaction') ? '$message Rollback applied.' : message}',
+      'Transaction failed. $withRollbackSuffix',
       action: SnackBarAction(
         label: 'Retry',
         onPressed: _completeSale,
