@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
 
@@ -65,8 +66,8 @@ class CartTableWidget extends StatelessWidget {
                       ],
                     ),
             ),
-            DataCell(Text(item.unitPrice.toStringAsFixed(2))),
-            DataCell(Text(item.lineTotal.toStringAsFixed(2))),
+            DataCell(Text(FormattingHelpers.currencyPkr(item.unitPrice))),
+            DataCell(Text(FormattingHelpers.currencyPkr(item.lineTotal))),
             DataCell(
               IconButton(
                 icon: const Icon(Icons.delete_outline),

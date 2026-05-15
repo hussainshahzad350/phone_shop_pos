@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
+import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
+import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
@@ -84,15 +86,22 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     final formState = ref.read(purchaseFormStateProvider);
     final service = await ref.read(purchaseServiceProvider.future);
 
-    final result = await service.completePurchase(
-      items: formState.items,
-      discount: formState.discount,
-      tax: formState.tax,
-      paidAmount: formState.paidAmount,
-      supplierId: formState.selectedSupplierId,
-      invoiceNumber: formState.invoiceNumber,
-      notes: formState.notes,
-    );
+    final result = await ref
+        .read(operationManagerProvider.notifier)
+        .track(
+          code: 'save_purchase',
+          label: 'Saving purchase',
+          progressLabel: 'Saving purchase and updating stock',
+          action: (_) => service.completePurchase(
+            items: formState.items,
+            discount: formState.discount,
+            tax: formState.tax,
+            paidAmount: formState.paidAmount,
+            supplierId: formState.selectedSupplierId,
+            invoiceNumber: formState.invoiceNumber,
+            notes: formState.notes,
+          ),
+        );
 
     if (!mounted) {
       return;
@@ -116,7 +125,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
         'Purchase saved. '
         '${completion.serializedItemCount} IMEI(s), '
         '${completion.quantityItemCount} qty line(s). '
-        'Total: PKR ${completion.total.toStringAsFixed(2)}',
+        'Total: ${FormattingHelpers.currencyPkr(completion.total)}',
       );
     } else {
       _showSnack(result.asFailure!.error.message);
@@ -353,7 +362,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Cost: PKR ${product.purchasePrice.toStringAsFixed(2)}',
+                                'Cost: ${FormattingHelpers.currencyPkr(product.purchasePrice)}',
                                 style: const TextStyle(fontSize: 11),
                               ),
                               Text(
@@ -408,7 +417,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                   ),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   onChanged: (v) {
-                    final val = double.tryParse(v) ?? 0;
+                    final val = FormattingHelpers.parseLocaleDecimal(v);
                     ref.read(purchaseFormStateProvider.notifier).setDiscount(val);
                   },
                 ),
@@ -422,7 +431,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                   ),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   onChanged: (v) {
-                    final val = double.tryParse(v) ?? 0;
+                    final val = FormattingHelpers.parseLocaleDecimal(v);
                     ref.read(purchaseFormStateProvider.notifier).setTax(val);
                   },
                 ),
@@ -442,7 +451,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                   ),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   onChanged: (v) {
-                    final val = double.tryParse(v) ?? 0;
+                    final val = FormattingHelpers.parseLocaleDecimal(v);
                     ref.read(purchaseFormStateProvider.notifier).setPaidAmount(val);
                   },
                 ),
@@ -515,7 +524,7 @@ class _TotalRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: <Widget>[
         Text(label, style: style),
-        Text('PKR ${value.toStringAsFixed(2)}', style: style),
+        Text(FormattingHelpers.currencyPkr(value), style: style),
       ],
     );
   }

@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/services/backup/database_backup_service.dart';
+import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
+import 'package:phone_shop_pos/core/services/printing/print_job_repository.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
@@ -25,7 +27,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() => _isProcessing = true);
     final service = await ref.read(databaseBackupServiceProvider.future);
     final backupPath = ref.read(backupSettingsProvider).backupDirectoryPath;
-    final result = await service.createBackup(directoryPath: backupPath);
+    final result = await ref
+        .read(operationManagerProvider.notifier)
+        .track<Result<BackupInfo>>(
+          code: 'backup_database',
+          label: 'Creating backup',
+          progressLabel: 'Creating a safe SQLite backup',
+          action: (_) => service.createBackup(directoryPath: backupPath),
+        );
 
     if (!mounted) {
       return;
@@ -67,8 +76,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         title: 'Restore Backup',
         message:
             'Restore database from ${p.basename(file.path)}?\n\n'
-            'This is destructive and will overwrite current sales history. '
-            'Always keep a fresh backup before attempting a restore.',
+            'This will replace the live shop data with the selected backup.\n'
+            'Before continuing:\n'
+            '• Make a fresh backup of the current shop data\n'
+            '• Ensure all cashiers stop using the app\n'
+            '• Be ready to verify the restored sales after restart',
         confirmLabel: 'Restore',
       ),
     );
@@ -79,7 +91,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     setState(() => _isProcessing = true);
     final service = await ref.read(databaseBackupServiceProvider.future);
-    final result = await service.restoreBackup(file.path);
+    final result = await ref
+        .read(operationManagerProvider.notifier)
+        .track<Result<void>>(
+          code: 'restore_database',
+          label: 'Restoring backup',
+          progressLabel: 'Replacing live database with selected backup',
+          action: (_) => service.restoreBackup(file.path),
+        );
 
     if (!mounted) {
       return;
@@ -103,6 +122,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           onPressed: _performRestore,
         ),
       );
+    }
+  }
+
+  Future<void> _retryPrintJob(InvoicePrintJob job) async {
+    final result = await ref.read(invoicePrintQueueProvider.notifier).printJob(
+          jobId: job.id,
+          paperSize: InvoicePaperSize.thermal80,
+        );
+    if (!mounted) {
+      return;
+    }
+    final message = result.fold(
+      onSuccess: (value) => 'Receipt queued to spool: ${value.path}',
+      onFailure: (error) => 'Print retry failed: ${error.message}',
+    );
+    if (result.isSuccess) {
+      AppNotifier.success(message);
+    } else {
+      AppNotifier.error(message);
+    }
+  }
+
+  Future<void> _cancelPrintJob(InvoicePrintJob job) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AppConfirmationDialog(
+        title: 'Cancel queued receipt?',
+        message:
+            'This will remove the receipt from the active print queue. Use this only if the receipt is no longer needed.',
+        confirmLabel: 'Cancel Receipt',
+      ),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+    final result = await ref.read(invoicePrintQueueProvider.notifier).cancel(job.id);
+    if (!mounted) {
+      return;
+    }
+    if (result.isSuccess) {
+      AppNotifier.info('Receipt removed from the active queue.');
+    } else {
+      AppNotifier.error(result.asFailure!.error.message);
     }
   }
 
@@ -293,58 +355,83 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(
-                        'Pending Invoice Print Queue',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      if (printQueue.isEmpty)
-                        const Text('No pending print jobs.')
-                      else
-                        ...printQueue.map(
-                          (job) => ListTile(
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(job.invoiceNumber),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Text(
-                                  'Attempts: ${job.attempts} • '
-                                  'Queued: ${FormattingHelpers.dateYmdHm(job.createdAt)}',
-                                ),
-                                if (job.lastError != null)
-                                  Text('Last error: ${job.lastError}'),
-                              ],
-                            ),
-                            trailing: IconButton(
-                              tooltip: 'Retry print',
-                              onPressed: () async {
-                                final result = await ref
-                                    .read(invoicePrintQueueProvider.notifier)
-                                    .printJob(
-                                      jobId: job.id,
-                                      paperSize: InvoicePaperSize.thermal80,
-                                    );
-                                if (!mounted) {
-                                  return;
-                                }
-                                final message = result.fold(
-                                  onSuccess: (value) =>
-                                      'Print job spooled: ${value.path}',
-                                  onFailure: (error) =>
-                                      'Retry failed: ${error.message}',
-                                );
-                                if (result.isSuccess) {
-                                  AppNotifier.success(message);
-                                } else {
-                                  AppNotifier.error(message);
-                                }
-                              },
-                              icon: const Icon(Icons.print_outlined),
-                            ),
-                          ),
-                        ),
+                       Row(
+                         children: <Widget>[
+                           Text(
+                             'Invoice Print Queue',
+                             style: Theme.of(context).textTheme.titleMedium,
+                           ),
+                           const Spacer(),
+                           if (printQueue.isNotEmpty)
+                             Text(
+                               '${printQueue.where((job) => job.status.canRetry).length} need attention',
+                               style: Theme.of(context).textTheme.bodySmall,
+                             ),
+                         ],
+                       ),
+                       const SizedBox(height: 8),
+                       if (printQueue.isEmpty)
+                         const Text('No queued or failed receipts.')
+                       else
+                         ...printQueue.map(
+                           (job) => ListTile(
+                             dense: true,
+                             contentPadding: EdgeInsets.zero,
+                              title: Text(job.invoiceNumber),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  const SizedBox(height: 2),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 4,
+                                    children: <Widget>[
+                                      AppStatusBadge(
+                                        label: job.status.label,
+                                        color: switch (job.status) {
+                                          InvoicePrintJobStatus.pending => Colors.blueGrey,
+                                          InvoicePrintJobStatus.processing => Colors.blue,
+                                          InvoicePrintJobStatus.completed => Colors.green,
+                                          InvoicePrintJobStatus.failed => Colors.orange,
+                                          InvoicePrintJobStatus.cancelled => Colors.grey,
+                                        },
+                                      ),
+                                      Text(
+                                        'Retries: ${job.retryCount}/${PrintJobRepository.retryLimit}',
+                                      ),
+                                    ],
+                                  ),
+                                  Text(
+                                   'Queued: ${FormattingHelpers.dateYmdHm(job.createdAt)} • '
+                                   'Updated: ${FormattingHelpers.dateYmdHm(job.updatedAt)}',
+                                 ),
+                                 if (job.lastError != null)
+                                   Text('Operator note: ${job.lastError}'),
+                                ],
+                              ),
+                             trailing: Wrap(
+                               spacing: 4,
+                               children: <Widget>[
+                                 IconButton(
+                                   tooltip: 'Retry print',
+                                   onPressed: !job.status.canRetry || job.retryLimitReached
+                                       ? null
+                                       : () => _retryPrintJob(job),
+                                   icon: const Icon(Icons.print_outlined),
+                                 ),
+                                 IconButton(
+                                   tooltip: 'Cancel queued receipt',
+                                   onPressed: job.status == InvoicePrintJobStatus.processing ||
+                                           job.status == InvoicePrintJobStatus.completed ||
+                                           job.status == InvoicePrintJobStatus.cancelled
+                                       ? null
+                                       : () => _cancelPrintJob(job),
+                                   icon: const Icon(Icons.cancel_outlined),
+                                 ),
+                               ],
+                             ),
+                           ),
+                         ),
                     ],
                   ),
                 ),
@@ -362,10 +449,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
     final kb = bytes / 1024;
     if (kb < 1024) {
-      return '${kb.toStringAsFixed(2)} KB';
+      return '${FormattingHelpers.decimal(kb)} KB';
     }
     final mb = kb / 1024;
-    return '${mb.toStringAsFixed(2)} MB';
+    return '${FormattingHelpers.decimal(mb)} MB';
   }
 
   void _showAboutDialog() {

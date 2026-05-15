@@ -1,5 +1,6 @@
 import 'package:phone_shop_pos/core/database/app_database.dart';
 import 'package:phone_shop_pos/core/database/base_repository.dart';
+import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
@@ -48,12 +49,15 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
           ..add(containsQuery);
       }
 
-      final rows = await _appDatabase.queryTable(
-        TableNames.productModels,
-        where: whereBuffer.toString(),
-        whereArgs: args,
-        orderBy: 'name COLLATE NOCASE ASC',
-        limit: limit,
+      final rows = await QueryDiagnostics.trace(
+        label: 'sales.search_sellable_products',
+        action: () => _appDatabase.queryTable(
+          TableNames.productModels,
+          where: whereBuffer.toString(),
+          whereArgs: args,
+          orderBy: 'name COLLATE NOCASE ASC',
+          limit: limit,
+        ),
       );
 
       return rows
@@ -82,12 +86,15 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
           ..add(containsQuery);
       }
 
-      final rows = await _appDatabase.queryTable(
-        TableNames.customers,
-        where: where,
-        whereArgs: args,
-        orderBy: 'name COLLATE NOCASE ASC',
-        limit: limit,
+      final rows = await QueryDiagnostics.trace(
+        label: 'sales.search_customers',
+        action: () => _appDatabase.queryTable(
+          TableNames.customers,
+          where: where,
+          whereArgs: args,
+          orderBy: 'name COLLATE NOCASE ASC',
+          limit: limit,
+        ),
       );
 
       return rows
@@ -135,12 +142,15 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
         }
       }
 
-      final rows = await _appDatabase.queryTable(
-        TableNames.serializedStock,
-        where: whereBuffer.toString(),
-        whereArgs: args,
-        orderBy: 'created_at ASC',
-        limit: limit,
+      final rows = await QueryDiagnostics.trace(
+        label: 'sales.get_available_imeis',
+        action: () => _appDatabase.queryTable(
+          TableNames.serializedStock,
+          where: whereBuffer.toString(),
+          whereArgs: args,
+          orderBy: 'created_at ASC',
+          limit: limit,
+        ),
       );
 
       return rows

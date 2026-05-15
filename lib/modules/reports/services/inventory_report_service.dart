@@ -1,5 +1,6 @@
 import 'package:phone_shop_pos/core/database/app_database.dart';
 import 'package:phone_shop_pos/core/database/base_repository.dart';
+import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/customer_balance_report_row_entity.dart';
@@ -22,8 +23,10 @@ class InventoryReportService with BaseRepositoryGuard {
           ? null
           : productFilterValue;
 
-      final rows = await _appDatabase.database.rawQuery(
-        '''
+      final rows = await QueryDiagnostics.trace(
+        label: 'reports.current_stock',
+        action: () => _appDatabase.database.rawQuery(
+          '''
         SELECT
           pm.name AS product_name,
           COALESCE(pm.category, '-') AS category,
@@ -58,14 +61,15 @@ class InventoryReportService with BaseRepositoryGuard {
         ORDER BY product_name COLLATE NOCASE ASC
         LIMIT ? OFFSET ?
         ''',
-        <Object?>[
-          productFilter,
-          productFilter,
-          productFilter,
-          productFilter,
-          filter.pageSize,
-          filter.offset,
-        ],
+          <Object?>[
+            productFilter,
+            productFilter,
+            productFilter,
+            productFilter,
+            filter.pageSize,
+            filter.offset,
+          ],
+        ),
       );
 
       return rows
@@ -97,8 +101,10 @@ class InventoryReportService with BaseRepositoryGuard {
         args.add(productFilter);
       }
 
-      final rows = await _appDatabase.database.rawQuery(
-        '''
+      final rows = await QueryDiagnostics.trace(
+        label: 'reports.low_stock',
+        action: () => _appDatabase.database.rawQuery(
+          '''
         SELECT pm.name, ist.quantity, ist.min_quantity, ist.location
         FROM ${TableNames.inventoryStock} ist
         JOIN ${TableNames.productModels} pm ON pm.id = ist.product_model_id
@@ -106,7 +112,8 @@ class InventoryReportService with BaseRepositoryGuard {
         ORDER BY ist.quantity ASC, pm.name COLLATE NOCASE ASC
         LIMIT ? OFFSET ?
         ''',
-        <Object?>[...args, filter.pageSize, filter.offset],
+          <Object?>[...args, filter.pageSize, filter.offset],
+        ),
       );
 
       return rows
@@ -151,8 +158,10 @@ class InventoryReportService with BaseRepositoryGuard {
         args.add(customerId);
       }
 
-      final rows = await _appDatabase.database.rawQuery(
-        '''
+      final rows = await QueryDiagnostics.trace(
+        label: 'reports.customer_balance',
+        action: () => _appDatabase.database.rawQuery(
+          '''
         SELECT
           COALESCE(c.name, 'Walk-in Customer') AS customer_name,
           COALESCE(SUM(s.total), 0) AS total_sales,
@@ -169,7 +178,8 @@ class InventoryReportService with BaseRepositoryGuard {
         ORDER BY pending_balance DESC
         LIMIT ? OFFSET ?
         ''',
-        <Object?>[...args, filter.pageSize, filter.offset],
+          <Object?>[...args, filter.pageSize, filter.offset],
+        ),
       );
 
       return rows

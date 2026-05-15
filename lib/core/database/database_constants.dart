@@ -2,7 +2,7 @@ class DatabaseConstants {
   const DatabaseConstants._();
 
   static const String databaseName = 'phone_shop_pos.db';
-  static const int databaseVersion = 4;
+  static const int databaseVersion = 5;
   static const int sqliteBusyTimeoutMs = 5000;
   static const int windowsRecommendedPathLength = 220;
 

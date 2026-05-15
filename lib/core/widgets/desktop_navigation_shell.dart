@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
+import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
+import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
 
 class DesktopNavigationShell extends ConsumerWidget {
   const DesktopNavigationShell({
@@ -26,6 +28,8 @@ class DesktopNavigationShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final activeOperations = ref.watch(activeCriticalOperationsProvider);
+    final pendingPrintJobs = ref.watch(pendingPrintJobCountProvider);
     final selectedIndex = _items.indexWhere((item) => currentPath == item.route);
     final currentLabel = _items
         .firstWhere(
@@ -58,6 +62,33 @@ class DesktopNavigationShell extends ConsumerWidget {
               const AppShortcutHint(label: 'Search', shortcut: 'F1 / Ctrl+F'),
               const AppShortcutHint(label: 'Refresh', shortcut: 'F5'),
               const AppShortcutHint(label: 'Save', shortcut: 'F10'),
+              if (pendingPrintJobs > 0)
+                Chip(
+                  avatar: const Icon(Icons.print_outlined, size: 16),
+                  label: Text(
+                    'Pending prints: $pendingPrintJobs',
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              if (activeOperations.isNotEmpty)
+                Chip(
+                  avatar: const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  label: Text(
+                    activeOperations.length == 1
+                        ? (activeOperations.first.progressLabel ??
+                            activeOperations.first.label)
+                        : '${activeOperations.length} active operations',
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
               Chip(
                 label: Text(
                   'v${AppRuntimeConfig.fullVersion}',

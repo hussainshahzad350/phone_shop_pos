@@ -53,12 +53,21 @@ class FileSpoolPrinterService implements PrinterService {
 
       final nowUtc = DateTime.now().toUtc();
       final timestamp = nowUtc.millisecondsSinceEpoch;
+      final safeInvoiceNumber = job.invoiceNumber.replaceAll(
+        RegExp(r'[<>:"/\\|?*\x00-\x1F]'),
+        '_',
+      );
       final filePath = p.join(
         spoolDirectoryPath,
-        '${job.invoiceNumber}_${paperSize.name}_$timestamp.txt',
+        '${safeInvoiceNumber}_${paperSize.name}_$timestamp.txt',
       );
-      final file = File(filePath);
-      await file.writeAsString(renderedPayload);
+      final tempPath = '$filePath.tmp';
+      final tempFile = File(tempPath);
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+      await tempFile.writeAsString(renderedPayload, flush: true);
+      await tempFile.rename(filePath);
 
       return Success<PrinterReceiptArtifact>(
         PrinterReceiptArtifact(path: filePath, createdAt: nowUtc),

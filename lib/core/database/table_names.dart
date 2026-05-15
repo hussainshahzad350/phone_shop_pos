@@ -12,6 +12,7 @@ class TableNames {
   static const String purchaseItems = 'purchase_items';
   static const String expenses = 'expenses';
   static const String users = 'users';
+  static const String printJobs = 'print_jobs';
 
   /// Sequence table used for atomic, collision-free invoice number generation.
   static const String invoiceSequences = 'invoice_sequences';

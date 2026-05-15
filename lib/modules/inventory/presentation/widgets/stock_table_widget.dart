@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/stock_row_entity.dart';
@@ -55,14 +56,20 @@ class StockTableWidget extends StatelessWidget {
           DataCell(
             Text(
               row.costPrice != null
-                  ? row.costPrice!.toStringAsFixed(0)
+                  ? FormattingHelpers.decimal(
+                      row.costPrice!,
+                      fractionDigits: 0,
+                    )
                   : '—',
             ),
           ),
           DataCell(
             Text(
               row.sellingPrice != null
-                  ? row.sellingPrice!.toStringAsFixed(0)
+                  ? FormattingHelpers.decimal(
+                      row.sellingPrice!,
+                      fractionDigits: 0,
+                    )
                   : '—',
             ),
           ),
@@ -96,12 +103,16 @@ class StockTableWidget extends StatelessWidget {
         ),
         DataCell(
           Text(
-            row.unitCost != null ? row.unitCost!.toStringAsFixed(0) : '—',
+            row.unitCost != null
+                ? FormattingHelpers.decimal(row.unitCost!, fractionDigits: 0)
+                : '—',
           ),
         ),
         DataCell(
           Text(
-            row.unitPrice != null ? row.unitPrice!.toStringAsFixed(0) : '—',
+            row.unitPrice != null
+                ? FormattingHelpers.decimal(row.unitPrice!, fractionDigits: 0)
+                : '—',
           ),
         ),
         DataCell(Text(row.location ?? '—')),

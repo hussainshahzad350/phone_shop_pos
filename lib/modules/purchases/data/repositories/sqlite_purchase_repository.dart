@@ -1,5 +1,6 @@
 import 'package:phone_shop_pos/core/database/app_database.dart';
 import 'package:phone_shop_pos/core/database/base_repository.dart';
+import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
@@ -32,18 +33,22 @@ class SqlitePurchaseRepository with BaseRepositoryGuard implements PurchaseRepos
 
       if (trimmedQuery.isNotEmpty) {
         where = 'name LIKE ? OR phone LIKE ?';
+        final phonePrefix = '$trimmedQuery%';
         final likeQuery = '%$trimmedQuery%';
         args
           ..add(likeQuery)
-          ..add(likeQuery);
+          ..add(phonePrefix);
       }
 
-      final rows = await _appDatabase.queryTable(
-        TableNames.suppliers,
-        where: where,
-        whereArgs: args,
-        orderBy: 'name COLLATE NOCASE ASC',
-        limit: limit,
+      final rows = await QueryDiagnostics.trace(
+        label: 'purchases.search_suppliers',
+        action: () => _appDatabase.queryTable(
+          TableNames.suppliers,
+          where: where,
+          whereArgs: args,
+          orderBy: 'name COLLATE NOCASE ASC',
+          limit: limit,
+        ),
       );
 
       return rows
@@ -73,19 +78,23 @@ class SqlitePurchaseRepository with BaseRepositoryGuard implements PurchaseRepos
         whereBuffer.write(
           ' AND (name LIKE ? OR sku LIKE ? OR brand LIKE ?)',
         );
+        final prefixQuery = '$trimmedQuery%';
         final likeQuery = '%$trimmedQuery%';
         args
-          ..add(likeQuery)
-          ..add(likeQuery)
+          ..add(prefixQuery)
+          ..add(prefixQuery)
           ..add(likeQuery);
       }
 
-      final rows = await _appDatabase.queryTable(
-        TableNames.productModels,
-        where: whereBuffer.toString(),
-        whereArgs: args,
-        orderBy: 'name COLLATE NOCASE ASC',
-        limit: limit,
+      final rows = await QueryDiagnostics.trace(
+        label: 'purchases.search_products',
+        action: () => _appDatabase.queryTable(
+          TableNames.productModels,
+          where: whereBuffer.toString(),
+          whereArgs: args,
+          orderBy: 'name COLLATE NOCASE ASC',
+          limit: limit,
+        ),
       );
 
       return rows

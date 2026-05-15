@@ -301,5 +301,29 @@ class MigrationService {
       'CREATE INDEX IF NOT EXISTS idx_sale_items_serialized_stock_id ON ${TableNames.saleItems}(serialized_stock_id);',
       'CREATE INDEX IF NOT EXISTS idx_sales_pending_balance ON ${TableNames.sales}(total, paid_amount);',
     ],
+    5: <String>[
+      '''
+      CREATE TABLE ${TableNames.printJobs} (
+        id TEXT PRIMARY KEY NOT NULL,
+        sale_id TEXT NOT NULL UNIQUE,
+        invoice_number TEXT NOT NULL,
+        document_json TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (
+          status IN ('pending', 'processing', 'completed', 'failed', 'cancelled')
+        ),
+        retry_count INTEGER NOT NULL DEFAULT 0 CHECK (retry_count >= 0),
+        last_error TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      ''',
+      'CREATE INDEX IF NOT EXISTS idx_print_jobs_status_updated ON ${TableNames.printJobs}(status, updated_at DESC);',
+      'CREATE INDEX IF NOT EXISTS idx_print_jobs_created_at ON ${TableNames.printJobs}(created_at DESC);',
+      'CREATE INDEX IF NOT EXISTS idx_print_jobs_invoice_number ON ${TableNames.printJobs}(invoice_number);',
+      'CREATE INDEX IF NOT EXISTS idx_serialized_stock_product_status_imei1 ON ${TableNames.serializedStock}(product_model_id, stock_status, imei1);',
+      'CREATE INDEX IF NOT EXISTS idx_serialized_stock_product_status_imei2 ON ${TableNames.serializedStock}(product_model_id, stock_status, imei2);',
+      'CREATE INDEX IF NOT EXISTS idx_suppliers_name ON ${TableNames.suppliers}(name);',
+      'CREATE INDEX IF NOT EXISTS idx_customers_name_phone ON ${TableNames.customers}(name, phone);',
+    ],
   };
 }
