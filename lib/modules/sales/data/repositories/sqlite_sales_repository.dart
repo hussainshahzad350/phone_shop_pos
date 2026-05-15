@@ -142,7 +142,7 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
         TableNames.serializedStock,
         where: whereBuffer.toString(),
         whereArgs: args,
-        orderBy: 'created_at DESC',
+        orderBy: 'created_at ASC',
         limit: limit,
       );
 
