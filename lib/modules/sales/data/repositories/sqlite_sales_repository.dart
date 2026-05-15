@@ -21,6 +21,8 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
   SqliteSalesRepository({required AppDatabase appDatabase})
     : _appDatabase = appDatabase;
 
+  static final RegExp _digitsOnlyPattern = RegExp(r'^\d+$');
+
   final AppDatabase _appDatabase;
 
   @override
@@ -35,14 +37,15 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
 
       if (trimmedQuery.isNotEmpty) {
         whereBuffer.write(
-          ' AND (name LIKE ? OR sku LIKE ? OR brand LIKE ? OR category LIKE ?)',
+          ' AND (sku LIKE ? OR name LIKE ? OR brand LIKE ? OR category LIKE ?)',
         );
-        final likeQuery = '%$trimmedQuery%';
+        final prefixQuery = '$trimmedQuery%';
+        final containsQuery = '%$trimmedQuery%';
         args
-          ..add(likeQuery)
-          ..add(likeQuery)
-          ..add(likeQuery)
-          ..add(likeQuery);
+          ..add(prefixQuery)
+          ..add(containsQuery)
+          ..add(containsQuery)
+          ..add(containsQuery);
       }
 
       final rows = await _appDatabase.queryTable(
@@ -71,11 +74,12 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
       String? where;
 
       if (trimmedQuery.isNotEmpty) {
-        where = 'name LIKE ? OR phone LIKE ?';
-        final likeQuery = '%$trimmedQuery%';
+        where = 'phone LIKE ? OR name LIKE ?';
+        final prefixQuery = '$trimmedQuery%';
+        final containsQuery = '%$trimmedQuery%';
         args
-          ..add(likeQuery)
-          ..add(likeQuery);
+          ..add(prefixQuery)
+          ..add(containsQuery);
       }
 
       final rows = await _appDatabase.queryTable(
@@ -110,14 +114,25 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
       final whereBuffer = StringBuffer('product_model_id = ? AND stock_status = ?');
 
       if (trimmedQuery.isNotEmpty) {
-        whereBuffer.write(
-          ' AND (imei1 LIKE ? OR imei2 LIKE ? OR serial_number LIKE ?)',
-        );
-        final likeQuery = '%$trimmedQuery%';
-        args
-          ..add(likeQuery)
-          ..add(likeQuery)
-          ..add(likeQuery);
+        final prefixQuery = '$trimmedQuery%';
+        if (_digitsOnlyPattern.hasMatch(trimmedQuery)) {
+          whereBuffer.write(
+            ' AND (imei1 LIKE ? OR imei2 LIKE ? OR serial_number LIKE ?)',
+          );
+          args
+            ..add(prefixQuery)
+            ..add(prefixQuery)
+            ..add(prefixQuery);
+        } else {
+          final containsQuery = '%$trimmedQuery%';
+          whereBuffer.write(
+            ' AND (imei1 LIKE ? OR imei2 LIKE ? OR serial_number LIKE ?)',
+          );
+          args
+            ..add(containsQuery)
+            ..add(containsQuery)
+            ..add(containsQuery);
+        }
       }
 
       final rows = await _appDatabase.queryTable(

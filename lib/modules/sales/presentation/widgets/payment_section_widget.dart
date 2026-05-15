@@ -9,6 +9,7 @@ class PaymentSectionWidget extends StatelessWidget {
     required this.onPaidAmountChanged,
     required this.onNotesChanged,
     required this.onCompleteSale,
+    this.onPaidAmountSubmitted,
     required this.isProcessing,
     this.paymentMethodFocusNode,
     this.paidAmountFocusNode,
@@ -20,6 +21,7 @@ class PaymentSectionWidget extends StatelessWidget {
   final ValueChanged<double> onPaidAmountChanged;
   final ValueChanged<String> onNotesChanged;
   final VoidCallback onCompleteSale;
+  final VoidCallback? onPaidAmountSubmitted;
   final bool isProcessing;
   final FocusNode? paymentMethodFocusNode;
   final FocusNode? paidAmountFocusNode;
@@ -60,12 +62,19 @@ class PaymentSectionWidget extends StatelessWidget {
             TextField(
               focusNode: paidAmountFocusNode,
               keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
               decoration: const InputDecoration(
                 labelText: 'Paid Amount',
                 border: OutlineInputBorder(),
                 isDense: true,
               ),
               onChanged: (value) => onPaidAmountChanged(double.tryParse(value) ?? 0),
+              onSubmitted: (_) {
+                if (isProcessing) {
+                  return;
+                }
+                (onPaidAmountSubmitted ?? onCompleteSale).call();
+              },
             ),
             const SizedBox(height: 8),
             TextField(

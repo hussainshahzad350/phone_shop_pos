@@ -12,9 +12,11 @@ import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
+import 'package:phone_shop_pos/modules/sales/domain/repositories/sales_repository.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/billing_state_provider.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/cart_state_provider.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_query_providers.dart';
+import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_repository_provider.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/totals_provider.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/cart_table_widget.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/customer_selector_widget.dart';
@@ -66,84 +68,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
       return;
     }
 
-    final imeis = await ref.read(availableImeisProvider(product.id).future);
-    if (!mounted) {
-      return;
-    }
-
-    if (imeis.isEmpty) {
-      AppNotifier.warning('No in-stock IMEI available.');
-      return;
-    }
-
-    SerializedStockEntity? selected;
-    if (imeis.length == 1) {
-      selected = imeis.first;
-    } else {
-      selected = await showDialog<SerializedStockEntity>(
-        context: context,
-        builder: (context) {
-          String imeiQuery = '';
-          return StatefulBuilder(
-            builder: (context, setDialogState) {
-              final searchText = imeiQuery.trim().toLowerCase();
-              final filtered = searchText.isEmpty
-                  ? imeis
-                  : imeis.where((item) {
-                      return item.imei1.toLowerCase().contains(searchText) ||
-                          (item.imei2?.toLowerCase().contains(searchText) ??
-                              false);
-                    }).toList(growable: false);
-              return AlertDialog(
-                title: Text('Select IMEI - ${product.name}'),
-                content: SizedBox(
-                  width: 460,
-                  height: 420,
-                  child: Column(
-                    children: <Widget>[
-                      TextField(
-                        autofocus: true,
-                        decoration: const InputDecoration(
-                          hintText: 'Search IMEI...',
-                          prefixIcon: Icon(Icons.search),
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                        onChanged: (value) {
-                          imeiQuery = value;
-                          setDialogState(() {});
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      Expanded(
-                        child: filtered.isEmpty
-                            ? const Center(child: Text('No IMEI matched.'))
-                            : ListView.builder(
-                                itemCount: filtered.length,
-                                itemBuilder: (context, index) {
-                                  final stock = filtered[index];
-                                  return ListTile(
-                                    dense: true,
-                                    title: Text(stock.imei1),
-                                    subtitle: stock.imei2 == null
-                                        ? null
-                                        : Text(stock.imei2!),
-                                    onTap: () =>
-                                        Navigator.of(context).pop(stock),
-                                  );
-                                },
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      );
-    }
-
+    final selected = await _showImeiPickerDialog(product);
     if (selected == null) {
       return;
     }
@@ -158,6 +83,21 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     if (result.isSuccess) {
       _focusSearchAfterAdd();
     }
+  }
+
+  Future<SerializedStockEntity?> _showImeiPickerDialog(ProductEntity product) async {
+    final repository = await ref.read(salesRepositoryProvider.future);
+    if (!mounted) {
+      return null;
+    }
+    return showDialog<SerializedStockEntity>(
+      context: context,
+      builder: (context) => _ImeiPickerDialog(
+        productName: product.name,
+        productModelId: product.id,
+        repository: repository,
+      ),
+    );
   }
 
   void _showResultError(Result<void> result) {
@@ -203,6 +143,18 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     ref.invalidate(productSearchResultsProvider);
     ref.invalidate(customerSearchResultsProvider);
     AppNotifier.info('Sales screen refreshed.');
+  }
+
+  void _handleEscape() {
+    if (_isCompleting) {
+      return;
+    }
+    final hasSearch = _productSearchController.text.trim().isNotEmpty;
+    if (hasSearch) {
+      _productSearchController.clear();
+      ref.read(billingStateProvider.notifier).setProductSearchQuery('');
+    }
+    _focusSearchAfterAdd();
   }
 
   void _handleGlobalShortcut(AppShortcutEventState state) {
@@ -352,16 +304,10 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
         const SingleActivator(LogicalKeyboardKey.equal): _CartIncreaseQtyIntent(),
         const SingleActivator(LogicalKeyboardKey.numpadSubtract): _CartDecreaseQtyIntent(),
         const SingleActivator(LogicalKeyboardKey.minus): _CartDecreaseQtyIntent(),
-        const SingleActivator(LogicalKeyboardKey.f10): _CompleteSaleIntent(),
+        const SingleActivator(LogicalKeyboardKey.escape): _SalesEscapeIntent(),
       },
       child: Actions(
         actions: <Type, Action<Intent>>{
-          _CompleteSaleIntent: CallbackAction<_CompleteSaleIntent>(
-            onInvoke: (intent) {
-              _completeSale();
-              return null;
-            },
-          ),
           _CartNextIntent: CallbackAction<_CartNextIntent>(
             onInvoke: (intent) {
               _selectNextCartRow(1, cartItems.length);
@@ -389,6 +335,12 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
           _CartRemoveIntent: CallbackAction<_CartRemoveIntent>(
             onInvoke: (intent) {
               _removeSelectedCartRow(cartItems);
+              return null;
+            },
+          ),
+          _SalesEscapeIntent: CallbackAction<_SalesEscapeIntent>(
+            onInvoke: (intent) {
+              _handleEscape();
               return null;
             },
           ),
@@ -580,6 +532,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                                           value,
                                         );
                                   },
+                                  onPaidAmountSubmitted: _completeSale,
                                   onCompleteSale: _completeSale,
                                   isProcessing: _isCompleting,
                                 ),
@@ -600,10 +553,6 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
   }
 }
 
-class _CompleteSaleIntent extends Intent {
-  const _CompleteSaleIntent();
-}
-
 class _CartNextIntent extends Intent {
   const _CartNextIntent();
 }
@@ -622,4 +571,231 @@ class _CartDecreaseQtyIntent extends Intent {
 
 class _CartRemoveIntent extends Intent {
   const _CartRemoveIntent();
+}
+
+class _SalesEscapeIntent extends Intent {
+  const _SalesEscapeIntent();
+}
+
+class _ImeiPickerDialog extends StatefulWidget {
+  const _ImeiPickerDialog({
+    required this.productName,
+    required this.productModelId,
+    required this.repository,
+  });
+
+  final String productName;
+  final String productModelId;
+  final SalesRepository repository;
+
+  @override
+  State<_ImeiPickerDialog> createState() => _ImeiPickerDialogState();
+}
+
+class _ImeiPickerDialogState extends State<_ImeiPickerDialog> {
+  // Keep the candidate list bounded for smooth keyboard navigation on desktop.
+  static const int _kMaxImeiResults = 120;
+  static const Duration _kImeiSearchDebounce = Duration(milliseconds: 150);
+
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+  Timer? _debounce;
+  bool _isLoading = false;
+  List<SerializedStockEntity> _items = const <SerializedStockEntity>[];
+  int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _runSearch();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    _searchFocus.dispose();
+    super.dispose();
+  }
+
+  Future<void> _runSearch({String query = ''}) async {
+    setState(() {
+      _isLoading = true;
+    });
+    final result = await widget.repository.getAvailableImeis(
+      widget.productModelId,
+      query: query,
+      limit: _kMaxImeiResults,
+    );
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = false;
+      _items = result.fold(
+        onSuccess: (items) => items,
+        onFailure: (_) => const <SerializedStockEntity>[],
+      );
+      _selectedIndex = _items.isEmpty
+          ? 0
+          : _selectedIndex.clamp(0, _items.length - 1);
+    });
+
+    if (result.isFailure) {
+      AppNotifier.error(result.asFailure!.error.message);
+    }
+  }
+
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(_kImeiSearchDebounce, () {
+      _runSearch(query: value.trim());
+    });
+  }
+
+  void _moveSelection(int delta) {
+    if (_items.isEmpty) {
+      return;
+    }
+    setState(() {
+      _selectedIndex = (_selectedIndex + delta).clamp(0, _items.length - 1);
+    });
+  }
+
+  void _selectCurrent() {
+    if (_items.isEmpty) {
+      return;
+    }
+    Navigator.of(context).pop(_items[_selectedIndex]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Shortcuts(
+      shortcuts: const <ShortcutActivator, Intent>{
+        SingleActivator(LogicalKeyboardKey.escape): _ImeiCancelIntent(),
+        SingleActivator(LogicalKeyboardKey.enter): _ImeiSelectIntent(),
+        SingleActivator(LogicalKeyboardKey.arrowDown): _ImeiDownIntent(),
+        SingleActivator(LogicalKeyboardKey.arrowUp): _ImeiUpIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          _ImeiCancelIntent: CallbackAction<_ImeiCancelIntent>(
+            onInvoke: (_) {
+              Navigator.of(context).pop();
+              return null;
+            },
+          ),
+          _ImeiSelectIntent: CallbackAction<_ImeiSelectIntent>(
+            onInvoke: (_) {
+              _selectCurrent();
+              return null;
+            },
+          ),
+          _ImeiDownIntent: CallbackAction<_ImeiDownIntent>(
+            onInvoke: (_) {
+              _moveSelection(1);
+              return null;
+            },
+          ),
+          _ImeiUpIntent: CallbackAction<_ImeiUpIntent>(
+            onInvoke: (_) {
+              _moveSelection(-1);
+              return null;
+            },
+          ),
+        },
+        child: AlertDialog(
+          title: Text('Select IMEI - ${widget.productName}'),
+          content: SizedBox(
+            width: 520,
+            height: 440,
+            child: Column(
+              children: <Widget>[
+                TextField(
+                  controller: _searchController,
+                  focusNode: _searchFocus,
+                  autofocus: true,
+                  textInputAction: TextInputAction.search,
+                  decoration: const InputDecoration(
+                    hintText: 'Search IMEI / Serial',
+                    helperText: 'Enter = select, Esc = cancel, ↑↓ = navigate',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  onChanged: _onSearchChanged,
+                  onSubmitted: (_) => _selectCurrent(),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _items.isEmpty
+                      ? const Center(child: Text('No IMEI matched.'))
+                      : ListView.builder(
+                          itemCount: _items.length,
+                          itemBuilder: (context, index) {
+                            final stock = _items[index];
+                            final selected = index == _selectedIndex;
+                            final secondImei = stock.imei2?.trim();
+                            return Semantics(
+                              selected: selected,
+                              label: secondImei == null || secondImei.isEmpty
+                                  ? 'IMEI 1 ${stock.imei1}'
+                                  : 'IMEI 1 ${stock.imei1}, IMEI 2 $secondImei',
+                              child: ExcludeSemantics(
+                                child: ListTile(
+                                  dense: true,
+                                  selected: selected,
+                                  title: Text('IMEI 1: ${stock.imei1}'),
+                                  subtitle: stock.imei2 == null
+                                      ? null
+                                      : Text('IMEI 2: ${stock.imei2!}'),
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedIndex = index;
+                                    });
+                                    _selectCurrent();
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: _items.isEmpty ? null : _selectCurrent,
+              child: const Text('Select'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ImeiCancelIntent extends Intent {
+  const _ImeiCancelIntent();
+}
+
+class _ImeiSelectIntent extends Intent {
+  const _ImeiSelectIntent();
+}
+
+class _ImeiDownIntent extends Intent {
+  const _ImeiDownIntent();
+}
+
+class _ImeiUpIntent extends Intent {
+  const _ImeiUpIntent();
 }

@@ -64,8 +64,6 @@ class AppShortcutManager extends ConsumerWidget {
             control: true,
           ): _FocusSearchIntent(),
           SingleActivator(LogicalKeyboardKey.f2): _FocusPaymentIntent(),
-          SingleActivator(LogicalKeyboardKey.f3): _HoldSaleIntent(),
-          SingleActivator(LogicalKeyboardKey.f4): _PrintIntent(),
           SingleActivator(LogicalKeyboardKey.f5): _RefreshIntent(),
           SingleActivator(LogicalKeyboardKey.f10): _SaveIntent(),
           SingleActivator(LogicalKeyboardKey.escape): _EscapeIntent(),
@@ -101,18 +99,6 @@ class AppShortcutManager extends ConsumerWidget {
                 ref
                     .read(appShortcutEventBusProvider.notifier)
                     .emit(AppShortcutEvent.focusPayment);
-                return null;
-              },
-            ),
-            _HoldSaleIntent: CallbackAction<_HoldSaleIntent>(
-              onInvoke: (_) {
-                AppNotifier.warning('Hold/Resume sale will be enabled in next phase.');
-                return null;
-              },
-            ),
-            _PrintIntent: CallbackAction<_PrintIntent>(
-              onInvoke: (_) {
-                AppNotifier.warning('Print action placeholder.');
                 return null;
               },
             ),
@@ -177,14 +163,6 @@ class _FocusSearchIntent extends Intent {
 
 class _FocusPaymentIntent extends Intent {
   const _FocusPaymentIntent();
-}
-
-class _HoldSaleIntent extends Intent {
-  const _HoldSaleIntent();
-}
-
-class _PrintIntent extends Intent {
-  const _PrintIntent();
 }
 
 class _RefreshIntent extends Intent {
