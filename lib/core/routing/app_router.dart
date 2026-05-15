@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:phone_shop_pos/core/widgets/desktop_navigation_shell.dart';
 import 'package:phone_shop_pos/core/widgets/module_placeholder_screen.dart';
+import 'package:phone_shop_pos/modules/purchases/presentation/screens/purchase_screen.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/screens/sales_billing_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -23,6 +24,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/sales',
             builder: (context, state) => const SalesBillingScreen(),
+          ),
+          GoRoute(
+            path: '/purchases',
+            builder: (context, state) => const PurchaseScreen(),
           ),
           GoRoute(
             path: '/inventory',
