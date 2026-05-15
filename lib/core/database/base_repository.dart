@@ -20,6 +20,18 @@ mixin BaseRepositoryGuard on BaseRepository {
       final value = await action();
       return Success<T>(value);
     } on DatabaseException catch (error) {
+      final lowerMessage = error.toString().toLowerCase();
+      if (lowerMessage.contains('database is locked') ||
+          lowerMessage.contains('database is busy')) {
+        return Failure<T>(
+          AppError(
+            code: 'database_locked',
+            message:
+                'Database is temporarily locked by another process. Retry after a moment.',
+            details: error,
+          ),
+        );
+      }
       return Failure<T>(
         AppError(
           code: 'database_error',

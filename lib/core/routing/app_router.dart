@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,6 +12,21 @@ import 'package:phone_shop_pos/modules/settings/presentation/screens/settings_sc
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
+    errorBuilder: (context, state) => Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Text('Navigation error. Returning to dashboard.'),
+            const SizedBox(height: 8),
+            FilledButton(
+              onPressed: () => GoRouter.of(context).go('/dashboard'),
+              child: const Text('Go to Dashboard'),
+            ),
+          ],
+        ),
+      ),
+    ),
     routes: <RouteBase>[
       ShellRoute(
         builder: (context, state, child) => DesktopNavigationShell(
