@@ -178,6 +178,8 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
     String? notes,
   }) {
     return guard<SaleCompletionEntity>(() async {
+      _validateSaleRequest(items: items, totals: totals);
+
       final now = DateTimeHelpers.nowUtc();
       final saleId = IdHelpers.newId(prefix: 'sal');
 
@@ -321,5 +323,49 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
         totals: totals,
       );
     }, operation: 'create_sale_transaction');
+  }
+
+  void _validateSaleRequest({
+    required List<CartItemEntity> items,
+    required SaleTotalsEntity totals,
+  }) {
+    if (items.isEmpty) {
+      throw StateError('Sale requires at least one item.');
+    }
+    if (totals.subtotal < 0 ||
+        totals.discount < 0 ||
+        totals.tax < 0 ||
+        totals.total < 0 ||
+        totals.paidAmount < 0) {
+      throw StateError('Sale totals cannot be negative.');
+    }
+
+    final serializedIds = <String>{};
+    for (final item in items) {
+      if (item.unitPrice < 0) {
+        throw StateError('${item.productName} has invalid unit price.');
+      }
+
+      if (item.hasImei) {
+        final serializedStockId = item.serializedStockId;
+        if (serializedStockId == null || serializedStockId.isEmpty) {
+          throw StateError('${item.productName} requires a serialized stock ID.');
+        }
+        if (item.quantity != 1) {
+          throw StateError('${item.productName} serialized quantity must be 1.');
+        }
+        if (!serializedIds.add(serializedStockId)) {
+          throw StateError('Duplicate serialized stock detected in sale.');
+        }
+        continue;
+      }
+
+      if (item.quantity <= 0) {
+        throw StateError('${item.productName} has invalid quantity.');
+      }
+      if (item.serializedStockId != null) {
+        throw StateError('${item.productName} cannot reference serialized stock.');
+      }
+    }
   }
 }
