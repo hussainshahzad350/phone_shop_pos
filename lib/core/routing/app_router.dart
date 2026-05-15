@@ -11,7 +11,9 @@ import 'package:phone_shop_pos/modules/sales/presentation/screens/sales_billing_
 import 'package:phone_shop_pos/modules/settings/presentation/screens/settings_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final navigatorKey = ref.watch(rootNavigatorKeyProvider);
   return GoRouter(
+    navigatorKey: navigatorKey,
     errorBuilder: (context, state) => Scaffold(
       body: Center(
         child: Column(
@@ -71,3 +73,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+final rootNavigatorKeyProvider = Provider<GlobalKey<NavigatorState>>(
+  (ref) => GlobalKey<NavigatorState>(),
+);

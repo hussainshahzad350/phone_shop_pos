@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.dart';
 
 class TotalsPanelWidget extends StatelessWidget {
@@ -33,7 +34,8 @@ class TotalsPanelWidget extends StatelessWidget {
                 border: OutlineInputBorder(),
                 isDense: true,
               ),
-              onChanged: (value) => onDiscountChanged(double.tryParse(value) ?? 0),
+              onChanged: (value) =>
+                  onDiscountChanged(FormattingHelpers.parseLocaleDecimal(value)),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -43,7 +45,8 @@ class TotalsPanelWidget extends StatelessWidget {
                 border: OutlineInputBorder(),
                 isDense: true,
               ),
-              onChanged: (value) => onTaxChanged(double.tryParse(value) ?? 0),
+              onChanged: (value) =>
+                  onTaxChanged(FormattingHelpers.parseLocaleDecimal(value)),
             ),
             const SizedBox(height: 8),
             _line(label: 'Total', value: totals.total, bold: true),
@@ -63,7 +66,7 @@ class TotalsPanelWidget extends StatelessWidget {
       children: <Widget>[
         Text(label),
         Text(
-          value.toStringAsFixed(2),
+          FormattingHelpers.currencyPkr(value),
           style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal),
         ),
       ],

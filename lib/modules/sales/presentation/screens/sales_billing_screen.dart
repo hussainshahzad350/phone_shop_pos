@@ -8,12 +8,15 @@ import 'package:phone_shop_pos/core/services/printing/invoice_print_renderer.dar
 
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
+import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
+import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
+import 'package:phone_shop_pos/modules/sales/domain/entities/sale_completion_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/repositories/sales_repository.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/billing_state_provider.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/cart_state_provider.dart';
@@ -246,12 +249,19 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     );
 
     final result = await ref
-        .read(cartStateProvider.notifier)
-        .completeSale(
-          totals: totals,
-          customerId: billing.selectedCustomerId,
-          paymentMethod: billing.paymentMethod,
-          notes: billing.notes,
+        .read(operationManagerProvider.notifier)
+        .track<Result<SaleCompletionEntity>>(
+          code: 'save_sale',
+          label: 'Saving sale',
+          progressLabel: 'Saving sale and updating stock',
+          action: (_) {
+            return ref.read(cartStateProvider.notifier).completeSale(
+                  totals: totals,
+                  customerId: billing.selectedCustomerId,
+                  paymentMethod: billing.paymentMethod,
+                  notes: billing.notes,
+                );
+          },
         );
 
     if (!mounted) {
@@ -276,17 +286,25 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
             : 'Customer',
         notes: billing.notes.trim().isEmpty ? null : billing.notes.trim(),
       );
-      final jobId = ref.read(invoicePrintQueueProvider.notifier).enqueue(document);
+      final enqueueResult = await ref
+          .read(invoicePrintQueueProvider.notifier)
+          .enqueue(document);
 
       ref.read(billingStateProvider.notifier).resetAfterSale();
       _productSearchController.clear();
-      AppNotifier.success(
-        'Sale completed. Invoice: ${completion.invoiceNumber}',
-        action: SnackBarAction(
-          label: 'Print Preview',
-          onPressed: () => _openPrintPreview(jobId),
-        ),
-      );
+      if (enqueueResult.isSuccess) {
+        AppNotifier.success(
+          'Sale completed. Invoice: ${completion.invoiceNumber}',
+          action: SnackBarAction(
+            label: 'Print Preview',
+            onPressed: () => _openPrintPreview(enqueueResult.asSuccess!.value),
+          ),
+        );
+      } else {
+        AppNotifier.warning(
+          'Sale completed, but the receipt queue could not be updated. Check printer queue health in Settings.',
+        );
+      }
       _focusSearchAfterAdd();
       return;
     }
@@ -430,7 +448,9 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        'PKR ${product.salePrice.toStringAsFixed(2)}',
+                                        FormattingHelpers.currencyPkr(
+                                          product.salePrice,
+                                        ),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(

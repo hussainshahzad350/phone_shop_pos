@@ -373,7 +373,7 @@ class _ProfitView extends ConsumerWidget {
           Expanded(
             child: ReportSummaryCardWidget(
               label: 'Margin',
-              value: '${report.marginPercent.toStringAsFixed(2)}%',
+              value: '${FormattingHelpers.decimal(report.marginPercent)}%',
               color: Colors.indigo,
             ),
           ),

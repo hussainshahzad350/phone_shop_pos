@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 
 class ImeiEntryWidget extends StatefulWidget {
@@ -92,8 +93,11 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
                     ),
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     onChanged: (v) {
-                      final parsed = double.tryParse(v);
-                      if (parsed != null && parsed >= 0) {
+                      final parsed = FormattingHelpers.parseLocaleDecimal(
+                        v,
+                        fallback: -1,
+                      );
+                      if (parsed >= 0) {
                         _defaultCost = parsed;
                       }
                     },

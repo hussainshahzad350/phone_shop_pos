@@ -1,5 +1,6 @@
 import 'package:phone_shop_pos/core/database/app_database.dart';
 import 'package:phone_shop_pos/core/database/base_repository.dart';
+import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
@@ -17,6 +18,8 @@ class SqliteInventoryRepository
     implements InventoryRepository {
   SqliteInventoryRepository({required AppDatabase appDatabase})
       : _appDatabase = appDatabase;
+
+  static final RegExp _digitsOnlyPattern = RegExp(r'^\d+$');
 
   final AppDatabase _appDatabase;
 
@@ -38,13 +41,17 @@ class SqliteInventoryRepository
   }) {
     return guard<List<SerializedStockEntity>>(() async {
       final trimmed = imei.trim();
-      final likeQuery = '%$trimmed%';
-      final rows = await _appDatabase.queryTable(
-        TableNames.serializedStock,
-        where: 'imei1 LIKE ? OR imei2 LIKE ? OR serial_number LIKE ?',
-        whereArgs: <Object?>[likeQuery, likeQuery, likeQuery],
-        orderBy: 'created_at DESC',
-        limit: limit,
+      final usePrefix = trimmed.isNotEmpty && _digitsOnlyPattern.hasMatch(trimmed);
+      final searchQuery = usePrefix ? '$trimmed%' : '%$trimmed%';
+      final rows = await QueryDiagnostics.trace(
+        label: 'inventory.search_serialized_by_imei',
+        action: () => _appDatabase.queryTable(
+          TableNames.serializedStock,
+          where: 'imei1 LIKE ? OR imei2 LIKE ? OR serial_number LIKE ?',
+          whereArgs: <Object?>[searchQuery, searchQuery, searchQuery],
+          orderBy: 'created_at DESC',
+          limit: limit,
+        ),
       );
       return rows
           .map(SerializedStockModel.fromMap)
@@ -268,7 +275,10 @@ WHERE ${quantityWhere.toString()}''');
       final sql =
           '${parts.join('\nUNION ALL\n')}\nORDER BY name COLLATE NOCASE ASC\nLIMIT $limit';
 
-      final rows = await _appDatabase.database.rawQuery(sql, args);
+      final rows = await QueryDiagnostics.trace(
+        label: 'inventory.get_stock_rows',
+        action: () => _appDatabase.database.rawQuery(sql, args),
+      );
       return rows.map(_rowToStockRowEntity).toList(growable: false);
     }, operation: 'get_stock_rows');
   }

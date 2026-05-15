@@ -1,5 +1,6 @@
 import 'package:phone_shop_pos/core/database/app_database.dart';
 import 'package:phone_shop_pos/core/database/base_repository.dart';
+import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
@@ -16,8 +17,10 @@ class ProfitReportService with BaseRepositoryGuard {
       final args = <Object?>[];
       final where = _buildWhereClause(filter, args: args);
 
-      final rows = await _appDatabase.database.rawQuery(
-        '''
+      final rows = await QueryDiagnostics.trace(
+        label: 'reports.profit',
+        action: () => _appDatabase.database.rawQuery(
+          '''
         SELECT
           COALESCE(SUM(si.line_total), 0) AS total_revenue,
           COALESCE(SUM(si.cost_price * si.quantity), 0) AS total_cost
@@ -25,7 +28,8 @@ class ProfitReportService with BaseRepositoryGuard {
         JOIN ${TableNames.saleItems} si ON si.sale_id = s.id
         WHERE $where
         ''',
-        args,
+          args,
+        ),
       );
 
       final row = rows.first;

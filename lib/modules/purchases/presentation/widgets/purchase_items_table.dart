@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 
 class PurchaseItemsTable extends StatelessWidget {
@@ -99,7 +100,7 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
         }
       }
       if (!_costFocus.hasFocus) {
-        final newCost = widget.item.unitCost.toStringAsFixed(2);
+        final newCost = FormattingHelpers.decimal(widget.item.unitCost);
         if (_costController.text != newCost) {
           _costController.text = newCost;
         }
@@ -190,8 +191,11 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
                         decimal: true,
                       ),
                       onChanged: (v) {
-                        final cost = double.tryParse(v);
-                        if (cost != null && cost >= 0) {
+                        final cost = FormattingHelpers.parseLocaleDecimal(
+                          v,
+                          fallback: -1,
+                        );
+                        if (cost >= 0) {
                           widget.onUpdateUnitCost(cost);
                         }
                       },
@@ -205,7 +209,7 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
                 ],
                 const SizedBox(width: 16),
                 Text(
-                  'PKR ${item.lineTotal.toStringAsFixed(2)}',
+                  FormattingHelpers.currencyPkr(item.lineTotal),
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -295,7 +299,7 @@ class _ImeiEntryRow extends StatelessWidget {
           ),
         ),
         Text(
-          'PKR ${entry.costPrice.toStringAsFixed(2)}',
+          FormattingHelpers.currencyPkr(entry.costPrice),
           style: const TextStyle(fontSize: 12),
         ),
         IconButton(

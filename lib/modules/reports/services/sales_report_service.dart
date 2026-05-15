@@ -1,5 +1,6 @@
 import 'package:phone_shop_pos/core/database/app_database.dart';
 import 'package:phone_shop_pos/core/database/base_repository.dart';
+import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
@@ -20,8 +21,10 @@ class SalesReportService with BaseRepositoryGuard {
       final args = <Object?>[];
       final where = _buildSalesWhereClause(filter, args: args);
 
-      final rows = await _appDatabase.database.rawQuery(
-        '''
+      final rows = await QueryDiagnostics.trace(
+        label: 'reports.daily_sales',
+        action: () => _appDatabase.database.rawQuery(
+          '''
         SELECT
           date(s.sale_date) AS sale_day,
           COUNT(DISTINCT s.id) AS invoice_count,
@@ -48,7 +51,8 @@ class SalesReportService with BaseRepositoryGuard {
         ORDER BY sale_day DESC
         LIMIT ? OFFSET ?
         ''',
-        <Object?>[...args, filter.pageSize, filter.offset],
+          <Object?>[...args, filter.pageSize, filter.offset],
+        ),
       );
 
       return rows
@@ -74,8 +78,10 @@ class SalesReportService with BaseRepositoryGuard {
       final args = <Object?>[];
       final where = _buildSalesWhereClause(filter, args: args);
 
-      final rows = await _appDatabase.database.rawQuery(
-        '''
+      final rows = await QueryDiagnostics.trace(
+        label: 'reports.date_range_sales',
+        action: () => _appDatabase.database.rawQuery(
+          '''
         SELECT
           s.invoice_number,
           s.sale_date,
@@ -90,7 +96,8 @@ class SalesReportService with BaseRepositoryGuard {
         ORDER BY s.sale_date DESC
         LIMIT ? OFFSET ?
         ''',
-        <Object?>[...args, filter.pageSize, filter.offset],
+          <Object?>[...args, filter.pageSize, filter.offset],
+        ),
       );
 
       return rows
@@ -116,8 +123,10 @@ class SalesReportService with BaseRepositoryGuard {
       final args = <Object?>[];
       final where = _buildSalesWhereClause(filter, args: args);
 
-      final rows = await _appDatabase.database.rawQuery(
-        '''
+      final rows = await QueryDiagnostics.trace(
+        label: 'reports.sold_phones',
+        action: () => _appDatabase.database.rawQuery(
+          '''
         SELECT
           s.invoice_number,
           s.sale_date,
@@ -135,7 +144,8 @@ class SalesReportService with BaseRepositoryGuard {
         ORDER BY s.sale_date DESC
         LIMIT ? OFFSET ?
         ''',
-        <Object?>[...args, filter.pageSize, filter.offset],
+          <Object?>[...args, filter.pageSize, filter.offset],
+        ),
       );
 
       return rows

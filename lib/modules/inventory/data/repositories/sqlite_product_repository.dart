@@ -1,5 +1,6 @@
 import 'package:phone_shop_pos/core/database/app_database.dart';
 import 'package:phone_shop_pos/core/database/base_repository.dart';
+import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
@@ -69,10 +70,11 @@ class SqliteProductRepository
         where.write(
           ' AND (name LIKE ? OR sku LIKE ? OR brand LIKE ? OR category LIKE ?)',
         );
+        final prefixQuery = '$trimmed%';
         final likeQuery = '%$trimmed%';
         args
-          ..add(likeQuery)
-          ..add(likeQuery)
+          ..add(prefixQuery)
+          ..add(prefixQuery)
           ..add(likeQuery)
           ..add(likeQuery);
       }
@@ -82,12 +84,15 @@ class SqliteProductRepository
         args.add(hasImei ? 1 : 0);
       }
 
-      final rows = await _appDatabase.queryTable(
-        TableNames.productModels,
-        where: where.toString(),
-        whereArgs: args,
-        orderBy: 'name COLLATE NOCASE ASC',
-        limit: limit,
+      final rows = await QueryDiagnostics.trace(
+        label: 'inventory.search_products',
+        action: () => _appDatabase.queryTable(
+          TableNames.productModels,
+          where: where.toString(),
+          whereArgs: args,
+          orderBy: 'name COLLATE NOCASE ASC',
+          limit: limit,
+        ),
       );
 
       return rows

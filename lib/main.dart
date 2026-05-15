@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/database/database_provider.dart';
+import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 
 import 'core/notifications/app_notifier.dart';
@@ -26,11 +28,70 @@ Future<void> main() async {
   );
 }
 
-class PhoneShopPosApp extends ConsumerWidget {
+class PhoneShopPosApp extends ConsumerStatefulWidget {
   const PhoneShopPosApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PhoneShopPosApp> createState() => _PhoneShopPosAppState();
+}
+
+class _PhoneShopPosAppState extends ConsumerState<PhoneShopPosApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  Future<AppExitResponse> didRequestAppExit() async {
+    final operations = ref.read(activeCriticalOperationsProvider);
+    if (operations.isEmpty) {
+      return AppExitResponse.exit;
+    }
+
+    final navigatorKey = ref.read(rootNavigatorKeyProvider);
+    final dialogContext = navigatorKey.currentContext;
+    if (dialogContext == null) {
+      return AppExitResponse.cancel;
+    }
+
+    final message = StringBuffer()
+      ..writeln(
+        'The app is still completing critical work. Closing now may interrupt the cashier workflow.',
+      )
+      ..writeln()
+      ..writeln(
+        'Any save that cannot finish should roll back safely, but the operator may need to retry printing or backup after reopening.',
+      )
+      ..writeln()
+      ..writeln('Active operations:');
+    for (final operation in operations) {
+      message.writeln(
+        '• ${operation.progressLabel ?? operation.label}',
+      );
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: dialogContext,
+      builder: (context) => AppConfirmationDialog(
+        title: 'Close app during active work?',
+        message: message.toString(),
+        confirmLabel: 'Close App',
+        cancelLabel: 'Stay Open',
+      ),
+    );
+    return confirmed == true ? AppExitResponse.exit : AppExitResponse.cancel;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final startup = ref.watch(appDatabaseProvider);
     final router = ref.watch(appRouterProvider);
 

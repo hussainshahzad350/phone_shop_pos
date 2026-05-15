@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
+import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 
 class PaymentSectionWidget extends StatelessWidget {
   const PaymentSectionWidget({
@@ -68,7 +69,9 @@ class PaymentSectionWidget extends StatelessWidget {
                 border: OutlineInputBorder(),
                 isDense: true,
               ),
-              onChanged: (value) => onPaidAmountChanged(double.tryParse(value) ?? 0),
+               onChanged: (value) => onPaidAmountChanged(
+                 FormattingHelpers.parseLocaleDecimal(value),
+               ),
               onSubmitted: (_) {
                 if (isProcessing) {
                   return;
