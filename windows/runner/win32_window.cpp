@@ -25,6 +25,8 @@ constexpr const wchar_t kWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
 constexpr const wchar_t kGetPreferredBrightnessRegKey[] =
   L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
 constexpr const wchar_t kGetPreferredBrightnessRegValue[] = L"AppsUseLightTheme";
+constexpr int kMinWindowWidth = 1366;
+constexpr int kMinWindowHeight = 768;
 
 // The number of Win32Window objects that currently exist.
 static int g_active_window_count = 0;
@@ -204,6 +206,14 @@ Win32Window::MessageHandler(HWND hwnd,
         MoveWindow(child_content_, rect.left, rect.top, rect.right - rect.left,
                    rect.bottom - rect.top, TRUE);
       }
+      return 0;
+    }
+    case WM_GETMINMAXINFO: {
+      auto* minmax_info = reinterpret_cast<MINMAXINFO*>(lparam);
+      const UINT dpi = GetDpiForWindow(hwnd);
+      const double scale_factor = dpi / 96.0;
+      minmax_info->ptMinTrackSize.x = Scale(kMinWindowWidth, scale_factor);
+      minmax_info->ptMinTrackSize.y = Scale(kMinWindowHeight, scale_factor);
       return 0;
     }
 
