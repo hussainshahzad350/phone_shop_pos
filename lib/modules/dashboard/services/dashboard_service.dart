@@ -23,6 +23,14 @@ class DashboardService with BaseRepositoryGuard {
   DateTime? _cachedKpisAt;
   Future<Result<DashboardKpisEntity>>? _inFlightKpisRequest;
 
+  /// Clears the in-memory KPI cache, forcing the next [getDashboardKpis] call
+  /// to re-query the database. Useful in tests and after mutations.
+  void clearCache() {
+    _cachedKpis = null;
+    _cachedKpisAt = null;
+    _inFlightKpisRequest = null;
+  }
+
   Future<Result<DashboardKpisEntity>> getDashboardKpis() async {
     final now = _nowProvider();
     final cached = _cachedKpis;
@@ -62,10 +70,20 @@ class DashboardService with BaseRepositoryGuard {
         SELECT
           COALESCE(SUM(CASE WHEN pm.has_imei = 1 THEN 1 ELSE 0 END), 0) AS phones_sold,
           COALESCE(SUM(CASE WHEN pm.has_imei = 0 THEN si.quantity ELSE 0 END), 0) AS accessories_sold,
-          COALESCE(SUM(si.line_total - (si.cost_price * si.quantity)), 0) AS today_profit
+          COALESCE(SUM(
+            si.line_total - (si.cost_price * si.quantity)
+            - COALESCE(ri.return_amount, 0) + COALESCE(ri.return_cost, 0)
+          ), 0) AS today_profit
         FROM ${TableNames.saleItems} si
         JOIN ${TableNames.sales} s ON s.id = si.sale_id
         JOIN ${TableNames.productModels} pm ON pm.id = si.product_model_id
+        LEFT JOIN (
+          SELECT sale_item_id,
+                 SUM(return_amount) AS return_amount,
+                 SUM(cost_price * return_qty) AS return_cost
+          FROM ${TableNames.saleReturns}
+          GROUP BY sale_item_id
+        ) ri ON ri.sale_item_id = si.id
         WHERE s.sale_date >= ? AND s.sale_date < ?
         ''',
           <Object?>[DateTimeHelpers.toSql(start), DateTimeHelpers.toSql(end)],

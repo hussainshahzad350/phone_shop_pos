@@ -290,6 +290,24 @@ class OperationsWorkflowService with BaseRepositoryGuard {
       final now = DateTimeHelpers.nowUtc();
 
       await _appDatabase.runInTransaction<void>((transaction) async {
+        // ── Read unit cost snapshot from sale_items ───────────────────────
+        final saleItemRows = await transaction.query(
+          TableNames.saleItems,
+          columns: <String>['cost_price'],
+          where: 'id = ?',
+          whereArgs: <Object?>[item.saleItemId],
+          limit: 1,
+        );
+        if (saleItemRows.isEmpty) {
+          throw StateError('Sale item not found for return.');
+        }
+        final unitCostPrice =
+            (saleItemRows.first['cost_price'] as num?)?.toDouble() ?? 0;
+
+        late double returnAmount;
+        String? returnedSerializedId;
+        String returnType;
+
         if (item.hasImei) {
           if (quantity != 1) {
             throw StateError('Serialized item return must be exactly one unit.');
@@ -319,74 +337,98 @@ class OperationsWorkflowService with BaseRepositoryGuard {
             whereArgs: <Object?>[serializedId],
           );
 
-          await transaction.insert(TableNames.saleReturns, <String, Object?>{
-            'id': IdHelpers.newId(prefix: 'ret'),
-            'sale_id': saleId,
-            'sale_item_id': item.saleItemId,
-            'product_model_id': item.productModelId,
-            'serialized_stock_id': serializedId,
-            'return_type': 'imei',
-            'return_qty': 1,
-            'return_amount': item.lineTotal,
-            'reason': trimmedReason,
-            'notes': normalizedNotes,
-            'created_at': DateTimeHelpers.toSql(now),
-            'updated_at': DateTimeHelpers.toSql(now),
-          });
-          return;
+          returnAmount = item.lineTotal;
+          returnedSerializedId = serializedId;
+          returnType = 'imei';
+        } else {
+          await transaction.rawInsert(
+            '''
+            INSERT OR IGNORE INTO ${TableNames.inventoryStock}
+            (id, product_model_id, quantity, min_quantity, unit_cost, unit_price, created_at, updated_at)
+            VALUES (?, ?, 0, 0, 0, 0, ?, ?)
+            ''',
+            <Object?>[
+              IdHelpers.newId(prefix: 'stk'),
+              item.productModelId,
+              DateTimeHelpers.toSql(now),
+              DateTimeHelpers.toSql(now),
+            ],
+          );
+
+          final stockRows = await transaction.query(
+            TableNames.inventoryStock,
+            columns: <String>['quantity'],
+            where: 'product_model_id = ?',
+            whereArgs: <Object?>[item.productModelId],
+            limit: 1,
+          );
+          if (stockRows.isEmpty) {
+            throw StateError('Inventory row missing for return item.');
+          }
+          final oldQty = (stockRows.first['quantity'] as num?)?.toInt() ?? 0;
+          final newQty = oldQty + quantity;
+
+          await transaction.update(
+            TableNames.inventoryStock,
+            <String, Object?>{
+              'quantity': newQty,
+              'updated_at': DateTimeHelpers.toSql(now),
+            },
+            where: 'product_model_id = ?',
+            whereArgs: <Object?>[item.productModelId],
+          );
+
+          returnAmount = item.unitPrice * quantity;
+          returnedSerializedId = null;
+          returnType = 'quantity';
         }
 
-        await transaction.rawInsert(
-          '''
-          INSERT OR IGNORE INTO ${TableNames.inventoryStock}
-          (id, product_model_id, quantity, min_quantity, unit_cost, unit_price, created_at, updated_at)
-          VALUES (?, ?, 0, 0, 0, 0, ?, ?)
-          ''',
-          <Object?>[
-            IdHelpers.newId(prefix: 'stk'),
-            item.productModelId,
-            DateTimeHelpers.toSql(now),
-            DateTimeHelpers.toSql(now),
-          ],
-        );
-
-        final stockRows = await transaction.query(
-          TableNames.inventoryStock,
-          columns: <String>['quantity'],
-          where: 'product_model_id = ?',
-          whereArgs: <Object?>[item.productModelId],
-          limit: 1,
-        );
-        if (stockRows.isEmpty) {
-          throw StateError('Inventory row missing for return item.');
-        }
-        final oldQty = (stockRows.first['quantity'] as num?)?.toInt() ?? 0;
-        final newQty = oldQty + quantity;
-
-        await transaction.update(
-          TableNames.inventoryStock,
-          <String, Object?>{
-            'quantity': newQty,
-            'updated_at': DateTimeHelpers.toSql(now),
-          },
-          where: 'product_model_id = ?',
-          whereArgs: <Object?>[item.productModelId],
-        );
-
+        // ── Insert return audit record ────────────────────────────────────
         await transaction.insert(TableNames.saleReturns, <String, Object?>{
           'id': IdHelpers.newId(prefix: 'ret'),
           'sale_id': saleId,
           'sale_item_id': item.saleItemId,
           'product_model_id': item.productModelId,
-          'serialized_stock_id': null,
-          'return_type': 'quantity',
+          'serialized_stock_id': returnedSerializedId,
+          'return_type': returnType,
           'return_qty': quantity,
-          'return_amount': item.unitPrice * quantity,
+          'return_amount': returnAmount,
+          'cost_price': unitCostPrice,
           'reason': trimmedReason,
           'notes': normalizedNotes,
           'created_at': DateTimeHelpers.toSql(now),
           'updated_at': DateTimeHelpers.toSql(now),
         });
+
+        // ── Refund Model: reduce sale total and clamp paid_amount ─────────
+        final saleRows = await transaction.query(
+          TableNames.sales,
+          columns: <String>['total', 'paid_amount'],
+          where: 'id = ?',
+          whereArgs: <Object?>[saleId],
+          limit: 1,
+        );
+        if (saleRows.isEmpty) {
+          throw StateError('Sale not found for financial adjustment.');
+        }
+        final currentTotal =
+            (saleRows.first['total'] as num?)?.toDouble() ?? 0;
+        final currentPaid =
+            (saleRows.first['paid_amount'] as num?)?.toDouble() ?? 0;
+        final newTotal =
+            (currentTotal - returnAmount).clamp(0.0, currentTotal);
+        final newPaid = currentPaid.clamp(0, newTotal);
+
+        await transaction.update(
+          TableNames.sales,
+          <String, Object?>{
+            'total': newTotal,
+            'paid_amount': newPaid,
+            'updated_at': DateTimeHelpers.toSql(now),
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[saleId],
+        );
       });
     }, operation: 'process_sale_return');
   }

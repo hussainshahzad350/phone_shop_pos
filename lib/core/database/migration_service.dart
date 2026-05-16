@@ -601,5 +601,10 @@ class MigrationService {
       'CREATE INDEX IF NOT EXISTS idx_stock_adjustments_created ON ${TableNames.stockAdjustments}(created_at DESC);',
       'CREATE INDEX IF NOT EXISTS idx_stock_adjustments_product ON ${TableNames.stockAdjustments}(product_model_id);',
     ],
+    11: <String>[
+      // Refund Model: sale_returns now stores the unit cost at return time so
+      // that profit reports can correctly reverse the cost component.
+      'ALTER TABLE ${TableNames.saleReturns} ADD COLUMN cost_price REAL NOT NULL DEFAULT 0;',
+    ],
   };
 }

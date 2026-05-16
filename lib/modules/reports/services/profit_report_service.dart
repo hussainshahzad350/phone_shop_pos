@@ -22,10 +22,19 @@ class ProfitReportService with BaseRepositoryGuard {
         action: () => _appDatabase.database.rawQuery(
           '''
         SELECT
-          COALESCE(SUM(si.line_total), 0) AS total_revenue,
-          COALESCE(SUM(si.cost_price * si.quantity), 0) AS total_cost
+          COALESCE(SUM(si.line_total), 0)
+            - COALESCE(SUM(COALESCE(ri.return_amount, 0)), 0) AS total_revenue,
+          COALESCE(SUM(si.cost_price * si.quantity), 0)
+            - COALESCE(SUM(COALESCE(ri.return_cost, 0)), 0) AS total_cost
         FROM ${TableNames.sales} s
         JOIN ${TableNames.saleItems} si ON si.sale_id = s.id
+        LEFT JOIN (
+          SELECT sale_item_id,
+                 SUM(return_amount) AS return_amount,
+                 SUM(cost_price * return_qty) AS return_cost
+          FROM ${TableNames.saleReturns}
+          GROUP BY sale_item_id
+        ) ri ON ri.sale_item_id = si.id
         WHERE $where
         ''',
           args,
