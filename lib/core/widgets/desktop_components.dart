@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+const int _kDefaultPaginateThreshold = 80;
+
 class AppDesktopScaffold extends StatelessWidget {
   const AppDesktopScaffold({
     super.key,
@@ -161,7 +163,7 @@ class AppDataTable extends StatelessWidget {
     required this.rows,
     this.emptyMessage = 'No records found.',
     this.rowsPerPage = 25,
-    this.paginateThreshold = 80,
+    this.paginateThreshold = _kDefaultPaginateThreshold,
     this.dataRowMinHeight = 38,
     this.dataRowMaxHeight = 46,
     this.columnSpacing = 16,

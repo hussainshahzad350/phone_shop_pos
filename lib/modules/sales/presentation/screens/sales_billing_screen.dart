@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
 
@@ -15,8 +14,8 @@ import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
-import 'package:phone_shop_pos/modules/sales/domain/entities/sale_completion_entity.dart';
-import 'package:phone_shop_pos/modules/sales/domain/repositories/sales_repository.dart';
+import 'package:phone_shop_pos/modules/sales/presentation/helpers/sale_completion_flow.dart';
+import 'package:phone_shop_pos/modules/sales/presentation/helpers/sales_shortcut_helpers.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/billing_state_provider.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/cart_state_provider.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
@@ -25,6 +24,7 @@ import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_reposi
 import 'package:phone_shop_pos/modules/sales/presentation/providers/totals_provider.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/cart_table_widget.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/customer_selector_widget.dart';
+import 'package:phone_shop_pos/modules/sales/presentation/widgets/imei_picker_dialog.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/payment_section_widget.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/product_search_bar.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/totals_panel_widget.dart';
@@ -99,7 +99,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     }
     return showDialog<SerializedStockEntity>(
       context: context,
-      builder: (context) => _ImeiPickerDialog(
+      builder: (context) => ImeiPickerDialog(
         productName: product.name,
         productModelId: product.id,
         repository: repository,
@@ -165,27 +165,15 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
   }
 
   void _handleGlobalShortcut(AppShortcutEventState state) {
-    if (!mounted || state.token == 0 || state.token == _handledShortcutToken) {
-      return;
-    }
-    _handledShortcutToken = state.token;
-
-    switch (state.event) {
-      case AppShortcutEvent.focusSearch:
-        _productSearchFocus.requestFocus();
-        break;
-      case AppShortcutEvent.focusPayment:
-        _paymentMethodFocus.requestFocus();
-        break;
-      case AppShortcutEvent.refreshCurrentScreen:
-        _refreshSales();
-        break;
-      case AppShortcutEvent.saveOrComplete:
-        _completeSale();
-        break;
-      case null:
-        break;
-    }
+    _handledShortcutToken = SalesGlobalShortcutHelper.handle(
+      state: state,
+      isMounted: mounted,
+      handledShortcutToken: _handledShortcutToken,
+      onFocusSearch: _productSearchFocus.requestFocus,
+      onFocusPayment: _paymentMethodFocus.requestFocus,
+      onRefreshCurrentScreen: _refreshSales,
+      onSaveOrComplete: _completeSale,
+    );
   }
 
   void _selectNextCartRow(int delta, int total) {
@@ -243,27 +231,41 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
       _isCompleting = true;
     });
 
-    final totals = ref.read(totalsProvider);
     final billing = ref.read(billingStateProvider);
     final saleItemsSnapshot = List<CartItemEntity>.from(
       ref.read(cartStateProvider),
     );
-
-    final result = await ref
-        .read(operationManagerProvider.notifier)
-        .track<Result<SaleCompletionEntity>>(
-          code: 'save_sale',
-          label: 'Saving sale',
-          progressLabel: 'Saving sale and updating stock',
-          action: (_) {
-            return ref.read(cartStateProvider.notifier).completeSale(
-                  totals: totals,
-                  customerId: billing.selectedCustomerId,
-                  paymentMethod: billing.paymentMethod,
-                  notes: billing.notes,
-                );
-          },
-        );
+    final flow = SaleCompletionFlow(
+      trackSaleOperation: (action) {
+        return ref
+            .read(operationManagerProvider.notifier)
+            .track(
+              code: 'save_sale',
+              label: 'Saving sale',
+              progressLabel: 'Saving sale and updating stock',
+              action: (_) => action(),
+            );
+      },
+      completeSale: () {
+        return ref.read(cartStateProvider.notifier).completeSale(
+              totals: ref.read(totalsProvider),
+              customerId: billing.selectedCustomerId,
+              paymentMethod: billing.paymentMethod,
+              notes: billing.notes,
+            );
+      },
+      enqueueInvoice: (document) {
+        return ref.read(invoicePrintQueueProvider.notifier).enqueue(document);
+      },
+      resetBilling: () {
+        ref.read(billingStateProvider.notifier).resetAfterSale();
+      },
+    );
+    final flowOutcome = await flow.run(
+      billing: billing,
+      saleItemsSnapshot: saleItemsSnapshot,
+    );
+    final result = flowOutcome.completionResult;
 
     if (!mounted) {
       return;
@@ -275,24 +277,9 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
 
     if (result.isSuccess) {
       final completion = result.asSuccess!.value;
-      final document = InvoicePrintDocument(
-        saleId: completion.saleId,
-        invoiceNumber: completion.invoiceNumber,
-        saleDate: DateTime.now().toUtc(),
-        items: saleItemsSnapshot,
-        totals: completion.totals,
-        paymentMethod: billing.paymentMethod,
-        customerLabel: billing.selectedCustomerId == null
-            ? 'Walk-in Customer'
-            : 'Customer',
-        notes: billing.notes.trim().isEmpty ? null : billing.notes.trim(),
-      );
-      final enqueueResult =
-          await ref.read(invoicePrintQueueProvider.notifier).enqueue(document);
-
-      ref.read(billingStateProvider.notifier).resetAfterSale();
+      final enqueueResult = flowOutcome.enqueueResult;
       _productSearchController.clear();
-      if (enqueueResult.isSuccess) {
+      if (enqueueResult != null && enqueueResult.isSuccess) {
         AppNotifier.success(
           'Sale completed. Invoice: ${completion.invoiceNumber}',
           action: SnackBarAction(
@@ -353,56 +340,16 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     final products = productsAsync.value ?? const <ProductEntity>[];
 
     return Shortcuts(
-      shortcuts: const <ShortcutActivator, Intent>{
-        SingleActivator(LogicalKeyboardKey.arrowDown): _CartNextIntent(),
-        SingleActivator(LogicalKeyboardKey.arrowUp): _CartPreviousIntent(),
-        SingleActivator(LogicalKeyboardKey.delete): _CartRemoveIntent(),
-        SingleActivator(LogicalKeyboardKey.numpadAdd): _CartIncreaseQtyIntent(),
-        SingleActivator(LogicalKeyboardKey.equal): _CartIncreaseQtyIntent(),
-        SingleActivator(LogicalKeyboardKey.numpadSubtract):
-            _CartDecreaseQtyIntent(),
-        SingleActivator(LogicalKeyboardKey.minus): _CartDecreaseQtyIntent(),
-        SingleActivator(LogicalKeyboardKey.escape): _SalesEscapeIntent(),
-      },
+      shortcuts: salesScreenShortcuts,
       child: Actions(
-        actions: <Type, Action<Intent>>{
-          _CartNextIntent: CallbackAction<_CartNextIntent>(
-            onInvoke: (intent) {
-              _selectNextCartRow(1, cartItems.length);
-              return null;
-            },
-          ),
-          _CartPreviousIntent: CallbackAction<_CartPreviousIntent>(
-            onInvoke: (intent) {
-              _selectNextCartRow(-1, cartItems.length);
-              return null;
-            },
-          ),
-          _CartIncreaseQtyIntent: CallbackAction<_CartIncreaseQtyIntent>(
-            onInvoke: (intent) {
-              _changeSelectedQuantity(cartItems, 1);
-              return null;
-            },
-          ),
-          _CartDecreaseQtyIntent: CallbackAction<_CartDecreaseQtyIntent>(
-            onInvoke: (intent) {
-              _changeSelectedQuantity(cartItems, -1);
-              return null;
-            },
-          ),
-          _CartRemoveIntent: CallbackAction<_CartRemoveIntent>(
-            onInvoke: (intent) {
-              _removeSelectedCartRow(cartItems);
-              return null;
-            },
-          ),
-          _SalesEscapeIntent: CallbackAction<_SalesEscapeIntent>(
-            onInvoke: (intent) {
-              _handleEscape();
-              return null;
-            },
-          ),
-        },
+        actions: buildSalesScreenActions(
+          onCartNext: () => _selectNextCartRow(1, cartItems.length),
+          onCartPrevious: () => _selectNextCartRow(-1, cartItems.length),
+          onIncreaseQty: () => _changeSelectedQuantity(cartItems, 1),
+          onDecreaseQty: () => _changeSelectedQuantity(cartItems, -1),
+          onRemove: () => _removeSelectedCartRow(cartItems),
+          onEscape: _handleEscape,
+        ),
         child: Scaffold(
           body: AppLoadingOverlay(
             isLoading: _isCompleting,
@@ -764,251 +711,4 @@ class _InvoicePrintPreviewDialogState
       ),
     );
   }
-}
-
-class _CartNextIntent extends Intent {
-  const _CartNextIntent();
-}
-
-class _CartPreviousIntent extends Intent {
-  const _CartPreviousIntent();
-}
-
-class _CartIncreaseQtyIntent extends Intent {
-  const _CartIncreaseQtyIntent();
-}
-
-class _CartDecreaseQtyIntent extends Intent {
-  const _CartDecreaseQtyIntent();
-}
-
-class _CartRemoveIntent extends Intent {
-  const _CartRemoveIntent();
-}
-
-class _SalesEscapeIntent extends Intent {
-  const _SalesEscapeIntent();
-}
-
-class _ImeiPickerDialog extends StatefulWidget {
-  const _ImeiPickerDialog({
-    required this.productName,
-    required this.productModelId,
-    required this.repository,
-  });
-
-  final String productName;
-  final String productModelId;
-  final SalesRepository repository;
-
-  @override
-  State<_ImeiPickerDialog> createState() => _ImeiPickerDialogState();
-}
-
-class _ImeiPickerDialogState extends State<_ImeiPickerDialog> {
-  // Keep the candidate list bounded for smooth keyboard navigation on desktop.
-  static const int _kMaxImeiResults = 120;
-  static const Duration _kImeiSearchDebounce = Duration(milliseconds: 150);
-
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocus = FocusNode();
-  Timer? _debounce;
-  bool _isLoading = false;
-  List<SerializedStockEntity> _items = const <SerializedStockEntity>[];
-  int _selectedIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _runSearch();
-  }
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _searchController.dispose();
-    _searchFocus.dispose();
-    super.dispose();
-  }
-
-  Future<void> _runSearch({String query = ''}) async {
-    setState(() {
-      _isLoading = true;
-    });
-    final result = await widget.repository.getAvailableImeis(
-      widget.productModelId,
-      query: query,
-      limit: _kMaxImeiResults,
-    );
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _isLoading = false;
-      _items = result.fold(
-        onSuccess: (items) => items,
-        onFailure: (_) => const <SerializedStockEntity>[],
-      );
-      _selectedIndex =
-          _items.isEmpty ? 0 : _selectedIndex.clamp(0, _items.length - 1);
-    });
-
-    if (result.isFailure) {
-      AppNotifier.error(result.asFailure!.error.message);
-    }
-  }
-
-  void _onSearchChanged(String value) {
-    _debounce?.cancel();
-    _debounce = Timer(_kImeiSearchDebounce, () {
-      _runSearch(query: value.trim());
-    });
-  }
-
-  void _moveSelection(int delta) {
-    if (_items.isEmpty) {
-      return;
-    }
-    setState(() {
-      _selectedIndex = (_selectedIndex + delta).clamp(0, _items.length - 1);
-    });
-  }
-
-  void _selectCurrent() {
-    if (_items.isEmpty) {
-      return;
-    }
-    Navigator.of(context).pop(_items[_selectedIndex]);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Shortcuts(
-      shortcuts: const <ShortcutActivator, Intent>{
-        SingleActivator(LogicalKeyboardKey.escape): _ImeiCancelIntent(),
-        SingleActivator(LogicalKeyboardKey.enter): _ImeiSelectIntent(),
-        SingleActivator(LogicalKeyboardKey.arrowDown): _ImeiDownIntent(),
-        SingleActivator(LogicalKeyboardKey.arrowUp): _ImeiUpIntent(),
-      },
-      child: Actions(
-        actions: <Type, Action<Intent>>{
-          _ImeiCancelIntent: CallbackAction<_ImeiCancelIntent>(
-            onInvoke: (_) {
-              Navigator.of(context).pop();
-              return null;
-            },
-          ),
-          _ImeiSelectIntent: CallbackAction<_ImeiSelectIntent>(
-            onInvoke: (_) {
-              _selectCurrent();
-              return null;
-            },
-          ),
-          _ImeiDownIntent: CallbackAction<_ImeiDownIntent>(
-            onInvoke: (_) {
-              _moveSelection(1);
-              return null;
-            },
-          ),
-          _ImeiUpIntent: CallbackAction<_ImeiUpIntent>(
-            onInvoke: (_) {
-              _moveSelection(-1);
-              return null;
-            },
-          ),
-        },
-        child: AlertDialog(
-          title: Text('Select IMEI - ${widget.productName}'),
-          content: SizedBox(
-            width: 520,
-            height: 440,
-            child: Column(
-              children: <Widget>[
-                TextField(
-                  controller: _searchController,
-                  focusNode: _searchFocus,
-                  autofocus: true,
-                  textInputAction: TextInputAction.search,
-                  decoration: const InputDecoration(
-                    hintText: 'Search IMEI / Serial',
-                    helperText: 'Enter = select, Esc = cancel, ↑↓ = navigate',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  onChanged: _onSearchChanged,
-                  onSubmitted: (_) => _selectCurrent(),
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _items.isEmpty
-                          ? const Center(child: Text('No IMEI matched.'))
-                          : ListView.builder(
-                              itemCount: _items.length,
-                              itemBuilder: (context, index) {
-                                final stock = _items[index];
-                                final selected = index == _selectedIndex;
-                                final secondImei = stock.imei2?.trim();
-                                return Semantics(
-                                  selected: selected,
-                                  label: secondImei == null ||
-                                          secondImei.isEmpty
-                                      ? 'IMEI 1 ${stock.imei1}'
-                                      : 'IMEI 1 ${stock.imei1}, IMEI 2 $secondImei',
-                                  child: ExcludeSemantics(
-                                    child: ListTile(
-                                      dense: true,
-                                      selected: selected,
-                                      title: Text('IMEI 1: ${stock.imei1}'),
-                                      subtitle: stock.imei2 == null
-                                          ? null
-                                          : Text('IMEI 2: ${stock.imei2!}'),
-                                      onTap: () {
-                                        setState(() {
-                                          _selectedIndex = index;
-                                        });
-                                        _selectCurrent();
-                                      },
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                ),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: _items.isEmpty ? null : _selectCurrent,
-              child: const Text('Select'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ImeiCancelIntent extends Intent {
-  const _ImeiCancelIntent();
-}
-
-class _ImeiSelectIntent extends Intent {
-  const _ImeiSelectIntent();
-}
-
-class _ImeiDownIntent extends Intent {
-  const _ImeiDownIntent();
-}
-
-class _ImeiUpIntent extends Intent {
-  const _ImeiUpIntent();
 }

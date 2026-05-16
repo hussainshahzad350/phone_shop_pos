@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
+const int _kReportPaginateThreshold = 200;
+
 class ReportTableColumn {
   const ReportTableColumn({required this.label});
 
@@ -27,7 +29,7 @@ class ReportTableWidget extends StatelessWidget {
 
     return AppDataTable(
       rowsPerPage: 50,
-      paginateThreshold: 200,
+      paginateThreshold: _kReportPaginateThreshold,
       columns: columns
           .map((col) => DataColumn(label: Text(col.label)))
           .toList(growable: false),
