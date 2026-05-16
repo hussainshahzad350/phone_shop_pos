@@ -367,9 +367,11 @@ class PurchaseService {
   }) {
     final existingImei1 = existingEntry.imei1.trim();
     final existingImei2 = existingEntry.imei2?.trim();
-    return existingImei1 == newEntry.imei1 ||
-        existingImei2 == newEntry.imei1 ||
-        (newEntry.imei2 != null &&
-            (existingImei1 == newEntry.imei2 || existingImei2 == newEntry.imei2));
+    final newImei1 = newEntry.imei1;
+    final newImei2 = newEntry.imei2;
+    return existingImei1 == newImei1 ||
+        existingImei2 == newImei1 ||
+        (newImei2 != null &&
+            (existingImei1 == newImei2 || existingImei2 == newImei2));
   }
 }

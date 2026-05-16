@@ -38,6 +38,8 @@ class PaymentSectionWidget extends StatefulWidget {
 }
 
 class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
+  static final RegExp _trimTrailingZeroPattern = RegExp(r'\.?0+$');
+
   late final TextEditingController _paidAmountController;
   late final TextEditingController _notesController;
 
@@ -180,6 +182,6 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
       fractionDigits: 2,
       useGrouping: false,
     );
-    return raw.replaceFirst(RegExp(r'\.?0+$'), '');
+    return raw.replaceFirst(_trimTrailingZeroPattern, '');
   }
 }
