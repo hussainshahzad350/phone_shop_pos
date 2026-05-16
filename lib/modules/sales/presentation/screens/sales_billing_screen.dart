@@ -12,7 +12,6 @@ import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
-import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/helpers/sale_completion_flow.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/helpers/sales_shortcut_helpers.dart';
@@ -276,27 +275,46 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     });
 
     if (result.isSuccess) {
-      final completion = result.asSuccess!.value;
-      final enqueueResult = flowOutcome.enqueueResult;
-      _productSearchController.clear();
-      if (enqueueResult != null && enqueueResult.isSuccess) {
-        AppNotifier.success(
-          'Sale completed. Invoice: ${completion.invoiceNumber}',
-          action: SnackBarAction(
-            label: 'Print Preview',
-            onPressed: () => _openPrintPreview(enqueueResult.asSuccess!.value),
-          ),
-        );
-      } else {
-        AppNotifier.warning(
-          'Sale completed, but the receipt queue could not be updated. Check printer queue health in Settings.',
-        );
-      }
-      _focusSearchAfterAdd();
+      _handleSuccessfulSale(flowOutcome);
       return;
     }
 
-    final error = result.asFailure!.error;
+    _handleFailedSale(result.asFailure!.error);
+  }
+
+  Future<void> _openPrintPreview(String jobId) async {
+    final notifier = ref.read(invoicePrintQueueProvider.notifier);
+    final job = notifier.findById(jobId);
+    if (job == null || !mounted) {
+      return;
+    }
+    await showDialog<void>(
+      context: context,
+      builder: (context) => _InvoicePrintPreviewDialog(jobId: jobId, job: job),
+    );
+  }
+
+  void _handleSuccessfulSale(SaleCompletionFlowOutcome flowOutcome) {
+    final completion = flowOutcome.completionResult.asSuccess!.value;
+    final enqueueResult = flowOutcome.enqueueResult;
+    _productSearchController.clear();
+    if (enqueueResult != null && enqueueResult.isSuccess) {
+      AppNotifier.success(
+        'Sale completed. Invoice: ${completion.invoiceNumber}',
+        action: SnackBarAction(
+          label: 'Print Preview',
+          onPressed: () => _openPrintPreview(enqueueResult.asSuccess!.value),
+        ),
+      );
+    } else {
+      AppNotifier.warning(
+        'Sale completed, but the receipt queue could not be updated. Check printer queue health in Settings.',
+      );
+    }
+    _focusSearchAfterAdd();
+  }
+
+  void _handleFailedSale(AppError error) {
     final message = error.message;
     final lowerMessage = message.toLowerCase();
     final withRollbackSuffix =
@@ -310,18 +328,6 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
         label: 'Retry',
         onPressed: _completeSale,
       ),
-    );
-  }
-
-  Future<void> _openPrintPreview(String jobId) async {
-    final notifier = ref.read(invoicePrintQueueProvider.notifier);
-    final job = notifier.findById(jobId);
-    if (job == null || !mounted) {
-      return;
-    }
-    await showDialog<void>(
-      context: context,
-      builder: (context) => _InvoicePrintPreviewDialog(jobId: jobId, job: job),
     );
   }
 
@@ -493,21 +499,62 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                           flex: 2,
                           child: ListView(
                             children: <Widget>[
-                              FocusTraversalOrder(
-                                order: const NumericFocusOrder(2),
-                                child: CustomerSelectorWidget(
-                                  customers: customersAsync.value ??
-                                      const <CustomerOptionEntity>[],
-                                  selectedCustomerId:
-                                      billing.selectedCustomerId,
-                                  onChanged: (value) {
-                                    ref
-                                        .read(billingStateProvider.notifier)
-                                        .setSelectedCustomerId(value);
-                                  },
-                                  onSearchChanged: _debouncedCustomerSearch,
-                                ),
-                              ),
+                               FocusTraversalOrder(
+                                 order: const NumericFocusOrder(2),
+                                 child: customersAsync.when(
+                                   data: (customers) => CustomerSelectorWidget(
+                                     customers: customers,
+                                     customerSearchQuery:
+                                         billing.customerSearchQuery,
+                                     selectedCustomerId:
+                                         billing.selectedCustomerId,
+                                     onChanged: (value) {
+                                       ref
+                                           .read(billingStateProvider.notifier)
+                                           .setSelectedCustomerId(value);
+                                     },
+                                     onSearchChanged: _debouncedCustomerSearch,
+                                   ),
+                                   loading: () => const Card(
+                                     child: Padding(
+                                       padding: EdgeInsets.all(24),
+                                       child: Center(
+                                         child: CircularProgressIndicator(),
+                                       ),
+                                     ),
+                                   ),
+                                   error: (error, _) {
+                                     final message = error is AppError
+                                         ? error.message
+                                         : 'Failed to load customers.';
+                                     return Card(
+                                       child: Padding(
+                                         padding: const EdgeInsets.all(12),
+                                         child: Column(
+                                           crossAxisAlignment:
+                                               CrossAxisAlignment.start,
+                                           children: <Widget>[
+                                             const Text(
+                                               'Customer',
+                                               style: TextStyle(
+                                                 fontWeight: FontWeight.bold,
+                                               ),
+                                             ),
+                                             const SizedBox(height: 8),
+                                             Text(message),
+                                             const SizedBox(height: 8),
+                                             OutlinedButton.icon(
+                                               onPressed: _refreshSales,
+                                               icon: const Icon(Icons.refresh),
+                                               label: const Text('Retry'),
+                                             ),
+                                           ],
+                                         ),
+                                       ),
+                                     );
+                                   },
+                                 ),
+                               ),
                               const SizedBox(height: 8),
                               FocusTraversalOrder(
                                 order: const NumericFocusOrder(3),
@@ -530,11 +577,13 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                               const SizedBox(height: 8),
                               FocusTraversalOrder(
                                 order: const NumericFocusOrder(4),
-                                child: PaymentSectionWidget(
-                                  paymentMethod: billing.paymentMethod,
-                                  paymentMethodFocusNode: _paymentMethodFocus,
-                                  paidAmountFocusNode: _paidAmountFocus,
-                                  notesFocusNode: _notesFocus,
+                                 child: PaymentSectionWidget(
+                                   paymentMethod: billing.paymentMethod,
+                                   paidAmount: billing.paidAmount,
+                                   notes: billing.notes,
+                                   paymentMethodFocusNode: _paymentMethodFocus,
+                                   paidAmountFocusNode: _paidAmountFocus,
+                                   notesFocusNode: _notesFocus,
                                   onPaymentMethodChanged: (value) {
                                     ref
                                         .read(billingStateProvider.notifier)

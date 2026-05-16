@@ -1,5 +1,6 @@
 import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
+import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
@@ -202,6 +203,15 @@ class SalesService {
       );
     }
     final normalizedNotes = NotesSafety.normalizeNullable(notes);
+    final normalizedPaymentMethod = PaymentMethod.normalizeNullable(paymentMethod);
+    if (paymentMethod != null && normalizedPaymentMethod == null) {
+      return const Failure<SaleCompletionEntity>(
+        AppError(
+          code: 'invalid_payment_method',
+          message: 'Payment method must be cash, card, or bank.',
+        ),
+      );
+    }
 
     // Invoice number is generated atomically inside the transaction by the
     // repository; no pre-generation here avoids sequence collisions.
@@ -211,7 +221,7 @@ class SalesService {
       saleDate: DateTime.now().toUtc(),
       customerId: customerId,
       userId: userId,
-      paymentMethod: paymentMethod,
+      paymentMethod: normalizedPaymentMethod,
       notes: normalizedNotes,
     );
   }

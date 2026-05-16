@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/database/database_constants.dart';
 import 'package:phone_shop_pos/core/database/migration_service.dart';
 import 'package:phone_shop_pos/core/database/sqlite_service.dart';
@@ -617,7 +618,7 @@ class AppDatabase {
         'tax': 0,
         'total': 105800,
         'paid_amount': 100000,
-        'payment_method': 'cash',
+        'payment_method': PaymentMethod.cash,
         'notes': 'Partial payment from regular customer',
         'created_at': now,
         'updated_at': now,
@@ -659,7 +660,7 @@ class AppDatabase {
         'tax': 0,
         'total': 1300,
         'paid_amount': 1300,
-        'payment_method': 'card',
+        'payment_method': PaymentMethod.card,
         'notes': 'Walk-in accessories sale',
         'created_at': now,
         'updated_at': now,
@@ -701,7 +702,7 @@ class AppDatabase {
         'tax': 0,
         'total': 5000,
         'paid_amount': 2500,
-        'payment_method': 'bank_transfer',
+        'payment_method': PaymentMethod.bank,
         'notes': 'Wholesale order, remaining due',
         'created_at': now,
         'updated_at': now,
@@ -731,7 +732,7 @@ class AppDatabase {
         'tax': 0,
         'total': 232000,
         'paid_amount': 232000,
-        'payment_method': 'cash',
+        'payment_method': PaymentMethod.cash,
         'notes': 'High-value phone sale',
         'created_at': now,
         'updated_at': now,
@@ -761,7 +762,7 @@ class AppDatabase {
         'tax': 0,
         'total': 2550,
         'paid_amount': 2000,
-        'payment_method': 'cash',
+        'payment_method': PaymentMethod.cash,
         'notes': 'Small mixed sale',
         'created_at': now,
         'updated_at': now,
@@ -803,7 +804,7 @@ class AppDatabase {
         'tax': 0,
         'total': 4500,
         'paid_amount': 4500,
-        'payment_method': 'cash',
+        'payment_method': PaymentMethod.cash,
         'notes': 'Promotional accessories bundle',
         'created_at': now,
         'updated_at': now,

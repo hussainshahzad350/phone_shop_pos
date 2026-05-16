@@ -1,3 +1,4 @@
+import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
@@ -142,8 +143,19 @@ class PurchaseFormStateNotifier extends StateNotifier<PurchaseFormState> {
     }
   }
 
-  Future<void> addImeiEntry({required int index, required ImeiEntry entry}) async {
+  Future<Result<void>> addImeiEntry({
+    required int index,
+    required ImeiEntry entry,
+  }) async {
     final service = await _ref.read(purchaseServiceProvider.future);
+    final validation = await service.validateImeiEntry(
+      entry: entry,
+      currentItems: state.items,
+    );
+    if (validation.isFailure) {
+      state = state.copyWith(errorMessage: validation.asFailure!.error.message);
+      return Failure<void>(validation.asFailure!.error);
+    }
     final result = service.addImeiEntry(
       items: state.items,
       index: index,
@@ -152,8 +164,10 @@ class PurchaseFormStateNotifier extends StateNotifier<PurchaseFormState> {
 
     if (result.isSuccess) {
       state = state.copyWith(items: result.asSuccess!.value, clearErrorMessage: true);
+      return const Success<void>(null);
     } else {
       state = state.copyWith(errorMessage: result.asFailure!.error.message);
+      return Failure<void>(result.asFailure!.error);
     }
   }
 

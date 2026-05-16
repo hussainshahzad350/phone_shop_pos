@@ -22,6 +22,4 @@ class InventoryStockEntity {
   final String? location;
   final DateTime createdAt;
   final DateTime updatedAt;
-
-  bool get isLowStock => quantity <= minQuantity;
 }

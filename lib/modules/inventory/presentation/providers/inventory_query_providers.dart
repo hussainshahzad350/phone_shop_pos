@@ -15,7 +15,7 @@ final stockRowsProvider = FutureProvider<List<StockRowEntity>>((ref) async {
   );
   return result.fold(
     onSuccess: (rows) => rows,
-    onFailure: (error) => const <StockRowEntity>[],
+    onFailure: (error) => throw error,
   );
 });
 
@@ -25,16 +25,7 @@ final inventorySummaryProvider =
   final result = await service.getInventorySummary();
   return result.fold(
     onSuccess: (summary) => summary,
-    onFailure: (error) => const InventorySummaryEntity(
-      totalPhones: 0,
-      inStockPhones: 0,
-      soldPhones: 0,
-      reservedPhones: 0,
-      totalAccessoryVariants: 0,
-      totalAccessoryUnits: 0,
-      lowStockCount: 0,
-      totalStockValue: 0,
-    ),
+    onFailure: (error) => throw error,
   );
 });
 
@@ -43,6 +34,6 @@ final lowStockProvider = FutureProvider<List<StockRowEntity>>((ref) async {
   final result = await service.getLowStockRows();
   return result.fold(
     onSuccess: (rows) => rows,
-    onFailure: (error) => const <StockRowEntity>[],
+    onFailure: (error) => throw error,
   );
 });

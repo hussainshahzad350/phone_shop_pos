@@ -7,6 +7,7 @@ import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/core/utils/id_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/data/models/inventory_stock_model.dart';
 import 'package:phone_shop_pos/modules/inventory/data/models/serialized_stock_model.dart';
+import 'package:phone_shop_pos/modules/inventory/domain/entities/inventory_stock_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/inventory_summary_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/stock_row_entity.dart';
@@ -81,10 +82,10 @@ class SqliteInventoryRepository
   }
 
   @override
-  Future<Result<InventoryStockModel?>> getInventoryStockByProduct(
+  Future<Result<InventoryStockEntity?>> getInventoryStockByProduct(
     String productModelId,
   ) {
-    return guard<InventoryStockModel?>(() async {
+    return guard<InventoryStockEntity?>(() async {
       final rows = await _appDatabase.queryTable(
         TableNames.inventoryStock,
         where: 'product_model_id = ?',
@@ -94,16 +95,17 @@ class SqliteInventoryRepository
       if (rows.isEmpty) {
         return null;
       }
-      return InventoryStockModel.fromMap(rows.first);
+      return InventoryStockModel.fromMap(rows.first).toEntity();
     }, operation: 'get_inventory_stock_by_product');
   }
 
   @override
-  Future<Result<void>> upsertInventoryStock(InventoryStockModel stock) {
+  Future<Result<void>> upsertInventoryStock(InventoryStockEntity stock) {
     return guard<void>(() async {
+      final model = InventoryStockModel.fromEntity(stock);
       await _appDatabase.insert(
         TableNames.inventoryStock,
-        stock.toMap(),
+        model.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     }, operation: 'upsert_inventory_stock');

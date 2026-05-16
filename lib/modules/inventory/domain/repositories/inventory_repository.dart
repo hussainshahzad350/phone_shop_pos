@@ -1,6 +1,6 @@
 import 'package:phone_shop_pos/core/database/base_repository.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
-import 'package:phone_shop_pos/modules/inventory/data/models/inventory_stock_model.dart';
+import 'package:phone_shop_pos/modules/inventory/domain/entities/inventory_stock_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/inventory_summary_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/stock_row_entity.dart';
@@ -20,11 +20,11 @@ abstract class InventoryRepository extends BaseRepository {
     required SerializedStockStatus status,
   });
 
-  Future<Result<InventoryStockModel?>> getInventoryStockByProduct(
+  Future<Result<InventoryStockEntity?>> getInventoryStockByProduct(
     String productModelId,
   );
 
-  Future<Result<void>> upsertInventoryStock(InventoryStockModel stock);
+  Future<Result<void>> upsertInventoryStock(InventoryStockEntity stock);
 
   Future<Result<int>> adjustInventoryQuantity({
     required String productModelId,

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/services/export/csv_export_service.dart';
 import 'package:phone_shop_pos/core/services/export/printable_report_service.dart';
+import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/database/database_provider.dart';
 import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
@@ -64,11 +65,12 @@ class ReportFilterNotifier extends StateNotifier<ReportFilterEntity> {
   }
 
   void setPaymentMethod(String? paymentMethod) {
-    if (paymentMethod == null || paymentMethod.isEmpty) {
+    final normalized = PaymentMethod.normalizeNullable(paymentMethod);
+    if (normalized == null) {
       state = state.copyWith(clearPaymentMethod: true, page: 1);
       return;
     }
-    state = state.copyWith(paymentMethod: paymentMethod, page: 1);
+    state = state.copyWith(paymentMethod: normalized, page: 1);
   }
 
   void nextPage() {
@@ -131,7 +133,7 @@ final dailySalesReportProvider =
       final result = await service.getDailySalesReport(filter);
       return result.fold(
         onSuccess: (value) => value,
-        onFailure: (_) => const <DailySalesReportRowEntity>[],
+        onFailure: (error) => throw error,
       );
     });
 
@@ -142,7 +144,7 @@ final dateRangeSalesReportProvider =
       final result = await service.getDateRangeSalesReport(filter);
       return result.fold(
         onSuccess: (value) => value,
-        onFailure: (_) => const <SalesReportRowEntity>[],
+        onFailure: (error) => throw error,
       );
     });
 
@@ -153,7 +155,7 @@ final soldPhonesReportProvider =
       final result = await service.getSoldPhonesReport(filter);
       return result.fold(
         onSuccess: (value) => value,
-        onFailure: (_) => const <SoldPhoneReportRowEntity>[],
+        onFailure: (error) => throw error,
       );
     });
 
@@ -163,11 +165,7 @@ final profitReportProvider = FutureProvider<ProfitReportEntity>((ref) async {
   final result = await service.getProfitReport(filter);
   return result.fold(
     onSuccess: (value) => value,
-    onFailure: (_) => const ProfitReportEntity(
-      totalRevenue: 0,
-      totalCost: 0,
-      totalProfit: 0,
-    ),
+    onFailure: (error) => throw error,
   );
 });
 
@@ -178,7 +176,7 @@ final currentStockReportProvider =
       final result = await service.getCurrentStockReport(filter);
       return result.fold(
         onSuccess: (value) => value,
-        onFailure: (_) => const <StockReportRowEntity>[],
+        onFailure: (error) => throw error,
       );
     });
 
@@ -189,7 +187,7 @@ final customerBalanceReportProvider =
       final result = await service.getCustomerBalanceReport(filter);
       return result.fold(
         onSuccess: (value) => value,
-        onFailure: (_) => const <CustomerBalanceReportRowEntity>[],
+        onFailure: (error) => throw error,
       );
     });
 
@@ -201,7 +199,7 @@ final lowStockReportProvider = FutureProvider<List<LowStockReportRowEntity>>((
   final result = await service.getLowStockReport(filter);
   return result.fold(
     onSuccess: (value) => value,
-    onFailure: (_) => const <LowStockReportRowEntity>[],
+    onFailure: (error) => throw error,
   );
 });
 

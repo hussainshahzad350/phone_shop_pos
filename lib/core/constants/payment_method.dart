@@ -22,4 +22,23 @@ class PaymentMethod {
   /// Returns true if [value] is one of the known payment methods.
   static bool isValid(String? value) =>
       value != null && values.contains(value);
+
+  /// Normalizes supported legacy aliases and trims whitespace.
+  static String? normalizeNullable(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+    if (trimmed == 'bank_transfer') {
+      return bank;
+    }
+    return isValid(trimmed) ? trimmed : null;
+  }
+
+  static String normalizeOrDefault(
+    String? value, {
+    String fallback = cash,
+  }) {
+    return normalizeNullable(value) ?? fallback;
+  }
 }

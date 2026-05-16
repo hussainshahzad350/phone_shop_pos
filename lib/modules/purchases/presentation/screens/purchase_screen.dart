@@ -72,10 +72,14 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     }
 
     for (final entry in entries) {
-      await ref.read(purchaseFormStateProvider.notifier).addImeiEntry(
+      final result = await ref.read(purchaseFormStateProvider.notifier).addImeiEntry(
             index: itemIndex,
             entry: entry,
           );
+      if (result.isFailure) {
+        _showSnack(result.asFailure!.error.message);
+        break;
+      }
     }
   }
 

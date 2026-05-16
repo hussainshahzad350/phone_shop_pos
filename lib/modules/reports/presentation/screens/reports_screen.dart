@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_export_action_widget.dart';
@@ -35,14 +36,21 @@ class ReportsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tab = ref.watch(selectedReportsTabProvider);
     final filter = ref.watch(reportFilterProvider);
+    final customerOptionsAsync = ref.watch(reportCustomerOptionsProvider);
+    final productOptionsAsync = ref.watch(reportProductOptionsProvider);
     final canGoNextPage = _canGoNextPage(
       ref: ref,
       tab: tab,
       pageSize: filter.pageSize,
     );
-    final customers =
-        ref.watch(reportCustomerOptionsProvider).value ?? const [];
-    final products = ref.watch(reportProductOptionsProvider).value ?? const [];
+    final customers = customerOptionsAsync.valueOrNull ?? const [];
+    final products = productOptionsAsync.valueOrNull ?? const [];
+    final customerOptionsError = customerOptionsAsync.whenOrNull(
+      error: (error, _) => _errorMessage(error, 'Failed to load customers.'),
+    );
+    final productOptionsError = productOptionsAsync.whenOrNull(
+      error: (error, _) => _errorMessage(error, 'Failed to load products.'),
+    );
 
     return Shortcuts(
       shortcuts: const <ShortcutActivator, Intent>{
@@ -82,6 +90,8 @@ class ReportsScreen extends ConsumerWidget {
                   filter: filter,
                   customerOptions: customers,
                   productOptions: products,
+                  customerOptionsError: customerOptionsError,
+                  productOptionsError: productOptionsError,
                   onStartDate: (date) => ref
                       .read(reportFilterProvider.notifier)
                       .setStartDate(date),
@@ -226,6 +236,13 @@ class ReportsScreen extends ConsumerWidget {
       case ReportsTab.profit:
         return false;
     }
+  }
+
+  String _errorMessage(Object error, String fallback) {
+    if (error is AppError) {
+      return error.message;
+    }
+    return fallback;
   }
 }
 

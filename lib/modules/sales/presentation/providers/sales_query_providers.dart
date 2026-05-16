@@ -14,7 +14,7 @@ final productSearchResultsProvider = FutureProvider<List<ProductEntity>>((ref) a
   final result = await repository.searchSellableProducts(query, limit: 30);
   return result.fold(
     onSuccess: (products) => products,
-    onFailure: (error) => const <ProductEntity>[],
+    onFailure: (error) => throw error,
   );
 });
 
@@ -26,7 +26,7 @@ final customerSearchResultsProvider = FutureProvider<List<CustomerOptionEntity>>
   final result = await repository.searchCustomers(query, limit: 30);
   return result.fold(
     onSuccess: (customers) => customers,
-    onFailure: (error) => const <CustomerOptionEntity>[],
+    onFailure: (error) => throw error,
   );
 });
 
@@ -46,10 +46,10 @@ final availableImeisProvider =
   });
   ref.onDispose(() => disposeTimer?.cancel());
 
-    final repository = await ref.watch(salesRepositoryProvider.future);
-    final result = await repository.getAvailableImeis(productModelId, limit: 50);
-    return result.fold(
-      onSuccess: (items) => items,
-      onFailure: (error) => const <SerializedStockEntity>[],
-    );
+  final repository = await ref.watch(salesRepositoryProvider.future);
+  final result = await repository.getAvailableImeis(productModelId, limit: 50);
+  return result.fold(
+    onSuccess: (items) => items,
+    onFailure: (error) => throw error,
+  );
 });

@@ -31,6 +31,7 @@ class _ImeiPickerDialogState extends State<ImeiPickerDialog> {
   Timer? _debounce;
   bool _isLoading = false;
   List<SerializedStockEntity> _items = const <SerializedStockEntity>[];
+  String? _errorMessage;
   int _selectedIndex = 0;
 
   @override
@@ -65,6 +66,10 @@ class _ImeiPickerDialogState extends State<ImeiPickerDialog> {
       _items = result.fold(
         onSuccess: (items) => items,
         onFailure: (_) => const <SerializedStockEntity>[],
+      );
+      _errorMessage = result.fold(
+        onSuccess: (_) => null,
+        onFailure: (error) => error.message,
       );
       _selectedIndex =
           _items.isEmpty ? 0 : _selectedIndex.clamp(0, _items.length - 1);
@@ -160,7 +165,24 @@ class _ImeiPickerDialogState extends State<ImeiPickerDialog> {
                 Expanded(
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
-                      : _items.isEmpty
+                      : _errorMessage != null
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: <Widget>[
+                                  Text(_errorMessage!),
+                                  const SizedBox(height: 8),
+                                  OutlinedButton.icon(
+                                    onPressed: () => _runSearch(
+                                      query: _searchController.text.trim(),
+                                    ),
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('Retry'),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : _items.isEmpty
                           ? const Center(child: Text('No IMEI matched.'))
                           : ListView.builder(
                               itemCount: _items.length,
