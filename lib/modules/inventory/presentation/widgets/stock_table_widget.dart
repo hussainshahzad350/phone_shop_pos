@@ -5,6 +5,8 @@ import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/stock_row_entity.dart';
 
+const int _kStockPaginateThreshold = 120;
+
 class StockTableWidget extends StatelessWidget {
   const StockTableWidget({super.key, required this.rows});
 
@@ -21,7 +23,7 @@ class StockTableWidget extends StatelessWidget {
       dataRowMinHeight: 36,
       dataRowMaxHeight: 44,
       rowsPerPage: 50,
-      paginateThreshold: 120,
+      paginateThreshold: _kStockPaginateThreshold,
       columns: const <DataColumn>[
         DataColumn(label: Text('Type')),
         DataColumn(label: Text('Product')),
