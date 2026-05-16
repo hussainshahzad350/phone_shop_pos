@@ -54,15 +54,6 @@ class InvoicePrintQueueNotifier extends StateNotifier<List<InvoicePrintJob>> {
     }
 
     final job = currentJob.asSuccess!.value!;
-    if (job.status == InvoicePrintJobStatus.completed) {
-      return const Failure<PrinterReceiptArtifact>(
-        AppError(
-          code: 'duplicate_print_blocked',
-          message:
-              'This receipt was already marked as printed. Check the printer before retrying.',
-        ),
-      );
-    }
     if (job.retryLimitReached) {
       return const Failure<PrinterReceiptArtifact>(
         AppError(

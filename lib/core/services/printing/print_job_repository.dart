@@ -110,11 +110,10 @@ class PrintJobRepository with BaseRepositoryGuard {
   Future<Result<InvoicePrintJob>> markProcessing(String jobId) {
     return guard<InvoicePrintJob>(() async {
       final job = await _requireJob(jobId);
-      if (job.status == InvoicePrintJobStatus.completed) {
-        throw StateError('Receipt already printed for this sale.');
-      }
       if (!job.status.canRetry) {
-        throw StateError('This print job cannot be retried.');
+        if (job.status != InvoicePrintJobStatus.completed) {
+          throw StateError('This print job cannot be retried.');
+        }
       }
       if (job.retryLimitReached) {
         throw StateError('Retry limit reached. Review the printer before retrying.');

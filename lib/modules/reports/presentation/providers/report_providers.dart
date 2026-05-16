@@ -7,6 +7,7 @@ import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/database/database_provider.dart';
 import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
+import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/customer_balance_report_row_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/daily_sales_report_row_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/low_stock_report_row_entity.dart';
@@ -16,6 +17,7 @@ import 'package:phone_shop_pos/modules/reports/domain/entities/sales_report_row_
 import 'package:phone_shop_pos/modules/reports/domain/entities/sold_phone_report_row_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/stock_report_row_entity.dart';
 import 'package:phone_shop_pos/modules/reports/services/inventory_report_service.dart';
+import 'package:phone_shop_pos/modules/reports/services/operations_workflow_service.dart';
 import 'package:phone_shop_pos/modules/reports/services/profit_report_service.dart';
 import 'package:phone_shop_pos/modules/reports/services/sales_report_service.dart';
 
@@ -27,6 +29,10 @@ enum ReportsTab {
   currentStock,
   customerBalance,
   lowStock,
+  salesHistory,
+  creditCollection,
+  purchaseHistory,
+  supplierLedger,
 }
 
 class ReportFilterNotifier extends StateNotifier<ReportFilterEntity> {
@@ -124,6 +130,12 @@ final inventoryReportServiceProvider =
 final profitReportServiceProvider = FutureProvider<ProfitReportService>((ref) async {
   final appDatabase = await ref.watch(appDatabaseProvider.future);
   return ProfitReportService(appDatabase: appDatabase);
+});
+
+final operationsWorkflowServiceProvider =
+    FutureProvider<OperationsWorkflowService>((ref) async {
+  final appDatabase = await ref.watch(appDatabaseProvider.future);
+  return OperationsWorkflowService(appDatabase: appDatabase);
 });
 
 final dailySalesReportProvider =
@@ -300,3 +312,93 @@ const int reportFilterOptionsLimit = 250;
 
 final reportCustomerOptionSearchProvider = StateProvider<String>((ref) => '');
 final reportProductOptionSearchProvider = StateProvider<String>((ref) => '');
+
+final salesHistoryInvoiceQueryProvider = StateProvider<String>((ref) => '');
+final salesHistoryCustomerQueryProvider = StateProvider<String>((ref) => '');
+final salesHistoryStartDateProvider = StateProvider<DateTime?>((ref) => null);
+final salesHistoryEndDateProvider = StateProvider<DateTime?>((ref) => null);
+final salesHistoryPendingOnlyProvider = StateProvider<bool>((ref) => false);
+
+final salesHistoryRowsProvider = FutureProvider<List<SalesHistoryRowEntity>>((
+  ref,
+) async {
+  final service = await ref.watch(operationsWorkflowServiceProvider.future);
+  final result = await service.searchSalesHistory(
+    invoiceQuery: ref.watch(salesHistoryInvoiceQueryProvider),
+    customerQuery: ref.watch(salesHistoryCustomerQueryProvider),
+    startDate: ref.watch(salesHistoryStartDateProvider),
+    endDate: ref.watch(salesHistoryEndDateProvider),
+    pendingOnly: ref.watch(salesHistoryPendingOnlyProvider),
+  );
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
+
+final salesInvoiceDetailProvider =
+    FutureProvider.autoDispose.family<SalesInvoiceDetailEntity?, String>((
+  ref,
+  saleId,
+) async {
+  final service = await ref.watch(operationsWorkflowServiceProvider.future);
+  final result = await service.getSalesInvoiceDetail(saleId);
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
+
+final purchaseHistorySupplierQueryProvider = StateProvider<String>((ref) => '');
+final purchaseHistoryStartDateProvider = StateProvider<DateTime?>((ref) => null);
+final purchaseHistoryEndDateProvider = StateProvider<DateTime?>((ref) => null);
+
+final purchaseHistoryRowsProvider =
+    FutureProvider<List<PurchaseHistoryRowEntity>>((ref) async {
+  final service = await ref.watch(operationsWorkflowServiceProvider.future);
+  final result = await service.searchPurchaseHistory(
+    supplierQuery: ref.watch(purchaseHistorySupplierQueryProvider),
+    startDate: ref.watch(purchaseHistoryStartDateProvider),
+    endDate: ref.watch(purchaseHistoryEndDateProvider),
+  );
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
+
+final purchaseHistoryDetailProvider =
+    FutureProvider.autoDispose.family<PurchaseHistoryDetailEntity?, String>((
+  ref,
+  purchaseId,
+) async {
+  final service = await ref.watch(operationsWorkflowServiceProvider.future);
+  final result = await service.getPurchaseHistoryDetail(purchaseId);
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
+
+final supplierLedgerRowsProvider =
+    FutureProvider<List<SupplierLedgerRowEntity>>((ref) async {
+  final service = await ref.watch(operationsWorkflowServiceProvider.future);
+  final result = await service.getSupplierLedger(
+    startDate: ref.watch(purchaseHistoryStartDateProvider),
+    endDate: ref.watch(purchaseHistoryEndDateProvider),
+  );
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
+
+final stockAdjustmentHistoryProvider =
+    FutureProvider<List<StockAdjustmentHistoryRowEntity>>((ref) async {
+  final service = await ref.watch(operationsWorkflowServiceProvider.future);
+  final result = await service.getStockAdjustments();
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
