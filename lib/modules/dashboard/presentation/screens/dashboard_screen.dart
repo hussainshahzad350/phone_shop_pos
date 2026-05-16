@@ -13,6 +13,7 @@ class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   void _refresh(WidgetRef ref) {
+    ref.invalidate(dashboardServiceProvider);
     ref.invalidate(dashboardKpisProvider);
     ref.invalidate(dashboardRecentSalesProvider);
     ref.invalidate(dashboardLowStockProvider);

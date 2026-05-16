@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 
@@ -6,6 +7,10 @@ class QueryDiagnostics {
   const QueryDiagnostics._();
 
   static const Duration slowQueryThreshold = Duration(milliseconds: 120);
+  static const bool productionSlowQueryLogsEnabled = bool.fromEnvironment(
+    'PHONE_SHOP_POS_SLOW_QUERY_LOGS',
+    defaultValue: false,
+  );
 
   static Future<T> trace<T>({
     required String label,
@@ -16,13 +21,20 @@ class QueryDiagnostics {
       return await action();
     } finally {
       stopwatch.stop();
-      if (kDebugMode) {
-        final elapsed = stopwatch.elapsedMilliseconds;
-        final prefix = elapsed >= slowQueryThreshold.inMilliseconds
-            ? '[slow-query]'
-            : '[query]';
-        debugPrint('$prefix ${elapsed}ms $label');
+      final elapsed = stopwatch.elapsedMilliseconds;
+      final isSlow = elapsed >= slowQueryThreshold.inMilliseconds;
+      if (kDebugMode || (productionSlowQueryLogsEnabled && isSlow)) {
+        final prefix = isSlow ? '[slow-query]' : '[query]';
+        _log('$prefix ${elapsed}ms $label');
       }
     }
+  }
+
+  static void _log(String message) {
+    if (kDebugMode) {
+      debugPrint(message);
+      return;
+    }
+    developer.log(message, name: 'QueryDiagnostics');
   }
 }

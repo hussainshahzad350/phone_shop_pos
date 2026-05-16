@@ -170,32 +170,41 @@ class SqliteInventoryRepository
     int limit = 200,
   }) {
     return guard<List<StockRowEntity>>(() async {
-      final args = <Object?>[];
-      final serializedWhere = StringBuffer('pm.is_active = 1');
-      final quantityWhere = StringBuffer('pm.is_active = 1');
-
-      final trimmed = searchQuery?.trim() ?? '';
-      if (trimmed.isNotEmpty) {
-        serializedWhere.write(
-          ' AND (pm.name LIKE ? OR pm.sku LIKE ? OR pm.brand LIKE ?'
-          ' OR ss.imei1 LIKE ? OR ss.imei2 LIKE ?)',
-        );
-        quantityWhere.write(
-          ' AND (pm.name LIKE ? OR pm.sku LIKE ? OR pm.brand LIKE ?)',
-        );
-      }
-
-      if (serializedStatusFilter != null) {
-        serializedWhere.write(' AND ss.stock_status = ?');
-      }
-
+      final boundedLimit = limit <= 0 ? 200 : limit;
       final showSerialized = hasImeiFilter == null || hasImeiFilter == true;
       final showQuantity = hasImeiFilter == null || hasImeiFilter == false;
+      final trimmedQuery = searchQuery?.trim() ?? '';
+      final usePrefixSearch =
+          trimmedQuery.isNotEmpty && _digitsOnlyPattern.hasMatch(trimmedQuery);
+      final searchLike = trimmedQuery.isEmpty
+          ? null
+          : (usePrefixSearch ? '$trimmedQuery%' : '%$trimmedQuery%');
 
-      final parts = <String>[];
-
+      final bufferedRows = <StockRowEntity>[];
       if (showSerialized) {
-        parts.add('''
+        final args = <Object?>[];
+        final where = StringBuffer('pm.is_active = 1');
+        if (searchLike != null) {
+          where.write(
+            ' AND (pm.name LIKE ? OR pm.sku LIKE ? OR pm.brand LIKE ?'
+            ' OR ss.imei1 LIKE ? OR ss.imei2 LIKE ? OR ss.serial_number LIKE ?)',
+          );
+          args
+            ..add(searchLike)
+            ..add(searchLike)
+            ..add(searchLike)
+            ..add(searchLike)
+            ..add(searchLike)
+            ..add(searchLike);
+        }
+        if (serializedStatusFilter != null) {
+          where.write(' AND ss.stock_status = ?');
+          args.add(serializedStatusFilter.value);
+        }
+        final rows = await QueryDiagnostics.trace(
+          label: 'inventory.get_stock_rows.serialized',
+          action: () => _appDatabase.database.rawQuery(
+            '''
 SELECT
   'serialized' AS row_type,
   pm.id AS product_model_id,
@@ -218,24 +227,30 @@ SELECT
   NULL AS location
 FROM ${TableNames.serializedStock} ss
 JOIN ${TableNames.productModels} pm ON pm.id = ss.product_model_id
-WHERE ${serializedWhere.toString()}''');
-
-        if (trimmed.isNotEmpty) {
-          final likeQuery = '%$trimmed%';
-          args
-            ..add(likeQuery)
-            ..add(likeQuery)
-            ..add(likeQuery)
-            ..add(likeQuery)
-            ..add(likeQuery);
-        }
-        if (serializedStatusFilter != null) {
-          args.add(serializedStatusFilter.value);
-        }
+WHERE ${where.toString()}
+ORDER BY pm.name COLLATE NOCASE ASC, ss.created_at DESC
+LIMIT ?
+''',
+            <Object?>[...args, boundedLimit],
+          ),
+        );
+        bufferedRows.addAll(rows.map(_rowToStockRowEntity));
       }
 
       if (showQuantity) {
-        parts.add('''
+        final args = <Object?>[];
+        final where = StringBuffer('pm.is_active = 1');
+        if (searchLike != null) {
+          where.write(' AND (pm.name LIKE ? OR pm.sku LIKE ? OR pm.brand LIKE ?)');
+          args
+            ..add(searchLike)
+            ..add(searchLike)
+            ..add(searchLike);
+        }
+        final rows = await QueryDiagnostics.trace(
+          label: 'inventory.get_stock_rows.quantity',
+          action: () => _appDatabase.database.rawQuery(
+            '''
 SELECT
   'quantity' AS row_type,
   pm.id AS product_model_id,
@@ -258,29 +273,22 @@ SELECT
   ist.location
 FROM ${TableNames.inventoryStock} ist
 JOIN ${TableNames.productModels} pm ON pm.id = ist.product_model_id
-WHERE ${quantityWhere.toString()}''');
-
-        if (trimmed.isNotEmpty) {
-          final likeQuery = '%$trimmed%';
-          args
-            ..add(likeQuery)
-            ..add(likeQuery)
-            ..add(likeQuery);
-        }
+WHERE ${where.toString()}
+ORDER BY pm.name COLLATE NOCASE ASC
+LIMIT ?
+''',
+            <Object?>[...args, boundedLimit],
+          ),
+        );
+        bufferedRows.addAll(rows.map(_rowToStockRowEntity));
       }
 
-      if (parts.isEmpty) {
+      if (bufferedRows.isEmpty) {
         return const <StockRowEntity>[];
       }
 
-      final sql =
-          '${parts.join('\nUNION ALL\n')}\nORDER BY name COLLATE NOCASE ASC\nLIMIT $limit';
-
-      final rows = await QueryDiagnostics.trace(
-        label: 'inventory.get_stock_rows',
-        action: () => _appDatabase.database.rawQuery(sql, args),
-      );
-      return rows.map(_rowToStockRowEntity).toList(growable: false);
+      bufferedRows.sort(_stockRowComparator);
+      return bufferedRows.take(boundedLimit).toList(growable: false);
     }, operation: 'get_stock_rows');
   }
 
@@ -398,5 +406,21 @@ WHERE ${quantityWhere.toString()}''');
       unitPrice: (row['unit_price'] as num?)?.toDouble(),
       location: row['location'] as String?,
     );
+  }
+
+  int _stockRowComparator(StockRowEntity a, StockRowEntity b) {
+    final aName = a.productName.toLowerCase();
+    final bName = b.productName.toLowerCase();
+    final byName = aName.compareTo(bName);
+    if (byName != 0) {
+      return byName;
+    }
+    if (a.type != b.type) {
+      return a.type == StockRowType.serialized ? -1 : 1;
+    }
+    if (a.type == StockRowType.serialized) {
+      return (a.imei1 ?? '').compareTo(b.imei1 ?? '');
+    }
+    return (a.inventoryStockId ?? '').compareTo(b.inventoryStockId ?? '');
   }
 }
