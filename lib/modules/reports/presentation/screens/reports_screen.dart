@@ -1376,7 +1376,7 @@ class _CollectPaymentDialogState extends ConsumerState<_CollectPaymentDialog> {
                   .map(
                     (value) => DropdownMenuItem<String>(
                       value: value,
-                      child: Text(PaymentMethod.labels[value] ?? value),
+                      child: Text(PaymentMethod.labels[value]!),
                     ),
                   )
                   .toList(growable: false),
