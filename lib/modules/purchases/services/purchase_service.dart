@@ -232,6 +232,10 @@ class PurchaseService {
     return const Success<void>(null);
   }
 
+  /// Validates a purchase IMEI entry before it is stored in form state.
+  ///
+  /// Both IMEI fields are checked for format, uniqueness, distinctness, and
+  /// non-negative cost so invalid serialized stock never reaches persistence.
   Future<Result<void>> validateImeiEntry({
     required ImeiEntry entry,
     required List<PurchaseFormItem> currentItems,

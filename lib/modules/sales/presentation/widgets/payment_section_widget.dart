@@ -156,6 +156,8 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
     );
   }
 
+  /// Keeps controller text aligned with provider-backed widget values while
+  /// preserving cursor placement and clearing stale IME composition state.
   void _syncController({
     required TextEditingController controller,
     required String nextText,

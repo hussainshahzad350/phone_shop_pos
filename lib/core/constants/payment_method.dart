@@ -24,6 +24,9 @@ class PaymentMethod {
       value != null && values.contains(value);
 
   /// Normalizes supported legacy aliases and trims whitespace.
+  ///
+  /// Returns `null` when the value is empty or not one of the allowed payment
+  /// methods.
   static String? normalizeNullable(String? value) {
     final trimmed = value?.trim();
     if (trimmed == null || trimmed.isEmpty) {

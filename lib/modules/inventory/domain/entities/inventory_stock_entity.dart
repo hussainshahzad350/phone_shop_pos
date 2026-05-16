@@ -1,7 +1,7 @@
 /// Raw quantity-stock data used by repository contracts.
 ///
-/// Low-stock presentation logic remains on StockRowEntity, which carries the
-/// merged inventory table state used by the UI.
+/// Low-stock presentation logic remains on StockRowEntity, which combines
+/// inventory-stock quantities with product-model details for UI tables.
 class InventoryStockEntity {
   const InventoryStockEntity({
     required this.id,
