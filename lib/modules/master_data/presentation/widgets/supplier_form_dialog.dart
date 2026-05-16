@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/supplier_entity.dart';
 
 class SupplierFormData {
@@ -66,11 +67,7 @@ class _SupplierFormDialogState extends State<SupplierFormDialog> {
   }
 
   String? _nullIfBlank(String value) {
-    final trimmed = value.trim();
-    if (trimmed.isEmpty) {
-      return null;
-    }
-    return trimmed;
+    return NotesSafety.normalizeNullable(value);
   }
 
   void _submit() {
@@ -163,11 +160,14 @@ class _SupplierFormDialogState extends State<SupplierFormDialog> {
               TextFormField(
                 controller: _notesController,
                 maxLines: 2,
+                maxLength: NotesSafety.maxLength,
                 decoration: const InputDecoration(
                   labelText: 'Notes',
                   border: OutlineInputBorder(),
                   isDense: true,
                 ),
+                validator: (value) =>
+                    NotesSafety.validate(value, fieldLabel: 'Supplier notes'),
               ),
               const SizedBox(height: 8),
               SwitchListTile(

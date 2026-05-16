@@ -7,7 +7,7 @@ import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.
 void main() {
   const renderer = InvoicePrintRenderer();
 
-  InvoicePrintDocument buildDocument() {
+  InvoicePrintDocument buildDocument({String? notes}) {
     return InvoicePrintDocument(
       saleId: 'sal_1',
       invoiceNumber: 'INV-20260515-0001',
@@ -31,6 +31,7 @@ void main() {
       ),
       paymentMethod: 'cash',
       customerLabel: 'Walk-in Customer',
+      notes: notes,
     );
   }
 
@@ -54,5 +55,17 @@ void main() {
 
     final lines = output.split('\n');
     expect(lines.any((line) => line.length >= 60), isTrue);
+  });
+
+  test('defensively renders notes as compact single-line text', () {
+    final output = renderer.render(
+      document: buildDocument(
+        notes: '  line 1\nline 2\tline 3 ${'x' * 400}  ',
+      ),
+      paperSize: InvoicePaperSize.thermal58,
+    );
+
+    expect(output, contains('Notes:'));
+    expect(output, isNot(contains('line 1\nline 2')));
   });
 }

@@ -384,5 +384,14 @@ class MigrationService {
       'CREATE INDEX IF NOT EXISTS idx_suppliers_is_active ON ${TableNames.suppliers}(is_active);',
     ],
     7: <String>[],
+    8: <String>[
+      '''
+      CREATE TABLE IF NOT EXISTS ${TableNames.appSettings} (
+        key TEXT PRIMARY KEY NOT NULL,
+        value TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      ''',
+    ],
   };
 }

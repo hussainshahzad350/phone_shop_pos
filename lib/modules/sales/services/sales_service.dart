@@ -1,5 +1,6 @@
 import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
+import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_completion_entity.dart';
@@ -194,6 +195,14 @@ class SalesService {
       return Failure<SaleCompletionEntity>(validationResult.asFailure!.error);
     }
 
+    final notesError = NotesSafety.validate(notes, fieldLabel: 'Sale notes');
+    if (notesError != null) {
+      return Failure<SaleCompletionEntity>(
+        AppError(code: 'invalid_sale_notes', message: notesError),
+      );
+    }
+    final normalizedNotes = NotesSafety.normalizeNullable(notes);
+
     // Invoice number is generated atomically inside the transaction by the
     // repository; no pre-generation here avoids sequence collisions.
     return _repository.createSaleTransaction(
@@ -203,7 +212,7 @@ class SalesService {
       customerId: customerId,
       userId: userId,
       paymentMethod: paymentMethod,
-      notes: notes,
+      notes: normalizedNotes,
     );
   }
 }

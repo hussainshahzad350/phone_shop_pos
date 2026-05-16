@@ -127,6 +127,45 @@ void main() {
       expect(await context.countRows(TableNames.purchaseItems), 2);
     });
 
+    test('stores last-backup metadata in SQLite and reuses it across folder changes', () async {
+      final context = await _TestContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final primaryBackupDirectory = '${context.rootDirectory.path}/backups_a';
+      final secondaryBackupDirectory = '${context.rootDirectory.path}/backups_b';
+      await Directory(secondaryBackupDirectory).create(recursive: true);
+
+      final backup = _expectSuccess(
+        await context.backupService.createBackup(
+          directoryPath: primaryBackupDirectory,
+        ),
+      );
+
+      final metadataRows = await context.appDatabase.queryTable(
+        TableNames.appSettings,
+        where: 'key = ?',
+        whereArgs: <Object?>['backup.last_info'],
+        limit: 1,
+      );
+      expect(metadataRows, isNotEmpty);
+      expect(
+        await File('${context.rootDirectory.path}/last_backup.json').exists(),
+        isFalse,
+      );
+
+      final unrelatedBackup =
+          '$secondaryBackupDirectory/backup_2099_12_31_235959.db';
+      await File(unrelatedBackup).writeAsString('not a real sqlite backup');
+
+      final health = _expectSuccess(
+        await context.backupService.getDatabaseHealth(
+          backupDirectoryPath: secondaryBackupDirectory,
+        ),
+      );
+      expect(health.lastBackup, isNotNull);
+      expect(health.lastBackup!.path, backup.path);
+    });
+
     test('rolls back a mixed sale when a later line item fails', () async {
       final context = await _TestContext.createTemporary();
       addTearDown(context.dispose);

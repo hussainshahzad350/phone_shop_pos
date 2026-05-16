@@ -1,5 +1,6 @@
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
+import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 
 class InvoicePrintRenderer {
   const InvoicePrintRenderer();
@@ -48,8 +49,8 @@ class InvoicePrintRenderer {
       ..writeln('Paid: ${FormattingHelpers.currencyPkr(document.totals.paidAmount)}')
       ..writeln('Balance: ${FormattingHelpers.currencyPkr(document.totals.remaining)}');
 
-    final notes = document.notes?.trim();
-    if (notes != null && notes.isNotEmpty) {
+    final notes = NotesSafety.normalizeForRendering(document.notes);
+    if (notes.isNotEmpty) {
       buffer
         ..writeln('-' * width)
         ..writeln('Notes:')

@@ -1,5 +1,6 @@
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
+import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_completion_entity.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/billing_state_provider.dart';
@@ -48,7 +49,7 @@ class SaleCompletionFlow {
       paymentMethod: billing.paymentMethod,
       customerLabel:
           billing.selectedCustomerId == null ? 'Walk-in Customer' : 'Customer',
-      notes: billing.notes.trim().isEmpty ? null : billing.notes.trim(),
+      notes: NotesSafety.normalizeNullable(billing.notes),
     );
     final enqueueResult = await enqueueInvoice(document);
 
