@@ -1,5 +1,6 @@
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/database/database_constants.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
 
@@ -37,6 +38,10 @@ class MigrationService {
   Future<void> _applyMigration(Database database, int version) async {
     if (version == 7) {
       await _applyMigrationV7(database);
+      return;
+    }
+    if (version == 9) {
+      await _applyMigrationV9(database);
       return;
     }
     final statements = _migrationStatements[version];
@@ -78,6 +83,126 @@ class MigrationService {
       WHERE imei2 IS NOT NULL;
       ''',
     );
+  }
+
+  Future<void> _applyMigrationV9(Database database) async {
+    await database.execute(
+      '''
+      UPDATE ${TableNames.sales}
+      SET payment_method = '${PaymentMethod.bank}'
+      WHERE payment_method = 'bank_transfer'
+      ''',
+    );
+    await database.execute(
+      '''
+      UPDATE ${TableNames.sales}
+      SET payment_method = NULL
+      WHERE payment_method IS NOT NULL
+        AND payment_method NOT IN (
+          '${PaymentMethod.cash}',
+          '${PaymentMethod.card}',
+          '${PaymentMethod.bank}'
+        )
+      ''',
+    );
+
+    // SQLite requires foreign keys to be disabled while the sales table is
+    // renamed and recreated, otherwise the schema change is rejected.
+    await database.execute('PRAGMA foreign_keys = OFF;');
+    try {
+      await database.execute(
+        'ALTER TABLE ${TableNames.sales} RENAME TO ${TableNames.sales}_old;',
+      );
+      await database.execute(
+        '''
+        CREATE TABLE ${TableNames.sales} (
+          id TEXT PRIMARY KEY NOT NULL,
+          invoice_number TEXT NOT NULL UNIQUE,
+          customer_id TEXT,
+          user_id TEXT,
+          sale_date TEXT NOT NULL,
+          subtotal REAL NOT NULL DEFAULT 0,
+          discount REAL NOT NULL DEFAULT 0,
+          tax REAL NOT NULL DEFAULT 0,
+          total REAL NOT NULL DEFAULT 0,
+          paid_amount REAL NOT NULL DEFAULT 0,
+          payment_method TEXT CHECK (
+            payment_method IS NULL OR payment_method IN (
+              '${PaymentMethod.cash}',
+              '${PaymentMethod.card}',
+              '${PaymentMethod.bank}'
+            )
+          ),
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (customer_id) REFERENCES ${TableNames.customers}(id)
+            ON UPDATE CASCADE
+            ON DELETE SET NULL,
+          FOREIGN KEY (user_id) REFERENCES ${TableNames.users}(id)
+            ON UPDATE CASCADE
+            ON DELETE SET NULL
+        );
+        ''',
+      );
+      await database.execute(
+        '''
+        INSERT INTO ${TableNames.sales} (
+          id,
+          invoice_number,
+          customer_id,
+          user_id,
+          sale_date,
+          subtotal,
+          discount,
+          tax,
+          total,
+          paid_amount,
+          payment_method,
+          notes,
+          created_at,
+          updated_at
+        )
+        SELECT
+          id,
+          invoice_number,
+          customer_id,
+          user_id,
+          sale_date,
+          subtotal,
+          discount,
+          tax,
+          total,
+          paid_amount,
+          payment_method,
+          notes,
+          created_at,
+          updated_at
+        FROM ${TableNames.sales}_old;
+        ''',
+      );
+      await database.execute('DROP TABLE ${TableNames.sales}_old;');
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_sale_date ON ${TableNames.sales}(sale_date);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_invoice_number ON ${TableNames.sales}(invoice_number);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_customer_sale_date ON ${TableNames.sales}(customer_id, sale_date);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_payment_method_sale_date ON ${TableNames.sales}(payment_method, sale_date);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_pending_balance ON ${TableNames.sales}(total, paid_amount);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_created_at ON ${TableNames.sales}(created_at);',
+      );
+    } finally {
+      await database.execute('PRAGMA foreign_keys = ON;');
+    }
   }
 
   static const Map<int, List<String>> _migrationStatements = {
@@ -186,7 +311,13 @@ class MigrationService {
         tax REAL NOT NULL DEFAULT 0,
         total REAL NOT NULL DEFAULT 0,
         paid_amount REAL NOT NULL DEFAULT 0,
-        payment_method TEXT,
+        payment_method TEXT CHECK (
+          payment_method IS NULL OR payment_method IN (
+            '${PaymentMethod.cash}',
+            '${PaymentMethod.card}',
+            '${PaymentMethod.bank}'
+          )
+        ),
         notes TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -393,5 +524,6 @@ class MigrationService {
       );
       ''',
     ],
+    9: <String>[],
   };
 }

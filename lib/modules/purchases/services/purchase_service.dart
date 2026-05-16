@@ -11,6 +11,8 @@ class PurchaseService {
     required PurchaseRepository repository,
   }) : _repository = repository;
 
+  static final RegExp _imeiPattern = RegExp(r'^\d{14,15}$');
+
   final PurchaseRepository _repository;
 
   Result<List<PurchaseFormItem>> addProduct({
@@ -127,8 +129,18 @@ class PurchaseService {
       );
     }
 
+    final normalizedEntry = ImeiEntry(
+      imei1: entry.imei1.trim(),
+      imei2: _normalizeOptional(entry.imei2),
+      serialNumber: _normalizeOptional(entry.serialNumber),
+      costPrice: entry.costPrice,
+      sellingPrice: entry.sellingPrice,
+    );
     final duplicate = item.imeiEntries.any(
-      (e) => e.imei1 == entry.imei1,
+      (existingEntry) => _hasImeiConflict(
+        existingEntry: existingEntry,
+        newEntry: normalizedEntry,
+      ),
     );
     if (duplicate) {
       return const Failure<List<PurchaseFormItem>>(
@@ -138,7 +150,7 @@ class PurchaseService {
 
     final nextItems = <PurchaseFormItem>[...items];
     nextItems[index] = item.copyWith(
-      imeiEntries: <ImeiEntry>[...item.imeiEntries, entry],
+      imeiEntries: <ImeiEntry>[...item.imeiEntries, normalizedEntry],
     );
     return Success<List<PurchaseFormItem>>(nextItems);
   }
@@ -179,7 +191,7 @@ class PurchaseService {
     }
 
     // Phase 5: IMEI format validation — standard IMEIs are exactly 15 digits.
-    if (!RegExp(r'^\d{14,15}$').hasMatch(trimmed)) {
+    if (!_imeiPattern.hasMatch(trimmed)) {
       return const Failure<void>(
         AppError(
           code: 'invalid_imei_format',
@@ -220,6 +232,55 @@ class PurchaseService {
     return const Success<void>(null);
   }
 
+  /// Validates a purchase IMEI entry before it is stored in form state.
+  ///
+  /// Both IMEI fields are checked for format, uniqueness, distinctness, and
+  /// non-negative cost so invalid serialized stock never reaches persistence.
+  Future<Result<void>> validateImeiEntry({
+    required ImeiEntry entry,
+    required List<PurchaseFormItem> currentItems,
+  }) async {
+    final normalizedImei1 = entry.imei1.trim();
+    final normalizedImei2 = entry.imei2?.trim();
+
+    final imei1Result = await validateImei(
+      imei: normalizedImei1,
+      currentItems: currentItems,
+    );
+    if (imei1Result.isFailure) {
+      return imei1Result;
+    }
+
+    if (normalizedImei2 != null && normalizedImei2.isNotEmpty) {
+      if (normalizedImei1 == normalizedImei2) {
+        return const Failure<void>(
+          AppError(
+            code: 'duplicate_imei_pair',
+            message: 'IMEI 1 and IMEI 2 must be different.',
+          ),
+        );
+      }
+      final imei2Result = await validateImei(
+        imei: normalizedImei2,
+        currentItems: currentItems,
+      );
+      if (imei2Result.isFailure) {
+        return imei2Result;
+      }
+    }
+
+    if (entry.costPrice < 0) {
+      return const Failure<void>(
+        AppError(
+          code: 'invalid_cost',
+          message: 'IMEI cost price cannot be negative.',
+        ),
+      );
+    }
+
+    return const Success<void>(null);
+  }
+
   Future<Result<PurchaseCompletionEntity>> completePurchase({
     required List<PurchaseFormItem> items,
     required double discount,
@@ -243,6 +304,29 @@ class PurchaseService {
             message: '${item.productName} has no IMEI entries.',
           ),
         );
+      }
+      if (item.hasImei) {
+        final otherItems = items
+            .where((current) => !identical(current, item))
+            .toList(growable: false);
+        for (final entry in item.imeiEntries) {
+          final validation = await validateImeiEntry(
+            entry: entry,
+            currentItems: <PurchaseFormItem>[
+              ...otherItems,
+              item.copyWith(
+                imeiEntries: item.imeiEntries
+                    .where((candidate) => !identical(candidate, entry))
+                    .toList(growable: false),
+              ),
+            ],
+          );
+          if (validation.isFailure) {
+            return Failure<PurchaseCompletionEntity>(
+              validation.asFailure!.error,
+            );
+          }
+        }
       }
       if (!item.hasImei && item.quantity <= 0) {
         return Failure<PurchaseCompletionEntity>(
@@ -271,5 +355,27 @@ class PurchaseService {
       invoiceNumber: invoiceNumber,
       notes: normalizedNotes,
     );
+  }
+
+  static String? _normalizeOptional(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed;
+  }
+
+  static bool _hasImeiConflict({
+    required ImeiEntry existingEntry,
+    required ImeiEntry newEntry,
+  }) {
+    final existingImei1 = existingEntry.imei1.trim();
+    final existingImei2 = existingEntry.imei2?.trim();
+    final newImei1 = newEntry.imei1;
+    final newImei2 = newEntry.imei2;
+    return existingImei1 == newImei1 ||
+        existingImei2 == newImei1 ||
+        (newImei2 != null &&
+            (existingImei1 == newImei2 || existingImei2 == newImei2));
   }
 }

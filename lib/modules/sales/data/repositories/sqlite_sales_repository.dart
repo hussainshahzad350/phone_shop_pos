@@ -2,6 +2,7 @@ import 'package:phone_shop_pos/core/database/app_database.dart';
 import 'package:phone_shop_pos/core/database/base_repository.dart';
 import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
+import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/core/utils/id_helpers.dart';
@@ -208,7 +209,17 @@ class SqliteSalesRepository
     String? notes,
   }) {
     return guard<SaleCompletionEntity>(() async {
-      _validateSaleRequest(items: items, totals: totals);
+      final normalizedPaymentMethod = PaymentMethod.normalizeNullable(
+        paymentMethod,
+      );
+      if (paymentMethod != null && normalizedPaymentMethod == null) {
+        throw StateError('Payment method must be cash, card, or bank.');
+      }
+      _validateSaleRequest(
+        items: items,
+        totals: totals,
+        paymentMethod: normalizedPaymentMethod,
+      );
 
       final now = DateTimeHelpers.nowUtc();
       final saleId = IdHelpers.newId(prefix: 'sal');
@@ -252,12 +263,12 @@ class SqliteSalesRepository
           subtotal: totals.subtotal,
           discount: totals.discount,
           tax: totals.tax,
-          total: totals.total,
-          paidAmount: totals.paidAmount,
-          paymentMethod: paymentMethod,
-          notes: notes,
-          createdAt: now,
-          updatedAt: now,
+            total: totals.total,
+            paidAmount: totals.paidAmount,
+            paymentMethod: normalizedPaymentMethod,
+            notes: notes,
+            createdAt: now,
+            updatedAt: now,
         );
         await transaction.insert(TableNames.sales, saleModel.toMap());
 
@@ -354,6 +365,7 @@ class SqliteSalesRepository
   void _validateSaleRequest({
     required List<CartItemEntity> items,
     required SaleTotalsEntity totals,
+    required String? paymentMethod,
   }) {
     if (items.isEmpty) {
       throw StateError('Sale requires at least one item.');
@@ -364,6 +376,9 @@ class SqliteSalesRepository
         totals.total < 0 ||
         totals.paidAmount < 0) {
       throw StateError('Sale totals cannot be negative.');
+    }
+    if (paymentMethod != null && !PaymentMethod.isValid(paymentMethod)) {
+      throw StateError('Payment method must be cash, card, or bank.');
     }
 
     final serializedIds = <String>{};

@@ -1,4 +1,5 @@
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
+import 'package:phone_shop_pos/modules/inventory/domain/entities/inventory_stock_entity.dart';
 import 'package:phone_shop_pos/shared/models/base_db_model.dart';
 
 class InventoryStockModel extends BaseDbModel {
@@ -38,6 +39,21 @@ class InventoryStockModel extends BaseDbModel {
     );
   }
 
+  factory InventoryStockModel.fromEntity(InventoryStockEntity entity) {
+    return InventoryStockModel(
+      id: entity.id,
+      productModelId: entity.productModelId,
+      quantity: entity.quantity,
+      minQuantity: entity.minQuantity,
+      maxQuantity: entity.maxQuantity,
+      unitCost: entity.unitCost,
+      unitPrice: entity.unitPrice,
+      location: entity.location,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+    );
+  }
+
   Map<String, Object?> toMap() {
     return <String, Object?>{
       ...toBaseMap(),
@@ -49,5 +65,20 @@ class InventoryStockModel extends BaseDbModel {
       'unit_price': unitPrice,
       'location': location,
     };
+  }
+
+  InventoryStockEntity toEntity() {
+    return InventoryStockEntity(
+      id: id,
+      productModelId: productModelId,
+      quantity: quantity,
+      minQuantity: minQuantity,
+      maxQuantity: maxQuantity,
+      unitCost: unitCost,
+      unitPrice: unitPrice,
+      location: location,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
   }
 }

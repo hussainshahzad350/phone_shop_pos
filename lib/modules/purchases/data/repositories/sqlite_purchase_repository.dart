@@ -21,6 +21,8 @@ class SqlitePurchaseRepository
   SqlitePurchaseRepository({required AppDatabase appDatabase})
       : _appDatabase = appDatabase;
 
+  static final RegExp _imeiPattern = RegExp(r'^\d{14,15}$');
+
   final AppDatabase _appDatabase;
 
   @override
@@ -341,14 +343,25 @@ class SqlitePurchaseRepository
           if (normalizedImei1.isEmpty) {
             throw StateError('${item.productName} contains an empty IMEI.');
           }
+          if (!_imeiPattern.hasMatch(normalizedImei1)) {
+            throw StateError(
+              '${item.productName} contains an invalid IMEI format.',
+            );
+          }
           if (entry.costPrice < 0) {
             throw StateError(
                 '${item.productName} contains a negative IMEI cost.');
           }
           if (normalizedImei2 != null &&
-              normalizedImei2.isNotEmpty &&
-              normalizedImei1 == normalizedImei2) {
-            throw StateError('${item.productName} has duplicate IMEI values.');
+              normalizedImei2.isNotEmpty) {
+            if (!_imeiPattern.hasMatch(normalizedImei2)) {
+              throw StateError(
+                '${item.productName} contains an invalid IMEI format.',
+              );
+            }
+            if (normalizedImei1 == normalizedImei2) {
+              throw StateError('${item.productName} has duplicate IMEI values.');
+            }
           }
         }
         continue;

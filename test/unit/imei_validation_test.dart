@@ -15,6 +15,9 @@ class _StubPurchaseRepository implements PurchaseRepository {
       : _existingImeis = existingImeis;
 
   final Set<String> _existingImeis;
+  int _createPurchaseCallCount = 0;
+
+  int get createPurchaseCallCount => _createPurchaseCallCount;
 
   @override
   Future<Result<bool>> isImeiUnique(String imei) async =>
@@ -51,8 +54,17 @@ class _StubPurchaseRepository implements PurchaseRepository {
     String? supplierId,
     String? invoiceNumber,
     String? notes,
-  }) =>
-      throw UnimplementedError();
+  }) async {
+    _createPurchaseCallCount++;
+    return const Success<PurchaseCompletionEntity>(
+      PurchaseCompletionEntity(
+        purchaseId: 'pur_1',
+        total: 1000,
+        serializedItemCount: 1,
+        quantityItemCount: 0,
+      ),
+    );
+  }
 }
 
 void main() {
@@ -181,6 +193,19 @@ void main() {
       expect(result.isFailure, isTrue);
       expect((result.asFailure!.error).code, 'imei_exists');
     });
+
+    test('rejects IMEI entry when imei1 and imei2 are identical', () async {
+      final result = await service.validateImeiEntry(
+        entry: const ImeiEntry(
+          imei1: '356789101234561',
+          imei2: '356789101234561',
+          costPrice: 1000,
+        ),
+        currentItems: const <PurchaseFormItem>[],
+      );
+      expect(result.isFailure, isTrue);
+      expect((result.asFailure!.error).code, 'duplicate_imei_pair');
+    });
   });
 
   group('PurchaseService — addImeiEntry duplicate detection', () {
@@ -236,6 +261,72 @@ void main() {
       for (final v in PaymentMethod.values) {
         expect(PaymentMethod.labels.containsKey(v), isTrue);
       }
+    });
+
+    test('normalizeNullable converts legacy bank_transfer values', () {
+      expect(
+        PaymentMethod.normalizeNullable('bank_transfer'),
+        PaymentMethod.bank,
+      );
+    });
+  });
+
+  group('PurchaseService completePurchase validation', () {
+    late _StubPurchaseRepository repository;
+    late PurchaseService service;
+
+    setUp(() {
+      repository =
+          _StubPurchaseRepository(existingImeis: <String>{'999888777666555'});
+      service = PurchaseService(repository: repository);
+    });
+
+    test('rejects invalid serialized IMEI before repository transaction', () async {
+      final result = await service.completePurchase(
+        items: const <PurchaseFormItem>[
+          PurchaseFormItem(
+            productModelId: 'prd-001',
+            productName: 'Phone',
+            hasImei: true,
+            imeiEntries: <ImeiEntry>[
+              ImeiEntry(imei1: 'invalid-imei', costPrice: 1000),
+            ],
+          ),
+        ],
+        discount: 0,
+        tax: 0,
+        paidAmount: 0,
+      );
+
+      expect(result.isFailure, isTrue);
+      expect((result.asFailure!.error).code, 'invalid_imei_format');
+      expect(repository.createPurchaseCallCount, 0);
+    });
+
+    test('rejects existing secondary IMEI before repository transaction', () async {
+      final result = await service.completePurchase(
+        items: const <PurchaseFormItem>[
+          PurchaseFormItem(
+            productModelId: 'prd-001',
+            productName: 'Phone',
+            hasImei: true,
+            imeiEntries: <ImeiEntry>[
+              ImeiEntry(
+                imei1: '356789101234561',
+                imei2: '999888777666555',
+                costPrice: 1000,
+              ),
+            ],
+          ),
+        ],
+        discount: 0,
+        tax: 0,
+        paidAmount: 0,
+      );
+
+      expect(result.isFailure, isTrue);
+      expect((result.asFailure!.error).code, 'imei_exists');
+      expect(repository.createPurchaseCallCount, 0);
     });
   });
 }

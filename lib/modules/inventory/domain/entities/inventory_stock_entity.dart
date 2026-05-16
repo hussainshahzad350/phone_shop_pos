@@ -1,3 +1,7 @@
+/// Raw quantity-stock data used by repository contracts.
+///
+/// Low-stock presentation logic remains on StockRowEntity, which combines
+/// inventory-stock quantities with product-model details for UI tables.
 class InventoryStockEntity {
   const InventoryStockEntity({
     required this.id,
@@ -22,6 +26,4 @@ class InventoryStockEntity {
   final String? location;
   final DateTime createdAt;
   final DateTime updatedAt;
-
-  bool get isLowStock => quantity <= minQuantity;
 }

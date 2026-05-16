@@ -11,7 +11,7 @@ class BillingState {
     this.paidAmount = 0,
     this.paymentMethod = PaymentMethod.cash,
     this.notes = '',
-  });
+  }) : paymentMethod = PaymentMethod.normalizeOrDefault(paymentMethod);
 
   final String productSearchQuery;
   final String customerSearchQuery;
@@ -79,7 +79,9 @@ class BillingStateNotifier extends StateNotifier<BillingState> {
   }
 
   void setPaymentMethod(String value) {
-    state = state.copyWith(paymentMethod: value);
+    state = state.copyWith(
+      paymentMethod: PaymentMethod.normalizeOrDefault(value),
+    );
   }
 
   void setNotes(String value) {
