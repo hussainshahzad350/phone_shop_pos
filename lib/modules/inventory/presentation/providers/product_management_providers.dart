@@ -19,6 +19,6 @@ final managedProductsProvider =
   );
   return result.fold(
     onSuccess: (items) => items,
-    onFailure: (_) => const <ProductEntity>[],
+    onFailure: (error) => throw error,
   );
 });

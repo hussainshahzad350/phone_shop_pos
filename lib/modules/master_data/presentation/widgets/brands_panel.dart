@@ -194,7 +194,20 @@ class _BrandsPanelState extends ConsumerState<BrandsPanel> {
                       .toList(growable: false),
                 ),
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => Center(child: Text('Error: $error')),
+                error: (error, _) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Text('Error loading brands: $error'),
+                      const SizedBox(height: 8),
+                      FilledButton.icon(
+                        onPressed: () => ref.invalidate(brandListProvider),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/errors/app_error.dart';
@@ -52,14 +53,24 @@ class ReportsScreen extends ConsumerWidget {
       tab: tab,
       pageSize: filter.pageSize,
     );
-    final customers = customerOptionsAsync.valueOrNull ?? const [];
-    final products = productOptionsAsync.valueOrNull ?? const [];
+    final customers = customerOptionsAsync.when(
+      data: (value) => value,
+      loading: () => const <MapEntry<String, String>>[],
+      error: (_, __) => const <MapEntry<String, String>>[],
+    );
+    final products = productOptionsAsync.when(
+      data: (value) => value,
+      loading: () => const <MapEntry<String, String>>[],
+      error: (_, __) => const <MapEntry<String, String>>[],
+    );
     final customerOptionsError = customerOptionsAsync.whenOrNull(
       error: (error, _) => _errorMessage(error, 'Failed to load customers.'),
     );
     final productOptionsError = productOptionsAsync.whenOrNull(
       error: (error, _) => _errorMessage(error, 'Failed to load products.'),
     );
+    final customerOptionsLoading = customerOptionsAsync.isLoading;
+    final productOptionsLoading = productOptionsAsync.isLoading;
 
     return Shortcuts(
       shortcuts: const <ShortcutActivator, Intent>{
@@ -102,6 +113,12 @@ class ReportsScreen extends ConsumerWidget {
                     productOptions: products,
                     customerOptionsError: customerOptionsError,
                     productOptionsError: productOptionsError,
+                    customerOptionsLoading: customerOptionsLoading,
+                    productOptionsLoading: productOptionsLoading,
+                    onRetryCustomerOptions: () =>
+                        ref.invalidate(reportCustomerOptionsProvider),
+                    onRetryProductOptions: () =>
+                        ref.invalidate(reportProductOptionsProvider),
                     onStartDate: (date) => ref
                         .read(reportFilterProvider.notifier)
                         .setStartDate(date),
@@ -307,6 +324,39 @@ class _ReportContent extends ConsumerWidget {
   }
 }
 
+class _ReportErrorView extends StatelessWidget {
+  const _ReportErrorView({
+    required this.message,
+    required this.error,
+    required this.onRetry,
+  });
+
+  final String message;
+  final Object error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final details = error is AppError ? (error as AppError).message : '$error';
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Text(message),
+          const SizedBox(height: 6),
+          Text(details, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DailySalesView extends ConsumerWidget {
   const _DailySalesView();
 
@@ -388,8 +438,11 @@ class _DailySalesView extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) =>
-          const Center(child: Text('Failed to load daily sales report.')),
+      error: (error, _) => _ReportErrorView(
+        message: 'Failed to load daily sales report.',
+        error: error,
+        onRetry: () => ref.invalidate(dailySalesReportProvider),
+      ),
     );
   }
 }
@@ -467,8 +520,11 @@ class _DateRangeSalesView extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) =>
-          const Center(child: Text('Failed to load date range sales report.')),
+      error: (error, _) => _ReportErrorView(
+        message: 'Failed to load date range sales report.',
+        error: error,
+        onRetry: () => ref.invalidate(dateRangeSalesReportProvider),
+      ),
     );
   }
 }
@@ -517,8 +573,11 @@ class _ProfitView extends ConsumerWidget {
         ],
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) =>
-          const Center(child: Text('Failed to load profit report.')),
+      error: (error, _) => _ReportErrorView(
+        message: 'Failed to load profit report.',
+        error: error,
+        onRetry: () => ref.invalidate(profitReportProvider),
+      ),
     );
   }
 }
@@ -596,8 +655,11 @@ class _SoldPhonesView extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) =>
-          const Center(child: Text('Failed to load sold phones report.')),
+      error: (error, _) => _ReportErrorView(
+        message: 'Failed to load sold phones report.',
+        error: error,
+        onRetry: () => ref.invalidate(soldPhonesReportProvider),
+      ),
     );
   }
 }
@@ -646,8 +708,11 @@ class _CurrentStockView extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) =>
-          const Center(child: Text('Failed to load current stock report.')),
+      error: (error, _) => _ReportErrorView(
+        message: 'Failed to load current stock report.',
+        error: error,
+        onRetry: () => ref.invalidate(currentStockReportProvider),
+      ),
     );
   }
 }
@@ -688,8 +753,11 @@ class _CustomerBalanceView extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) =>
-          const Center(child: Text('Failed to load customer balance report.')),
+      error: (error, _) => _ReportErrorView(
+        message: 'Failed to load customer balance report.',
+        error: error,
+        onRetry: () => ref.invalidate(customerBalanceReportProvider),
+      ),
     );
   }
 }
@@ -730,8 +798,11 @@ class _LowStockView extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) =>
-          const Center(child: Text('Failed to load low stock report.')),
+      error: (error, _) => _ReportErrorView(
+        message: 'Failed to load low stock report.',
+        error: error,
+        onRetry: () => ref.invalidate(lowStockReportProvider),
+      ),
     );
   }
 }
@@ -880,7 +951,11 @@ class _SalesHistoryView extends ConsumerWidget {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, __) => const Center(child: Text('Failed to load sales history.')),
+            error: (error, __) => _ReportErrorView(
+              message: 'Failed to load sales history.',
+              error: error,
+              onRetry: () => ref.invalidate(salesHistoryRowsProvider),
+            ),
           ),
         ),
       ],
@@ -962,7 +1037,11 @@ class _CreditCollectionView extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const Center(child: Text('Failed to load credit sales.')),
+      error: (error, __) => _ReportErrorView(
+        message: 'Failed to load credit sales.',
+        error: error,
+        onRetry: () => ref.invalidate(salesHistoryRowsProvider),
+      ),
     );
   }
 }
@@ -1079,7 +1158,11 @@ class _PurchaseHistoryView extends ConsumerWidget {
               ),
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, __) => const Center(child: Text('Failed to load purchase history.')),
+            error: (error, __) => _ReportErrorView(
+              message: 'Failed to load purchase history.',
+              error: error,
+              onRetry: () => ref.invalidate(purchaseHistoryRowsProvider),
+            ),
           ),
         ),
       ],
@@ -1120,7 +1203,11 @@ class _SupplierLedgerView extends ConsumerWidget {
         ),
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const Center(child: Text('Failed to load supplier ledger.')),
+      error: (error, __) => _ReportErrorView(
+        message: 'Failed to load supplier ledger.',
+        error: error,
+        onRetry: () => ref.invalidate(supplierLedgerRowsProvider),
+      ),
     );
   }
 }
@@ -1238,7 +1325,7 @@ class _CollectPaymentDialog extends ConsumerStatefulWidget {
 class _CollectPaymentDialogState extends ConsumerState<_CollectPaymentDialog> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
-  String _paymentMethod = 'cash';
+  String _paymentMethod = PaymentMethod.cash;
   bool _isSubmitting = false;
 
   @override
@@ -1285,11 +1372,14 @@ class _CollectPaymentDialogState extends ConsumerState<_CollectPaymentDialog> {
                 border: OutlineInputBorder(),
                 isDense: true,
               ),
-              items: const <DropdownMenuItem<String>>[
-                DropdownMenuItem<String>(value: 'cash', child: Text('Cash')),
-                DropdownMenuItem<String>(value: 'card', child: Text('Card')),
-                DropdownMenuItem<String>(value: 'bank', child: Text('Bank')),
-              ],
+              items: PaymentMethod.values
+                  .map(
+                    (value) => DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(PaymentMethod.labels[value] ?? value),
+                    ),
+                  )
+                  .toList(growable: false),
               onChanged: (value) {
                 if (value != null) {
                   setState(() => _paymentMethod = value);
