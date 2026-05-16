@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
@@ -28,13 +30,26 @@ final customerSearchResultsProvider = FutureProvider<List<CustomerOptionEntity>>
   );
 });
 
-final availableImeisProvider = FutureProvider.family<List<SerializedStockEntity>, String>(
-  (ref, productModelId) async {
+final availableImeisProvider =
+    FutureProvider.autoDispose.family<List<SerializedStockEntity>, String>((
+  ref,
+  productModelId,
+) async {
+  final link = ref.keepAlive();
+  Timer? disposeTimer;
+  ref.onCancel(() {
+    disposeTimer = Timer(const Duration(seconds: 20), link.close);
+  });
+  ref.onResume(() {
+    disposeTimer?.cancel();
+    disposeTimer = null;
+  });
+  ref.onDispose(() => disposeTimer?.cancel());
+
     final repository = await ref.watch(salesRepositoryProvider.future);
     final result = await repository.getAvailableImeis(productModelId, limit: 50);
     return result.fold(
       onSuccess: (items) => items,
       onFailure: (error) => const <SerializedStockEntity>[],
     );
-  },
-);
+});

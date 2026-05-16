@@ -1,5 +1,6 @@
 import 'package:phone_shop_pos/core/database/app_database.dart';
 import 'package:phone_shop_pos/core/database/base_repository.dart';
+import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
@@ -8,83 +9,140 @@ import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_low_s
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_recent_sale_entity.dart';
 
 class DashboardService with BaseRepositoryGuard {
-  DashboardService({required AppDatabase appDatabase}) : _appDatabase = appDatabase;
+  DashboardService({
+    required AppDatabase appDatabase,
+    DateTime Function()? nowProvider,
+  })  : _appDatabase = appDatabase,
+        _nowProvider = nowProvider ?? DateTimeHelpers.nowUtc;
 
   final AppDatabase _appDatabase;
+  final DateTime Function() _nowProvider;
+  static const Duration _kpiCacheTtl = Duration(seconds: 20);
 
-  Future<Result<DashboardKpisEntity>> getDashboardKpis() {
-    return guard<DashboardKpisEntity>(() async {
-      final now = DateTimeHelpers.nowUtc();
+  DashboardKpisEntity? _cachedKpis;
+  DateTime? _cachedKpisAt;
+  Future<Result<DashboardKpisEntity>>? _inFlightKpisRequest;
+
+  Future<Result<DashboardKpisEntity>> getDashboardKpis() async {
+    final now = _nowProvider();
+    final cached = _cachedKpis;
+    final cachedAt = _cachedKpisAt;
+    if (cached != null &&
+        cachedAt != null &&
+        now.difference(cachedAt) < _kpiCacheTtl) {
+      return Success<DashboardKpisEntity>(cached);
+    }
+
+    final inFlight = _inFlightKpisRequest;
+    if (inFlight != null) {
+      return inFlight;
+    }
+
+    final request = guard<DashboardKpisEntity>(() async {
       final start = DateTime.utc(now.year, now.month, now.day);
       final end = start.add(const Duration(days: 1));
 
-      final salesRows = await _appDatabase.database.rawQuery(
-        '''
+      final salesRows = await QueryDiagnostics.trace(
+        label: 'dashboard.today_sales',
+        action: () => _appDatabase.database.rawQuery(
+          '''
         SELECT
-          COALESCE(SUM(s.total), 0) AS today_sales,
-          COALESCE(SUM(CASE
-            WHEN pm.has_imei = 1 THEN 1
-            ELSE 0
-          END), 0) AS phones_sold,
-          COALESCE(SUM(CASE
-            WHEN pm.has_imei = 0 THEN si.quantity
-            ELSE 0
-          END), 0) AS accessories_sold,
-          COALESCE(SUM(
-            si.line_total - (si.cost_price * si.quantity)
-          ), 0) AS today_profit
+          COALESCE(SUM(s.total), 0) AS today_sales
         FROM ${TableNames.sales} s
-        LEFT JOIN ${TableNames.saleItems} si ON si.sale_id = s.id
-        LEFT JOIN ${TableNames.productModels} pm ON pm.id = si.product_model_id
         WHERE s.sale_date >= ? AND s.sale_date < ?
         ''',
-        <Object?>[DateTimeHelpers.toSql(start), DateTimeHelpers.toSql(end)],
+          <Object?>[DateTimeHelpers.toSql(start), DateTimeHelpers.toSql(end)],
+        ),
       );
 
-      final stockRows = await _appDatabase.database.rawQuery(
-        '''
+      final itemRows = await QueryDiagnostics.trace(
+        label: 'dashboard.today_item_aggregates',
+        action: () => _appDatabase.database.rawQuery(
+          '''
         SELECT
-          COALESCE((
-            SELECT COUNT(*)
-            FROM ${TableNames.inventoryStock} ist
-            JOIN ${TableNames.productModels} pm ON pm.id = ist.product_model_id
-            WHERE pm.is_active = 1 AND pm.has_imei = 0 AND ist.quantity <= ist.min_quantity
-          ), 0) AS low_stock_count,
-          COALESCE((
-            SELECT SUM(ist.quantity)
-            FROM ${TableNames.inventoryStock} ist
-            JOIN ${TableNames.productModels} pm ON pm.id = ist.product_model_id
-            WHERE pm.is_active = 1 AND pm.has_imei = 0
-          ), 0)
-          + COALESCE((
-            SELECT COUNT(*)
-            FROM ${TableNames.serializedStock} ss
-            JOIN ${TableNames.productModels} pm ON pm.id = ss.product_model_id
-            WHERE pm.is_active = 1 AND ss.stock_status = 'in_stock'
-          ), 0) AS available_stock_count,
-          COALESCE((
-            SELECT SUM(CASE
-              WHEN s.total > s.paid_amount THEN s.total - s.paid_amount
-              ELSE 0
-            END)
-            FROM ${TableNames.sales} s
-          ), 0) AS pending_balances
+          COALESCE(SUM(CASE WHEN pm.has_imei = 1 THEN 1 ELSE 0 END), 0) AS phones_sold,
+          COALESCE(SUM(CASE WHEN pm.has_imei = 0 THEN si.quantity ELSE 0 END), 0) AS accessories_sold,
+          COALESCE(SUM(si.line_total - (si.cost_price * si.quantity)), 0) AS today_profit
+        FROM ${TableNames.saleItems} si
+        JOIN ${TableNames.sales} s ON s.id = si.sale_id
+        JOIN ${TableNames.productModels} pm ON pm.id = si.product_model_id
+        WHERE s.sale_date >= ? AND s.sale_date < ?
         ''',
+          <Object?>[DateTimeHelpers.toSql(start), DateTimeHelpers.toSql(end)],
+        ),
+      );
+
+      final stockRows = await QueryDiagnostics.trace(
+        label: 'dashboard.stock_aggregates',
+        action: () => _appDatabase.database.rawQuery(
+          '''
+        SELECT
+          COALESCE(SUM(CASE WHEN ist.quantity <= ist.min_quantity THEN 1 ELSE 0 END), 0) AS low_stock_count,
+          COALESCE(SUM(ist.quantity), 0) AS accessory_units
+        FROM ${TableNames.inventoryStock} ist
+        JOIN ${TableNames.productModels} pm ON pm.id = ist.product_model_id
+        WHERE pm.is_active = 1 AND pm.has_imei = 0
+        ''',
+        ),
+      );
+
+      final serializedRows = await QueryDiagnostics.trace(
+        label: 'dashboard.in_stock_serialized_count',
+        action: () => _appDatabase.database.rawQuery(
+          '''
+        SELECT COALESCE(COUNT(*), 0) AS in_stock_serialized
+        FROM ${TableNames.serializedStock} ss
+        JOIN ${TableNames.productModels} pm ON pm.id = ss.product_model_id
+        WHERE pm.is_active = 1 AND ss.stock_status = 'in_stock'
+        ''',
+        ),
+      );
+
+      final pendingRows = await QueryDiagnostics.trace(
+        label: 'dashboard.pending_balances',
+        action: () => _appDatabase.database.rawQuery(
+          '''
+        SELECT
+          COALESCE(SUM(CASE
+            WHEN s.total > s.paid_amount THEN s.total - s.paid_amount
+            ELSE 0
+          END), 0) AS pending_balances
+        FROM ${TableNames.sales} s
+        ''',
+        ),
       );
 
       final sales = salesRows.first;
+      final items = itemRows.first;
       final stock = stockRows.first;
+      final serialized = serializedRows.first;
+      final pending = pendingRows.first;
 
-      return DashboardKpisEntity(
+      final entity = DashboardKpisEntity(
         todaySales: (sales['today_sales'] as num?)?.toDouble() ?? 0,
-        todayProfit: (sales['today_profit'] as num?)?.toDouble() ?? 0,
-        phonesSoldToday: (sales['phones_sold'] as num?)?.toInt() ?? 0,
-        accessoriesSoldToday: (sales['accessories_sold'] as num?)?.toInt() ?? 0,
+        todayProfit: (items['today_profit'] as num?)?.toDouble() ?? 0,
+        phonesSoldToday: (items['phones_sold'] as num?)?.toInt() ?? 0,
+        accessoriesSoldToday: (items['accessories_sold'] as num?)?.toInt() ?? 0,
         lowStockCount: (stock['low_stock_count'] as num?)?.toInt() ?? 0,
-        availableStockCount: (stock['available_stock_count'] as num?)?.toInt() ?? 0,
-        pendingBalances: (stock['pending_balances'] as num?)?.toDouble() ?? 0,
+        availableStockCount:
+            ((stock['accessory_units'] as num?)?.toInt() ?? 0) +
+                ((serialized['in_stock_serialized'] as num?)?.toInt() ?? 0),
+        pendingBalances: (pending['pending_balances'] as num?)?.toDouble() ?? 0,
       );
+
+      _cachedKpis = entity;
+      _cachedKpisAt = now;
+      return entity;
     }, operation: 'get_dashboard_kpis');
+
+    _inFlightKpisRequest = request;
+    try {
+      return await request;
+    } finally {
+      if (identical(_inFlightKpisRequest, request)) {
+        _inFlightKpisRequest = null;
+      }
+    }
   }
 
   Future<Result<List<DashboardRecentSaleEntity>>> getRecentSales({int limit = 10}) {

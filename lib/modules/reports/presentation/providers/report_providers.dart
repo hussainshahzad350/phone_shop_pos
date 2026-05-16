@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/services/export/csv_export_service.dart';
 import 'package:phone_shop_pos/core/services/export/printable_report_service.dart';
 import 'package:phone_shop_pos/core/database/database_provider.dart';
+import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
+import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/customer_balance_report_row_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/daily_sales_report_row_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/low_stock_report_row_entity.dart';
@@ -201,15 +205,44 @@ final lowStockReportProvider = FutureProvider<List<LowStockReportRowEntity>>((
   );
 });
 
-final reportCustomerOptionsProvider = FutureProvider<List<MapEntry<String, String>>>(
+final reportCustomerOptionsProvider =
+    FutureProvider.autoDispose<List<MapEntry<String, String>>>(
   (ref) async {
+    final link = ref.keepAlive();
+    Timer? disposeTimer;
+    ref.onCancel(() {
+      disposeTimer = Timer(const Duration(seconds: 45), link.close);
+    });
+    ref.onResume(() {
+      disposeTimer?.cancel();
+      disposeTimer = null;
+    });
+    ref.onDispose(() => disposeTimer?.cancel());
+
     final appDatabase = await ref.watch(appDatabaseProvider.future);
-    final rows = await appDatabase.database.rawQuery(
-      '''
+    final searchQuery = ref.watch(reportCustomerOptionSearchProvider).trim();
+    final args = <Object?>[];
+    final where = StringBuffer('is_active = 1');
+    if (searchQuery.isNotEmpty) {
+      final like = '%$searchQuery%';
+      where.write(' AND (name LIKE ? OR phone LIKE ?)');
+      args
+        ..add(like)
+        ..add(like);
+    }
+
+    final rows = await QueryDiagnostics.trace(
+      label: 'reports.customer_filter_options',
+      action: () => appDatabase.database.rawQuery(
+        '''
       SELECT id, name
-      FROM customers
+      FROM ${TableNames.customers}
+      WHERE ${where.toString()}
       ORDER BY name COLLATE NOCASE ASC
+      LIMIT ?
       ''',
+        <Object?>[...args, reportFilterOptionsLimit],
+      ),
     );
 
     return rows
@@ -218,16 +251,45 @@ final reportCustomerOptionsProvider = FutureProvider<List<MapEntry<String, Strin
   },
 );
 
-final reportProductOptionsProvider = FutureProvider<List<MapEntry<String, String>>>(
+final reportProductOptionsProvider =
+    FutureProvider.autoDispose<List<MapEntry<String, String>>>(
   (ref) async {
+    final link = ref.keepAlive();
+    Timer? disposeTimer;
+    ref.onCancel(() {
+      disposeTimer = Timer(const Duration(seconds: 45), link.close);
+    });
+    ref.onResume(() {
+      disposeTimer?.cancel();
+      disposeTimer = null;
+    });
+    ref.onDispose(() => disposeTimer?.cancel());
+
     final appDatabase = await ref.watch(appDatabaseProvider.future);
-    final rows = await appDatabase.database.rawQuery(
-      '''
+    final searchQuery = ref.watch(reportProductOptionSearchProvider).trim();
+    final args = <Object?>[];
+    final where = StringBuffer('is_active = 1');
+    if (searchQuery.isNotEmpty) {
+      final like = '%$searchQuery%';
+      where.write(' AND (name LIKE ? OR sku LIKE ? OR brand LIKE ?)');
+      args
+        ..add(like)
+        ..add(like)
+        ..add(like);
+    }
+
+    final rows = await QueryDiagnostics.trace(
+      label: 'reports.product_filter_options',
+      action: () => appDatabase.database.rawQuery(
+        '''
       SELECT id, name
-      FROM product_models
-      WHERE is_active = 1
+      FROM ${TableNames.productModels}
+      WHERE ${where.toString()}
       ORDER BY name COLLATE NOCASE ASC
+      LIMIT ?
       ''',
+        <Object?>[...args, reportFilterOptionsLimit],
+      ),
     );
 
     return rows
@@ -235,3 +297,8 @@ final reportProductOptionsProvider = FutureProvider<List<MapEntry<String, String
         .toList(growable: false);
   },
 );
+
+const int reportFilterOptionsLimit = 250;
+
+final reportCustomerOptionSearchProvider = StateProvider<String>((ref) => '');
+final reportProductOptionSearchProvider = StateProvider<String>((ref) => '');
