@@ -44,6 +44,10 @@ class MigrationService {
       await _applyMigrationV9(database);
       return;
     }
+    if (version == 12) {
+      await _applyMigrationV12(database);
+      return;
+    }
     final statements = _migrationStatements[version];
     if (statements == null) {
       return;
@@ -205,7 +209,116 @@ class MigrationService {
     }
   }
 
-  static const Map<int, List<String>> _migrationStatements = {
+  // ── v12: strict financial CHECK constraints on the sales table ───────────
+  // Enforces: subtotal >= 0, discount >= 0, tax >= 0, total >= 0,
+  //           paid_amount >= 0, and paid_amount <= total at the DB level.
+  // Any legacy rows that violate these invariants are silently clamped
+  // during the INSERT … SELECT so that the upgrade never blocks.
+  Future<void> _applyMigrationV12(Database database) async {
+    await database.execute('PRAGMA foreign_keys = OFF;');
+    try {
+      await database.execute(
+        'ALTER TABLE ${TableNames.sales} RENAME TO ${TableNames.sales}_old;',
+      );
+      await database.execute(
+        '''
+        CREATE TABLE ${TableNames.sales} (
+          id TEXT PRIMARY KEY NOT NULL,
+          invoice_number TEXT NOT NULL UNIQUE,
+          customer_id TEXT,
+          user_id TEXT,
+          sale_date TEXT NOT NULL,
+          subtotal REAL NOT NULL DEFAULT 0,
+          discount REAL NOT NULL DEFAULT 0,
+          tax REAL NOT NULL DEFAULT 0,
+          total REAL NOT NULL DEFAULT 0,
+          paid_amount REAL NOT NULL DEFAULT 0,
+          payment_method TEXT CHECK (
+            payment_method IS NULL OR payment_method IN (
+              '${PaymentMethod.cash}',
+              '${PaymentMethod.card}',
+              '${PaymentMethod.bank}'
+            )
+          ),
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (customer_id) REFERENCES ${TableNames.customers}(id)
+            ON UPDATE CASCADE
+            ON DELETE SET NULL,
+          FOREIGN KEY (user_id) REFERENCES ${TableNames.users}(id)
+            ON UPDATE CASCADE
+            ON DELETE SET NULL,
+          CHECK (subtotal >= 0),
+          CHECK (discount >= 0),
+          CHECK (tax >= 0),
+          CHECK (total >= 0),
+          CHECK (paid_amount >= 0),
+          CHECK (paid_amount <= total)
+        );
+        ''',
+      );
+      // Migrate existing rows; clamp any values that violate the new
+      // constraints so the upgrade never fails on corrupted legacy data.
+      await database.execute(
+        '''
+        INSERT INTO ${TableNames.sales} (
+          id,
+          invoice_number,
+          customer_id,
+          user_id,
+          sale_date,
+          subtotal,
+          discount,
+          tax,
+          total,
+          paid_amount,
+          payment_method,
+          notes,
+          created_at,
+          updated_at
+        )
+        SELECT
+          id,
+          invoice_number,
+          customer_id,
+          user_id,
+          sale_date,
+          MAX(0.0, subtotal),
+          MAX(0.0, discount),
+          MAX(0.0, tax),
+          MAX(0.0, total),
+          MAX(0.0, MIN(paid_amount, MAX(0.0, total))),
+          payment_method,
+          notes,
+          created_at,
+          updated_at
+        FROM ${TableNames.sales}_old;
+        ''',
+      );
+      await database.execute('DROP TABLE ${TableNames.sales}_old;');
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_sale_date ON ${TableNames.sales}(sale_date);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_invoice_number ON ${TableNames.sales}(invoice_number);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_customer_sale_date ON ${TableNames.sales}(customer_id, sale_date);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_payment_method_sale_date ON ${TableNames.sales}(payment_method, sale_date);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_pending_balance ON ${TableNames.sales}(total, paid_amount);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_created_at ON ${TableNames.sales}(created_at);',
+      );
+    } finally {
+      await database.execute('PRAGMA foreign_keys = ON;');
+    }
+  }
     1: <String>[
       '''
       CREATE TABLE ${TableNames.productModels} (
@@ -606,5 +719,9 @@ class MigrationService {
       // that profit reports can correctly reverse the cost component.
       'ALTER TABLE ${TableNames.saleReturns} ADD COLUMN cost_price REAL NOT NULL DEFAULT 0;',
     ],
+    // v12 is handled by the dedicated _applyMigrationV12 method above.
+    // The empty list is kept here so that all version numbers are represented
+    // in the map for documentation purposes (consistent with v7 and v9).
+    12: <String>[],
   };
 }

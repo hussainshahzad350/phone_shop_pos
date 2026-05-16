@@ -1115,6 +1115,209 @@ void main() {
       expect(dailyRows.first.totalSales, closeTo(200, 0.0001));
       expect(dailyRows.first.pendingBalances, closeTo(100, 0.0001));
     });
+
+    // ── Payment integrity invariants ──────────────────────────────────────
+
+    test('repository rejects sale where paid_amount exceeds total', () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final todayUtc = DateTimeHelpers.nowUtc();
+
+      await context.createProduct(
+        id: 'prd_overpay_guard',
+        name: 'Overpay Guard Accessory',
+        sku: 'ACC-OVERPAY-001',
+        purchasePrice: 100,
+        salePrice: 500,
+        hasImei: false,
+      );
+
+      _expectSuccess(
+        await context.purchaseRepository.createPurchaseTransaction(
+          items: const <PurchaseFormItem>[
+            PurchaseFormItem(
+              productModelId: 'prd_overpay_guard',
+              productName: 'Overpay Guard Accessory',
+              hasImei: false,
+              quantity: 5,
+              unitCost: 100,
+            ),
+          ],
+          discount: 0,
+          tax: 0,
+          paidAmount: 500,
+        ),
+      );
+
+      // total = 500 but paid_amount = 9999 — must be rejected
+      final result = await context.salesRepository.createSaleTransaction(
+        items: const <CartItemEntity>[
+          CartItemEntity(
+            productModelId: 'prd_overpay_guard',
+            productName: 'Overpay Guard Accessory',
+            hasImei: false,
+            quantity: 1,
+            unitPrice: 500,
+          ),
+        ],
+        totals: const SaleTotalsEntity(
+          subtotal: 500,
+          discount: 0,
+          tax: 0,
+          total: 500,
+          paidAmount: 9999,
+        ),
+        saleDate: todayUtc,
+      );
+
+      expect(result.isFailure, isTrue,
+          reason: 'overpayment must be rejected by the repository');
+    });
+
+    test('DB constraint rejects direct sales insert where paid_amount > total',
+        () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final now = DateTimeHelpers.toSql(DateTimeHelpers.nowUtc());
+
+      await expectLater(
+        context.appDatabase.insert(TableNames.sales, <String, Object?>{
+          'id': 'sal_db_overpay',
+          'invoice_number': 'INV-DB-OVERPAY-0001',
+          'customer_id': null,
+          'user_id': null,
+          'sale_date': now,
+          'subtotal': 1000.0,
+          'discount': 0.0,
+          'tax': 0.0,
+          'total': 1000.0,
+          'paid_amount': 9999.0, // violates paid_amount <= total
+          'payment_method': null,
+          'notes': null,
+          'created_at': now,
+          'updated_at': now,
+        }),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+
+    test('DB constraint rejects direct sales insert where paid_amount is negative',
+        () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final now = DateTimeHelpers.toSql(DateTimeHelpers.nowUtc());
+
+      await expectLater(
+        context.appDatabase.insert(TableNames.sales, <String, Object?>{
+          'id': 'sal_db_negpaid',
+          'invoice_number': 'INV-DB-NEGPAID-0001',
+          'customer_id': null,
+          'user_id': null,
+          'sale_date': now,
+          'subtotal': 1000.0,
+          'discount': 0.0,
+          'tax': 0.0,
+          'total': 1000.0,
+          'paid_amount': -1.0, // violates paid_amount >= 0
+          'payment_method': null,
+          'notes': null,
+          'created_at': now,
+          'updated_at': now,
+        }),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+
+    test('DB constraint rejects direct sales insert where total is negative',
+        () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final now = DateTimeHelpers.toSql(DateTimeHelpers.nowUtc());
+
+      await expectLater(
+        context.appDatabase.insert(TableNames.sales, <String, Object?>{
+          'id': 'sal_db_negtotal',
+          'invoice_number': 'INV-DB-NEGTOTAL-0001',
+          'customer_id': null,
+          'user_id': null,
+          'sale_date': now,
+          'subtotal': 0.0,
+          'discount': 0.0,
+          'tax': 0.0,
+          'total': -1.0, // violates total >= 0
+          'paid_amount': 0.0,
+          'payment_method': null,
+          'notes': null,
+          'created_at': now,
+          'updated_at': now,
+        }),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+
+    test('migration v12 clamps legacy overpayment rows on upgrade', () async {
+      // Build a v11 database with a corrupted row (paid_amount > total),
+      // then upgrade to v12 and verify the row is clamped.
+      final root =
+          await Directory.systemTemp.createTemp('phone_shop_pos_v12_clamp_');
+      addTearDown(() async {
+        if (await root.exists()) {
+          await root.delete(recursive: true);
+        }
+      });
+
+      final v11Database = AppDatabase(
+        localDatabaseService: SqliteFfiDatabaseService(rootDirectory: root.path),
+        migrationService: const _MigrationServiceV11(),
+      );
+      await v11Database.initialize(seedDemoData: false);
+
+      // Insert a deliberately corrupted row — no CHECK constraints exist yet
+      // in v11 so this succeeds.
+      final now = DateTimeHelpers.toSql(DateTime.utc(2026, 5, 16));
+      await v11Database.insert(TableNames.sales, <String, Object?>{
+        'id': 'sal_legacy_overpay',
+        'invoice_number': 'INV-LEGACY-OVERPAY-0001',
+        'customer_id': null,
+        'user_id': null,
+        'sale_date': now,
+        'subtotal': 1000.0,
+        'discount': 0.0,
+        'tax': 0.0,
+        'total': 1000.0,
+        'paid_amount': 5000.0, // intentionally corrupted
+        'payment_method': null,
+        'notes': null,
+        'created_at': now,
+        'updated_at': now,
+      });
+      await v11Database.close();
+
+      // Upgrade to v12 — must succeed and clamp the corrupted row.
+      final v12Database = AppDatabase(
+        localDatabaseService: SqliteFfiDatabaseService(rootDirectory: root.path),
+        migrationService: const MigrationService(),
+      );
+      await v12Database.initialize(seedDemoData: false);
+
+      final rows = await v12Database.queryTable(
+        TableNames.sales,
+        where: 'id = ?',
+        whereArgs: const <Object?>['sal_legacy_overpay'],
+        limit: 1,
+      );
+      expect(rows, isNotEmpty);
+      // paid_amount must have been clamped to total = 1000
+      expect(
+        (rows.first['paid_amount'] as num?)?.toDouble(),
+        closeTo(1000.0, 0.0001),
+      );
+      await v12Database.close();
+    });
   });
 }
 
@@ -1202,6 +1405,13 @@ class _MigrationServiceV6 extends MigrationService {
 
   @override
   int get latestVersion => 6;
+}
+
+class _MigrationServiceV11 extends MigrationService {
+  const _MigrationServiceV11();
+
+  @override
+  int get latestVersion => 11;
 }
 
 T _expectSuccess<T>(Result<T> result) {
