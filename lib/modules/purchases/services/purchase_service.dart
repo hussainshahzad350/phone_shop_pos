@@ -137,12 +137,10 @@ class PurchaseService {
       sellingPrice: entry.sellingPrice,
     );
     final duplicate = item.imeiEntries.any(
-      (e) =>
-          e.imei1.trim() == normalizedEntry.imei1 ||
-          e.imei2?.trim() == normalizedEntry.imei1 ||
-          (normalizedEntry.imei2 != null &&
-              (e.imei1.trim() == normalizedEntry.imei2 ||
-                  e.imei2?.trim() == normalizedEntry.imei2)),
+      (existingEntry) => _hasImeiConflict(
+        existingEntry: existingEntry,
+        newEntry: normalizedEntry,
+      ),
     );
     if (duplicate) {
       return const Failure<List<PurchaseFormItem>>(
@@ -361,5 +359,17 @@ class PurchaseService {
       return null;
     }
     return trimmed;
+  }
+
+  static bool _hasImeiConflict({
+    required ImeiEntry existingEntry,
+    required ImeiEntry newEntry,
+  }) {
+    final existingImei1 = existingEntry.imei1.trim();
+    final existingImei2 = existingEntry.imei2?.trim();
+    return existingImei1 == newEntry.imei1 ||
+        existingImei2 == newEntry.imei1 ||
+        (newEntry.imei2 != null &&
+            (existingImei1 == newEntry.imei2 || existingImei2 == newEntry.imei2));
   }
 }
