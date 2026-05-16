@@ -180,6 +180,6 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
       fractionDigits: 2,
       useGrouping: false,
     );
-    return raw.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
+    return raw.replaceFirst(RegExp(r'\.?0+$'), '');
   }
 }

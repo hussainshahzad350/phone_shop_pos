@@ -304,20 +304,20 @@ class PurchaseService {
         );
       }
       if (item.hasImei) {
+        final otherItems = items
+            .where((current) => !identical(current, item))
+            .toList(growable: false);
         for (final entry in item.imeiEntries) {
           final validation = await validateImeiEntry(
             entry: entry,
-            currentItems: items
-                .map(
-                  (current) => identical(current, item)
-                      ? current.copyWith(
-                          imeiEntries: current.imeiEntries
-                              .where((candidate) => !identical(candidate, entry))
-                              .toList(growable: false),
-                        )
-                      : current,
-                )
-                .toList(growable: false),
+            currentItems: <PurchaseFormItem>[
+              ...otherItems,
+              item.copyWith(
+                imeiEntries: item.imeiEntries
+                    .where((candidate) => !identical(candidate, entry))
+                    .toList(growable: false),
+              ),
+            ],
           );
           if (validation.isFailure) {
             return Failure<PurchaseCompletionEntity>(

@@ -15,7 +15,9 @@ class _StubPurchaseRepository implements PurchaseRepository {
       : _existingImeis = existingImeis;
 
   final Set<String> _existingImeis;
-  int createPurchaseCalls = 0;
+  int _createPurchaseCallCount = 0;
+
+  int get createPurchaseCallCount => _createPurchaseCallCount;
 
   @override
   Future<Result<bool>> isImeiUnique(String imei) async =>
@@ -53,7 +55,7 @@ class _StubPurchaseRepository implements PurchaseRepository {
     String? invoiceNumber,
     String? notes,
   }) async {
-    createPurchaseCalls++;
+    _createPurchaseCallCount++;
     return const Success<PurchaseCompletionEntity>(
       PurchaseCompletionEntity(
         purchaseId: 'pur_1',
@@ -298,7 +300,7 @@ void main() {
 
       expect(result.isFailure, isTrue);
       expect((result.asFailure!.error).code, 'invalid_imei_format');
-      expect(repository.createPurchaseCalls, 0);
+      expect(repository.createPurchaseCallCount, 0);
     });
 
     test('rejects existing secondary IMEI before repository transaction', () async {
@@ -324,7 +326,7 @@ void main() {
 
       expect(result.isFailure, isTrue);
       expect((result.asFailure!.error).code, 'imei_exists');
-      expect(repository.createPurchaseCalls, 0);
+      expect(repository.createPurchaseCallCount, 0);
     });
   });
 }

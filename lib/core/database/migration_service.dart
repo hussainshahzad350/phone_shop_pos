@@ -106,6 +106,8 @@ class MigrationService {
       ''',
     );
 
+    // SQLite requires foreign keys to be disabled while the sales table is
+    // renamed and recreated, otherwise the schema change is rejected.
     await database.execute('PRAGMA foreign_keys = OFF;');
     try {
       await database.execute(
