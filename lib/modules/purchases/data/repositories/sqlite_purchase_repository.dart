@@ -259,18 +259,39 @@ class SqlitePurchaseRepository
               ],
             );
 
-            await transaction.rawUpdate(
-              '''
-              UPDATE ${TableNames.inventoryStock}
-              SET quantity = quantity + ?, unit_cost = ?, updated_at = ?
-              WHERE product_model_id = ?
-              ''',
-              <Object?>[
-                item.quantity,
-                item.unitCost,
-                DateTimeHelpers.toSql(now),
-                item.productModelId,
-              ],
+            final stockRows = await transaction.query(
+              TableNames.inventoryStock,
+              columns: <String>['quantity', 'unit_cost'],
+              where: 'product_model_id = ?',
+              whereArgs: <Object?>[item.productModelId],
+              limit: 1,
+            );
+            if (stockRows.isEmpty) {
+              throw StateError(
+                'Inventory stock row missing after upsert for ${item.productName}.',
+              );
+            }
+
+            final oldQty = (stockRows.first['quantity'] as num?)?.toInt() ?? 0;
+            final oldCost =
+                (stockRows.first['unit_cost'] as num?)?.toDouble() ?? 0;
+            final newQty = item.quantity;
+            final totalQty = oldQty + newQty;
+            final averageCost = totalQty <= 0
+                ? oldCost
+                : oldQty <= 0
+                    ? item.unitCost
+                    : ((oldQty * oldCost) + (newQty * item.unitCost)) / totalQty;
+
+            await transaction.update(
+              TableNames.inventoryStock,
+              <String, Object?>{
+                'quantity': totalQty,
+                'unit_cost': averageCost,
+                'updated_at': DateTimeHelpers.toSql(now),
+              },
+              where: 'product_model_id = ?',
+              whereArgs: <Object?>[item.productModelId],
             );
 
             final itemModel = PurchaseItemModel(

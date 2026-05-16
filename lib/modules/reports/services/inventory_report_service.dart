@@ -163,7 +163,11 @@ class InventoryReportService with BaseRepositoryGuard {
         action: () => _appDatabase.database.rawQuery(
           '''
         SELECT
-          COALESCE(c.name, 'Walk-in Customer') AS customer_name,
+          CASE
+            WHEN COALESCE(s.customer_id, 'walk_in') = 'walk_in'
+              THEN 'Walk-in Customer'
+            ELSE COALESCE(MAX(c.name), 'Walk-in Customer')
+          END AS customer_name,
           COALESCE(SUM(s.total), 0) AS total_sales,
           COALESCE(SUM(s.paid_amount), 0) AS total_paid,
           COALESCE(SUM(CASE
@@ -173,7 +177,7 @@ class InventoryReportService with BaseRepositoryGuard {
         FROM ${TableNames.sales} s
         LEFT JOIN ${TableNames.customers} c ON c.id = s.customer_id
         WHERE ${where.toString()}
-        GROUP BY customer_name
+        GROUP BY COALESCE(s.customer_id, 'walk_in')
         HAVING pending_balance > 0
         ORDER BY pending_balance DESC
         LIMIT ? OFFSET ?
