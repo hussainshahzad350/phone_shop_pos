@@ -346,6 +346,98 @@ void main() {
       expect(dashboard.todayProfit, closeTo(profit.totalProfit, 0.0001));
     });
 
+    test(
+        'daily sales report does not multiply invoice totals by sale item count',
+        () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final todayUtc = DateTimeHelpers.nowUtc();
+      final day = DateTime.utc(todayUtc.year, todayUtc.month, todayUtc.day);
+
+      await context.createProduct(
+        id: 'prd_daily_no_dup_1',
+        name: 'Daily Report Accessory 1',
+        sku: 'ACC-DAILY-NODUP-1',
+        purchasePrice: 50,
+        salePrice: 120,
+        hasImei: false,
+      );
+      await context.createProduct(
+        id: 'prd_daily_no_dup_2',
+        name: 'Daily Report Accessory 2',
+        sku: 'ACC-DAILY-NODUP-2',
+        purchasePrice: 80,
+        salePrice: 180,
+        hasImei: false,
+      );
+
+      _expectSuccess(
+        await context.purchaseRepository.createPurchaseTransaction(
+          items: const <PurchaseFormItem>[
+            PurchaseFormItem(
+              productModelId: 'prd_daily_no_dup_1',
+              productName: 'Daily Report Accessory 1',
+              hasImei: false,
+              quantity: 5,
+              unitCost: 50,
+            ),
+            PurchaseFormItem(
+              productModelId: 'prd_daily_no_dup_2',
+              productName: 'Daily Report Accessory 2',
+              hasImei: false,
+              quantity: 5,
+              unitCost: 80,
+            ),
+          ],
+          discount: 0,
+          tax: 0,
+          paidAmount: 650,
+        ),
+      );
+
+      _expectSuccess(
+        await context.salesRepository.createSaleTransaction(
+          items: const <CartItemEntity>[
+            CartItemEntity(
+              productModelId: 'prd_daily_no_dup_1',
+              productName: 'Daily Report Accessory 1',
+              hasImei: false,
+              quantity: 1,
+              unitPrice: 120,
+            ),
+            CartItemEntity(
+              productModelId: 'prd_daily_no_dup_2',
+              productName: 'Daily Report Accessory 2',
+              hasImei: false,
+              quantity: 1,
+              unitPrice: 180,
+            ),
+          ],
+          totals: const SaleTotalsEntity(
+            subtotal: 300,
+            discount: 0,
+            tax: 0,
+            total: 300,
+            paidAmount: 100,
+          ),
+          saleDate: todayUtc,
+        ),
+      );
+
+      final rows = _expectSuccess(
+        await context.salesReportService.getDailySalesReport(
+          ReportFilterEntity(startDate: day, endDate: day),
+        ),
+      );
+
+      expect(rows, hasLength(1));
+      expect(rows.first.invoiceCount, 1);
+      expect(rows.first.totalSales, closeTo(300, 0.0001));
+      expect(rows.first.pendingBalances, closeTo(200, 0.0001));
+      expect(rows.first.totalProfit, closeTo(170, 0.0001));
+    });
+
     test('sold phones report uses sale_items cost snapshot only', () async {
       final context = await _ConsistencyContext.createTemporary();
       addTearDown(context.dispose);

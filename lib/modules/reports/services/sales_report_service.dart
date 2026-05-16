@@ -25,23 +25,35 @@ class SalesReportService with BaseRepositoryGuard {
         label: 'reports.daily_sales',
         action: () => _appDatabase.database.rawQuery(
           '''
+        WITH invoice_rollup AS (
+          SELECT
+            s.id AS sale_id,
+            date(s.sale_date) AS sale_day,
+            s.total,
+            s.paid_amount,
+            COALESCE(SUM(
+              si.line_total - (si.cost_price * si.quantity)
+            ), 0) AS invoice_profit,
+            COALESCE(SUM(CASE WHEN pm.has_imei = 1 THEN 1 ELSE 0 END), 0) AS phones_sold,
+            COALESCE(SUM(CASE WHEN pm.has_imei = 0 THEN si.quantity ELSE 0 END), 0) AS accessories_sold
+          FROM ${TableNames.sales} s
+          LEFT JOIN ${TableNames.saleItems} si ON si.sale_id = s.id
+          LEFT JOIN ${TableNames.productModels} pm ON pm.id = si.product_model_id
+          WHERE $where
+          GROUP BY s.id, sale_day, s.total, s.paid_amount
+        )
         SELECT
-          date(s.sale_date) AS sale_day,
-          COUNT(DISTINCT s.id) AS invoice_count,
-          COALESCE(SUM(s.total), 0) AS total_sales,
-          COALESCE(SUM(
-            si.line_total - (si.cost_price * si.quantity)
-          ), 0) AS total_profit,
-          COALESCE(SUM(CASE WHEN pm.has_imei = 1 THEN 1 ELSE 0 END), 0) AS phones_sold,
-          COALESCE(SUM(CASE WHEN pm.has_imei = 0 THEN si.quantity ELSE 0 END), 0) AS accessories_sold,
+          sale_day,
+          COUNT(*) AS invoice_count,
+          COALESCE(SUM(total), 0) AS total_sales,
+          COALESCE(SUM(invoice_profit), 0) AS total_profit,
+          COALESCE(SUM(phones_sold), 0) AS phones_sold,
+          COALESCE(SUM(accessories_sold), 0) AS accessories_sold,
           COALESCE(SUM(CASE
-            WHEN s.total > s.paid_amount THEN s.total - s.paid_amount
+            WHEN total > paid_amount THEN total - paid_amount
             ELSE 0
           END), 0) AS pending_balances
-        FROM ${TableNames.sales} s
-        LEFT JOIN ${TableNames.saleItems} si ON si.sale_id = s.id
-        LEFT JOIN ${TableNames.productModels} pm ON pm.id = si.product_model_id
-        WHERE $where
+        FROM invoice_rollup
         GROUP BY sale_day
         ORDER BY sale_day DESC
         LIMIT ? OFFSET ?
