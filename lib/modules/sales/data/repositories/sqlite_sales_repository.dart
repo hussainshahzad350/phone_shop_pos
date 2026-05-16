@@ -16,11 +16,12 @@ import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_ent
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_completion_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/repositories/sales_repository.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository {
+class SqliteSalesRepository
+    with BaseRepositoryGuard
+    implements SalesRepository {
   SqliteSalesRepository({required AppDatabase appDatabase})
-    : _appDatabase = appDatabase;
+      : _appDatabase = appDatabase;
 
   static final RegExp _digitsOnlyPattern = RegExp(r'^\d+$');
 
@@ -117,8 +118,12 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
   }) {
     return guard<List<SerializedStockEntity>>(() async {
       final trimmedQuery = query.trim();
-      final args = <Object?>[productModelId, SerializedStockStatus.inStock.value];
-      final whereBuffer = StringBuffer('product_model_id = ? AND stock_status = ?');
+      final args = <Object?>[
+        productModelId,
+        SerializedStockStatus.inStock.value
+      ];
+      final whereBuffer =
+          StringBuffer('product_model_id = ? AND stock_status = ?');
 
       if (trimmedQuery.isNotEmpty) {
         final prefixQuery = '$trimmedQuery%';
@@ -216,8 +221,7 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
 
       await _appDatabase.runInTransaction<void>((transaction) async {
         // ── Phase 4: atomic invoice sequence ─────────────────────────────
-        final dateKey =
-            '${saleDate.year.toString().padLeft(4, '0')}'
+        final dateKey = '${saleDate.year.toString().padLeft(4, '0')}'
             '${saleDate.month.toString().padLeft(2, '0')}'
             '${saleDate.day.toString().padLeft(2, '0')}';
 
@@ -236,8 +240,7 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
           <Object?>[dateKey],
         );
         final seq = (seqRows.first['last_seq'] as num).toInt();
-        invoiceNumber =
-            'INV-$dateKey-${seq.toString().padLeft(4, '0')}';
+        invoiceNumber = 'INV-$dateKey-${seq.toString().padLeft(4, '0')}';
 
         // ── Sale header ───────────────────────────────────────────────────
         final saleModel = SaleModel(
@@ -279,8 +282,7 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
             }
 
             // Phase 3: snapshot the serialized stock cost price at sale time.
-            costPrice =
-                (imeiRows.first['cost_price'] as num?)?.toDouble() ?? 0;
+            costPrice = (imeiRows.first['cost_price'] as num?)?.toDouble() ?? 0;
 
             await transaction.update(
               TableNames.serializedStock,
@@ -308,8 +310,7 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
             }
 
             // Phase 3: snapshot the per-unit cost from inventory at sale time.
-            costPrice =
-                (stockRows.isEmpty
+            costPrice = (stockRows.isEmpty
                     ? 0
                     : (stockRows.first['unit_cost'] as num?)?.toDouble()) ??
                 0;
@@ -374,10 +375,12 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
       if (item.hasImei) {
         final serializedStockId = item.serializedStockId;
         if (serializedStockId == null || serializedStockId.isEmpty) {
-          throw StateError('${item.productName} requires a serialized stock ID.');
+          throw StateError(
+              '${item.productName} requires a serialized stock ID.');
         }
         if (item.quantity != 1) {
-          throw StateError('${item.productName} serialized quantity must be 1.');
+          throw StateError(
+              '${item.productName} serialized quantity must be 1.');
         }
         if (!serializedIds.add(serializedStockId)) {
           throw StateError('Duplicate serialized stock detected in sale.');
@@ -389,7 +392,8 @@ class SqliteSalesRepository with BaseRepositoryGuard implements SalesRepository 
         throw StateError('${item.productName} has invalid quantity.');
       }
       if (item.serializedStockId != null) {
-        throw StateError('${item.productName} cannot reference serialized stock.');
+        throw StateError(
+            '${item.productName} cannot reference serialized stock.');
       }
     }
   }

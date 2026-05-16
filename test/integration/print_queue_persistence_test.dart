@@ -20,7 +20,8 @@ void main() {
       final enqueueResult = await context.repository.enqueue(context.document);
       expect(enqueueResult.isSuccess, isTrue);
 
-      final reloadedContext = await _PrintQueueContext.create(context.rootDirectory);
+      final reloadedContext =
+          await _PrintQueueContext.create(context.rootDirectory);
       addTearDown(() => reloadedContext.dispose(deleteRoot: false));
       final jobsResult = await reloadedContext.repository.loadJobs();
 
@@ -33,7 +34,8 @@ void main() {
       );
     });
 
-    test('recovers stale processing jobs as failed for manual review', () async {
+    test('recovers stale processing jobs as failed for manual review',
+        () async {
       final context = await _PrintQueueContext.createTemporary();
       addTearDown(context.dispose);
 
@@ -76,30 +78,30 @@ class _PrintQueueContext {
   final AppDatabase appDatabase;
   final PrintJobRepository repository;
 
-  InvoicePrintDocument get document => const InvoicePrintDocument(
-    saleId: 'sal_stress_1',
-    invoiceNumber: 'INV-STRESS-1',
-    saleDate: DateTime.utc(2026, 5, 15),
-    items: <CartItemEntity>[
-      CartItemEntity(
-        productModelId: 'prd_stress_1',
-        productName: 'Stress Phone',
-        hasImei: true,
-        quantity: 1,
-        unitPrice: 75000,
-        serializedStockId: 'ser_stress_1',
-        imei: '356789101234561',
-      ),
-    ],
-    totals: SaleTotalsEntity(
-      subtotal: 75000,
-      discount: 0,
-      tax: 0,
-      total: 75000,
-      paidAmount: 75000,
-    ),
-    paymentMethod: 'cash',
-  );
+  InvoicePrintDocument get document => InvoicePrintDocument(
+        saleId: 'sal_stress_1',
+        invoiceNumber: 'INV-STRESS-1',
+        saleDate: DateTime.utc(2026, 5, 15),
+        items: <CartItemEntity>[
+          const CartItemEntity(
+            productModelId: 'prd_stress_1',
+            productName: 'Stress Phone',
+            hasImei: true,
+            quantity: 1,
+            unitPrice: 75000,
+            serializedStockId: 'ser_stress_1',
+            imei: '356789101234561',
+          ),
+        ],
+        totals: const SaleTotalsEntity(
+          subtotal: 75000,
+          discount: 0,
+          tax: 0,
+          total: 75000,
+          paidAmount: 75000,
+        ),
+        paymentMethod: 'cash',
+      );
 
   static Future<_PrintQueueContext> createTemporary() async {
     final rootDirectory = await Directory.systemTemp.createTemp(

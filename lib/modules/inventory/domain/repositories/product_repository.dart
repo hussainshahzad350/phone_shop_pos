@@ -10,10 +10,15 @@ abstract class ProductRepository extends BaseRepository {
   Future<Result<List<ProductEntity>>> searchProducts(
     String query, {
     bool? hasImei,
+    bool? isActive,
     int limit = 50,
   });
 
   Future<Result<void>> updateProduct(ProductEntity product);
 
   Future<Result<void>> deactivateProduct(String id);
+
+  Future<Result<void>> activateProduct(String id);
+
+  Future<Result<bool>> isSkuUnique(String sku, {String? excludeId});
 }

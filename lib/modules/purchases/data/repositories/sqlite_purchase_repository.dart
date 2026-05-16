@@ -15,9 +15,11 @@ import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_i
 import 'package:phone_shop_pos/modules/purchases/domain/entities/supplier_option_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/repositories/purchase_repository.dart';
 
-class SqlitePurchaseRepository with BaseRepositoryGuard implements PurchaseRepository {
+class SqlitePurchaseRepository
+    with BaseRepositoryGuard
+    implements PurchaseRepository {
   SqlitePurchaseRepository({required AppDatabase appDatabase})
-    : _appDatabase = appDatabase;
+      : _appDatabase = appDatabase;
 
   final AppDatabase _appDatabase;
 
@@ -169,11 +171,12 @@ class SqlitePurchaseRepository with BaseRepositoryGuard implements PurchaseRepos
       }
       // ─────────────────────────────────────────────────────────────────────
 
-      final subtotal = items.fold<double>(0, (sum, item) => sum + item.lineTotal);
-      final sanitizedDiscount = discount.clamp(0, subtotal);
-      final sanitizedTax = tax < 0 ? 0 : tax;
+      final subtotal =
+          items.fold<double>(0, (sum, item) => sum + item.lineTotal);
+      final sanitizedDiscount = discount.clamp(0, subtotal).toDouble();
+      final sanitizedTax = tax < 0 ? 0.0 : tax;
       final total = (subtotal - sanitizedDiscount) + sanitizedTax;
-      final sanitizedPaid = paidAmount < 0 ? 0 : paidAmount;
+      final sanitizedPaid = paidAmount < 0 ? 0.0 : paidAmount;
 
       final purchaseModel = PurchaseModel(
         id: purchaseId,
@@ -209,7 +212,8 @@ class SqlitePurchaseRepository with BaseRepositoryGuard implements PurchaseRepos
                   (rawSerial == null || rawSerial.isEmpty) ? null : rawSerial;
 
               final stockId = IdHelpers.newId(prefix: 'ser');
-              await transaction.insert(TableNames.serializedStock, <String, Object?>{
+              await transaction
+                  .insert(TableNames.serializedStock, <String, Object?>{
                 'id': stockId,
                 'product_model_id': item.productModelId,
                 'imei1': normalizedImei1,
@@ -235,7 +239,8 @@ class SqlitePurchaseRepository with BaseRepositoryGuard implements PurchaseRepos
                 createdAt: now,
                 updatedAt: now,
               );
-              await transaction.insert(TableNames.purchaseItems, itemModel.toMap());
+              await transaction.insert(
+                  TableNames.purchaseItems, itemModel.toMap());
               serializedCount++;
             }
           } else {
@@ -279,7 +284,8 @@ class SqlitePurchaseRepository with BaseRepositoryGuard implements PurchaseRepos
               createdAt: now,
               updatedAt: now,
             );
-            await transaction.insert(TableNames.purchaseItems, itemModel.toMap());
+            await transaction.insert(
+                TableNames.purchaseItems, itemModel.toMap());
             quantityCount++;
           }
         }
@@ -303,7 +309,8 @@ class SqlitePurchaseRepository with BaseRepositoryGuard implements PurchaseRepos
     for (final item in items) {
       if (item.hasImei) {
         if (item.imeiEntries.isEmpty) {
-          throw StateError('${item.productName} requires at least one IMEI entry.');
+          throw StateError(
+              '${item.productName} requires at least one IMEI entry.');
         }
 
         for (final entry in item.imeiEntries) {
@@ -314,7 +321,8 @@ class SqlitePurchaseRepository with BaseRepositoryGuard implements PurchaseRepos
             throw StateError('${item.productName} contains an empty IMEI.');
           }
           if (entry.costPrice < 0) {
-            throw StateError('${item.productName} contains a negative IMEI cost.');
+            throw StateError(
+                '${item.productName} contains a negative IMEI cost.');
           }
           if (normalizedImei2 != null &&
               normalizedImei2.isNotEmpty &&
@@ -332,7 +340,8 @@ class SqlitePurchaseRepository with BaseRepositoryGuard implements PurchaseRepos
         throw StateError('${item.productName} has invalid unit cost.');
       }
       if (item.imeiEntries.isNotEmpty) {
-        throw StateError('${item.productName} cannot mix quantity and IMEI stock.');
+        throw StateError(
+            '${item.productName} cannot mix quantity and IMEI stock.');
       }
     }
   }

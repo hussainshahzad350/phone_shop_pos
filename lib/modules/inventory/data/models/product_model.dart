@@ -15,12 +15,16 @@ class ProductModel extends BaseDbModel {
     this.brand,
     this.category,
     this.sku,
+    this.barcode,
+    this.minStockAlert = 0,
   });
 
   final String name;
   final String? brand;
   final String? category;
   final String? sku;
+  final String? barcode;
+  final int minStockAlert;
   final double purchasePrice;
   final double salePrice;
   final bool hasImei;
@@ -33,6 +37,8 @@ class ProductModel extends BaseDbModel {
       brand: map['brand'] as String?,
       category: map['category'] as String?,
       sku: map['sku'] as String?,
+      barcode: map['barcode'] as String?,
+      minStockAlert: (map['min_stock_alert'] as num?)?.toInt() ?? 0,
       purchasePrice: (map['purchase_price'] as num).toDouble(),
       salePrice: (map['sale_price'] as num).toDouble(),
       hasImei: (map['has_imei'] as num) == 1,
@@ -49,6 +55,8 @@ class ProductModel extends BaseDbModel {
       brand: entity.brand,
       category: entity.category,
       sku: entity.sku,
+      barcode: entity.barcode,
+      minStockAlert: entity.minStockAlert,
       purchasePrice: entity.purchasePrice,
       salePrice: entity.salePrice,
       hasImei: entity.hasImei,
@@ -65,6 +73,8 @@ class ProductModel extends BaseDbModel {
       'brand': brand,
       'category': category,
       'sku': sku,
+      'barcode': barcode,
+      'min_stock_alert': minStockAlert,
       'purchase_price': purchasePrice,
       'sale_price': salePrice,
       'has_imei': hasImei ? 1 : 0,
@@ -79,6 +89,8 @@ class ProductModel extends BaseDbModel {
       brand: brand,
       category: category,
       sku: sku,
+      barcode: barcode,
+      minStockAlert: minStockAlert,
       purchasePrice: purchasePrice,
       salePrice: salePrice,
       hasImei: hasImei,

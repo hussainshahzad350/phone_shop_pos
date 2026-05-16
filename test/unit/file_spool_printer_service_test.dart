@@ -16,16 +16,17 @@ void main() {
     });
 
     final service = FileSpoolPrinterService(spoolDirectoryPath: temp.path);
-    const job = InvoicePrintJob(
+    final job = InvoicePrintJob(
       id: 'job_1',
       invoiceNumber: 'INV-1',
       createdAt: DateTime.utc(2026, 5, 15),
+      updatedAt: DateTime.utc(2026, 5, 15),
       document: InvoicePrintDocument(
         saleId: 'sal_1',
         invoiceNumber: 'INV-1',
         saleDate: DateTime.utc(2026, 5, 15),
         items: <CartItemEntity>[],
-        totals: SaleTotalsEntity(
+        totals: const SaleTotalsEntity(
           subtotal: 0,
           discount: 0,
           tax: 0,

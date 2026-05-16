@@ -338,7 +338,8 @@ class AppStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final brightness = ThemeData.estimateBrightnessForColor(color);
-    final foreground = brightness == Brightness.dark ? Colors.white : Colors.black87;
+    final foreground =
+        brightness == Brightness.dark ? Colors.white : Colors.black87;
     return Chip(
       label: Text(
         label,
@@ -371,7 +372,7 @@ class AppLoadingOverlay extends StatelessWidget {
         if (isLoading)
           Positioned.fill(
             child: ColoredBox(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               child: Center(
                 child: Card(
                   child: Padding(

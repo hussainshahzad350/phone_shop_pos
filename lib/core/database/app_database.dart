@@ -15,8 +15,8 @@ class AppDatabase {
   AppDatabase({
     required LocalDatabaseService localDatabaseService,
     required MigrationService migrationService,
-  }) : _localDatabaseService = localDatabaseService,
-       _migrationService = migrationService;
+  })  : _localDatabaseService = localDatabaseService,
+        _migrationService = migrationService;
 
   final LocalDatabaseService _localDatabaseService;
   final MigrationService _migrationService;
@@ -168,11 +168,14 @@ class AppDatabase {
   }
 
   Future<void> seedDemoDataIfEmpty() async {
-    final usersCount = Sqflite.firstIntValue(
-      await database.rawQuery('SELECT COUNT(*) FROM ${TableNames.users}'),
+    final usersCountRow = await database.rawQuery(
+      'SELECT COUNT(*) AS count FROM ${TableNames.users}',
     );
+    final usersCount = usersCountRow.isEmpty
+        ? 0
+        : (usersCountRow.first['count'] as num?)?.toInt() ?? 0;
 
-    if ((usersCount ?? 0) > 0) {
+    if (usersCount > 0) {
       return;
     }
 

@@ -1,16 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:phone_shop_pos/modules/sales/services/sales_calculator.dart';
 
 void main() {
-  const calculator = SalesCalculator();
-
   group('SalesCalculator — totals', () {
     test('subtotal equals sum of line totals', () {
       // The calculator is tested via its output; we verify the core formula:
       //   subtotal = Σ(lineTotal)
       //   total = subtotal - discount + tax
       //   profit = total_revenue - total_cost  (see profit report service)
-      final subtotal = 10000.0 + 5000.0;
+      const subtotal = 10000.0 + 5000.0;
       expect(subtotal, 15000.0);
     });
 

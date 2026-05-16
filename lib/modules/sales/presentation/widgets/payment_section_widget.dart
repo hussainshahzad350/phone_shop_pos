@@ -36,11 +36,12 @@ class PaymentSectionWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text('Payment', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Payment',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               focusNode: paymentMethodFocusNode,
-              value: paymentMethod,
+              initialValue: paymentMethod,
               items: PaymentMethod.values
                   .map(
                     (value) => DropdownMenuItem<String>(
@@ -69,9 +70,9 @@ class PaymentSectionWidget extends StatelessWidget {
                 border: OutlineInputBorder(),
                 isDense: true,
               ),
-               onChanged: (value) => onPaidAmountChanged(
-                 FormattingHelpers.parseLocaleDecimal(value),
-               ),
+              onChanged: (value) => onPaidAmountChanged(
+                FormattingHelpers.parseLocaleDecimal(value),
+              ),
               onSubmitted: (_) {
                 if (isProcessing) {
                   return;
@@ -97,7 +98,8 @@ class PaymentSectionWidget extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: isProcessing ? null : onCompleteSale,
                 icon: const Icon(Icons.point_of_sale_outlined),
-                label: Text(isProcessing ? 'Processing...' : 'Complete Sale (F10)'),
+                label: Text(
+                    isProcessing ? 'Processing...' : 'Complete Sale (F10)'),
               ),
             ),
           ],

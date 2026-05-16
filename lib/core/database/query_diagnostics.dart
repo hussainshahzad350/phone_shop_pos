@@ -16,14 +16,13 @@ class QueryDiagnostics {
       return await action();
     } finally {
       stopwatch.stop();
-      if (!kDebugMode) {
-        return;
+      if (kDebugMode) {
+        final elapsed = stopwatch.elapsedMilliseconds;
+        final prefix = elapsed >= slowQueryThreshold.inMilliseconds
+            ? '[slow-query]'
+            : '[query]';
+        debugPrint('$prefix ${elapsed}ms $label');
       }
-      final elapsed = stopwatch.elapsedMilliseconds;
-      final prefix = elapsed >= slowQueryThreshold.inMilliseconds
-          ? '[slow-query]'
-          : '[query]';
-      debugPrint('$prefix ${elapsed}ms $label');
     }
   }
 }

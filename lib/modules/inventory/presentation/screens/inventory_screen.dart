@@ -73,7 +73,8 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AppShortcutEventState>(appShortcutEventBusProvider, (previous, next) {
+    ref.listen<AppShortcutEventState>(appShortcutEventBusProvider,
+        (previous, next) {
       _handleGlobalShortcut(next);
     });
 
@@ -82,8 +83,8 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     final stockAsync = ref.watch(stockRowsProvider);
 
     return Shortcuts(
-      shortcuts: <ShortcutActivator, Intent>{
-        const SingleActivator(LogicalKeyboardKey.f5): const _RefreshIntent(),
+      shortcuts: const <ShortcutActivator, Intent>{
+        SingleActivator(LogicalKeyboardKey.f5): _RefreshIntent(),
       },
       child: Actions(
         actions: <Type, Action<Intent>>{

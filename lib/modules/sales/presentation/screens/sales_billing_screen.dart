@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
-import 'package:phone_shop_pos/core/services/printing/invoice_print_renderer.dart';
 
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
@@ -38,7 +37,8 @@ class SalesBillingScreen extends ConsumerStatefulWidget {
 }
 
 class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
-  final TextEditingController _productSearchController = TextEditingController();
+  final TextEditingController _productSearchController =
+      TextEditingController();
   final FocusNode _productSearchFocus = FocusNode();
   final FocusNode _paymentMethodFocus = FocusNode();
   final FocusNode _paidAmountFocus = FocusNode();
@@ -64,9 +64,9 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
   Future<void> _handleAddProduct(ProductEntity product) async {
     if (!product.hasImei) {
       final result = await ref.read(cartStateProvider.notifier).addToCart(
-        product: product,
-        quantity: 1,
-      );
+            product: product,
+            quantity: 1,
+          );
       _showResultError(result);
       if (result.isSuccess) {
         _focusSearchAfterAdd();
@@ -80,18 +80,19 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     }
 
     final result = await ref.read(cartStateProvider.notifier).addToCart(
-      product: product,
-      serializedStockId: selected.id,
-      imei: selected.imei1,
-      price: selected.sellingPrice ?? product.salePrice,
-    );
+          product: product,
+          serializedStockId: selected.id,
+          imei: selected.imei1,
+          price: selected.sellingPrice ?? product.salePrice,
+        );
     _showResultError(result);
     if (result.isSuccess) {
       _focusSearchAfterAdd();
     }
   }
 
-  Future<SerializedStockEntity?> _showImeiPickerDialog(ProductEntity product) async {
+  Future<SerializedStockEntity?> _showImeiPickerDialog(
+      ProductEntity product) async {
     final repository = await ref.read(salesRepositoryProvider.future);
     if (!mounted) {
       return null;
@@ -212,9 +213,9 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
       return;
     }
     final result = await ref.read(cartStateProvider.notifier).updateQty(
-      index: _selectedCartIndex,
-      quantity: nextQty,
-    );
+          index: _selectedCartIndex,
+          quantity: nextQty,
+        );
     _showResultError(result);
   }
 
@@ -223,8 +224,8 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
       return;
     }
     final result = await ref.read(cartStateProvider.notifier).removeFromCart(
-      _selectedCartIndex,
-    );
+          _selectedCartIndex,
+        );
     _showResultError(result);
     if (result.isSuccess && mounted) {
       final upper = cartItems.length - 2;
@@ -286,9 +287,8 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
             : 'Customer',
         notes: billing.notes.trim().isEmpty ? null : billing.notes.trim(),
       );
-      final enqueueResult = await ref
-          .read(invoicePrintQueueProvider.notifier)
-          .enqueue(document);
+      final enqueueResult =
+          await ref.read(invoicePrintQueueProvider.notifier).enqueue(document);
 
       ref.read(billingStateProvider.notifier).resetAfterSale();
       _productSearchController.clear();
@@ -312,10 +312,11 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     final error = result.asFailure!.error;
     final message = error.message;
     final lowerMessage = message.toLowerCase();
-    final withRollbackSuffix = error.code.toLowerCase().contains('transaction') &&
-            !lowerMessage.contains('rollback')
-        ? '$message Rollback applied.'
-        : message;
+    final withRollbackSuffix =
+        error.code.toLowerCase().contains('transaction') &&
+                !lowerMessage.contains('rollback')
+            ? '$message Rollback applied.'
+            : message;
     AppNotifier.error(
       'Transaction failed. $withRollbackSuffix',
       action: SnackBarAction(
@@ -339,7 +340,8 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AppShortcutEventState>(appShortcutEventBusProvider, (previous, next) {
+    ref.listen<AppShortcutEventState>(appShortcutEventBusProvider,
+        (previous, next) {
       _handleGlobalShortcut(next);
     });
 
@@ -351,15 +353,16 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     final products = productsAsync.value ?? const <ProductEntity>[];
 
     return Shortcuts(
-      shortcuts: <ShortcutActivator, Intent>{
-        const SingleActivator(LogicalKeyboardKey.arrowDown): _CartNextIntent(),
-        const SingleActivator(LogicalKeyboardKey.arrowUp): _CartPreviousIntent(),
-        const SingleActivator(LogicalKeyboardKey.delete): _CartRemoveIntent(),
-        const SingleActivator(LogicalKeyboardKey.numpadAdd): _CartIncreaseQtyIntent(),
-        const SingleActivator(LogicalKeyboardKey.equal): _CartIncreaseQtyIntent(),
-        const SingleActivator(LogicalKeyboardKey.numpadSubtract): _CartDecreaseQtyIntent(),
-        const SingleActivator(LogicalKeyboardKey.minus): _CartDecreaseQtyIntent(),
-        const SingleActivator(LogicalKeyboardKey.escape): _SalesEscapeIntent(),
+      shortcuts: const <ShortcutActivator, Intent>{
+        SingleActivator(LogicalKeyboardKey.arrowDown): _CartNextIntent(),
+        SingleActivator(LogicalKeyboardKey.arrowUp): _CartPreviousIntent(),
+        SingleActivator(LogicalKeyboardKey.delete): _CartRemoveIntent(),
+        SingleActivator(LogicalKeyboardKey.numpadAdd): _CartIncreaseQtyIntent(),
+        SingleActivator(LogicalKeyboardKey.equal): _CartIncreaseQtyIntent(),
+        SingleActivator(LogicalKeyboardKey.numpadSubtract):
+            _CartDecreaseQtyIntent(),
+        SingleActivator(LogicalKeyboardKey.minus): _CartDecreaseQtyIntent(),
+        SingleActivator(LogicalKeyboardKey.escape): _SalesEscapeIntent(),
       },
       child: Actions(
         actions: <Type, Action<Intent>>{
@@ -438,7 +441,8 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                                 child: OutlinedButton(
                                   onPressed: () => _handleAddProduct(product),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: <Widget>[
                                       Text(
@@ -479,7 +483,8 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                             ],
                           ),
                         ),
-                        loading: () => const Center(child: CircularProgressIndicator()),
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
                       ),
                     ),
                   ),
@@ -506,25 +511,31 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                                   if (item.hasImei) {
                                     return;
                                   }
-                                  ref.read(cartStateProvider.notifier).updateQty(
-                                    index: index,
-                                    quantity: item.quantity + 1,
-                                  );
+                                  ref
+                                      .read(cartStateProvider.notifier)
+                                      .updateQty(
+                                        index: index,
+                                        quantity: item.quantity + 1,
+                                      );
                                 },
                                 onDecreaseQty: (index) {
                                   final item = cartItems[index];
                                   if (item.hasImei || item.quantity <= 1) {
                                     return;
                                   }
-                                  ref.read(cartStateProvider.notifier).updateQty(
-                                    index: index,
-                                    quantity: item.quantity - 1,
-                                  );
+                                  ref
+                                      .read(cartStateProvider.notifier)
+                                      .updateQty(
+                                        index: index,
+                                        quantity: item.quantity - 1,
+                                      );
                                 },
                                 onRemove: (index) {
-                                  ref.read(cartStateProvider.notifier).removeFromCart(
-                                    index,
-                                  );
+                                  ref
+                                      .read(cartStateProvider.notifier)
+                                      .removeFromCart(
+                                        index,
+                                      );
                                 },
                               ),
                             ),
@@ -540,7 +551,8 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                                 child: CustomerSelectorWidget(
                                   customers: customersAsync.value ??
                                       const <CustomerOptionEntity>[],
-                                  selectedCustomerId: billing.selectedCustomerId,
+                                  selectedCustomerId:
+                                      billing.selectedCustomerId,
                                   onChanged: (value) {
                                     ref
                                         .read(billingStateProvider.notifier)
@@ -560,7 +572,9 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                                         .setDiscount(value);
                                   },
                                   onTaxChanged: (value) {
-                                    ref.read(billingStateProvider.notifier).setTax(
+                                    ref
+                                        .read(billingStateProvider.notifier)
+                                        .setTax(
                                           value,
                                         );
                                   },
@@ -585,7 +599,9 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                                         .setPaidAmount(value);
                                   },
                                   onNotesChanged: (value) {
-                                    ref.read(billingStateProvider.notifier).setNotes(
+                                    ref
+                                        .read(billingStateProvider.notifier)
+                                        .setNotes(
                                           value,
                                         );
                                   },
@@ -680,7 +696,8 @@ class _InvoicePrintPreviewDialogState
                 if (job.lastError != null)
                   Tooltip(
                     message: job.lastError!,
-                    child: const Icon(Icons.warning_amber, color: Colors.orange),
+                    child:
+                        const Icon(Icons.warning_amber, color: Colors.orange),
                   ),
               ],
             ),
@@ -833,9 +850,8 @@ class _ImeiPickerDialogState extends State<_ImeiPickerDialog> {
         onSuccess: (items) => items,
         onFailure: (_) => const <SerializedStockEntity>[],
       );
-      _selectedIndex = _items.isEmpty
-          ? 0
-          : _selectedIndex.clamp(0, _items.length - 1);
+      _selectedIndex =
+          _items.isEmpty ? 0 : _selectedIndex.clamp(0, _items.length - 1);
     });
 
     if (result.isFailure) {
@@ -929,37 +945,38 @@ class _ImeiPickerDialogState extends State<_ImeiPickerDialog> {
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : _items.isEmpty
-                      ? const Center(child: Text('No IMEI matched.'))
-                      : ListView.builder(
-                          itemCount: _items.length,
-                          itemBuilder: (context, index) {
-                            final stock = _items[index];
-                            final selected = index == _selectedIndex;
-                            final secondImei = stock.imei2?.trim();
-                            return Semantics(
-                              selected: selected,
-                              label: secondImei == null || secondImei.isEmpty
-                                  ? 'IMEI 1 ${stock.imei1}'
-                                  : 'IMEI 1 ${stock.imei1}, IMEI 2 $secondImei',
-                              child: ExcludeSemantics(
-                                child: ListTile(
-                                  dense: true,
+                          ? const Center(child: Text('No IMEI matched.'))
+                          : ListView.builder(
+                              itemCount: _items.length,
+                              itemBuilder: (context, index) {
+                                final stock = _items[index];
+                                final selected = index == _selectedIndex;
+                                final secondImei = stock.imei2?.trim();
+                                return Semantics(
                                   selected: selected,
-                                  title: Text('IMEI 1: ${stock.imei1}'),
-                                  subtitle: stock.imei2 == null
-                                      ? null
-                                      : Text('IMEI 2: ${stock.imei2!}'),
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedIndex = index;
-                                    });
-                                    _selectCurrent();
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                                  label: secondImei == null ||
+                                          secondImei.isEmpty
+                                      ? 'IMEI 1 ${stock.imei1}'
+                                      : 'IMEI 1 ${stock.imei1}, IMEI 2 $secondImei',
+                                  child: ExcludeSemantics(
+                                    child: ListTile(
+                                      dense: true,
+                                      selected: selected,
+                                      title: Text('IMEI 1: ${stock.imei1}'),
+                                      subtitle: stock.imei2 == null
+                                          ? null
+                                          : Text('IMEI 2: ${stock.imei2!}'),
+                                      onTap: () {
+                                        setState(() {
+                                          _selectedIndex = index;
+                                        });
+                                        _selectCurrent();
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                 ),
               ],
             ),

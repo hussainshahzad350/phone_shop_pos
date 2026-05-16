@@ -27,11 +27,9 @@ class MigrationService {
     int oldVersion,
     int newVersion,
   ) async {
-    for (
-      var currentVersion = oldVersion + 1;
-      currentVersion <= newVersion;
-      currentVersion++
-    ) {
+    for (var currentVersion = oldVersion + 1;
+        currentVersion <= newVersion;
+        currentVersion++) {
       await _applyMigration(database, currentVersion);
     }
   }
@@ -324,6 +322,30 @@ class MigrationService {
       'CREATE INDEX IF NOT EXISTS idx_serialized_stock_product_status_imei2 ON ${TableNames.serializedStock}(product_model_id, stock_status, imei2);',
       'CREATE INDEX IF NOT EXISTS idx_suppliers_name ON ${TableNames.suppliers}(name);',
       'CREATE INDEX IF NOT EXISTS idx_customers_name_phone ON ${TableNames.customers}(name, phone);',
+    ],
+
+    // ── v6: master-data management — brands, extended fields ─────────────
+    6: <String>[
+      '''
+      CREATE TABLE ${TableNames.brands} (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL UNIQUE,
+        is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      ''',
+      'ALTER TABLE ${TableNames.productModels} ADD COLUMN barcode TEXT;',
+      'ALTER TABLE ${TableNames.productModels} ADD COLUMN min_stock_alert INTEGER NOT NULL DEFAULT 0;',
+      'ALTER TABLE ${TableNames.customers} ADD COLUMN notes TEXT;',
+      'ALTER TABLE ${TableNames.customers} ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1;',
+      'ALTER TABLE ${TableNames.suppliers} ADD COLUMN notes TEXT;',
+      'ALTER TABLE ${TableNames.suppliers} ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1;',
+      'CREATE INDEX IF NOT EXISTS idx_brands_name ON ${TableNames.brands}(name);',
+      'CREATE INDEX IF NOT EXISTS idx_brands_is_active ON ${TableNames.brands}(is_active);',
+      'CREATE INDEX IF NOT EXISTS idx_product_models_barcode ON ${TableNames.productModels}(barcode);',
+      'CREATE INDEX IF NOT EXISTS idx_customers_is_active ON ${TableNames.customers}(is_active);',
+      'CREATE INDEX IF NOT EXISTS idx_suppliers_is_active ON ${TableNames.suppliers}(is_active);',
     ],
   };
 }
