@@ -63,7 +63,7 @@ void main() {
     expect(resetCount, 1);
   });
 
-  test('preserves success when queue enqueue fails and still resets billing', () async {
+  test('preserves success when enqueue fails and still resets billing', () async {
     var resetCount = 0;
     final flow = SaleCompletionFlow(
       trackSaleOperation: (action) => action(),
