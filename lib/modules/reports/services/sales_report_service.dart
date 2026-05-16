@@ -129,7 +129,7 @@ class SalesReportService with BaseRepositoryGuard {
           COALESCE(ss.imei1, '-') AS imei,
           COALESCE(c.name, 'Walk-in Customer') AS customer_name,
           si.line_total AS sale_price,
-          COALESCE(ss.cost_price, pm.purchase_price, 0) AS cost_price
+          COALESCE(si.cost_price, 0) AS cost_price
         FROM ${TableNames.sales} s
         JOIN ${TableNames.saleItems} si ON si.sale_id = s.id
         JOIN ${TableNames.productModels} pm ON pm.id = si.product_model_id

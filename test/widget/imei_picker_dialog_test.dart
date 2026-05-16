@@ -33,6 +33,49 @@ void main() {
 
     expect(result?.id, 'ss-2');
   });
+
+  testWidgets('shows error and retry when IMEI lookup fails', (tester) async {
+    final repository = _FlakySalesRepository();
+    SerializedStockEntity? selected;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () async {
+                  selected = await showDialog<SerializedStockEntity>(
+                    context: context,
+                    builder: (_) => ImeiPickerDialog(
+                      productName: 'Phone A',
+                      productModelId: 'pm-1',
+                      repository: repository,
+                    ),
+                  );
+                },
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('Temporary IMEI lookup failure'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Retry'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Retry'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.textContaining('IMEI 1:'), findsWidgets);
+    expect(selected, isNull);
+  });
 }
 
 Future<SerializedStockEntity?> _openDialogAndSelect({
@@ -147,6 +190,28 @@ class _FakeSalesRepository implements SalesRepository {
     return const Failure<SaleCompletionEntity>(
       AppError(code: 'not_implemented', message: 'Not used in this test'),
     );
+  }
+}
+
+class _FlakySalesRepository extends _FakeSalesRepository {
+  bool _hasFailed = false;
+
+  @override
+  Future<Result<List<SerializedStockEntity>>> getAvailableImeis(
+    String productModelId, {
+    String query = '',
+    int limit = 20,
+  }) async {
+    if (!_hasFailed) {
+      _hasFailed = true;
+      return const Failure<List<SerializedStockEntity>>(
+        AppError(
+          code: 'temporary_failure',
+          message: 'Temporary IMEI lookup failure',
+        ),
+      );
+    }
+    return super.getAvailableImeis(productModelId, query: query, limit: limit);
   }
 }
 

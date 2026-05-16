@@ -21,6 +21,7 @@ class SqliteInventoryRepository
       : _appDatabase = appDatabase;
 
   static final RegExp _digitsOnlyPattern = RegExp(r'^\d+$');
+  static final RegExp _imeiPattern = RegExp(r'^\d{14,15}$');
 
   final AppDatabase _appDatabase;
 
@@ -29,7 +30,49 @@ class SqliteInventoryRepository
     SerializedStockEntity stock,
   ) {
     return guard<SerializedStockEntity>(() async {
-      final model = SerializedStockModel.fromEntity(stock);
+      final imei1 = stock.imei1.trim();
+      final imei2 = _normalizeOptional(stock.imei2);
+      if (imei1.isEmpty || !_imeiPattern.hasMatch(imei1)) {
+        throw StateError('Primary IMEI must be 14–15 digits.');
+      }
+      if (imei2 != null) {
+        if (!_imeiPattern.hasMatch(imei2)) {
+          throw StateError('Secondary IMEI must be 14–15 digits.');
+        }
+        if (imei1 == imei2) {
+          throw StateError('Primary and secondary IMEI must be different.');
+        }
+      }
+
+      final imeiValues = <String>{imei1, if (imei2 != null) imei2};
+      for (final value in imeiValues) {
+        final existing = await _appDatabase.queryTable(
+          TableNames.serializedStock,
+          where: 'imei1 = ? OR imei2 = ?',
+          whereArgs: <Object?>[value, value],
+          limit: 1,
+        );
+        if (existing.isNotEmpty) {
+          throw StateError('IMEI already exists in stock: $value');
+        }
+      }
+
+      final model = SerializedStockModel.fromEntity(
+        SerializedStockEntity(
+          id: stock.id,
+          productModelId: stock.productModelId,
+          imei1: imei1,
+          imei2: imei2,
+          serialNumber: _normalizeOptional(stock.serialNumber),
+          stockStatus: stock.stockStatus,
+          costPrice: stock.costPrice,
+          createdAt: stock.createdAt,
+          updatedAt: stock.updatedAt,
+          sellingPrice: stock.sellingPrice,
+          supplierId: stock.supplierId,
+          notes: stock.notes,
+        ),
+      );
       await _appDatabase.insert(TableNames.serializedStock, model.toMap());
       return model.toEntity();
     }, operation: 'add_serialized_stock');
@@ -424,5 +467,13 @@ LIMIT ?
       return (a.imei1 ?? '').compareTo(b.imei1 ?? '');
     }
     return (a.inventoryStockId ?? '').compareTo(b.inventoryStockId ?? '');
+  }
+
+  String? _normalizeOptional(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed;
   }
 }

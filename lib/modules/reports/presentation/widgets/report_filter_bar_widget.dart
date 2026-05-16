@@ -17,6 +17,10 @@ class ReportFilterBarWidget extends StatelessWidget {
     required this.onClear,
     this.customerOptionsError,
     this.productOptionsError,
+    this.customerOptionsLoading = false,
+    this.productOptionsLoading = false,
+    this.onRetryCustomerOptions,
+    this.onRetryProductOptions,
   });
 
   final ReportFilterEntity filter;
@@ -31,13 +35,13 @@ class ReportFilterBarWidget extends StatelessWidget {
   final VoidCallback onClear;
   final String? customerOptionsError;
   final String? productOptionsError;
+  final bool customerOptionsLoading;
+  final bool productOptionsLoading;
+  final VoidCallback? onRetryCustomerOptions;
+  final VoidCallback? onRetryProductOptions;
 
   @override
   Widget build(BuildContext context) {
-    final errors = <String>[
-      if (customerOptionsError != null) customerOptionsError!,
-      if (productOptionsError != null) productOptionsError!,
-    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -79,13 +83,13 @@ class ReportFilterBarWidget extends StatelessWidget {
               ),
             ),
             _IdDropdown(
-              label: 'Customer',
+              label: customerOptionsLoading ? 'Customer (loading...)' : 'Customer',
               value: filter.customerId,
               items: customerOptions,
               onChanged: onCustomer,
             ),
             _IdDropdown(
-              label: 'Product',
+              label: productOptionsLoading ? 'Product (loading...)' : 'Product',
               value: filter.productModelId,
               items: productOptions,
               onChanged: onProduct,
@@ -110,17 +114,48 @@ class ReportFilterBarWidget extends StatelessWidget {
             ),
           ],
         ),
-        if (errors.isNotEmpty) ...<Widget>[
+        if (customerOptionsError != null || productOptionsError != null) ...<Widget>[
           const SizedBox(height: 8),
-          ...errors.map(
-            (message) => Padding(
+          if (customerOptionsError != null)
+            Padding(
               padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                message,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      customerOptionsError!,
+                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: onRetryCustomerOptions,
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('Retry'),
+                  ),
+                ],
               ),
             ),
-          ),
+          if (productOptionsError != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      productOptionsError!,
+                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: onRetryProductOptions,
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
         ],
       ],
     );

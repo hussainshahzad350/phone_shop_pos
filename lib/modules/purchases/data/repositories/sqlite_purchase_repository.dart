@@ -200,11 +200,11 @@ class SqlitePurchaseRepository
 
       await _appDatabase.runInTransaction<void>((transaction) async {
         await transaction.insert(TableNames.purchases, purchaseModel.toMap());
+        final transactionBatchImeis = <String>{};
 
         for (final item in items) {
           if (item.hasImei) {
             for (final entry in item.imeiEntries) {
-              // Normalize: trim all values once before using them.
               final normalizedImei1 = entry.imei1.trim();
               final rawImei2 = entry.imei2?.trim();
               final normalizedImei2 =
@@ -212,6 +212,44 @@ class SqlitePurchaseRepository
               final rawSerial = entry.serialNumber?.trim();
               final normalizedSerial =
                   (rawSerial == null || rawSerial.isEmpty) ? null : rawSerial;
+              if (normalizedImei1.isEmpty ||
+                  !_imeiPattern.hasMatch(normalizedImei1)) {
+                throw StateError(
+                  '${item.productName} contains an invalid IMEI format.',
+                );
+              }
+              if (normalizedImei2 != null) {
+                if (!_imeiPattern.hasMatch(normalizedImei2)) {
+                  throw StateError(
+                    '${item.productName} contains an invalid IMEI format.',
+                  );
+                }
+                if (normalizedImei1 == normalizedImei2) {
+                  throw StateError(
+                    '${item.productName} has duplicate IMEI values.',
+                  );
+                }
+              }
+
+              final imeiValues = <String>[
+                normalizedImei1,
+                if (normalizedImei2 != null) normalizedImei2,
+              ];
+              for (final imei in imeiValues) {
+                if (!transactionBatchImeis.add(imei)) {
+                  throw StateError('Duplicate IMEI in batch: $imei');
+                }
+                final existingRows = await transaction.query(
+                  TableNames.serializedStock,
+                  columns: const <String>['id'],
+                  where: 'imei1 = ? OR imei2 = ?',
+                  whereArgs: <Object?>[imei, imei],
+                  limit: 1,
+                );
+                if (existingRows.isNotEmpty) {
+                  throw StateError('IMEI already exists in stock: $imei');
+                }
+              }
 
               final stockId = IdHelpers.newId(prefix: 'ser');
               await transaction

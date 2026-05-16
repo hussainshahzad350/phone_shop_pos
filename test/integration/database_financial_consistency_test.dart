@@ -9,7 +9,9 @@ import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/modules/dashboard/services/dashboard_service.dart';
 import 'package:phone_shop_pos/modules/inventory/data/repositories/sqlite_product_repository.dart';
+import 'package:phone_shop_pos/modules/inventory/data/repositories/sqlite_inventory_repository.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
+import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/data/repositories/sqlite_purchase_repository.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/report_filter_entity.dart';
@@ -342,6 +344,192 @@ void main() {
       expect(dashboard.todayProfit, closeTo(100, 0.0001));
       expect(dailyRows.first.totalProfit, closeTo(profit.totalProfit, 0.0001));
       expect(dashboard.todayProfit, closeTo(profit.totalProfit, 0.0001));
+    });
+
+    test('sold phones report uses sale_items cost snapshot only', () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final todayUtc = DateTimeHelpers.nowUtc();
+      final day = DateTime.utc(todayUtc.year, todayUtc.month, todayUtc.day);
+
+      await context.createProduct(
+        id: 'prd_profit_phone_snapshot',
+        name: 'Profit Snapshot Phone',
+        sku: 'PHONE-PROFIT-001',
+        purchasePrice: 50000,
+        salePrice: 55000,
+        hasImei: true,
+      );
+
+      _expectSuccess(
+        await context.purchaseRepository.createPurchaseTransaction(
+          items: const <PurchaseFormItem>[
+            PurchaseFormItem(
+              productModelId: 'prd_profit_phone_snapshot',
+              productName: 'Profit Snapshot Phone',
+              hasImei: true,
+              imeiEntries: <ImeiEntry>[
+                ImeiEntry(
+                  imei1: '356789101234650',
+                  imei2: '356789101234668',
+                  serialNumber: 'SNAP-IMEI-001',
+                  costPrice: 50000,
+                  sellingPrice: 55000,
+                ),
+              ],
+            ),
+          ],
+          discount: 0,
+          tax: 0,
+          paidAmount: 50000,
+        ),
+      );
+
+      final serializedRowsBefore = await context.appDatabase.queryTable(
+        TableNames.serializedStock,
+        where: 'product_model_id = ?',
+        whereArgs: const <Object?>['prd_profit_phone_snapshot'],
+        limit: 1,
+      );
+      expect(serializedRowsBefore, isNotEmpty);
+      final serializedId = serializedRowsBefore.first['id'] as String;
+
+      _expectSuccess(
+        await context.salesRepository.createSaleTransaction(
+          items: <CartItemEntity>[
+            CartItemEntity(
+              productModelId: 'prd_profit_phone_snapshot',
+              productName: 'Profit Snapshot Phone',
+              hasImei: true,
+              quantity: 1,
+              unitPrice: 55000,
+              serializedStockId: serializedId,
+              imei: '356789101234650',
+            ),
+          ],
+          totals: const SaleTotalsEntity(
+            subtotal: 55000,
+            discount: 0,
+            tax: 0,
+            total: 55000,
+            paidAmount: 55000,
+          ),
+          saleDate: todayUtc,
+        ),
+      );
+
+      await context.appDatabase.update(
+        TableNames.serializedStock,
+        <String, Object?>{'cost_price': 99999},
+        where: 'id = ?',
+        whereArgs: <Object?>[serializedId],
+      );
+      await context.appDatabase.update(
+        TableNames.productModels,
+        <String, Object?>{'purchase_price': 123456},
+        where: 'id = ?',
+        whereArgs: const <Object?>['prd_profit_phone_snapshot'],
+      );
+
+      final rows = _expectSuccess(
+        await context.salesReportService.getSoldPhonesReport(
+          ReportFilterEntity(startDate: day, endDate: day),
+        ),
+      );
+
+      expect(rows, isNotEmpty);
+      expect(rows.first.costPrice, closeTo(50000, 0.0001));
+      expect(rows.first.profit, closeTo(5000, 0.0001));
+    });
+
+    test('purchase repository rejects invalid IMEI format on direct call', () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      await context.createProduct(
+        id: 'prd_bypass_invalid_imei',
+        name: 'Bypass Invalid IMEI Phone',
+        sku: 'PHONE-BYPASS-001',
+        purchasePrice: 10000,
+        salePrice: 12000,
+        hasImei: true,
+      );
+
+      final result = await context.purchaseRepository.createPurchaseTransaction(
+        items: const <PurchaseFormItem>[
+          PurchaseFormItem(
+            productModelId: 'prd_bypass_invalid_imei',
+            productName: 'Bypass Invalid IMEI Phone',
+            hasImei: true,
+            imeiEntries: <ImeiEntry>[
+              ImeiEntry(imei1: 'invalid-imei', costPrice: 10000),
+            ],
+          ),
+        ],
+        discount: 0,
+        tax: 0,
+        paidAmount: 0,
+      );
+
+      expect(result.isFailure, isTrue);
+    });
+
+    test('inventory repository blocks direct serialized insert IMEI bypass', () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+      final inventoryRepository = SqliteInventoryRepository(
+        appDatabase: context.appDatabase,
+      );
+
+      await context.createProduct(
+        id: 'prd_inventory_imei_guard',
+        name: 'Inventory Guard Phone',
+        sku: 'PHONE-INV-GUARD-001',
+        purchasePrice: 20000,
+        salePrice: 23000,
+        hasImei: true,
+      );
+
+      final now = DateTime.utc(2026, 5, 16);
+      final invalidInsert = await inventoryRepository.addSerializedStock(
+        SerializedStockEntity(
+          id: 'ser_invalid_guard',
+          productModelId: 'prd_inventory_imei_guard',
+          imei1: 'not-valid',
+          stockStatus: SerializedStockStatus.inStock,
+          costPrice: 20000,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      expect(invalidInsert.isFailure, isTrue);
+
+      final firstInsert = await inventoryRepository.addSerializedStock(
+        SerializedStockEntity(
+          id: 'ser_valid_guard_1',
+          productModelId: 'prd_inventory_imei_guard',
+          imei1: '356789101234677',
+          stockStatus: SerializedStockStatus.inStock,
+          costPrice: 20000,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      expect(firstInsert.isSuccess, isTrue);
+
+      final duplicateInsert = await inventoryRepository.addSerializedStock(
+        SerializedStockEntity(
+          id: 'ser_valid_guard_2',
+          productModelId: 'prd_inventory_imei_guard',
+          imei1: '356789101234677',
+          stockStatus: SerializedStockStatus.inStock,
+          costPrice: 20000,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      expect(duplicateInsert.isFailure, isTrue);
     });
 
     test('customer balance report groups by customer id and keeps walk-ins',

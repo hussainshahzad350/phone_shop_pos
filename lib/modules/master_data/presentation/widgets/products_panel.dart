@@ -231,7 +231,20 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
                       .toList(growable: false),
                 ),
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => Center(child: Text('Error: $error')),
+                error: (error, _) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Text('Error loading products: $error'),
+                      const SizedBox(height: 8),
+                      FilledButton.icon(
+                        onPressed: () => ref.invalidate(managedProductsProvider),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),

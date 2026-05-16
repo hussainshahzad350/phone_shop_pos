@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/daily_sales_report_row_entity.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/screens/reports_screen.dart';
@@ -42,6 +43,37 @@ void main() {
       find.widgetWithText(OutlinedButton, 'Next'),
     );
     expect(nextButton.onPressed, isNotNull);
+  });
+
+  testWidgets('report failures show explicit error details and retry action', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          selectedReportsTabProvider.overrideWith((ref) => ReportsTab.dailySales),
+          reportFilterProvider.overrideWith((ref) => ReportFilterNotifier()),
+          reportCustomerOptionsProvider.overrideWith(
+            (ref) async => const <MapEntry<String, String>>[],
+          ),
+          reportProductOptionsProvider.overrideWith(
+            (ref) async => const <MapEntry<String, String>>[],
+          ),
+          dailySalesReportProvider.overrideWith((ref) async {
+            throw const AppError(
+              code: 'db_failure',
+              message: 'Database unavailable',
+            );
+          }),
+        ],
+        child: const MaterialApp(home: ReportsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Failed to load daily sales report.'), findsOneWidget);
+    expect(find.text('Database unavailable'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Retry'), findsOneWidget);
   });
 }
 

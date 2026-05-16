@@ -17,6 +17,6 @@ final brandListProvider = FutureProvider<List<BrandEntity>>((ref) async {
   );
   return result.fold(
     onSuccess: (items) => items,
-    onFailure: (_) => const <BrandEntity>[],
+    onFailure: (error) => throw error,
   );
 });

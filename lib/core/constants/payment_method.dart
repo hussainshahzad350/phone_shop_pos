@@ -23,7 +23,7 @@ class PaymentMethod {
   static bool isValid(String? value) =>
       value != null && values.contains(value);
 
-  /// Normalizes supported legacy aliases and trims whitespace.
+  /// Trims and validates payment method.
   ///
   /// Returns `null` when the value is empty or not one of the allowed payment
   /// methods.
@@ -31,9 +31,6 @@ class PaymentMethod {
     final trimmed = value?.trim();
     if (trimmed == null || trimmed.isEmpty) {
       return null;
-    }
-    if (trimmed == 'bank_transfer') {
-      return bank;
     }
     return isValid(trimmed) ? trimmed : null;
   }

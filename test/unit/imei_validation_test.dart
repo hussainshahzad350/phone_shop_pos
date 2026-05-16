@@ -263,10 +263,10 @@ void main() {
       }
     });
 
-    test('normalizeNullable converts legacy bank_transfer values', () {
+    test('normalizeNullable rejects legacy bank_transfer values', () {
       expect(
         PaymentMethod.normalizeNullable('bank_transfer'),
-        PaymentMethod.bank,
+        isNull,
       );
     });
   });

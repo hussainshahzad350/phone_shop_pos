@@ -33,6 +33,7 @@ class _ImeiPickerDialogState extends State<ImeiPickerDialog> {
   List<SerializedStockEntity> _items = const <SerializedStockEntity>[];
   String? _errorMessage;
   int _selectedIndex = 0;
+  int _latestSearchToken = 0;
 
   @override
   void initState() {
@@ -49,6 +50,7 @@ class _ImeiPickerDialogState extends State<ImeiPickerDialog> {
   }
 
   Future<void> _runSearch({String query = ''}) async {
+    final searchToken = ++_latestSearchToken;
     setState(() {
       _isLoading = true;
     });
@@ -60,24 +62,30 @@ class _ImeiPickerDialogState extends State<ImeiPickerDialog> {
     if (!mounted) {
       return;
     }
+    if (searchToken != _latestSearchToken) {
+      return;
+    }
 
+    if (result.isFailure) {
+      final failure = result.asFailure!.error;
+      setState(() {
+        _isLoading = false;
+        _items = const <SerializedStockEntity>[];
+        _errorMessage = failure.message;
+        _selectedIndex = 0;
+      });
+      AppNotifier.error(failure.message);
+      return;
+    }
+
+    final items = result.asSuccess!.value;
     setState(() {
       _isLoading = false;
-      _items = result.fold(
-        onSuccess: (items) => items,
-        onFailure: (_) => const <SerializedStockEntity>[],
-      );
-      _errorMessage = result.fold(
-        onSuccess: (_) => null,
-        onFailure: (error) => error.message,
-      );
+      _items = items;
+      _errorMessage = null;
       _selectedIndex =
           _items.isEmpty ? 0 : _selectedIndex.clamp(0, _items.length - 1);
     });
-
-    if (result.isFailure) {
-      AppNotifier.error(result.asFailure!.error.message);
-    }
   }
 
   void _onSearchChanged(String value) {
