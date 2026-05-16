@@ -15,7 +15,7 @@ class SalesCalculator {
     final sanitizedDiscount = discount.clamp(0, subtotal).toDouble();
     final sanitizedTax = tax < 0 ? 0.0 : tax;
     final total = (subtotal - sanitizedDiscount) + sanitizedTax;
-    final sanitizedPaidAmount = paidAmount < 0 ? 0.0 : paidAmount;
+    final sanitizedPaidAmount = paidAmount.clamp(0.0, total);
 
     return SaleTotalsEntity(
       subtotal: subtotal,

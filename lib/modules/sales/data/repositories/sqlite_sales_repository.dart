@@ -377,6 +377,11 @@ class SqliteSalesRepository
         totals.paidAmount < 0) {
       throw StateError('Sale totals cannot be negative.');
     }
+    if (totals.paidAmount > totals.total) {
+      throw StateError(
+        'Paid amount (${totals.paidAmount}) cannot exceed total (${totals.total}).',
+      );
+    }
     if (paymentMethod != null && !PaymentMethod.isValid(paymentMethod)) {
       throw StateError('Payment method must be cash, card, or bank.');
     }
