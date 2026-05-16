@@ -35,6 +35,10 @@ class MigrationService {
   }
 
   Future<void> _applyMigration(Database database, int version) async {
+    if (version == 7) {
+      await _applyMigrationV7(database);
+      return;
+    }
     final statements = _migrationStatements[version];
     if (statements == null) {
       return;
@@ -42,6 +46,38 @@ class MigrationService {
     for (final statement in statements) {
       await database.execute(statement);
     }
+  }
+
+  Future<void> _applyMigrationV7(Database database) async {
+    final duplicateRows = await database.rawQuery('''
+      SELECT imei2, COUNT(*) AS duplicate_count
+      FROM ${TableNames.serializedStock}
+      WHERE imei2 IS NOT NULL
+      GROUP BY imei2
+      HAVING COUNT(*) > 1
+      ORDER BY duplicate_count DESC, imei2 ASC
+      LIMIT 5
+    ''');
+
+    if (duplicateRows.isNotEmpty) {
+      final examples = duplicateRows
+          .map(
+            (row) =>
+                '${row['imei2']} (${(row['duplicate_count'] as num?)?.toInt() ?? 0}x)',
+          )
+          .join(', ');
+      throw StateError(
+        'Migration v7 blocked: duplicate non-null serialized_stock.imei2 values found ($examples). Resolve duplicates before upgrading.',
+      );
+    }
+
+    await database.execute(
+      '''
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_serialized_stock_imei2_unique
+      ON ${TableNames.serializedStock}(imei2)
+      WHERE imei2 IS NOT NULL;
+      ''',
+    );
   }
 
   static const Map<int, List<String>> _migrationStatements = {
@@ -347,5 +383,6 @@ class MigrationService {
       'CREATE INDEX IF NOT EXISTS idx_customers_is_active ON ${TableNames.customers}(is_active);',
       'CREATE INDEX IF NOT EXISTS idx_suppliers_is_active ON ${TableNames.suppliers}(is_active);',
     ],
+    7: <String>[],
   };
 }

@@ -31,16 +31,11 @@ class DashboardService with BaseRepositoryGuard {
             ELSE 0
           END), 0) AS accessories_sold,
           COALESCE(SUM(
-            si.line_total - CASE
-              WHEN si.serialized_stock_id IS NOT NULL THEN COALESCE(ss.cost_price, 0)
-              ELSE si.quantity * COALESCE(ist.unit_cost, pm.purchase_price, 0)
-            END
+            si.line_total - (si.cost_price * si.quantity)
           ), 0) AS today_profit
         FROM ${TableNames.sales} s
         LEFT JOIN ${TableNames.saleItems} si ON si.sale_id = s.id
         LEFT JOIN ${TableNames.productModels} pm ON pm.id = si.product_model_id
-        LEFT JOIN ${TableNames.serializedStock} ss ON ss.id = si.serialized_stock_id
-        LEFT JOIN ${TableNames.inventoryStock} ist ON ist.product_model_id = si.product_model_id
         WHERE s.sale_date >= ? AND s.sale_date < ?
         ''',
         <Object?>[DateTimeHelpers.toSql(start), DateTimeHelpers.toSql(end)],

@@ -30,10 +30,7 @@ class SalesReportService with BaseRepositoryGuard {
           COUNT(DISTINCT s.id) AS invoice_count,
           COALESCE(SUM(s.total), 0) AS total_sales,
           COALESCE(SUM(
-            si.line_total - CASE
-              WHEN si.serialized_stock_id IS NOT NULL THEN COALESCE(ss.cost_price, 0)
-              ELSE si.quantity * COALESCE(ist.unit_cost, pm.purchase_price, 0)
-            END
+            si.line_total - (si.cost_price * si.quantity)
           ), 0) AS total_profit,
           COALESCE(SUM(CASE WHEN pm.has_imei = 1 THEN 1 ELSE 0 END), 0) AS phones_sold,
           COALESCE(SUM(CASE WHEN pm.has_imei = 0 THEN si.quantity ELSE 0 END), 0) AS accessories_sold,
@@ -44,8 +41,6 @@ class SalesReportService with BaseRepositoryGuard {
         FROM ${TableNames.sales} s
         LEFT JOIN ${TableNames.saleItems} si ON si.sale_id = s.id
         LEFT JOIN ${TableNames.productModels} pm ON pm.id = si.product_model_id
-        LEFT JOIN ${TableNames.serializedStock} ss ON ss.id = si.serialized_stock_id
-        LEFT JOIN ${TableNames.inventoryStock} ist ON ist.product_model_id = si.product_model_id
         WHERE $where
         GROUP BY sale_day
         ORDER BY sale_day DESC
