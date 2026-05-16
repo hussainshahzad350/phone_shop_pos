@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.dart';
 
-class TotalsPanelWidget extends StatelessWidget {
+class TotalsPanelWidget extends StatefulWidget {
   const TotalsPanelWidget({
     super.key,
     required this.totals,
@@ -16,6 +16,39 @@ class TotalsPanelWidget extends StatelessWidget {
   final ValueChanged<double> onTaxChanged;
 
   @override
+  State<TotalsPanelWidget> createState() => _TotalsPanelWidgetState();
+}
+
+class _TotalsPanelWidgetState extends State<TotalsPanelWidget> {
+  late final TextEditingController _discountController;
+  late final TextEditingController _taxController;
+
+  @override
+  void initState() {
+    super.initState();
+    _discountController = TextEditingController(
+      text: _displayValue(widget.totals.discount),
+    );
+    _taxController = TextEditingController(
+      text: _displayValue(widget.totals.tax),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant TotalsPanelWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncControllerWithState(_discountController, widget.totals.discount);
+    _syncControllerWithState(_taxController, widget.totals.tax);
+  }
+
+  @override
+  void dispose() {
+    _discountController.dispose();
+    _taxController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
@@ -25,39 +58,71 @@ class TotalsPanelWidget extends StatelessWidget {
           children: <Widget>[
             const Text('Totals', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            _line(label: 'Subtotal', value: totals.subtotal),
+            _line(label: 'Subtotal', value: widget.totals.subtotal),
             const SizedBox(height: 8),
             TextField(
+              controller: _discountController,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
                 labelText: 'Discount',
                 border: OutlineInputBorder(),
                 isDense: true,
               ),
-              onChanged: (value) =>
-                  onDiscountChanged(FormattingHelpers.parseLocaleDecimal(value)),
+              onChanged: (value) => widget.onDiscountChanged(
+                FormattingHelpers.parseLocaleDecimal(value),
+              ),
             ),
             const SizedBox(height: 8),
             TextField(
+              controller: _taxController,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
                 labelText: 'Tax',
                 border: OutlineInputBorder(),
                 isDense: true,
               ),
-              onChanged: (value) =>
-                  onTaxChanged(FormattingHelpers.parseLocaleDecimal(value)),
+              onChanged: (value) => widget.onTaxChanged(
+                FormattingHelpers.parseLocaleDecimal(value),
+              ),
             ),
             const SizedBox(height: 8),
-            _line(label: 'Total', value: totals.total, bold: true),
+            _line(label: 'Total', value: widget.totals.total, bold: true),
             const SizedBox(height: 8),
-            _line(label: 'Paid', value: totals.paidAmount),
+            _line(label: 'Paid', value: widget.totals.paidAmount),
             const SizedBox(height: 8),
-            _line(label: 'Remaining', value: totals.remaining, bold: true),
+            _line(label: 'Remaining', value: widget.totals.remaining, bold: true),
           ],
         ),
       ),
     );
+  }
+
+  void _syncControllerWithState(TextEditingController controller, double value) {
+    final parsed = FormattingHelpers.parseLocaleDecimal(controller.text);
+    if ((parsed - value).abs() < 0.0001) {
+      return;
+    }
+    final text = _displayValue(value);
+    controller.value = controller.value.copyWith(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+      composing: TextRange.empty,
+    );
+  }
+
+  String _displayValue(double value) {
+    if (value == 0) {
+      return '';
+    }
+    if (value == value.truncateToDouble()) {
+      return value.toInt().toString();
+    }
+    final raw = FormattingHelpers.decimal(
+      value,
+      fractionDigits: 2,
+      useGrouping: false,
+    );
+    return raw.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
   }
 
   Widget _line({required String label, required double value, bool bold = false}) {

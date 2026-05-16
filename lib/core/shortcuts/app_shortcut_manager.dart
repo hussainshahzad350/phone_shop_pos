@@ -127,7 +127,9 @@ class AppShortcutManager extends ConsumerWidget {
             _BackupIntent: CallbackAction<_BackupIntent>(
               onInvoke: (_) {
                 context.go('/settings');
-                AppNotifier.info('Backup shortcuts available in Settings.');
+                AppNotifier.info(
+                  'Ctrl+B opened Settings. Use One-Click Backup there to start backup.',
+                );
                 return null;
               },
             ),

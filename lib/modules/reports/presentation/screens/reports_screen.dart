@@ -8,6 +8,16 @@ import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_filte
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_card_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_widget.dart';
 
+bool hasNextReportsPageCandidate({
+  required int resultsLength,
+  required int pageSize,
+}) {
+  if (pageSize <= 0) {
+    return false;
+  }
+  return resultsLength >= pageSize;
+}
+
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
 
@@ -25,6 +35,11 @@ class ReportsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tab = ref.watch(selectedReportsTabProvider);
     final filter = ref.watch(reportFilterProvider);
+    final canGoNextPage = _canGoNextPage(
+      ref: ref,
+      tab: tab,
+      pageSize: filter.pageSize,
+    );
     final customers =
         ref.watch(reportCustomerOptionsProvider).value ?? const [];
     final products = ref.watch(reportProductOptionsProvider).value ?? const [];
@@ -120,8 +135,9 @@ class ReportsScreen extends ConsumerWidget {
                     ),
                     const SizedBox(width: 8),
                     OutlinedButton.icon(
-                      onPressed: () =>
-                          ref.read(reportFilterProvider.notifier).nextPage(),
+                      onPressed: canGoNextPage
+                          ? () => ref.read(reportFilterProvider.notifier).nextPage()
+                          : null,
                       icon: const Icon(Icons.chevron_right),
                       label: const Text('Next'),
                     ),
@@ -157,6 +173,59 @@ class ReportsScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  bool _canGoNextPage({
+    required WidgetRef ref,
+    required ReportsTab tab,
+    required int pageSize,
+  }) {
+    switch (tab) {
+      case ReportsTab.dailySales:
+        final rows = ref.watch(dailySalesReportProvider).valueOrNull;
+        return rows != null &&
+            hasNextReportsPageCandidate(
+              resultsLength: rows.length,
+              pageSize: pageSize,
+            );
+      case ReportsTab.dateRangeSales:
+        final rows = ref.watch(dateRangeSalesReportProvider).valueOrNull;
+        return rows != null &&
+            hasNextReportsPageCandidate(
+              resultsLength: rows.length,
+              pageSize: pageSize,
+            );
+      case ReportsTab.soldPhones:
+        final rows = ref.watch(soldPhonesReportProvider).valueOrNull;
+        return rows != null &&
+            hasNextReportsPageCandidate(
+              resultsLength: rows.length,
+              pageSize: pageSize,
+            );
+      case ReportsTab.currentStock:
+        final rows = ref.watch(currentStockReportProvider).valueOrNull;
+        return rows != null &&
+            hasNextReportsPageCandidate(
+              resultsLength: rows.length,
+              pageSize: pageSize,
+            );
+      case ReportsTab.customerBalance:
+        final rows = ref.watch(customerBalanceReportProvider).valueOrNull;
+        return rows != null &&
+            hasNextReportsPageCandidate(
+              resultsLength: rows.length,
+              pageSize: pageSize,
+            );
+      case ReportsTab.lowStock:
+        final rows = ref.watch(lowStockReportProvider).valueOrNull;
+        return rows != null &&
+            hasNextReportsPageCandidate(
+              resultsLength: rows.length,
+              pageSize: pageSize,
+            );
+      case ReportsTab.profit:
+        return false;
+    }
   }
 }
 
