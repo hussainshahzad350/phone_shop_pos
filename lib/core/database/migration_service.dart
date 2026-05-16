@@ -719,6 +719,9 @@ class MigrationService {
       // that profit reports can correctly reverse the cost component.
       'ALTER TABLE ${TableNames.saleReturns} ADD COLUMN cost_price REAL NOT NULL DEFAULT 0;',
     ],
+    // v12 is handled by the dedicated _applyMigrationV12 method above.
+    // The empty list is kept here so that all version numbers are represented
+    // in the map for documentation purposes (consistent with v7 and v9).
     12: <String>[],
   };
 }
