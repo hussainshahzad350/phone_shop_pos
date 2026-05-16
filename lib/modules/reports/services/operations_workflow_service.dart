@@ -416,7 +416,7 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         final currentPaid =
             (saleRows.first['paid_amount'] as num?)?.toDouble() ?? 0;
         final newTotal =
-            (currentTotal - returnAmount).clamp(0, double.infinity);
+            (currentTotal - returnAmount).clamp(0.0, currentTotal);
         final newPaid = currentPaid.clamp(0, newTotal);
 
         await transaction.update(
