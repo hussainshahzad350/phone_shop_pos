@@ -2,6 +2,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
+import 'package:phone_shop_pos/core/database/database_provider.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/services/backup/database_backup_service.dart';
@@ -105,7 +106,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     setState(() => _isProcessing = false);
     _refreshHealthProviders();
-    ref.invalidate(databaseBackupServiceProvider);
+    if (result.isSuccess) {
+      ref.read(databaseRecoveryEpochProvider.notifier).state++;
+      ref.invalidate(appDatabaseProvider);
+      ref.invalidate(sqliteDatabaseProvider);
+      ref.invalidate(databaseBackupServiceProvider);
+    }
 
     final message = result.fold(
       onSuccess: (_) => 'Restore completed successfully.',

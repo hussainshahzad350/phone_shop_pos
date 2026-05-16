@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
+import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
@@ -486,6 +487,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
             child: TextField(
               controller: _notesController,
               maxLines: 3,
+              maxLength: NotesSafety.maxLength,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 labelText: 'Notes (optional)',

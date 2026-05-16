@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
+import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 
 class PaymentSectionWidget extends StatelessWidget {
   const PaymentSectionWidget({
@@ -84,6 +85,7 @@ class PaymentSectionWidget extends StatelessWidget {
             TextField(
               focusNode: notesFocusNode,
               maxLines: 2,
+              maxLength: NotesSafety.maxLength,
               decoration: const InputDecoration(
                 labelText: 'Notes',
                 border: OutlineInputBorder(),

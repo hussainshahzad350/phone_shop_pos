@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:phone_shop_pos/core/database/app_database.dart';
 import 'package:phone_shop_pos/core/database/base_repository.dart';
+import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
@@ -38,6 +39,8 @@ class DatabaseHealthInfo {
 }
 
 class DatabaseBackupService with BaseRepositoryGuard {
+  static const String _lastBackupMetadataKey = 'backup.last_info';
+
   DatabaseBackupService({required AppDatabase appDatabase})
     : _appDatabase = appDatabase;
 
@@ -275,62 +278,93 @@ class DatabaseBackupService with BaseRepositoryGuard {
   }
 
   Future<void> _writeLastBackupInfo(BackupInfo info) async {
-    final file = File(p.join(p.dirname(_appDatabase.filePath), 'last_backup.json'));
     final payload = <String, Object?>{
       'path': info.path,
       'createdAt': info.createdAt.toUtc().toIso8601String(),
       'sizeBytes': info.sizeBytes,
       'valid': info.valid,
     };
-    await file.writeAsString(jsonEncode(payload));
+    await _appDatabase.database.insert(TableNames.appSettings, <String, Object?>{
+      'key': _lastBackupMetadataKey,
+      'value': jsonEncode(payload),
+      'updated_at': DateTimeHelpers.toSql(DateTimeHelpers.nowUtc()),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  Future<BackupInfo?> _readLastBackupInfo({required String backupDirectoryPath}) async {
+  Future<BackupInfo?> _readLastBackupInfo({
+    required String backupDirectoryPath,
+  }) async {
+    final metadataValue = await _readAppSetting(_lastBackupMetadataKey);
+    if (metadataValue != null) {
+      try {
+        final parsed = _decodeBackupInfo(metadataValue);
+        if (parsed != null) {
+          return _refreshBackupValidity(parsed);
+        }
+      } catch (_) {
+        // Ignore invalid stored metadata payload and try legacy migration.
+      }
+    }
+
+    // Legacy one-time migration path for older builds.
     final metadataFile = File(
       p.join(p.dirname(_appDatabase.filePath), 'last_backup.json'),
     );
 
     if (await metadataFile.exists()) {
       try {
-        final decoded = jsonDecode(await metadataFile.readAsString());
-        if (decoded is Map<String, dynamic>) {
-          return BackupInfo(
-            path: decoded['path'] as String,
-            createdAt: DateTime.parse(decoded['createdAt'] as String).toLocal(),
-            sizeBytes: decoded['sizeBytes'] as int? ?? 0,
-            valid: decoded['valid'] as bool? ?? false,
-          );
+        final parsed = _decodeBackupInfo(await metadataFile.readAsString());
+        if (parsed != null) {
+          await _writeLastBackupInfo(parsed);
+          return _refreshBackupValidity(parsed);
         }
       } catch (_) {
-        // ignore invalid metadata and fallback to directory scan
+        // Ignore invalid legacy metadata.
       }
     }
 
-    final directory = Directory(backupDirectoryPath);
-    if (!await directory.exists()) {
-      return null;
-    }
+    return null;
+  }
 
-    final files = await directory
-        .list()
-        .where((entity) => entity is File)
-        .cast<File>()
-        .where((file) => p.basename(file.path).startsWith('backup_'))
-        .toList();
-
-    if (files.isEmpty) {
-      return null;
-    }
-
-    files.sort(
-      (a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()),
+  Future<String?> _readAppSetting(String key) async {
+    final rows = await _appDatabase.database.query(
+      TableNames.appSettings,
+      columns: <String>['value'],
+      where: 'key = ?',
+      whereArgs: <Object?>[key],
+      limit: 1,
     );
-    final latest = files.first;
+    if (rows.isEmpty) {
+      return null;
+    }
+    return rows.first['value'] as String?;
+  }
+
+  BackupInfo? _decodeBackupInfo(String raw) {
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) {
+      return null;
+    }
+    final path = decoded['path'];
+    final createdAt = decoded['createdAt'];
+    if (path is! String || createdAt is! String) {
+      return null;
+    }
     return BackupInfo(
-      path: latest.path,
-      createdAt: latest.lastModifiedSync(),
-      sizeBytes: await latest.length(),
-      valid: true,
+      path: path,
+      createdAt: DateTime.parse(createdAt).toLocal(),
+      sizeBytes: (decoded['sizeBytes'] as num?)?.toInt() ?? 0,
+      valid: decoded['valid'] as bool? ?? false,
+    );
+  }
+
+  Future<BackupInfo?> _refreshBackupValidity(BackupInfo info) async {
+    final exists = await File(info.path).exists();
+    return BackupInfo(
+      path: info.path,
+      createdAt: info.createdAt,
+      sizeBytes: info.sizeBytes,
+      valid: info.valid && exists,
     );
   }
 }

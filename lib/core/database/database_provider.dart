@@ -9,6 +9,8 @@ import 'package:phone_shop_pos/core/database/sqlite_service.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/services/startup/startup_health_service.dart';
 
+final databaseRecoveryEpochProvider = StateProvider<int>((ref) => 0);
+
 final localDatabaseServiceProvider = FutureProvider<LocalDatabaseService>((
   ref,
 ) async {
@@ -23,6 +25,7 @@ final migrationServiceProvider = Provider<MigrationService>(
 );
 
 final appDatabaseProvider = FutureProvider<AppDatabase>((ref) async {
+  ref.watch(databaseRecoveryEpochProvider);
   final localDatabaseService = await ref.watch(localDatabaseServiceProvider.future);
   final migrationService = ref.watch(migrationServiceProvider);
   final appDatabase = AppDatabase(

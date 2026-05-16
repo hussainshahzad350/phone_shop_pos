@@ -1,5 +1,6 @@
 import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
+import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_completion_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
@@ -253,6 +254,14 @@ class PurchaseService {
       }
     }
 
+    final notesError = NotesSafety.validate(notes, fieldLabel: 'Purchase notes');
+    if (notesError != null) {
+      return Failure<PurchaseCompletionEntity>(
+        AppError(code: 'invalid_purchase_notes', message: notesError),
+      );
+    }
+    final normalizedNotes = NotesSafety.normalizeNullable(notes);
+
     return _repository.createPurchaseTransaction(
       items: items,
       discount: discount,
@@ -260,7 +269,7 @@ class PurchaseService {
       paidAmount: paidAmount,
       supplierId: supplierId,
       invoiceNumber: invoiceNumber,
-      notes: notes,
+      notes: normalizedNotes,
     );
   }
 }
