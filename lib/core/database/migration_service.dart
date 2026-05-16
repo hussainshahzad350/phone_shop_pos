@@ -525,5 +525,81 @@ class MigrationService {
       ''',
     ],
     9: <String>[],
+    10: <String>[
+      '''
+      CREATE TABLE IF NOT EXISTS ${TableNames.salePayments} (
+        id TEXT PRIMARY KEY NOT NULL,
+        sale_id TEXT NOT NULL,
+        amount REAL NOT NULL CHECK (amount > 0),
+        payment_method TEXT NOT NULL CHECK (
+          payment_method IN (
+            '${PaymentMethod.cash}',
+            '${PaymentMethod.card}',
+            '${PaymentMethod.bank}'
+          )
+        ),
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (sale_id) REFERENCES ${TableNames.sales}(id)
+          ON UPDATE CASCADE
+          ON DELETE CASCADE
+      );
+      ''',
+      '''
+      CREATE TABLE IF NOT EXISTS ${TableNames.saleReturns} (
+        id TEXT PRIMARY KEY NOT NULL,
+        sale_id TEXT NOT NULL,
+        sale_item_id TEXT NOT NULL,
+        product_model_id TEXT NOT NULL,
+        serialized_stock_id TEXT,
+        return_type TEXT NOT NULL CHECK (return_type IN ('imei', 'quantity')),
+        return_qty INTEGER NOT NULL CHECK (return_qty > 0),
+        return_amount REAL NOT NULL DEFAULT 0,
+        reason TEXT NOT NULL,
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (sale_id) REFERENCES ${TableNames.sales}(id)
+          ON UPDATE CASCADE
+          ON DELETE CASCADE,
+        FOREIGN KEY (sale_item_id) REFERENCES ${TableNames.saleItems}(id)
+          ON UPDATE CASCADE
+          ON DELETE CASCADE,
+        FOREIGN KEY (product_model_id) REFERENCES ${TableNames.productModels}(id)
+          ON UPDATE CASCADE
+          ON DELETE RESTRICT,
+        FOREIGN KEY (serialized_stock_id) REFERENCES ${TableNames.serializedStock}(id)
+          ON UPDATE CASCADE
+          ON DELETE SET NULL
+      );
+      ''',
+      '''
+      CREATE TABLE IF NOT EXISTS ${TableNames.stockAdjustments} (
+        id TEXT PRIMARY KEY NOT NULL,
+        product_model_id TEXT NOT NULL,
+        serialized_stock_id TEXT,
+        adjustment_type TEXT NOT NULL CHECK (
+          adjustment_type IN ('increase', 'decrease', 'write_off')
+        ),
+        quantity_delta INTEGER NOT NULL,
+        reason TEXT NOT NULL CHECK (reason IN ('damage', 'theft', 'correction')),
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (product_model_id) REFERENCES ${TableNames.productModels}(id)
+          ON UPDATE CASCADE
+          ON DELETE RESTRICT,
+        FOREIGN KEY (serialized_stock_id) REFERENCES ${TableNames.serializedStock}(id)
+          ON UPDATE CASCADE
+          ON DELETE SET NULL
+      );
+      ''',
+      'CREATE INDEX IF NOT EXISTS idx_sale_payments_sale_created ON ${TableNames.salePayments}(sale_id, created_at DESC);',
+      'CREATE INDEX IF NOT EXISTS idx_sale_returns_sale_item ON ${TableNames.saleReturns}(sale_id, sale_item_id);',
+      'CREATE INDEX IF NOT EXISTS idx_sale_returns_serialized ON ${TableNames.saleReturns}(serialized_stock_id);',
+      'CREATE INDEX IF NOT EXISTS idx_stock_adjustments_created ON ${TableNames.stockAdjustments}(created_at DESC);',
+      'CREATE INDEX IF NOT EXISTS idx_stock_adjustments_product ON ${TableNames.stockAdjustments}(product_model_id);',
+    ],
   };
 }
