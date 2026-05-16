@@ -33,7 +33,7 @@ class _ImeiPickerDialogState extends State<ImeiPickerDialog> {
   List<SerializedStockEntity> _items = const <SerializedStockEntity>[];
   String? _errorMessage;
   int _selectedIndex = 0;
-  int _activeSearchToken = 0;
+  int _latestSearchToken = 0;
 
   @override
   void initState() {
@@ -50,7 +50,7 @@ class _ImeiPickerDialogState extends State<ImeiPickerDialog> {
   }
 
   Future<void> _runSearch({String query = ''}) async {
-    final searchToken = ++_activeSearchToken;
+    final searchToken = ++_latestSearchToken;
     setState(() {
       _isLoading = true;
     });
@@ -62,7 +62,7 @@ class _ImeiPickerDialogState extends State<ImeiPickerDialog> {
     if (!mounted) {
       return;
     }
-    if (searchToken != _activeSearchToken) {
+    if (searchToken != _latestSearchToken) {
       return;
     }
 
