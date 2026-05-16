@@ -16,6 +16,7 @@ import 'package:phone_shop_pos/modules/purchases/data/repositories/sqlite_purcha
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/report_filter_entity.dart';
 import 'package:phone_shop_pos/modules/reports/services/inventory_report_service.dart';
+import 'package:phone_shop_pos/modules/reports/services/operations_workflow_service.dart';
 import 'package:phone_shop_pos/modules/reports/services/profit_report_service.dart';
 import 'package:phone_shop_pos/modules/reports/services/sales_report_service.dart';
 import 'package:phone_shop_pos/modules/sales/data/repositories/sqlite_sales_repository.dart';
@@ -625,8 +626,7 @@ void main() {
     });
 
     test('customer balance report groups by customer id and keeps walk-ins',
-        () async {
-      final context = await _ConsistencyContext.createTemporary();
+        () async {      final context = await _ConsistencyContext.createTemporary();
       addTearDown(context.dispose);
 
       final todayUtc = DateTimeHelpers.nowUtc();
@@ -767,6 +767,354 @@ void main() {
         isTrue,
       );
     });
+
+    // ── Return Model (Option A — Refund Model) tests ──────────────────────
+
+    test('accessory return reduces sales.total and sales.paid_amount', () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final todayUtc = DateTimeHelpers.nowUtc();
+
+      await context.createProduct(
+        id: 'prd_return_acc',
+        name: 'Return Accessory',
+        sku: 'ACC-RET-001',
+        purchasePrice: 100,
+        salePrice: 200,
+        hasImei: false,
+      );
+
+      _expectSuccess(
+        await context.purchaseRepository.createPurchaseTransaction(
+          items: const <PurchaseFormItem>[
+            PurchaseFormItem(
+              productModelId: 'prd_return_acc',
+              productName: 'Return Accessory',
+              hasImei: false,
+              quantity: 5,
+              unitCost: 100,
+            ),
+          ],
+          discount: 0,
+          tax: 0,
+          paidAmount: 500,
+        ),
+      );
+
+      final saleResult = _expectSuccess(
+        await context.salesRepository.createSaleTransaction(
+          items: const <CartItemEntity>[
+            CartItemEntity(
+              productModelId: 'prd_return_acc',
+              productName: 'Return Accessory',
+              hasImei: false,
+              quantity: 2,
+              unitPrice: 200,
+            ),
+          ],
+          totals: const SaleTotalsEntity(
+            subtotal: 400,
+            discount: 0,
+            tax: 0,
+            total: 400,
+            paidAmount: 300,
+          ),
+          saleDate: todayUtc,
+        ),
+      );
+
+      final detail = _expectSuccess(
+        await context.operationsService.getSalesInvoiceDetail(saleResult.saleId),
+      );
+      expect(detail, isNotNull);
+      final returnItem = detail!.items.first;
+
+      // Return 1 of 2 units at 200 each → return_amount = 200
+      _expectSuccess(
+        await context.operationsService.processReturn(
+          saleId: saleResult.saleId,
+          item: returnItem,
+          quantity: 1,
+          reason: 'defective',
+        ),
+      );
+
+      final saleRows = await context.appDatabase.queryTable(
+        TableNames.sales,
+        where: 'id = ?',
+        whereArgs: <Object?>[saleResult.saleId],
+        limit: 1,
+      );
+      expect(saleRows, isNotEmpty);
+      // total reduced: 400 - 200 = 200
+      expect(
+        (saleRows.first['total'] as num?)?.toDouble(),
+        closeTo(200, 0.0001),
+      );
+      // paid clamped to new total: MIN(300, 200) = 200
+      expect(
+        (saleRows.first['paid_amount'] as num?)?.toDouble(),
+        closeTo(200, 0.0001),
+      );
+    });
+
+    test('return reduces profit in profit report and daily sales report',
+        () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final todayUtc = DateTimeHelpers.nowUtc();
+      final day = DateTime.utc(todayUtc.year, todayUtc.month, todayUtc.day);
+
+      await context.createProduct(
+        id: 'prd_return_profit',
+        name: 'Return Profit Accessory',
+        sku: 'ACC-RET-PROFIT-001',
+        purchasePrice: 100,
+        salePrice: 300,
+        hasImei: false,
+      );
+
+      _expectSuccess(
+        await context.purchaseRepository.createPurchaseTransaction(
+          items: const <PurchaseFormItem>[
+            PurchaseFormItem(
+              productModelId: 'prd_return_profit',
+              productName: 'Return Profit Accessory',
+              hasImei: false,
+              quantity: 4,
+              unitCost: 100,
+            ),
+          ],
+          discount: 0,
+          tax: 0,
+          paidAmount: 400,
+        ),
+      );
+
+      // Sell 2 units @ 300 each; total = 600, paid = 600.
+      // Gross profit = 2 × (300 - 100) = 400.
+      final saleResult = _expectSuccess(
+        await context.salesRepository.createSaleTransaction(
+          items: const <CartItemEntity>[
+            CartItemEntity(
+              productModelId: 'prd_return_profit',
+              productName: 'Return Profit Accessory',
+              hasImei: false,
+              quantity: 2,
+              unitPrice: 300,
+            ),
+          ],
+          totals: const SaleTotalsEntity(
+            subtotal: 600,
+            discount: 0,
+            tax: 0,
+            total: 600,
+            paidAmount: 600,
+          ),
+          saleDate: todayUtc,
+        ),
+      );
+
+      final filter = ReportFilterEntity(startDate: day, endDate: day);
+
+      // Verify pre-return profit = 400
+      final profitBefore =
+          _expectSuccess(await context.profitReportService.getProfitReport(filter));
+      expect(profitBefore.totalProfit, closeTo(400, 0.0001));
+
+      final detail = _expectSuccess(
+        await context.operationsService.getSalesInvoiceDetail(saleResult.saleId),
+      );
+      final returnItem = detail!.items.first;
+
+      // Return 1 unit → return_amount = 300, return_cost = 100
+      // Net profit after return = 400 - (300 - 100) = 200
+      _expectSuccess(
+        await context.operationsService.processReturn(
+          saleId: saleResult.saleId,
+          item: returnItem,
+          quantity: 1,
+          reason: 'customer changed mind',
+        ),
+      );
+
+      final profitAfter =
+          _expectSuccess(await context.profitReportService.getProfitReport(filter));
+      expect(profitAfter.totalProfit, closeTo(200, 0.0001));
+      expect(profitAfter.totalRevenue, closeTo(300, 0.0001));
+      expect(profitAfter.totalCost, closeTo(100, 0.0001));
+
+      final dailyRows = _expectSuccess(
+        await context.salesReportService.getDailySalesReport(filter),
+      );
+      expect(dailyRows, isNotEmpty);
+      expect(dailyRows.first.totalProfit, closeTo(200, 0.0001));
+      // total_sales reflects updated sales.total = 600 - 300 = 300
+      expect(dailyRows.first.totalSales, closeTo(300, 0.0001));
+      // fully paid after clamp (paid_amount was 600, clamped to 300)
+      expect(dailyRows.first.pendingBalances, closeTo(0, 0.0001));
+    });
+
+    test('return reduces dashboard today_profit', () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final todayUtc = DateTimeHelpers.nowUtc();
+
+      await context.createProduct(
+        id: 'prd_return_dash',
+        name: 'Return Dashboard Accessory',
+        sku: 'ACC-RET-DASH-001',
+        purchasePrice: 50,
+        salePrice: 150,
+        hasImei: false,
+      );
+
+      _expectSuccess(
+        await context.purchaseRepository.createPurchaseTransaction(
+          items: const <PurchaseFormItem>[
+            PurchaseFormItem(
+              productModelId: 'prd_return_dash',
+              productName: 'Return Dashboard Accessory',
+              hasImei: false,
+              quantity: 3,
+              unitCost: 50,
+            ),
+          ],
+          discount: 0,
+          tax: 0,
+          paidAmount: 150,
+        ),
+      );
+
+      // Sell 2 units @ 150 each; profit = 2 × 100 = 200
+      final saleResult = _expectSuccess(
+        await context.salesRepository.createSaleTransaction(
+          items: const <CartItemEntity>[
+            CartItemEntity(
+              productModelId: 'prd_return_dash',
+              productName: 'Return Dashboard Accessory',
+              hasImei: false,
+              quantity: 2,
+              unitPrice: 150,
+            ),
+          ],
+          totals: const SaleTotalsEntity(
+            subtotal: 300,
+            discount: 0,
+            tax: 0,
+            total: 300,
+            paidAmount: 300,
+          ),
+          saleDate: todayUtc,
+        ),
+      );
+
+      final dashBefore =
+          _expectSuccess(await context.dashboardService.getDashboardKpis());
+      expect(dashBefore.todayProfit, closeTo(200, 0.0001));
+
+      final detail = _expectSuccess(
+        await context.operationsService.getSalesInvoiceDetail(saleResult.saleId),
+      );
+      // Return both units → return_profit = 200, net profit = 0
+      _expectSuccess(
+        await context.operationsService.processReturn(
+          saleId: saleResult.saleId,
+          item: detail!.items.first,
+          quantity: 2,
+          reason: 'wrong product',
+        ),
+      );
+
+      // Flush the dashboard cache so the next call re-queries the DB.
+      context.dashboardService.clearCache();
+
+      final dashAfter =
+          _expectSuccess(await context.dashboardService.getDashboardKpis());
+      expect(dashAfter.todayProfit, closeTo(0, 0.0001));
+    });
+
+    test('partially-paid sale pending balance is correct after return', () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final todayUtc = DateTimeHelpers.nowUtc();
+      final day = DateTime.utc(todayUtc.year, todayUtc.month, todayUtc.day);
+
+      await context.createProduct(
+        id: 'prd_return_pending',
+        name: 'Return Pending Accessory',
+        sku: 'ACC-RET-PEND-001',
+        purchasePrice: 40,
+        salePrice: 100,
+        hasImei: false,
+      );
+
+      _expectSuccess(
+        await context.purchaseRepository.createPurchaseTransaction(
+          items: const <PurchaseFormItem>[
+            PurchaseFormItem(
+              productModelId: 'prd_return_pending',
+              productName: 'Return Pending Accessory',
+              hasImei: false,
+              quantity: 5,
+              unitCost: 40,
+            ),
+          ],
+          discount: 0,
+          tax: 0,
+          paidAmount: 200,
+        ),
+      );
+
+      // Sell 3 units @ 100 each; total = 300, paid = 100 → pending = 200
+      final saleResult = _expectSuccess(
+        await context.salesRepository.createSaleTransaction(
+          items: const <CartItemEntity>[
+            CartItemEntity(
+              productModelId: 'prd_return_pending',
+              productName: 'Return Pending Accessory',
+              hasImei: false,
+              quantity: 3,
+              unitPrice: 100,
+            ),
+          ],
+          totals: const SaleTotalsEntity(
+            subtotal: 300,
+            discount: 0,
+            tax: 0,
+            total: 300,
+            paidAmount: 100,
+          ),
+          saleDate: todayUtc,
+        ),
+      );
+
+      final detail = _expectSuccess(
+        await context.operationsService.getSalesInvoiceDetail(saleResult.saleId),
+      );
+
+      // Return 1 unit @ 100 → new total = 200, paid stays 100 → pending = 100
+      _expectSuccess(
+        await context.operationsService.processReturn(
+          saleId: saleResult.saleId,
+          item: detail!.items.first,
+          quantity: 1,
+          reason: 'excess order',
+        ),
+      );
+
+      final filter = ReportFilterEntity(startDate: day, endDate: day);
+      final dailyRows = _expectSuccess(
+        await context.salesReportService.getDailySalesReport(filter),
+      );
+      expect(dailyRows, isNotEmpty);
+      expect(dailyRows.first.totalSales, closeTo(200, 0.0001));
+      expect(dailyRows.first.pendingBalances, closeTo(100, 0.0001));
+    });
   });
 }
 
@@ -780,7 +1128,8 @@ class _ConsistencyContext {
         dashboardService = DashboardService(appDatabase: appDatabase),
         salesReportService = SalesReportService(appDatabase: appDatabase),
         profitReportService = ProfitReportService(appDatabase: appDatabase),
-        inventoryReportService = InventoryReportService(appDatabase: appDatabase);
+        inventoryReportService = InventoryReportService(appDatabase: appDatabase),
+        operationsService = OperationsWorkflowService(appDatabase: appDatabase);
 
   final Directory rootDirectory;
   final AppDatabase appDatabase;
@@ -791,6 +1140,7 @@ class _ConsistencyContext {
   final SalesReportService salesReportService;
   final ProfitReportService profitReportService;
   final InventoryReportService inventoryReportService;
+  final OperationsWorkflowService operationsService;
 
   static Future<_ConsistencyContext> createTemporary() async {
     final rootDirectory = await Directory.systemTemp.createTemp(
