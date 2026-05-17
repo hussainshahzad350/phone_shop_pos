@@ -18,7 +18,7 @@ class AppRuntimeConfig {
   );
   static const bool enableDemoSeedData = bool.fromEnvironment(
     'POS_ENABLE_DEMO_SEED',
-    defaultValue: false,
+    defaultValue: true,
   );
 
   static String get fullVersion => '$appVersion+$buildNumber';

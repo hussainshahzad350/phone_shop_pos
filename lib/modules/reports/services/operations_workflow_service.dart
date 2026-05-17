@@ -47,7 +47,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
       }
 
       if (startDate != null) {
-        final startUtc = DateTime.utc(startDate.year, startDate.month, startDate.day);
+        final startUtc =
+            DateTime.utc(startDate.year, startDate.month, startDate.day);
         whereClauses.add('s.sale_date >= ?');
         args.add(DateTimeHelpers.toSql(startUtc));
       }
@@ -61,6 +62,10 @@ class OperationsWorkflowService with BaseRepositoryGuard {
 
       if (pendingOnly) {
         whereClauses.add('s.paid_amount < s.total');
+        whereClauses.add("s.payment_method = 'credit'");
+        whereClauses.add(
+          "s.customer_id IS NOT NULL AND TRIM(s.customer_id) != '' AND LOWER(s.customer_id) != 'walk_in'",
+        );
       }
 
       final rows = await QueryDiagnostics.trace(
@@ -97,7 +102,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
           customerId: row['customer_id'] as String?,
           total: (row['total'] as num?)?.toDouble() ?? 0,
           paidAmount: (row['paid_amount'] as num?)?.toDouble() ?? 0,
-          paymentMethod: PaymentMethod.normalizeNullable(row['payment_method'] as String?),
+          paymentMethod:
+              PaymentMethod.normalizeNullable(row['payment_method'] as String?),
           printJobId: row['print_job_id'] as String?,
         );
       }).toList(growable: false);
@@ -169,8 +175,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
           customerId: header['customer_id'] as String?,
           total: (header['total'] as num?)?.toDouble() ?? 0,
           paidAmount: (header['paid_amount'] as num?)?.toDouble() ?? 0,
-          paymentMethod:
-              PaymentMethod.normalizeNullable(header['payment_method'] as String?),
+          paymentMethod: PaymentMethod.normalizeNullable(
+              header['payment_method'] as String?),
           printJobId: header['print_job_id'] as String?,
         ),
         items: itemRows.map((row) {
@@ -207,7 +213,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         throw StateError('Payment amount must be greater than zero.');
       }
       final normalizedNotes = NotesSafety.normalizeNullable(notes);
-      final notesError = NotesSafety.validate(normalizedNotes, fieldLabel: 'Payment notes');
+      final notesError =
+          NotesSafety.validate(normalizedNotes, fieldLabel: 'Payment notes');
       if (notesError != null) {
         throw StateError(notesError);
       }
@@ -284,7 +291,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         throw StateError('Return quantity must be greater than zero.');
       }
       if (quantity > item.returnableQty) {
-        throw StateError('Return quantity exceeds available returnable quantity.');
+        throw StateError(
+            'Return quantity exceeds available returnable quantity.');
       }
       final normalizedNotes = NotesSafety.normalizeNullable(notes);
       final now = DateTimeHelpers.nowUtc();
@@ -310,7 +318,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
 
         if (item.hasImei) {
           if (quantity != 1) {
-            throw StateError('Serialized item return must be exactly one unit.');
+            throw StateError(
+                'Serialized item return must be exactly one unit.');
           }
           final serializedId = item.serializedStockId;
           if (serializedId == null || serializedId.isEmpty) {
@@ -411,12 +420,10 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         if (saleRows.isEmpty) {
           throw StateError('Sale not found for financial adjustment.');
         }
-        final currentTotal =
-            (saleRows.first['total'] as num?)?.toDouble() ?? 0;
+        final currentTotal = (saleRows.first['total'] as num?)?.toDouble() ?? 0;
         final currentPaid =
             (saleRows.first['paid_amount'] as num?)?.toDouble() ?? 0;
-        final newTotal =
-            (currentTotal - returnAmount).clamp(0.0, currentTotal);
+        final newTotal = (currentTotal - returnAmount).clamp(0.0, currentTotal);
         final newPaid = currentPaid.clamp(0, newTotal);
 
         await transaction.update(
@@ -457,7 +464,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
       }
 
       if (startDate != null) {
-        final startUtc = DateTime.utc(startDate.year, startDate.month, startDate.day);
+        final startUtc =
+            DateTime.utc(startDate.year, startDate.month, startDate.day);
         whereClauses.add('p.purchase_date >= ?');
         args.add(DateTimeHelpers.toSql(startUtc));
       }
@@ -549,7 +557,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
       return PurchaseHistoryDetailEntity(
         purchase: PurchaseHistoryRowEntity(
           purchaseId: header['purchase_id'] as String,
-          purchaseDate: DateTimeHelpers.fromSql(header['purchase_date'] as String),
+          purchaseDate:
+              DateTimeHelpers.fromSql(header['purchase_date'] as String),
           supplierName: header['supplier_name'] as String,
           invoiceNumber: header['invoice_number'] as String?,
           total: (header['total'] as num?)?.toDouble() ?? 0,
@@ -580,7 +589,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
       final args = <Object?>[];
 
       if (startDate != null) {
-        final startUtc = DateTime.utc(startDate.year, startDate.month, startDate.day);
+        final startUtc =
+            DateTime.utc(startDate.year, startDate.month, startDate.day);
         whereClauses.add('p.purchase_date >= ?');
         args.add(DateTimeHelpers.toSql(startUtc));
       }
@@ -646,7 +656,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
 
         if (rows.isEmpty) {
           if (delta < 0) {
-            throw StateError('Cannot decrease stock. Item has no inventory row.');
+            throw StateError(
+                'Cannot decrease stock. Item has no inventory row.');
           }
           await transaction.insert(TableNames.inventoryStock, <String, Object?>{
             'id': IdHelpers.newId(prefix: 'stk'),

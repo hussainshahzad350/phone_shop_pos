@@ -63,7 +63,8 @@ class SalesService {
 
     if (quantity <= 0) {
       return const Failure<List<CartItemEntity>>(
-        AppError(code: 'invalid_qty', message: 'Quantity must be greater than 0.'),
+        AppError(
+            code: 'invalid_qty', message: 'Quantity must be greater than 0.'),
       );
     }
 
@@ -74,7 +75,8 @@ class SalesService {
 
     if (index >= 0) {
       final existing = nextItems[index];
-      nextItems[index] = existing.copyWith(quantity: existing.quantity + quantity);
+      nextItems[index] =
+          existing.copyWith(quantity: existing.quantity + quantity);
       return Success<List<CartItemEntity>>(nextItems);
     }
 
@@ -127,7 +129,8 @@ class SalesService {
 
     if (quantity <= 0) {
       return const Failure<List<CartItemEntity>>(
-        AppError(code: 'invalid_qty', message: 'Quantity must be greater than 0.'),
+        AppError(
+            code: 'invalid_qty', message: 'Quantity must be greater than 0.'),
       );
     }
 
@@ -156,7 +159,8 @@ class SalesService {
           );
         }
       } else {
-        final qtyResult = await _repository.getAvailableQuantity(item.productModelId);
+        final qtyResult =
+            await _repository.getAvailableQuantity(item.productModelId);
         if (qtyResult.isFailure) {
           return Failure<void>(qtyResult.asFailure!.error);
         }
@@ -203,12 +207,36 @@ class SalesService {
       );
     }
     final normalizedNotes = NotesSafety.normalizeNullable(notes);
-    final normalizedPaymentMethod = PaymentMethod.normalizeNullable(paymentMethod);
+    final normalizedPaymentMethod =
+        PaymentMethod.normalizeNullable(paymentMethod);
+    final isCreditSale = normalizedPaymentMethod == PaymentMethod.credit;
+    final normalizedCustomerId = customerId?.trim();
+    final isWalkInCustomer = normalizedCustomerId == null ||
+        normalizedCustomerId.isEmpty ||
+        normalizedCustomerId.toLowerCase() == 'walk_in';
+    if (totals.total > 0 && normalizedPaymentMethod == null) {
+      return const Failure<SaleCompletionEntity>(
+        AppError(
+          code: 'payment_method_required',
+          message:
+              'Payment method is required for completed sales (cash, card, bank, or credit/udhar).',
+        ),
+      );
+    }
+    if (isCreditSale && totals.remaining > 0 && isWalkInCustomer) {
+      return const Failure<SaleCompletionEntity>(
+        AppError(
+          code: 'registered_customer_required_for_credit_sale',
+          message:
+              'Credit sale requires a registered customer. Please select a customer.',
+        ),
+      );
+    }
     if (paymentMethod != null && normalizedPaymentMethod == null) {
       return const Failure<SaleCompletionEntity>(
         AppError(
           code: 'invalid_payment_method',
-          message: 'Payment method must be cash, card, or bank.',
+          message: 'Payment method must be cash, card, bank, or credit/udhar.',
         ),
       );
     }
@@ -219,7 +247,7 @@ class SalesService {
       items: items,
       totals: totals,
       saleDate: DateTime.now().toUtc(),
-      customerId: customerId,
+      customerId: normalizedCustomerId,
       userId: userId,
       paymentMethod: normalizedPaymentMethod,
       notes: normalizedNotes,

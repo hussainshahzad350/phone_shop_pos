@@ -10,7 +10,7 @@ import 'package:phone_shop_pos/modules/reports/domain/entities/stock_report_row_
 
 class InventoryReportService with BaseRepositoryGuard {
   InventoryReportService({required AppDatabase appDatabase})
-    : _appDatabase = appDatabase;
+      : _appDatabase = appDatabase;
 
   final AppDatabase _appDatabase;
 
@@ -19,9 +19,10 @@ class InventoryReportService with BaseRepositoryGuard {
   ) {
     return guard<List<StockReportRowEntity>>(() async {
       final productFilterValue = filter.productModelId?.trim();
-      final productFilter = productFilterValue == null || productFilterValue.isEmpty
-          ? null
-          : productFilterValue;
+      final productFilter =
+          productFilterValue == null || productFilterValue.isEmpty
+              ? null
+              : productFilterValue;
 
       final rows = await QueryDiagnostics.trace(
         label: 'reports.current_stock',
@@ -77,7 +78,8 @@ class InventoryReportService with BaseRepositoryGuard {
             (row) => StockReportRowEntity(
               productName: row['product_name'] as String,
               category: row['category'] as String,
-              availableQuantity: (row['available_quantity'] as num?)?.toInt() ?? 0,
+              availableQuantity:
+                  (row['available_quantity'] as num?)?.toInt() ?? 0,
               minQuantity: (row['min_quantity'] as num?)?.toInt() ?? 0,
               unitCost: (row['unit_cost'] as num?)?.toDouble() ?? 0,
               unitPrice: (row['unit_price'] as num?)?.toDouble() ?? 0,
@@ -94,7 +96,8 @@ class InventoryReportService with BaseRepositoryGuard {
   ) {
     return guard<List<LowStockReportRowEntity>>(() async {
       final args = <Object?>[];
-      final where = StringBuffer('pm.is_active = 1 AND ist.quantity <= ist.min_quantity');
+      final where =
+          StringBuffer('pm.is_active = 1 AND ist.quantity <= ist.min_quantity');
       final productFilter = filter.productModelId?.trim();
       if (productFilter != null && productFilter.isNotEmpty) {
         where.write(' AND pm.id = ?');
@@ -135,6 +138,11 @@ class InventoryReportService with BaseRepositoryGuard {
     return guard<List<CustomerBalanceReportRowEntity>>(() async {
       final args = <Object?>[];
       final where = StringBuffer('1 = 1');
+      where.write(' AND s.payment_method = ?');
+      args.add('credit');
+      where.write(
+        " AND s.customer_id IS NOT NULL AND TRIM(s.customer_id) != '' AND LOWER(s.customer_id) != 'walk_in'",
+      );
 
       final start = filter.startDate;
       if (start != null) {
@@ -163,11 +171,7 @@ class InventoryReportService with BaseRepositoryGuard {
         action: () => _appDatabase.database.rawQuery(
           '''
         SELECT
-          CASE
-            WHEN COALESCE(s.customer_id, 'walk_in') = 'walk_in'
-              THEN 'Walk-in Customer'
-            ELSE COALESCE(MAX(c.name), 'Walk-in Customer')
-          END AS customer_name,
+          COALESCE(MAX(c.name), 'Unknown Customer') AS customer_name,
           COALESCE(SUM(s.total), 0) AS total_sales,
           COALESCE(SUM(s.paid_amount), 0) AS total_paid,
           COALESCE(SUM(CASE
@@ -177,7 +181,7 @@ class InventoryReportService with BaseRepositoryGuard {
         FROM ${TableNames.sales} s
         LEFT JOIN ${TableNames.customers} c ON c.id = s.customer_id
         WHERE ${where.toString()}
-        GROUP BY COALESCE(s.customer_id, 'walk_in')
+        GROUP BY s.customer_id
         HAVING pending_balance > 0
         ORDER BY pending_balance DESC
         LIMIT ? OFFSET ?

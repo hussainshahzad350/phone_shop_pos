@@ -9,11 +9,13 @@ class TotalsPanelWidget extends StatefulWidget {
     required this.totals,
     required this.onDiscountChanged,
     required this.onTaxChanged,
+    this.enteredPaidAmount,
   });
 
   final SaleTotalsEntity totals;
   final ValueChanged<double> onDiscountChanged;
   final ValueChanged<double> onTaxChanged;
+  final double? enteredPaidAmount;
 
   @override
   State<TotalsPanelWidget> createState() => _TotalsPanelWidgetState();
@@ -50,6 +52,16 @@ class _TotalsPanelWidgetState extends State<TotalsPanelWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final receivedAmount =
+        (widget.enteredPaidAmount ?? widget.totals.paidAmount).clamp(
+      0.0,
+      double.infinity,
+    );
+    final changeAmount = (receivedAmount - widget.totals.paidAmount).clamp(
+      0.0,
+      double.infinity,
+    );
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -88,16 +100,27 @@ class _TotalsPanelWidgetState extends State<TotalsPanelWidget> {
             const SizedBox(height: 8),
             _line(label: 'Total', value: widget.totals.total, bold: true),
             const SizedBox(height: 8),
-            _line(label: 'Paid', value: widget.totals.paidAmount),
+            _line(label: 'Received', value: receivedAmount),
             const SizedBox(height: 8),
-            _line(label: 'Remaining', value: widget.totals.remaining, bold: true),
+            _line(
+              label: 'Change',
+              value: changeAmount,
+              bold: true,
+              color: changeAmount > 0
+                  ? Theme.of(context).colorScheme.primary
+                  : null,
+            ),
+            const SizedBox(height: 8),
+            _line(
+                label: 'Remaining', value: widget.totals.remaining, bold: true),
           ],
         ),
       ),
     );
   }
 
-  void _syncControllerWithState(TextEditingController controller, double value) {
+  void _syncControllerWithState(
+      TextEditingController controller, double value) {
     final parsed = FormattingHelpers.parseLocaleDecimal(controller.text);
     if ((parsed - value).abs() < 0.0001) {
       return;
@@ -122,17 +145,27 @@ class _TotalsPanelWidgetState extends State<TotalsPanelWidget> {
       fractionDigits: 2,
       useGrouping: false,
     );
-    return raw.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
+    return raw
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
   }
 
-  Widget _line({required String label, required double value, bool bold = false}) {
+  Widget _line({
+    required String label,
+    required double value,
+    bool bold = false,
+    Color? color,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: <Widget>[
-        Text(label),
+        Text(label, style: TextStyle(color: color)),
         Text(
           FormattingHelpers.currencyPkr(value),
-          style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal),
+          style: TextStyle(
+            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+            color: color,
+          ),
         ),
       ],
     );

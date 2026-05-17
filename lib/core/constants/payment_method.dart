@@ -8,20 +8,21 @@ class PaymentMethod {
   static const String cash = 'cash';
   static const String card = 'card';
   static const String bank = 'bank';
+  static const String credit = 'credit';
 
   /// All valid payment method values for validation / UI rendering.
-  static const List<String> values = <String>[cash, card, bank];
+  static const List<String> values = <String>[cash, card, bank, credit];
 
   /// Human-readable display labels keyed by value.
   static const Map<String, String> labels = <String, String>{
     cash: 'Cash',
     card: 'Card',
     bank: 'Bank Transfer',
+    credit: 'Credit/Udhar',
   };
 
   /// Returns true if [value] is one of the known payment methods.
-  static bool isValid(String? value) =>
-      value != null && values.contains(value);
+  static bool isValid(String? value) => value != null && values.contains(value);
 
   /// Trims and validates payment method.
   ///

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
 import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
@@ -12,6 +13,7 @@ import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
+import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_entity.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/helpers/sale_completion_flow.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/helpers/sales_shortcut_helpers.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/billing_state_provider.dart';
@@ -45,12 +47,10 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
   int _selectedCartIndex = 0;
   int _handledShortcutToken = 0;
   Timer? _productSearchDebounce;
-  Timer? _customerSearchDebounce;
 
   @override
   void dispose() {
     _productSearchDebounce?.cancel();
-    _customerSearchDebounce?.cancel();
     _productSearchController.dispose();
     _productSearchFocus.dispose();
     _paymentMethodFocus.dispose();
@@ -131,16 +131,6 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
         return;
       }
       ref.read(billingStateProvider.notifier).setProductSearchQuery(value);
-    });
-  }
-
-  void _debouncedCustomerSearch(String value) {
-    _customerSearchDebounce?.cancel();
-    _customerSearchDebounce = Timer(const Duration(milliseconds: 150), () {
-      if (!mounted) {
-        return;
-      }
-      ref.read(billingStateProvider.notifier).setCustomerSearchQuery(value);
     });
   }
 
@@ -225,11 +215,25 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     if (_isCompleting) {
       return;
     }
+    final billing = ref.read(billingStateProvider);
+    final totals = ref.read(totalsProvider);
+    final normalizedCustomerId = billing.selectedCustomerId?.trim();
+    final isWalkInCustomer = normalizedCustomerId == null ||
+        normalizedCustomerId.isEmpty ||
+        normalizedCustomerId.toLowerCase() == 'walk_in';
+    final isCreditMode =
+        billing.paymentMethod.trim().toLowerCase() == PaymentMethod.credit;
+    if (isCreditMode && totals.remaining > 0 && isWalkInCustomer) {
+      AppNotifier.warning(
+        'Credit sale requires a registered customer. Please select a customer.',
+      );
+      return;
+    }
+
     setState(() {
       _isCompleting = true;
     });
 
-    final billing = ref.read(billingStateProvider);
     final saleItemsSnapshot = List<CartItemEntity>.from(
       ref.read(cartStateProvider),
     );
@@ -244,7 +248,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
       },
       completeSale: () {
         return ref.read(cartStateProvider.notifier).completeSale(
-              totals: ref.read(totalsProvider),
+              totals: totals,
               customerId: billing.selectedCustomerId,
               paymentMethod: billing.paymentMethod,
               notes: billing.notes,
@@ -319,13 +323,37 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                 !lowerMessage.contains('rollback')
             ? '$message Rollback applied.'
             : message;
+    final detail = _buildFailureDetail(error);
+    final fullMessage = detail == null
+        ? 'Transaction failed. $withRollbackSuffix'
+        : 'Transaction failed. $withRollbackSuffix\nReason: $detail';
     AppNotifier.error(
-      'Transaction failed. $withRollbackSuffix',
+      fullMessage,
       action: SnackBarAction(
         label: 'Retry',
         onPressed: _completeSale,
       ),
+      showCloseIcon: true,
     );
+  }
+
+  String? _buildFailureDetail(AppError error) {
+    if (error.code != 'database_error') {
+      return null;
+    }
+    final details = error.details;
+    if (details == null) {
+      return null;
+    }
+
+    final compact = details.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (compact.isEmpty) {
+      return null;
+    }
+    if (compact.length <= 180) {
+      return compact;
+    }
+    return '${compact.substring(0, 180)}...';
   }
 
   @override
@@ -341,6 +369,14 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     final cartItems = ref.watch(cartStateProvider);
     final totals = ref.watch(totalsProvider);
     final products = productsAsync.value ?? const <ProductEntity>[];
+    final normalizedCustomerId = billing.selectedCustomerId?.trim();
+    final isWalkInCustomer = normalizedCustomerId == null ||
+        normalizedCustomerId.isEmpty ||
+        normalizedCustomerId.toLowerCase() == 'walk_in';
+    final isCreditMode =
+        billing.paymentMethod.trim().toLowerCase() == PaymentMethod.credit;
+    final requiresRegisteredCustomerForCredit =
+        isCreditMode && totals.remaining > 0 && isWalkInCustomer;
 
     return Shortcuts(
       shortcuts: salesScreenShortcuts,
@@ -498,58 +534,53 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                             children: <Widget>[
                               FocusTraversalOrder(
                                 order: const NumericFocusOrder(2),
-                                child: customersAsync.when(
-                                  data: (customers) => CustomerSelectorWidget(
-                                    customers: customers,
-                                    customerSearchQuery:
-                                        billing.customerSearchQuery,
-                                    selectedCustomerId:
-                                        billing.selectedCustomerId,
-                                    onChanged: (value) {
-                                      ref
-                                          .read(billingStateProvider.notifier)
-                                          .setSelectedCustomerId(value);
-                                    },
-                                    onSearchChanged: _debouncedCustomerSearch,
-                                  ),
-                                  loading: () => const Card(
-                                    child: Padding(
-                                      padding: EdgeInsets.all(24),
-                                      child: Center(
-                                        child: CircularProgressIndicator(),
-                                      ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    CustomerSelectorWidget(
+                                      customers: customersAsync.value ??
+                                          const <CustomerOptionEntity>[],
+                                      selectedCustomerId:
+                                          billing.selectedCustomerId,
+                                      onChanged: (value) {
+                                        ref
+                                            .read(billingStateProvider.notifier)
+                                            .setSelectedCustomerId(value);
+                                      },
                                     ),
-                                  ),
-                                  error: (error, _) {
-                                    final message = error is AppError
-                                        ? error.message
-                                        : 'Failed to load customers.';
-                                    return Card(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(12),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: <Widget>[
-                                            const Text(
-                                              'Customer',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Text(message),
-                                            const SizedBox(height: 8),
-                                            OutlinedButton.icon(
-                                              onPressed: _refreshSales,
-                                              icon: const Icon(Icons.refresh),
-                                              label: const Text('Retry'),
-                                            ),
-                                          ],
+                                    if (requiresRegisteredCustomerForCredit)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 8),
+                                        child: Text(
+                                          'Registered customer is required for credit (udhar) sale.',
+                                          style: TextStyle(
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.error,
+                                          ),
                                         ),
                                       ),
-                                    );
-                                  },
+                                    if (customersAsync.isLoading) ...<Widget>[
+                                      const SizedBox(height: 6),
+                                      const LinearProgressIndicator(
+                                          minHeight: 2),
+                                    ],
+                                    if (customersAsync.hasError) ...<Widget>[
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        customersAsync.error is AppError
+                                            ? (customersAsync.error as AppError)
+                                                .message
+                                            : 'Failed to load customers.',
+                                      ),
+                                      const SizedBox(height: 8),
+                                      OutlinedButton.icon(
+                                        onPressed: _refreshSales,
+                                        icon: const Icon(Icons.refresh),
+                                        label: const Text('Retry'),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -557,6 +588,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                                 order: const NumericFocusOrder(3),
                                 child: TotalsPanelWidget(
                                   totals: totals,
+                                  enteredPaidAmount: billing.paidAmount,
                                   onDiscountChanged: (value) {
                                     ref
                                         .read(billingStateProvider.notifier)
@@ -601,6 +633,10 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                                   onPaidAmountSubmitted: _completeSale,
                                   onCompleteSale: _completeSale,
                                   isProcessing: _isCompleting,
+                                  canCompleteSale:
+                                      !requiresRegisteredCustomerForCredit,
+                                  disabledReason:
+                                      'Credit sale requires a registered customer.',
                                 ),
                               ),
                             ],

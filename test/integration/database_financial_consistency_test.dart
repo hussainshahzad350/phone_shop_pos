@@ -38,7 +38,8 @@ void main() {
       });
 
       final v6Database = AppDatabase(
-        localDatabaseService: SqliteFfiDatabaseService(rootDirectory: root.path),
+        localDatabaseService:
+            SqliteFfiDatabaseService(rootDirectory: root.path),
         migrationService: const _MigrationServiceV6(),
       );
       await v6Database.initialize(seedDemoData: false);
@@ -84,7 +85,8 @@ void main() {
       await v6Database.close();
 
       final upgradedDatabase = AppDatabase(
-        localDatabaseService: SqliteFfiDatabaseService(rootDirectory: root.path),
+        localDatabaseService:
+            SqliteFfiDatabaseService(rootDirectory: root.path),
         migrationService: const MigrationService(),
       );
 
@@ -114,7 +116,8 @@ void main() {
       );
 
       final now = DateTimeHelpers.toSql(DateTime.utc(2026, 5, 16));
-      await context.appDatabase.insert(TableNames.serializedStock, <String, Object?>{
+      await context.appDatabase
+          .insert(TableNames.serializedStock, <String, Object?>{
         'id': 'ser_unique_1',
         'product_model_id': 'prd_imei2_unique',
         'imei1': '356789101234511',
@@ -128,7 +131,8 @@ void main() {
       });
 
       await expectLater(
-        context.appDatabase.insert(TableNames.serializedStock, <String, Object?>{
+        context.appDatabase
+            .insert(TableNames.serializedStock, <String, Object?>{
           'id': 'ser_unique_2',
           'product_model_id': 'prd_imei2_unique',
           'imei1': '356789101234512',
@@ -215,7 +219,8 @@ void main() {
       );
 
       final now = DateTimeHelpers.toSql(DateTime.utc(2026, 5, 16));
-      await context.appDatabase.insert(TableNames.inventoryStock, <String, Object?>{
+      await context.appDatabase
+          .insert(TableNames.inventoryStock, <String, Object?>{
         'id': 'stk_weighted_zero',
         'product_model_id': 'prd_weighted_zero',
         'quantity': 0,
@@ -333,11 +338,13 @@ void main() {
       );
 
       final filter = ReportFilterEntity(startDate: start, endDate: end);
-      final profit = _expectSuccess(await context.profitReportService.getProfitReport(filter));
+      final profit = _expectSuccess(
+          await context.profitReportService.getProfitReport(filter));
       final dailyRows = _expectSuccess(
         await context.salesReportService.getDailySalesReport(filter),
       );
-      final dashboard = _expectSuccess(await context.dashboardService.getDashboardKpis());
+      final dashboard =
+          _expectSuccess(await context.dashboardService.getDashboardKpis());
 
       expect(profit.totalProfit, closeTo(100, 0.0001));
       expect(dailyRows, isNotEmpty);
@@ -536,7 +543,8 @@ void main() {
       expect(rows.first.profit, closeTo(5000, 0.0001));
     });
 
-    test('purchase repository rejects invalid IMEI format on direct call', () async {
+    test('purchase repository rejects invalid IMEI format on direct call',
+        () async {
       final context = await _ConsistencyContext.createTemporary();
       addTearDown(context.dispose);
 
@@ -568,7 +576,8 @@ void main() {
       expect(result.isFailure, isTrue);
     });
 
-    test('inventory repository blocks direct serialized insert IMEI bypass', () async {
+    test('inventory repository blocks direct serialized insert IMEI bypass',
+        () async {
       final context = await _ConsistencyContext.createTemporary();
       addTearDown(context.dispose);
       final inventoryRepository = SqliteInventoryRepository(
@@ -625,8 +634,9 @@ void main() {
       expect(duplicateInsert.isFailure, isTrue);
     });
 
-    test('customer balance report groups by customer id and keeps walk-ins',
-        () async {      final context = await _ConsistencyContext.createTemporary();
+    test('customer balance report groups by registered customer id only',
+        () async {
+      final context = await _ConsistencyContext.createTemporary();
       addTearDown(context.dispose);
 
       final todayUtc = DateTimeHelpers.nowUtc();
@@ -701,6 +711,7 @@ void main() {
           ),
           saleDate: todayUtc,
           customerId: 'cus_same_1',
+          paymentMethod: 'credit',
         ),
       );
 
@@ -724,6 +735,7 @@ void main() {
           ),
           saleDate: todayUtc,
           customerId: 'cus_same_2',
+          paymentMethod: 'credit',
         ),
       );
 
@@ -746,6 +758,8 @@ void main() {
             paidAmount: 0,
           ),
           saleDate: todayUtc,
+          customerId: 'cus_same_1',
+          paymentMethod: 'credit',
         ),
       );
 
@@ -757,20 +771,21 @@ void main() {
         await context.inventoryReportService.getCustomerBalanceReport(filter),
       );
 
-      expect(balances.length, 3);
+      expect(balances.length, 2);
       expect(
         balances.where((row) => row.customerName == 'Same Name').length,
         2,
       );
       expect(
         balances.any((row) => row.customerName == 'Walk-in Customer'),
-        isTrue,
+        isFalse,
       );
     });
 
     // ── Return Model (Option A — Refund Model) tests ──────────────────────
 
-    test('accessory return reduces sales.total and sales.paid_amount', () async {
+    test('accessory return reduces sales.total and sales.paid_amount',
+        () async {
       final context = await _ConsistencyContext.createTemporary();
       addTearDown(context.dispose);
 
@@ -825,7 +840,8 @@ void main() {
       );
 
       final detail = _expectSuccess(
-        await context.operationsService.getSalesInvoiceDetail(saleResult.saleId),
+        await context.operationsService
+            .getSalesInvoiceDetail(saleResult.saleId),
       );
       expect(detail, isNotNull);
       final returnItem = detail!.items.first;
@@ -920,12 +936,13 @@ void main() {
       final filter = ReportFilterEntity(startDate: day, endDate: day);
 
       // Verify pre-return profit = 400
-      final profitBefore =
-          _expectSuccess(await context.profitReportService.getProfitReport(filter));
+      final profitBefore = _expectSuccess(
+          await context.profitReportService.getProfitReport(filter));
       expect(profitBefore.totalProfit, closeTo(400, 0.0001));
 
       final detail = _expectSuccess(
-        await context.operationsService.getSalesInvoiceDetail(saleResult.saleId),
+        await context.operationsService
+            .getSalesInvoiceDetail(saleResult.saleId),
       );
       final returnItem = detail!.items.first;
 
@@ -940,8 +957,8 @@ void main() {
         ),
       );
 
-      final profitAfter =
-          _expectSuccess(await context.profitReportService.getProfitReport(filter));
+      final profitAfter = _expectSuccess(
+          await context.profitReportService.getProfitReport(filter));
       expect(profitAfter.totalProfit, closeTo(200, 0.0001));
       expect(profitAfter.totalRevenue, closeTo(300, 0.0001));
       expect(profitAfter.totalCost, closeTo(100, 0.0001));
@@ -1017,7 +1034,8 @@ void main() {
       expect(dashBefore.todayProfit, closeTo(200, 0.0001));
 
       final detail = _expectSuccess(
-        await context.operationsService.getSalesInvoiceDetail(saleResult.saleId),
+        await context.operationsService
+            .getSalesInvoiceDetail(saleResult.saleId),
       );
       // Return both units → return_profit = 200, net profit = 0
       _expectSuccess(
@@ -1037,7 +1055,8 @@ void main() {
       expect(dashAfter.todayProfit, closeTo(0, 0.0001));
     });
 
-    test('partially-paid sale pending balance is correct after return', () async {
+    test('partially-paid sale pending balance is correct after return',
+        () async {
       final context = await _ConsistencyContext.createTemporary();
       addTearDown(context.dispose);
 
@@ -1094,7 +1113,8 @@ void main() {
       );
 
       final detail = _expectSuccess(
-        await context.operationsService.getSalesInvoiceDetail(saleResult.saleId),
+        await context.operationsService
+            .getSalesInvoiceDetail(saleResult.saleId),
       );
 
       // Return 1 unit @ 100 → new total = 200, paid stays 100 → pending = 100
@@ -1203,7 +1223,8 @@ void main() {
       );
     });
 
-    test('DB constraint rejects direct sales insert where paid_amount is negative',
+    test(
+        'DB constraint rejects direct sales insert where paid_amount is negative',
         () async {
       final context = await _ConsistencyContext.createTemporary();
       addTearDown(context.dispose);
@@ -1271,7 +1292,8 @@ void main() {
       });
 
       final v11Database = AppDatabase(
-        localDatabaseService: SqliteFfiDatabaseService(rootDirectory: root.path),
+        localDatabaseService:
+            SqliteFfiDatabaseService(rootDirectory: root.path),
         migrationService: const _MigrationServiceV11(),
       );
       await v11Database.initialize(seedDemoData: false);
@@ -1299,7 +1321,8 @@ void main() {
 
       // Upgrade to v12 — must succeed and clamp the corrupted row.
       final v12Database = AppDatabase(
-        localDatabaseService: SqliteFfiDatabaseService(rootDirectory: root.path),
+        localDatabaseService:
+            SqliteFfiDatabaseService(rootDirectory: root.path),
         migrationService: const MigrationService(),
       );
       await v12Database.initialize(seedDemoData: false);
@@ -1331,7 +1354,8 @@ class _ConsistencyContext {
         dashboardService = DashboardService(appDatabase: appDatabase),
         salesReportService = SalesReportService(appDatabase: appDatabase),
         profitReportService = ProfitReportService(appDatabase: appDatabase),
-        inventoryReportService = InventoryReportService(appDatabase: appDatabase),
+        inventoryReportService =
+            InventoryReportService(appDatabase: appDatabase),
         operationsService = OperationsWorkflowService(appDatabase: appDatabase);
 
   final Directory rootDirectory;

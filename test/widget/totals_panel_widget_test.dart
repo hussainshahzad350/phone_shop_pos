@@ -4,7 +4,8 @@ import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/totals_panel_widget.dart';
 
 void main() {
-  testWidgets('totals panel preserves discount and tax values across rebuilds', (
+  testWidgets('totals panel preserves discount and tax values across rebuilds',
+      (
     tester,
   ) async {
     double discount = 0;
@@ -60,5 +61,33 @@ void main() {
     expect(find.text('3'), findsOneWidget);
     expect(discount, 12.5);
     expect(tax, 3);
+  });
+
+  testWidgets('totals panel shows received and change when overpaid', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: TotalsPanelWidget(
+            totals: const SaleTotalsEntity(
+              subtotal: 1800,
+              discount: 0,
+              tax: 0,
+              total: 1800,
+              paidAmount: 1800,
+            ),
+            enteredPaidAmount: 3000,
+            onDiscountChanged: (_) {},
+            onTaxChanged: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Received'), findsOneWidget);
+    expect(find.text('Applied'), findsNothing);
+    expect(find.text('Change'), findsOneWidget);
+    expect(find.textContaining('PKR'), findsWidgets);
   });
 }

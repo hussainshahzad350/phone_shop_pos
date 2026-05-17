@@ -213,7 +213,7 @@ class SqliteSalesRepository
         paymentMethod,
       );
       if (paymentMethod != null && normalizedPaymentMethod == null) {
-        throw StateError('Payment method must be cash, card, or bank.');
+        throw StateError('Invalid payment method: $paymentMethod');
       }
       _validateSaleRequest(
         items: items,
@@ -231,6 +231,15 @@ class SqliteSalesRepository
       late String invoiceNumber;
 
       await _appDatabase.runInTransaction<void>((transaction) async {
+        await transaction.execute(
+          '''
+          CREATE TABLE IF NOT EXISTS ${TableNames.invoiceSequences} (
+            date_key TEXT PRIMARY KEY NOT NULL,
+            last_seq INTEGER NOT NULL DEFAULT 0
+          );
+          ''',
+        );
+
         // ── Phase 4: atomic invoice sequence ─────────────────────────────
         final dateKey = '${saleDate.year.toString().padLeft(4, '0')}'
             '${saleDate.month.toString().padLeft(2, '0')}'
@@ -250,6 +259,9 @@ class SqliteSalesRepository
           'SELECT last_seq FROM ${TableNames.invoiceSequences} WHERE date_key = ?',
           <Object?>[dateKey],
         );
+        if (seqRows.isEmpty) {
+          throw StateError('Invoice sequence could not be generated.');
+        }
         final seq = (seqRows.first['last_seq'] as num).toInt();
         invoiceNumber = 'INV-$dateKey-${seq.toString().padLeft(4, '0')}';
 
@@ -263,12 +275,12 @@ class SqliteSalesRepository
           subtotal: totals.subtotal,
           discount: totals.discount,
           tax: totals.tax,
-            total: totals.total,
-            paidAmount: totals.paidAmount,
-            paymentMethod: normalizedPaymentMethod,
-            notes: notes,
-            createdAt: now,
-            updatedAt: now,
+          total: totals.total,
+          paidAmount: totals.paidAmount,
+          paymentMethod: normalizedPaymentMethod,
+          notes: notes,
+          createdAt: now,
+          updatedAt: now,
         );
         await transaction.insert(TableNames.sales, saleModel.toMap());
 
@@ -383,7 +395,7 @@ class SqliteSalesRepository
       );
     }
     if (paymentMethod != null && !PaymentMethod.isValid(paymentMethod)) {
-      throw StateError('Payment method must be cash, card, or bank.');
+      throw StateError('Invalid payment method.');
     }
 
     final serializedIds = <String>{};

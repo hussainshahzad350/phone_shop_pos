@@ -5,7 +5,8 @@ import 'package:phone_shop_pos/modules/sales/presentation/widgets/customer_selec
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/payment_section_widget.dart';
 
 void main() {
-  testWidgets('payment section reflects latest riverpod-backed values on rebuild', (
+  testWidgets(
+      'payment section reflects latest riverpod-backed values on rebuild', (
     tester,
   ) async {
     String paymentMethod = 'cash';
@@ -41,9 +42,11 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.widgetWithText(TextField, 'Paid Amount'), '2500');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Paid Amount'), '2500');
     await tester.pump();
-    await tester.enterText(find.widgetWithText(TextField, 'Notes'), 'Test note');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Notes'), 'Test note');
     await tester.pump();
     await tester.tap(find.byType(DropdownButtonFormField<String>));
     await tester.pumpAndSettle();
@@ -63,12 +66,10 @@ void main() {
     expect(find.text('Test note'), findsNothing);
   });
 
-  testWidgets('customer selector reflects latest selected customer and search text', (
+  testWidgets('customer selector picks customer from inline dropdown search', (
     tester,
   ) async {
-    String search = '';
     String? selectedCustomerId;
-    late StateSetter updateHost;
 
     const customers = <CustomerOptionEntity>[
       CustomerOptionEntity(id: 'cus_1', name: 'Alice', phone: '0300'),
@@ -80,16 +81,11 @@ void main() {
         home: Scaffold(
           body: StatefulBuilder(
             builder: (context, setState) {
-              updateHost = setState;
               return CustomerSelectorWidget(
                 customers: customers,
-                customerSearchQuery: search,
                 selectedCustomerId: selectedCustomerId,
                 onChanged: (value) {
                   setState(() => selectedCustomerId = value);
-                },
-                onSearchChanged: (value) {
-                  setState(() => search = value);
                 },
               );
             },
@@ -98,23 +94,77 @@ void main() {
       ),
     );
 
+    await tester.tap(find.byIcon(Icons.arrow_drop_down));
+    await tester.pumpAndSettle();
+
+    final inlineSearchField = find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField &&
+          widget.readOnly == false &&
+          widget.decoration?.labelText == 'Search customer',
+    );
     await tester.enterText(
-      find.widgetWithText(TextField, 'Search customer'),
+      inlineSearchField,
       'Alice',
     );
-    await tester.pump();
-    await tester.tap(find.byType(DropdownButtonFormField<String?>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Alice (0300)').last);
     await tester.pumpAndSettle();
 
-    updateHost(() {
-      search = '';
-      selectedCustomerId = null;
-    });
-    await tester.pump();
+    await tester.tap(find.text('Alice').last);
+    await tester.pumpAndSettle();
 
-    expect(find.text('Alice'), findsNothing);
-    expect(find.text('Walk-in Customer'), findsOneWidget);
+    expect(selectedCustomerId, 'cus_1');
+    expect(find.textContaining('Alice'), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle), findsOneWidget);
+  });
+
+  testWidgets(
+      'customer selector default dropdown list is limited to 5 customers', (
+    tester,
+  ) async {
+    String? selectedCustomerId;
+
+    final customers = List<CustomerOptionEntity>.generate(
+      6,
+      (index) => CustomerOptionEntity(
+        id: 'cus_${index + 1}',
+        name: 'Customer ${index + 1}',
+        phone: '03${index + 1}00',
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StatefulBuilder(
+            builder: (context, setState) {
+              return CustomerSelectorWidget(
+                customers: customers,
+                selectedCustomerId: selectedCustomerId,
+                onChanged: (value) {
+                  setState(() => selectedCustomerId = value);
+                },
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byIcon(Icons.arrow_drop_down));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Walk-in Customer'), findsAtLeastNWidgets(1));
+    expect(find.text('Customer 1'), findsOneWidget);
+    expect(find.text('Customer 2', skipOffstage: false), findsOneWidget);
+    expect(find.text('More...'), findsOneWidget);
+    expect(
+      find.text('Customer 6', skipOffstage: false),
+      findsNothing,
+    );
+
+    await tester.tap(find.text('More...'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Customer 6'), findsOneWidget);
   });
 }

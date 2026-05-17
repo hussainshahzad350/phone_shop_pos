@@ -9,7 +9,9 @@ import 'package:phone_shop_pos/modules/sales/presentation/providers/billing_stat
 import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_repository_provider.dart';
 
 final productSearchResultsProvider = FutureProvider<List<ProductEntity>>((ref) async {
-  final query = ref.watch(billingStateProvider).productSearchQuery.trim();
+  final query = ref
+      .watch(billingStateProvider.select((state) => state.productSearchQuery))
+      .trim();
   final repository = await ref.watch(salesRepositoryProvider.future);
   final result = await repository.searchSellableProducts(query, limit: 30);
   return result.fold(
@@ -21,7 +23,9 @@ final productSearchResultsProvider = FutureProvider<List<ProductEntity>>((ref) a
 final customerSearchResultsProvider = FutureProvider<List<CustomerOptionEntity>>((
   ref,
 ) async {
-  final query = ref.watch(billingStateProvider).customerSearchQuery.trim();
+  final query = ref
+      .watch(billingStateProvider.select((state) => state.customerSearchQuery))
+      .trim();
   final repository = await ref.watch(salesRepositoryProvider.future);
   final result = await repository.searchCustomers(query, limit: 30);
   return result.fold(

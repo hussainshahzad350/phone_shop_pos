@@ -17,6 +17,35 @@ import 'package:phone_shop_pos/modules/sales/domain/repositories/sales_repositor
 import 'package:phone_shop_pos/modules/sales/services/sales_service.dart';
 
 void main() {
+  test('SalesService rejects completion when paid amount is zero', () async {
+    final repository = _FakeSalesRepository();
+    final service = SalesService(repository: repository);
+
+    final result = await service.completeSale(
+      items: const <CartItemEntity>[
+        CartItemEntity(
+          productModelId: 'prd_1',
+          productName: 'Cable',
+          hasImei: false,
+          quantity: 1,
+          unitPrice: 500,
+        ),
+      ],
+      totals: const SaleTotalsEntity(
+        subtotal: 500,
+        discount: 0,
+        tax: 0,
+        total: 500,
+        paidAmount: 0,
+      ),
+      paymentMethod: 'cash',
+    );
+
+    expect(result.isFailure, isTrue);
+    expect(result.asFailure?.error.code, 'paid_amount_required');
+    expect(repository.createCalls, 0);
+  });
+
   test('SalesService rejects notes above max length', () async {
     final repository = _FakeSalesRepository();
     final service = SalesService(repository: repository);
@@ -46,7 +75,8 @@ void main() {
     expect(repository.createCalls, 0);
   });
 
-  test('PurchaseService trims valid notes and rejects over-limit input', () async {
+  test('PurchaseService trims valid notes and rejects over-limit input',
+      () async {
     final repository = _FakePurchaseRepository();
     final service = PurchaseService(repository: repository);
 
@@ -135,7 +165,8 @@ class _FakeSalesRepository implements SalesRepository {
     String query = '',
     int limit = 20,
   }) async {
-    return const Success<List<SerializedStockEntity>>(<SerializedStockEntity>[]);
+    return const Success<List<SerializedStockEntity>>(
+        <SerializedStockEntity>[]);
   }
 
   @override

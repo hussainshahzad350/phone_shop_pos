@@ -15,6 +15,8 @@ class PaymentSectionWidget extends StatefulWidget {
     required this.onCompleteSale,
     this.onPaidAmountSubmitted,
     required this.isProcessing,
+    this.canCompleteSale = true,
+    this.disabledReason,
     this.paymentMethodFocusNode,
     this.paidAmountFocusNode,
     this.notesFocusNode,
@@ -29,6 +31,8 @@ class PaymentSectionWidget extends StatefulWidget {
   final VoidCallback onCompleteSale;
   final VoidCallback? onPaidAmountSubmitted;
   final bool isProcessing;
+  final bool canCompleteSale;
+  final String? disabledReason;
   final FocusNode? paymentMethodFocusNode;
   final FocusNode? paidAmountFocusNode;
   final FocusNode? notesFocusNode;
@@ -74,13 +78,15 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final isDisabled = widget.isProcessing || !widget.canCompleteSale;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text('Payment', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Payment',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               key: ValueKey<String>(widget.paymentMethod),
@@ -139,11 +145,22 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
               onChanged: widget.onNotesChanged,
             ),
             const SizedBox(height: 12),
+            if (!widget.canCompleteSale &&
+                widget.disabledReason != null &&
+                widget.disabledReason!.isNotEmpty) ...<Widget>[
+              Text(
+                widget.disabledReason!,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
             SizedBox(
               width: double.infinity,
               height: 48,
               child: FilledButton.icon(
-                onPressed: widget.isProcessing ? null : widget.onCompleteSale,
+                onPressed: isDisabled ? null : widget.onCompleteSale,
                 icon: const Icon(Icons.point_of_sale_outlined),
                 label: Text(
                   widget.isProcessing ? 'Processing...' : 'Complete Sale (F10)',

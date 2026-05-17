@@ -19,10 +19,12 @@ class MigrationService {
 
   Future<void> onCreate(Database database, int version) async {
     for (var currentVersion = 1; currentVersion <= version; currentVersion++) {
-      // v9 and v12 are transitional table-rewrite migrations for existing
-      // databases. Fresh installs already use the latest sales schema.
+      // v9, v12 and v13 are transitional table-rewrite migrations for
+      // existing databases. Fresh installs already use the latest sales
+      // schema.
       if (currentVersion == 9 ||
-          (currentVersion == 12 && version == latestVersion)) {
+          ((currentVersion == 12 || currentVersion == 13) &&
+              version == latestVersion)) {
         continue;
       }
       await _applyMigration(database, currentVersion);
@@ -55,6 +57,10 @@ class MigrationService {
       return;
     }
     if (version == 12) {
+      await _applyMigrationV12(database);
+      return;
+    }
+    if (version == 13) {
       await _applyMigrationV12(database);
       return;
     }
@@ -115,7 +121,8 @@ class MigrationService {
         AND payment_method NOT IN (
           '${PaymentMethod.cash}',
           '${PaymentMethod.card}',
-          '${PaymentMethod.bank}'
+          '${PaymentMethod.bank}',
+          '${PaymentMethod.credit}'
         )
       ''',
     );
@@ -145,7 +152,8 @@ class MigrationService {
             payment_method IS NULL OR payment_method IN (
               '${PaymentMethod.cash}',
               '${PaymentMethod.card}',
-              '${PaymentMethod.bank}'
+              '${PaymentMethod.bank}',
+              '${PaymentMethod.credit}'
             )
           ),
           notes TEXT,
@@ -250,7 +258,8 @@ class MigrationService {
             payment_method IS NULL OR payment_method IN (
               '${PaymentMethod.cash}',
               '${PaymentMethod.card}',
-              '${PaymentMethod.bank}'
+              '${PaymentMethod.bank}',
+              '${PaymentMethod.credit}'
             )
           ),
           notes TEXT,
@@ -355,7 +364,8 @@ class MigrationService {
             payment_method IS NULL OR payment_method IN (
               '${PaymentMethod.cash}',
               '${PaymentMethod.card}',
-              '${PaymentMethod.bank}'
+              '${PaymentMethod.bank}',
+              '${PaymentMethod.credit}'
             )
           ),
           notes TEXT,
@@ -509,7 +519,8 @@ class MigrationService {
           payment_method IS NULL OR payment_method IN (
             '${PaymentMethod.cash}',
             '${PaymentMethod.card}',
-            '${PaymentMethod.bank}'
+            '${PaymentMethod.bank}',
+            '${PaymentMethod.credit}'
           )
         ),
         notes TEXT,

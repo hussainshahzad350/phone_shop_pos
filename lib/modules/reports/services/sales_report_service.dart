@@ -10,7 +10,8 @@ import 'package:phone_shop_pos/modules/reports/domain/entities/sales_report_row_
 import 'package:phone_shop_pos/modules/reports/domain/entities/sold_phone_report_row_entity.dart';
 
 class SalesReportService with BaseRepositoryGuard {
-  SalesReportService({required AppDatabase appDatabase}) : _appDatabase = appDatabase;
+  SalesReportService({required AppDatabase appDatabase})
+      : _appDatabase = appDatabase;
 
   final AppDatabase _appDatabase;
 
@@ -79,7 +80,8 @@ class SalesReportService with BaseRepositoryGuard {
               totalProfit: (row['total_profit'] as num?)?.toDouble() ?? 0,
               phonesSold: (row['phones_sold'] as num?)?.toInt() ?? 0,
               accessoriesSold: (row['accessories_sold'] as num?)?.toInt() ?? 0,
-              pendingBalances: (row['pending_balances'] as num?)?.toDouble() ?? 0,
+              pendingBalances:
+                  (row['pending_balances'] as num?)?.toDouble() ?? 0,
             ),
           )
           .toList(growable: false);
@@ -226,6 +228,10 @@ class SalesReportService with BaseRepositoryGuard {
       clauses.add('s.paid_amount >= s.total');
     } else if (status == 'pending') {
       clauses.add('s.paid_amount < s.total');
+      clauses.add("s.payment_method = 'credit'");
+      clauses.add(
+        "s.customer_id IS NOT NULL AND TRIM(s.customer_id) != '' AND LOWER(s.customer_id) != 'walk_in'",
+      );
     }
 
     return clauses.join(' AND ');
