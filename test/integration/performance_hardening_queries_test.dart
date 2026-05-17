@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:phone_shop_pos/core/database/app_database.dart';
@@ -7,7 +6,6 @@ import 'package:phone_shop_pos/core/database/database_provider.dart';
 import 'package:phone_shop_pos/core/database/migration_service.dart';
 import 'package:phone_shop_pos/core/database/sqlite_service.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
-import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/modules/dashboard/services/dashboard_service.dart';
 import 'package:phone_shop_pos/modules/inventory/data/repositories/sqlite_inventory_repository.dart';
@@ -60,10 +58,12 @@ void main() {
       expect(third.asSuccess!.value.todaySales, 0);
     });
 
-    test('inventory stock query respects search and limit boundaries', () async {
+    test('inventory stock query respects search and limit boundaries',
+        () async {
       final context = await _PerfContext.createTemporary();
       addTearDown(context.dispose);
-      final repository = SqliteInventoryRepository(appDatabase: context.appDatabase);
+      final repository =
+          SqliteInventoryRepository(appDatabase: context.appDatabase);
 
       for (var i = 0; i < 220; i++) {
         final id = 'prd_ser_$i';
@@ -96,7 +96,8 @@ void main() {
         );
       }
 
-      final searched = await repository.getStockRows(searchQuery: '999', limit: 40);
+      final searched =
+          await repository.getStockRows(searchQuery: '999', limit: 40);
       expect(searched.isSuccess, isTrue);
       final searchedRows = searched.asSuccess!.value;
       expect(searchedRows.length, lessThanOrEqualTo(40));
@@ -112,7 +113,8 @@ void main() {
 
       for (var i = 0; i < 320; i++) {
         final now = DateTimeHelpers.toSql(DateTime.utc(2026, 5, 16));
-        await context.appDatabase.insert(TableNames.customers, <String, Object?>{
+        await context.appDatabase
+            .insert(TableNames.customers, <String, Object?>{
           'id': 'cus_$i',
           'name': 'Customer $i',
           'phone': '0300${i.toString().padLeft(7, '0')}',
@@ -138,20 +140,25 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final customers = await container.read(reportCustomerOptionsProvider.future);
+      final customers =
+          await container.read(reportCustomerOptionsProvider.future);
       expect(customers.length, reportFilterOptionsLimit);
 
-      container.read(reportCustomerOptionSearchProvider.notifier).state = 'Customer 319';
+      container.read(reportCustomerOptionSearchProvider.notifier).state =
+          'Customer 319';
       final searchedCustomers =
           await container.read(reportCustomerOptionsProvider.future);
       expect(searchedCustomers.length, 1);
       expect(searchedCustomers.first.value, 'Customer 319');
 
-      final products = await container.read(reportProductOptionsProvider.future);
+      final products =
+          await container.read(reportProductOptionsProvider.future);
       expect(products.length, reportFilterOptionsLimit);
 
-      container.read(reportProductOptionSearchProvider.notifier).state = 'Product 319';
-      final searchedProducts = await container.read(reportProductOptionsProvider.future);
+      container.read(reportProductOptionSearchProvider.notifier).state =
+          'Product 319';
+      final searchedProducts =
+          await container.read(reportProductOptionsProvider.future);
       expect(searchedProducts.length, 1);
       expect(searchedProducts.first.value, 'Product 319');
     });

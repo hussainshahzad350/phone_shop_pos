@@ -9,14 +9,14 @@ import 'package:phone_shop_pos/modules/sales/presentation/helpers/sale_completio
 import 'package:phone_shop_pos/modules/sales/presentation/providers/billing_state_provider.dart';
 
 void main() {
-  final totals = SaleTotalsEntity(
+  const totals = SaleTotalsEntity(
     subtotal: 1000,
     discount: 0,
     tax: 0,
     total: 1000,
     paidAmount: 1000,
   );
-  final completion = SaleCompletionEntity(
+  const completion = SaleCompletionEntity(
     saleId: 'sale-1',
     invoiceNumber: 'INV-1',
     totals: totals,
@@ -32,7 +32,7 @@ void main() {
       imei: '111111111111111',
     ),
   ];
-  const billing = BillingState(
+  final billing = BillingState(
     selectedCustomerId: 'cust-1',
     paymentMethod: 'cash',
     notes: 'done',
@@ -43,7 +43,7 @@ void main() {
     InvoicePrintDocument? capturedDocument;
     final flow = SaleCompletionFlow(
       trackSaleOperation: (action) => action(),
-      completeSale: () async => Success<SaleCompletionEntity>(completion),
+      completeSale: () async => const Success<SaleCompletionEntity>(completion),
       enqueueInvoice: (document) async {
         capturedDocument = document;
         return const Success<String>('job-1');
@@ -63,11 +63,12 @@ void main() {
     expect(resetCount, 1);
   });
 
-  test('preserves success when enqueue fails and still resets billing', () async {
+  test('preserves success when enqueue fails and still resets billing',
+      () async {
     var resetCount = 0;
     final flow = SaleCompletionFlow(
       trackSaleOperation: (action) => action(),
-      completeSale: () async => Success<SaleCompletionEntity>(completion),
+      completeSale: () async => const Success<SaleCompletionEntity>(completion),
       enqueueInvoice: (document) async => const Failure<String>(
         AppError(code: 'queue_error', message: 'queue failed'),
       ),
@@ -84,7 +85,8 @@ void main() {
     expect(resetCount, 1);
   });
 
-  test('stops on completion failure without enqueue and without reset', () async {
+  test('stops on completion failure without enqueue and without reset',
+      () async {
     var resetCount = 0;
     var enqueueCount = 0;
     final flow = SaleCompletionFlow(

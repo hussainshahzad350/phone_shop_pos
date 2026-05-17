@@ -43,7 +43,7 @@ void main() {
 
     expect(output, contains('INV-20260515-0001'));
     expect(output, contains('Samsung A54'));
-    expect(output, contains('Total: PKR 105000.00'));
+    expect(output, contains('Total: PKR 105,000.00'));
     expect(output, contains('Thank you for your purchase'));
   });
 

@@ -10,6 +10,9 @@ void main() {
   testWidgets('next page is disabled when results are less than page size', (
     tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 1024));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     await tester.pumpWidget(
       _buildReportsApp(
         rows: List<DailySalesReportRowEntity>.generate(
@@ -29,6 +32,9 @@ void main() {
   testWidgets('next page remains enabled when results equal page size', (
     tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 1024));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     await tester.pumpWidget(
       _buildReportsApp(
         rows: List<DailySalesReportRowEntity>.generate(
@@ -48,6 +54,9 @@ void main() {
   testWidgets('report failures show explicit error details and retry action', (
     tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 1024));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[

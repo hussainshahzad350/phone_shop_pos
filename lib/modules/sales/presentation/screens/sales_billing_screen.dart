@@ -1,9 +1,8 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
-
+import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
@@ -236,9 +235,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     );
     final flow = SaleCompletionFlow(
       trackSaleOperation: (action) {
-        return ref
-            .read(operationManagerProvider.notifier)
-            .track(
+        return ref.read(operationManagerProvider.notifier).track(
               code: 'save_sale',
               label: 'Saving sale',
               progressLabel: 'Saving sale and updating stock',
@@ -499,62 +496,62 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                           flex: 2,
                           child: ListView(
                             children: <Widget>[
-                               FocusTraversalOrder(
-                                 order: const NumericFocusOrder(2),
-                                 child: customersAsync.when(
-                                   data: (customers) => CustomerSelectorWidget(
-                                     customers: customers,
-                                     customerSearchQuery:
-                                         billing.customerSearchQuery,
-                                     selectedCustomerId:
-                                         billing.selectedCustomerId,
-                                     onChanged: (value) {
-                                       ref
-                                           .read(billingStateProvider.notifier)
-                                           .setSelectedCustomerId(value);
-                                     },
-                                     onSearchChanged: _debouncedCustomerSearch,
-                                   ),
-                                   loading: () => const Card(
-                                     child: Padding(
-                                       padding: EdgeInsets.all(24),
-                                       child: Center(
-                                         child: CircularProgressIndicator(),
-                                       ),
-                                     ),
-                                   ),
-                                   error: (error, _) {
-                                     final message = error is AppError
-                                         ? error.message
-                                         : 'Failed to load customers.';
-                                     return Card(
-                                       child: Padding(
-                                         padding: const EdgeInsets.all(12),
-                                         child: Column(
-                                           crossAxisAlignment:
-                                               CrossAxisAlignment.start,
-                                           children: <Widget>[
-                                             const Text(
-                                               'Customer',
-                                               style: TextStyle(
-                                                 fontWeight: FontWeight.bold,
-                                               ),
-                                             ),
-                                             const SizedBox(height: 8),
-                                             Text(message),
-                                             const SizedBox(height: 8),
-                                             OutlinedButton.icon(
-                                               onPressed: _refreshSales,
-                                               icon: const Icon(Icons.refresh),
-                                               label: const Text('Retry'),
-                                             ),
-                                           ],
-                                         ),
-                                       ),
-                                     );
-                                   },
-                                 ),
-                               ),
+                              FocusTraversalOrder(
+                                order: const NumericFocusOrder(2),
+                                child: customersAsync.when(
+                                  data: (customers) => CustomerSelectorWidget(
+                                    customers: customers,
+                                    customerSearchQuery:
+                                        billing.customerSearchQuery,
+                                    selectedCustomerId:
+                                        billing.selectedCustomerId,
+                                    onChanged: (value) {
+                                      ref
+                                          .read(billingStateProvider.notifier)
+                                          .setSelectedCustomerId(value);
+                                    },
+                                    onSearchChanged: _debouncedCustomerSearch,
+                                  ),
+                                  loading: () => const Card(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(24),
+                                      child: Center(
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                    ),
+                                  ),
+                                  error: (error, _) {
+                                    final message = error is AppError
+                                        ? error.message
+                                        : 'Failed to load customers.';
+                                    return Card(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: <Widget>[
+                                            const Text(
+                                              'Customer',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(message),
+                                            const SizedBox(height: 8),
+                                            OutlinedButton.icon(
+                                              onPressed: _refreshSales,
+                                              icon: const Icon(Icons.refresh),
+                                              label: const Text('Retry'),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
                               const SizedBox(height: 8),
                               FocusTraversalOrder(
                                 order: const NumericFocusOrder(3),
@@ -577,13 +574,13 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                               const SizedBox(height: 8),
                               FocusTraversalOrder(
                                 order: const NumericFocusOrder(4),
-                                 child: PaymentSectionWidget(
-                                   paymentMethod: billing.paymentMethod,
-                                   paidAmount: billing.paidAmount,
-                                   notes: billing.notes,
-                                   paymentMethodFocusNode: _paymentMethodFocus,
-                                   paidAmountFocusNode: _paidAmountFocus,
-                                   notesFocusNode: _notesFocus,
+                                child: PaymentSectionWidget(
+                                  paymentMethod: billing.paymentMethod,
+                                  paidAmount: billing.paidAmount,
+                                  notes: billing.notes,
+                                  paymentMethodFocusNode: _paymentMethodFocus,
+                                  paidAmountFocusNode: _paidAmountFocus,
+                                  notesFocusNode: _notesFocus,
                                   onPaymentMethodChanged: (value) {
                                     ref
                                         .read(billingStateProvider.notifier)

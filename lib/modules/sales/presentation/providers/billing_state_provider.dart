@@ -2,16 +2,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
 
 class BillingState {
-  const BillingState({
+  BillingState({
     this.productSearchQuery = '',
     this.customerSearchQuery = '',
     this.selectedCustomerId,
     this.discount = 0,
     this.tax = 0,
     this.paidAmount = 0,
-    this.paymentMethod = PaymentMethod.cash,
+    String? paymentMethod,
     this.notes = '',
-  }) : paymentMethod = PaymentMethod.normalizeOrDefault(paymentMethod);
+  }) : paymentMethod = PaymentMethod.normalizeOrDefault(
+         paymentMethod ?? PaymentMethod.cash,
+       );
 
   final String productSearchQuery;
   final String customerSearchQuery;
@@ -49,7 +51,7 @@ class BillingState {
 }
 
 class BillingStateNotifier extends StateNotifier<BillingState> {
-  BillingStateNotifier() : super(const BillingState());
+  BillingStateNotifier() : super(BillingState());
 
   void setProductSearchQuery(String value) {
     state = state.copyWith(productSearchQuery: value);
@@ -89,7 +91,7 @@ class BillingStateNotifier extends StateNotifier<BillingState> {
   }
 
   void resetAfterSale() {
-    state = const BillingState();
+    state = BillingState();
   }
 }
 

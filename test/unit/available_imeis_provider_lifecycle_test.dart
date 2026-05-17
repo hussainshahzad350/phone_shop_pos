@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
@@ -57,6 +58,25 @@ void main() {
 
 class _FakeSalesRepository implements SalesRepository {
   int calls = 0;
+
+  @override
+  Future<Result<T>> guard<T>(
+    Future<T> Function() action, {
+    String operation = 'repository_operation',
+  }) async {
+    try {
+      final value = await action();
+      return Success<T>(value);
+    } catch (error) {
+      return Failure<T>(
+        AppError(
+          code: 'test_error',
+          message: 'Fake repository error during $operation',
+          details: error,
+        ),
+      );
+    }
+  }
 
   @override
   Future<Result<List<SerializedStockEntity>>> getAvailableImeis(

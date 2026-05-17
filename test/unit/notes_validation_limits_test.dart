@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
@@ -90,6 +91,25 @@ class _FakeSalesRepository implements SalesRepository {
   int createCalls = 0;
 
   @override
+  Future<Result<T>> guard<T>(
+    Future<T> Function() action, {
+    String operation = 'repository_operation',
+  }) async {
+    try {
+      final value = await action();
+      return Success<T>(value);
+    } catch (error) {
+      return Failure<T>(
+        AppError(
+          code: 'test_error',
+          message: 'Fake repository error during $operation',
+          details: error,
+        ),
+      );
+    }
+  }
+
+  @override
   Future<Result<SaleCompletionEntity>> createSaleTransaction({
     required List<CartItemEntity> items,
     required SaleTotalsEntity totals,
@@ -147,6 +167,25 @@ class _FakeSalesRepository implements SalesRepository {
 
 class _FakePurchaseRepository implements PurchaseRepository {
   String? capturedNotes;
+
+  @override
+  Future<Result<T>> guard<T>(
+    Future<T> Function() action, {
+    String operation = 'repository_operation',
+  }) async {
+    try {
+      final value = await action();
+      return Success<T>(value);
+    } catch (error) {
+      return Failure<T>(
+        AppError(
+          code: 'test_error',
+          message: 'Fake repository error during $operation',
+          details: error,
+        ),
+      );
+    }
+  }
 
   @override
   Future<Result<PurchaseCompletionEntity>> createPurchaseTransaction({

@@ -390,7 +390,7 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
             const SizedBox(height: 8),
             if (!_isWriteOff) ...<Widget>[
               DropdownButtonFormField<String>(
-                value: _selectedProductModelId,
+                initialValue: _selectedProductModelId,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   isDense: true,
@@ -416,7 +416,7 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
               ),
             ] else ...<Widget>[
               DropdownButtonFormField<String>(
-                value: _selectedSerializedStockId,
+                initialValue: _selectedSerializedStockId,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   isDense: true,

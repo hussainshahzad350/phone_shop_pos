@@ -3,7 +3,7 @@ import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entiti
 
 void main() {
   test('sales history remaining balance is clamped at zero', () {
-    const row = SalesHistoryRowEntity(
+    final row = SalesHistoryRowEntity(
       saleId: 'sale-1',
       invoiceNumber: 'INV-1',
       saleDate: DateTime(2026, 1, 1),

@@ -42,7 +42,7 @@ class DatabaseBackupService with BaseRepositoryGuard {
   static const String _lastBackupMetadataKey = 'backup.last_info';
 
   DatabaseBackupService({required AppDatabase appDatabase})
-    : _appDatabase = appDatabase;
+      : _appDatabase = appDatabase;
 
   final AppDatabase _appDatabase;
 
@@ -62,7 +62,8 @@ class DatabaseBackupService with BaseRepositoryGuard {
       if (checkpointRows.isNotEmpty) {
         final busyValue = (checkpointRows.first['busy'] as num?)?.toInt() ?? 0;
         if (busyValue != 0) {
-          throw StateError('Database is busy; checkpoint failed before backup.');
+          throw StateError(
+              'Database is busy; checkpoint failed before backup.');
         }
       }
 
@@ -155,7 +156,8 @@ class DatabaseBackupService with BaseRepositoryGuard {
         // 5. Reopen and verify the restored database.
         try {
           await _appDatabase.initialize(seedDemoData: false);
-          final restoredValid = await _passesIntegrityChecks(_appDatabase.database);
+          final restoredValid =
+              await _passesIntegrityChecks(_appDatabase.database);
           if (!restoredValid) {
             throw StateError('Restored database failed integrity check.');
           }
@@ -208,10 +210,12 @@ class DatabaseBackupService with BaseRepositoryGuard {
   }
 
   Future<Result<bool>> validateBackup(String backupFilePath) {
-    return guard<bool>(() async => _validateBackup(backupFilePath), operation: 'validate_backup');
+    return guard<bool>(() async => _validateBackup(backupFilePath),
+        operation: 'validate_backup');
   }
 
-  Future<Result<DatabaseHealthInfo>> getDatabaseHealth({String? backupDirectoryPath}) {
+  Future<Result<DatabaseHealthInfo>> getDatabaseHealth(
+      {String? backupDirectoryPath}) {
     return guard<DatabaseHealthInfo>(() async {
       final dbPath = _appDatabase.filePath;
       final dbFile = File(dbPath);
@@ -242,7 +246,7 @@ class DatabaseBackupService with BaseRepositoryGuard {
     );
 
     try {
-      return _passesIntegrityChecks(opened);
+      return await _passesIntegrityChecks(opened);
     } finally {
       await opened.close();
     }
@@ -254,7 +258,8 @@ class DatabaseBackupService with BaseRepositoryGuard {
       return false;
     }
 
-    final integrityValue = integrityRows.first.values.first.toString().toLowerCase();
+    final integrityValue =
+        integrityRows.first.values.first.toString().toLowerCase();
     if (integrityValue != 'ok') {
       return false;
     }
@@ -284,11 +289,14 @@ class DatabaseBackupService with BaseRepositoryGuard {
       'sizeBytes': info.sizeBytes,
       'valid': info.valid,
     };
-    await _appDatabase.database.insert(TableNames.appSettings, <String, Object?>{
-      'key': _lastBackupMetadataKey,
-      'value': jsonEncode(payload),
-      'updated_at': DateTimeHelpers.toSql(DateTimeHelpers.nowUtc()),
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    await _appDatabase.database.insert(
+        TableNames.appSettings,
+        <String, Object?>{
+          'key': _lastBackupMetadataKey,
+          'value': jsonEncode(payload),
+          'updated_at': DateTimeHelpers.toSql(DateTimeHelpers.nowUtc()),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<BackupInfo?> _readLastBackupInfo({

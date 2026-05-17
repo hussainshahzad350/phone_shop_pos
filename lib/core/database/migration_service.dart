@@ -19,7 +19,17 @@ class MigrationService {
 
   Future<void> onCreate(Database database, int version) async {
     for (var currentVersion = 1; currentVersion <= version; currentVersion++) {
+      // v9 and v12 are transitional table-rewrite migrations for existing
+      // databases. Fresh installs already use the latest sales schema.
+      if (currentVersion == 9 ||
+          (currentVersion == 12 && version == latestVersion)) {
+        continue;
+      }
       await _applyMigration(database, currentVersion);
+    }
+
+    if (version == latestVersion && version >= 12) {
+      await _applyFreshInstallSalesChecks(database);
     }
   }
 
@@ -113,6 +123,7 @@ class MigrationService {
     // SQLite requires foreign keys to be disabled while the sales table is
     // renamed and recreated, otherwise the schema change is rejected.
     await database.execute('PRAGMA foreign_keys = OFF;');
+    await database.execute('PRAGMA legacy_alter_table = ON;');
     try {
       await database.execute(
         'ALTER TABLE ${TableNames.sales} RENAME TO ${TableNames.sales}_old;',
@@ -205,6 +216,7 @@ class MigrationService {
         'CREATE INDEX IF NOT EXISTS idx_sales_created_at ON ${TableNames.sales}(created_at);',
       );
     } finally {
+      await database.execute('PRAGMA legacy_alter_table = OFF;');
       await database.execute('PRAGMA foreign_keys = ON;');
     }
   }
@@ -216,6 +228,7 @@ class MigrationService {
   // during the INSERT … SELECT so that the upgrade never blocks.
   Future<void> _applyMigrationV12(Database database) async {
     await database.execute('PRAGMA foreign_keys = OFF;');
+    await database.execute('PRAGMA legacy_alter_table = ON;');
     try {
       await database.execute(
         'ALTER TABLE ${TableNames.sales} RENAME TO ${TableNames.sales}_old;',
@@ -316,9 +329,77 @@ class MigrationService {
         'CREATE INDEX IF NOT EXISTS idx_sales_created_at ON ${TableNames.sales}(created_at);',
       );
     } finally {
+      await database.execute('PRAGMA legacy_alter_table = OFF;');
       await database.execute('PRAGMA foreign_keys = ON;');
     }
   }
+
+  Future<void> _applyFreshInstallSalesChecks(Database database) async {
+    await database.execute('PRAGMA foreign_keys = OFF;');
+    try {
+      await database.execute('DROP TABLE IF EXISTS ${TableNames.sales};');
+      await database.execute(
+        '''
+        CREATE TABLE ${TableNames.sales} (
+          id TEXT PRIMARY KEY NOT NULL,
+          invoice_number TEXT NOT NULL UNIQUE,
+          customer_id TEXT,
+          user_id TEXT,
+          sale_date TEXT NOT NULL,
+          subtotal REAL NOT NULL DEFAULT 0,
+          discount REAL NOT NULL DEFAULT 0,
+          tax REAL NOT NULL DEFAULT 0,
+          total REAL NOT NULL DEFAULT 0,
+          paid_amount REAL NOT NULL DEFAULT 0,
+          payment_method TEXT CHECK (
+            payment_method IS NULL OR payment_method IN (
+              '${PaymentMethod.cash}',
+              '${PaymentMethod.card}',
+              '${PaymentMethod.bank}'
+            )
+          ),
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (customer_id) REFERENCES ${TableNames.customers}(id)
+            ON UPDATE CASCADE
+            ON DELETE SET NULL,
+          FOREIGN KEY (user_id) REFERENCES ${TableNames.users}(id)
+            ON UPDATE CASCADE
+            ON DELETE SET NULL,
+          CHECK (subtotal >= 0),
+          CHECK (discount >= 0),
+          CHECK (tax >= 0),
+          CHECK (total >= 0),
+          CHECK (paid_amount >= 0),
+          CHECK (paid_amount <= total)
+        );
+        ''',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_sale_date ON ${TableNames.sales}(sale_date);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_invoice_number ON ${TableNames.sales}(invoice_number);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_customer_sale_date ON ${TableNames.sales}(customer_id, sale_date);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_payment_method_sale_date ON ${TableNames.sales}(payment_method, sale_date);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_pending_balance ON ${TableNames.sales}(total, paid_amount);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_created_at ON ${TableNames.sales}(created_at);',
+      );
+    } finally {
+      await database.execute('PRAGMA foreign_keys = ON;');
+    }
+  }
+
+  static const Map<int, List<String>> _migrationStatements = {
     1: <String>[
       '''
       CREATE TABLE ${TableNames.productModels} (
