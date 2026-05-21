@@ -232,6 +232,24 @@ class SalesService {
         ),
       );
     }
+    if (isWalkInCustomer && totals.remaining > 0) {
+      return const Failure<SaleCompletionEntity>(
+        AppError(
+          code: 'walk_in_requires_full_payment',
+          message:
+              'Walk-in customer sale must be fully paid. Select a customer to keep pending amount.',
+        ),
+      );
+    }
+    if (isCreditSale && totals.paidAmount > 0) {
+      return const Failure<SaleCompletionEntity>(
+        AppError(
+          code: 'credit_method_requires_zero_upfront',
+          message:
+              'Credit/Udhar method only supports zero upfront payment. Use cash/card/bank for partial upfront payment.',
+        ),
+      );
+    }
     if (paymentMethod != null && normalizedPaymentMethod == null) {
       return const Failure<SaleCompletionEntity>(
         AppError(

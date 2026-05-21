@@ -274,7 +274,7 @@ void main() {
       expect(repository.dashboardSalesToday, 143000);
     });
 
-    test('S-006 Partial payment', () async {
+    test('S-006 Partial payment (registered customer)', () async {
       final repository = _InMemorySalesRepository(
         quantityByProductId: <String, int>{'prd_acc_6': 10},
         availableSerializedStockIds: <String>{},
@@ -302,6 +302,7 @@ void main() {
       final result = await service.completeSale(
         items: items,
         totals: totals,
+        customerId: 'cus_registered_6',
         paymentMethod: 'cash',
       );
 
@@ -383,6 +384,116 @@ void main() {
         result.asFailure?.error.code,
         'registered_customer_required_for_credit_sale',
       );
+    });
+
+    test('Walk-in customer cannot keep pending balance', () async {
+      final repository = _InMemorySalesRepository(
+        quantityByProductId: <String, int>{'prd_acc_walkin': 10},
+        availableSerializedStockIds: <String>{},
+        costByProductId: <String, double>{'prd_acc_walkin': 800},
+      );
+      final service = SalesService(repository: repository);
+
+      const totals = SaleTotalsEntity(
+        subtotal: 1000,
+        discount: 0,
+        tax: 0,
+        total: 1000,
+        paidAmount: 0,
+      );
+      const items = <CartItemEntity>[
+        CartItemEntity(
+          productModelId: 'prd_acc_walkin',
+          productName: 'Walk-in Item',
+          hasImei: false,
+          quantity: 1,
+          unitPrice: 1000,
+        ),
+      ];
+
+      final result = await service.completeSale(
+        items: items,
+        totals: totals,
+        customerId: null,
+        paymentMethod: 'cash',
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.asFailure?.error.code, 'walk_in_requires_full_payment');
+    });
+
+    test('Credit method rejects upfront paid amount', () async {
+      final repository = _InMemorySalesRepository(
+        quantityByProductId: <String, int>{'prd_acc_credit_paid': 10},
+        availableSerializedStockIds: <String>{},
+        costByProductId: <String, double>{'prd_acc_credit_paid': 600},
+      );
+      final service = SalesService(repository: repository);
+
+      const totals = SaleTotalsEntity(
+        subtotal: 1500,
+        discount: 0,
+        tax: 0,
+        total: 1500,
+        paidAmount: 500,
+      );
+      const items = <CartItemEntity>[
+        CartItemEntity(
+          productModelId: 'prd_acc_credit_paid',
+          productName: 'Credit Paid Item',
+          hasImei: false,
+          quantity: 1,
+          unitPrice: 1500,
+        ),
+      ];
+
+      final result = await service.completeSale(
+        items: items,
+        totals: totals,
+        customerId: 'cus_registered_credit_paid',
+        paymentMethod: 'credit',
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(
+          result.asFailure?.error.code, 'credit_method_requires_zero_upfront');
+    });
+
+    test('Registered customer allows partial upfront with cash method',
+        () async {
+      final repository = _InMemorySalesRepository(
+        quantityByProductId: <String, int>{'prd_acc_partial_cash': 10},
+        availableSerializedStockIds: <String>{},
+        costByProductId: <String, double>{'prd_acc_partial_cash': 700},
+      );
+      final service = SalesService(repository: repository);
+
+      const totals = SaleTotalsEntity(
+        subtotal: 2000,
+        discount: 0,
+        tax: 0,
+        total: 2000,
+        paidAmount: 1200,
+      );
+      const items = <CartItemEntity>[
+        CartItemEntity(
+          productModelId: 'prd_acc_partial_cash',
+          productName: 'Partial Cash Item',
+          hasImei: false,
+          quantity: 1,
+          unitPrice: 2000,
+        ),
+      ];
+
+      final result = await service.completeSale(
+        items: items,
+        totals: totals,
+        customerId: 'cus_registered_partial',
+        paymentMethod: 'cash',
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.asSuccess?.value.totals.remaining, 800);
     });
 
     test('S-008 Exact payment', () {

@@ -64,6 +64,10 @@ class MigrationService {
       await _applyMigrationV12(database);
       return;
     }
+    if (version == 14) {
+      await _applyMigrationV14(database);
+      return;
+    }
     final statements = _migrationStatements[version];
     if (statements == null) {
       return;
@@ -406,6 +410,279 @@ class MigrationService {
       );
     } finally {
       await database.execute('PRAGMA foreign_keys = ON;');
+    }
+  }
+
+  Future<void> _applyMigrationV14(Database database) async {
+    await _repairSalesOldForeignKeyReferences(database);
+  }
+
+  Future<void> _repairSalesOldForeignKeyReferences(Database database) async {
+    await database.execute('PRAGMA foreign_keys = OFF;');
+    try {
+      const legacySalesParent = '${TableNames.sales}_old';
+
+      if (await _tableReferencesParent(
+        database,
+        tableName: TableNames.saleItems,
+        parentTableName: legacySalesParent,
+      )) {
+        await _rebuildSaleItemsTable(database);
+      }
+
+      if (await _tableReferencesParent(
+        database,
+        tableName: TableNames.salePayments,
+        parentTableName: legacySalesParent,
+      )) {
+        await _rebuildSalePaymentsTable(database);
+      }
+
+      if (await _tableReferencesParent(
+        database,
+        tableName: TableNames.saleReturns,
+        parentTableName: legacySalesParent,
+      )) {
+        await _rebuildSaleReturnsTable(database);
+      }
+    } finally {
+      await database.execute('PRAGMA foreign_keys = ON;');
+    }
+  }
+
+  Future<bool> _tableReferencesParent(
+    Database database, {
+    required String tableName,
+    required String parentTableName,
+  }) async {
+    final rows =
+        await database.rawQuery('PRAGMA foreign_key_list($tableName);');
+    for (final row in rows) {
+      final referencedTable = (row['table'] as String?)?.trim();
+      if (referencedTable == parentTableName) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<void> _rebuildSaleItemsTable(Database database) async {
+    await database.execute(
+      'ALTER TABLE ${TableNames.saleItems} RENAME TO ${TableNames.saleItems}_old;',
+    );
+    await database.execute(
+      '''
+      CREATE TABLE ${TableNames.saleItems} (
+        id TEXT PRIMARY KEY NOT NULL,
+        sale_id TEXT NOT NULL,
+        product_model_id TEXT NOT NULL,
+        serialized_stock_id TEXT,
+        quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+        unit_price REAL NOT NULL DEFAULT 0,
+        discount REAL NOT NULL DEFAULT 0,
+        line_total REAL NOT NULL DEFAULT 0,
+        cost_price REAL NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (sale_id) REFERENCES ${TableNames.sales}(id)
+          ON UPDATE CASCADE
+          ON DELETE CASCADE,
+        FOREIGN KEY (product_model_id) REFERENCES ${TableNames.productModels}(id)
+          ON UPDATE CASCADE
+          ON DELETE RESTRICT,
+        FOREIGN KEY (serialized_stock_id) REFERENCES ${TableNames.serializedStock}(id)
+          ON UPDATE CASCADE
+          ON DELETE SET NULL
+      );
+      ''',
+    );
+    await database.execute(
+      '''
+      INSERT INTO ${TableNames.saleItems} (
+        id,
+        sale_id,
+        product_model_id,
+        serialized_stock_id,
+        quantity,
+        unit_price,
+        discount,
+        line_total,
+        cost_price,
+        created_at,
+        updated_at
+      )
+      SELECT
+        id,
+        sale_id,
+        product_model_id,
+        serialized_stock_id,
+        quantity,
+        unit_price,
+        discount,
+        line_total,
+        cost_price,
+        created_at,
+        updated_at
+      FROM ${TableNames.saleItems}_old;
+      ''',
+    );
+    await _dropTableBestEffort(database, '${TableNames.saleItems}_old');
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON ${TableNames.saleItems}(sale_id);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sale_items_product_model_id ON ${TableNames.saleItems}(product_model_id);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sale_items_serialized_stock_id ON ${TableNames.saleItems}(serialized_stock_id);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sale_items_sale_product ON ${TableNames.saleItems}(sale_id, product_model_id);',
+    );
+  }
+
+  Future<void> _rebuildSalePaymentsTable(Database database) async {
+    await database.execute(
+      'ALTER TABLE ${TableNames.salePayments} RENAME TO ${TableNames.salePayments}_old;',
+    );
+    await database.execute(
+      '''
+      CREATE TABLE ${TableNames.salePayments} (
+        id TEXT PRIMARY KEY NOT NULL,
+        sale_id TEXT NOT NULL,
+        amount REAL NOT NULL CHECK (amount > 0),
+        payment_method TEXT NOT NULL CHECK (
+          payment_method IN (
+            '${PaymentMethod.cash}',
+            '${PaymentMethod.card}',
+            '${PaymentMethod.bank}'
+          )
+        ),
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (sale_id) REFERENCES ${TableNames.sales}(id)
+          ON UPDATE CASCADE
+          ON DELETE CASCADE
+      );
+      ''',
+    );
+    await database.execute(
+      '''
+      INSERT INTO ${TableNames.salePayments} (
+        id,
+        sale_id,
+        amount,
+        payment_method,
+        notes,
+        created_at,
+        updated_at
+      )
+      SELECT
+        id,
+        sale_id,
+        amount,
+        payment_method,
+        notes,
+        created_at,
+        updated_at
+      FROM ${TableNames.salePayments}_old;
+      ''',
+    );
+    await _dropTableBestEffort(database, '${TableNames.salePayments}_old');
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sale_payments_sale_created ON ${TableNames.salePayments}(sale_id, created_at DESC);',
+    );
+  }
+
+  Future<void> _rebuildSaleReturnsTable(Database database) async {
+    await database.execute(
+      'ALTER TABLE ${TableNames.saleReturns} RENAME TO ${TableNames.saleReturns}_old;',
+    );
+    await database.execute(
+      '''
+      CREATE TABLE ${TableNames.saleReturns} (
+        id TEXT PRIMARY KEY NOT NULL,
+        sale_id TEXT NOT NULL,
+        sale_item_id TEXT NOT NULL,
+        product_model_id TEXT NOT NULL,
+        serialized_stock_id TEXT,
+        return_type TEXT NOT NULL CHECK (return_type IN ('imei', 'quantity')),
+        return_qty INTEGER NOT NULL CHECK (return_qty > 0),
+        return_amount REAL NOT NULL DEFAULT 0,
+        reason TEXT NOT NULL,
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        cost_price REAL NOT NULL DEFAULT 0,
+        FOREIGN KEY (sale_id) REFERENCES ${TableNames.sales}(id)
+          ON UPDATE CASCADE
+          ON DELETE CASCADE,
+        FOREIGN KEY (sale_item_id) REFERENCES ${TableNames.saleItems}(id)
+          ON UPDATE CASCADE
+          ON DELETE CASCADE,
+        FOREIGN KEY (product_model_id) REFERENCES ${TableNames.productModels}(id)
+          ON UPDATE CASCADE
+          ON DELETE RESTRICT,
+        FOREIGN KEY (serialized_stock_id) REFERENCES ${TableNames.serializedStock}(id)
+          ON UPDATE CASCADE
+          ON DELETE SET NULL
+      );
+      ''',
+    );
+    await database.execute(
+      '''
+      INSERT INTO ${TableNames.saleReturns} (
+        id,
+        sale_id,
+        sale_item_id,
+        product_model_id,
+        serialized_stock_id,
+        return_type,
+        return_qty,
+        return_amount,
+        reason,
+        notes,
+        created_at,
+        updated_at,
+        cost_price
+      )
+      SELECT
+        id,
+        sale_id,
+        sale_item_id,
+        product_model_id,
+        serialized_stock_id,
+        return_type,
+        return_qty,
+        return_amount,
+        reason,
+        notes,
+        created_at,
+        updated_at,
+        cost_price
+      FROM ${TableNames.saleReturns}_old;
+      ''',
+    );
+    await _dropTableBestEffort(database, '${TableNames.saleReturns}_old');
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sale_returns_sale_item ON ${TableNames.saleReturns}(sale_id, sale_item_id);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sale_returns_serialized ON ${TableNames.saleReturns}(serialized_stock_id);',
+    );
+  }
+
+  Future<void> _dropTableBestEffort(Database database, String tableName) async {
+    try {
+      await database.execute('DROP TABLE $tableName;');
+    } on DatabaseException catch (error) {
+      final message = error.toString().toLowerCase();
+      if (message.contains('no such table') ||
+          message.contains('sql logic error')) {
+        return;
+      }
+      rethrow;
     }
   }
 
