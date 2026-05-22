@@ -129,16 +129,18 @@ class ReportsScreen extends ConsumerWidget {
                     onStartDate: (date) => ref
                         .read(reportFilterProvider.notifier)
                         .setStartDate(date),
-                    onEndDate: (date) =>
-                        ref.read(reportFilterProvider.notifier).setEndDate(date),
+                    onEndDate: (date) => ref
+                        .read(reportFilterProvider.notifier)
+                        .setEndDate(date),
                     onCustomer: (value) => ref
                         .read(reportFilterProvider.notifier)
                         .setCustomerId(value),
                     onProduct: (value) => ref
                         .read(reportFilterProvider.notifier)
                         .setProductModelId(value),
-                    onStatus: (value) =>
-                        ref.read(reportFilterProvider.notifier).setStatus(value),
+                    onStatus: (value) => ref
+                        .read(reportFilterProvider.notifier)
+                        .setStatus(value),
                     onPaymentMethod: (value) => ref
                         .read(reportFilterProvider.notifier)
                         .setPaymentMethod(value),
@@ -182,7 +184,9 @@ class ReportsScreen extends ConsumerWidget {
                       const SizedBox(width: 8),
                       OutlinedButton.icon(
                         onPressed: canGoNextPage
-                            ? () => ref.read(reportFilterProvider.notifier).nextPage()
+                            ? () => ref
+                                .read(reportFilterProvider.notifier)
+                                .nextPage()
                             : null,
                         icon: const Icon(Icons.chevron_right),
                         label: const Text('Next'),
@@ -846,8 +850,9 @@ class _SalesHistoryView extends ConsumerWidget {
                       border: OutlineInputBorder(),
                       labelText: 'Invoice #',
                     ),
-                    onChanged: (value) =>
-                        ref.read(salesHistoryInvoiceQueryProvider.notifier).state = value,
+                    onChanged: (value) => ref
+                        .read(salesHistoryInvoiceQueryProvider.notifier)
+                        .state = value,
                   ),
                 ),
                 SizedBox(
@@ -858,8 +863,9 @@ class _SalesHistoryView extends ConsumerWidget {
                       border: OutlineInputBorder(),
                       labelText: 'Customer Name / ID',
                     ),
-                    onChanged: (value) =>
-                        ref.read(salesHistoryCustomerQueryProvider.notifier).state = value,
+                    onChanged: (value) => ref
+                        .read(salesHistoryCustomerQueryProvider.notifier)
+                        .state = value,
                   ),
                 ),
                 OutlinedButton.icon(
@@ -868,15 +874,18 @@ class _SalesHistoryView extends ConsumerWidget {
                       context: context,
                       firstDate: DateTime(2020),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
-                      initialDate: ref.read(salesHistoryStartDateProvider) ?? DateTime.now(),
+                      initialDate: ref.read(salesHistoryStartDateProvider) ??
+                          DateTime.now(),
                     );
-                    ref.read(salesHistoryStartDateProvider.notifier).state = picked;
+                    ref.read(salesHistoryStartDateProvider.notifier).state =
+                        picked;
                   },
                   icon: const Icon(Icons.calendar_today),
                   label: Text(
                     ref.watch(salesHistoryStartDateProvider) == null
                         ? 'Start Date'
-                        : FormattingHelpers.dateYmd(ref.watch(salesHistoryStartDateProvider)!),
+                        : FormattingHelpers.dateYmd(
+                            ref.watch(salesHistoryStartDateProvider)!),
                   ),
                 ),
                 OutlinedButton.icon(
@@ -885,22 +894,26 @@ class _SalesHistoryView extends ConsumerWidget {
                       context: context,
                       firstDate: DateTime(2020),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
-                      initialDate: ref.read(salesHistoryEndDateProvider) ?? DateTime.now(),
+                      initialDate: ref.read(salesHistoryEndDateProvider) ??
+                          DateTime.now(),
                     );
-                    ref.read(salesHistoryEndDateProvider.notifier).state = picked;
+                    ref.read(salesHistoryEndDateProvider.notifier).state =
+                        picked;
                   },
                   icon: const Icon(Icons.event),
                   label: Text(
                     ref.watch(salesHistoryEndDateProvider) == null
                         ? 'End Date'
-                        : FormattingHelpers.dateYmd(ref.watch(salesHistoryEndDateProvider)!),
+                        : FormattingHelpers.dateYmd(
+                            ref.watch(salesHistoryEndDateProvider)!),
                   ),
                 ),
                 FilterChip(
                   label: const Text('Pending only'),
                   selected: pendingOnly,
-                  onSelected: (value) =>
-                      ref.read(salesHistoryPendingOnlyProvider.notifier).state = value,
+                  onSelected: (value) => ref
+                      .read(salesHistoryPendingOnlyProvider.notifier)
+                      .state = value,
                 ),
               ],
             ),
@@ -928,11 +941,15 @@ class _SalesHistoryView extends ConsumerWidget {
                       return DataRow(
                         cells: <DataCell>[
                           DataCell(Text(row.invoiceNumber)),
-                          DataCell(Text(FormattingHelpers.dateYmd(row.saleDate))),
+                          DataCell(
+                              Text(FormattingHelpers.dateYmd(row.saleDate))),
                           DataCell(Text(row.customerName)),
-                          DataCell(Text(FormattingHelpers.currencyPkr(row.total))),
-                          DataCell(Text(FormattingHelpers.currencyPkr(row.paidAmount))),
-                          DataCell(Text(FormattingHelpers.currencyPkr(row.remainingBalance))),
+                          DataCell(
+                              Text(FormattingHelpers.currencyPkr(row.total))),
+                          DataCell(Text(
+                              FormattingHelpers.currencyPkr(row.paidAmount))),
+                          DataCell(Text(FormattingHelpers.currencyPkr(
+                              row.remainingBalance))),
                           DataCell(Text(row.isPaid ? 'Paid' : 'Pending')),
                           DataCell(
                             Wrap(
@@ -1009,7 +1026,8 @@ class _CreditCollectionView extends ConsumerWidget {
     final rowsAsync = ref.watch(salesHistoryRowsProvider);
     return rowsAsync.when(
       data: (rows) {
-        final pendingRows = rows.where((row) => !row.isPaid).toList(growable: false);
+        final pendingRows =
+            rows.where((row) => !row.isPaid).toList(growable: false);
         return Card(
           child: Padding(
             padding: const EdgeInsets.all(8),
@@ -1029,14 +1047,17 @@ class _CreditCollectionView extends ConsumerWidget {
                     DataCell(Text(row.invoiceNumber)),
                     DataCell(Text(row.customerName)),
                     DataCell(Text(FormattingHelpers.currencyPkr(row.total))),
-                    DataCell(Text(FormattingHelpers.currencyPkr(row.paidAmount))),
-                    DataCell(Text(FormattingHelpers.currencyPkr(row.remainingBalance))),
+                    DataCell(
+                        Text(FormattingHelpers.currencyPkr(row.paidAmount))),
+                    DataCell(Text(
+                        FormattingHelpers.currencyPkr(row.remainingBalance))),
                     DataCell(
                       FilledButton(
                         onPressed: () async {
                           await showDialog<void>(
                             context: context,
-                            builder: (context) => _CollectPaymentDialog(sale: row),
+                            builder: (context) =>
+                                _CollectPaymentDialog(sale: row),
                           );
                         },
                         child: const Text('Collect'),
@@ -1082,8 +1103,9 @@ class _PurchaseHistoryView extends ConsumerWidget {
                       border: OutlineInputBorder(),
                       labelText: 'Supplier',
                     ),
-                    onChanged: (value) =>
-                        ref.read(purchaseHistorySupplierQueryProvider.notifier).state = value,
+                    onChanged: (value) => ref
+                        .read(purchaseHistorySupplierQueryProvider.notifier)
+                        .state = value,
                   ),
                 ),
                 OutlinedButton.icon(
@@ -1092,16 +1114,18 @@ class _PurchaseHistoryView extends ConsumerWidget {
                       context: context,
                       firstDate: DateTime(2020),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
-                      initialDate:
-                          ref.read(purchaseHistoryStartDateProvider) ?? DateTime.now(),
+                      initialDate: ref.read(purchaseHistoryStartDateProvider) ??
+                          DateTime.now(),
                     );
-                    ref.read(purchaseHistoryStartDateProvider.notifier).state = picked;
+                    ref.read(purchaseHistoryStartDateProvider.notifier).state =
+                        picked;
                   },
                   icon: const Icon(Icons.calendar_today),
                   label: Text(
                     ref.watch(purchaseHistoryStartDateProvider) == null
                         ? 'Start Date'
-                        : FormattingHelpers.dateYmd(ref.watch(purchaseHistoryStartDateProvider)!),
+                        : FormattingHelpers.dateYmd(
+                            ref.watch(purchaseHistoryStartDateProvider)!),
                   ),
                 ),
                 OutlinedButton.icon(
@@ -1110,16 +1134,18 @@ class _PurchaseHistoryView extends ConsumerWidget {
                       context: context,
                       firstDate: DateTime(2020),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
-                      initialDate:
-                          ref.read(purchaseHistoryEndDateProvider) ?? DateTime.now(),
+                      initialDate: ref.read(purchaseHistoryEndDateProvider) ??
+                          DateTime.now(),
                     );
-                    ref.read(purchaseHistoryEndDateProvider.notifier).state = picked;
+                    ref.read(purchaseHistoryEndDateProvider.notifier).state =
+                        picked;
                   },
                   icon: const Icon(Icons.event),
                   label: Text(
                     ref.watch(purchaseHistoryEndDateProvider) == null
                         ? 'End Date'
-                        : FormattingHelpers.dateYmd(ref.watch(purchaseHistoryEndDateProvider)!),
+                        : FormattingHelpers.dateYmd(
+                            ref.watch(purchaseHistoryEndDateProvider)!),
                   ),
                 ),
               ],
@@ -1145,12 +1171,16 @@ class _PurchaseHistoryView extends ConsumerWidget {
                   rows: rows.map((row) {
                     return DataRow(
                       cells: <DataCell>[
-                        DataCell(Text(FormattingHelpers.dateYmd(row.purchaseDate))),
+                        DataCell(
+                            Text(FormattingHelpers.dateYmd(row.purchaseDate))),
                         DataCell(Text(row.supplierName)),
                         DataCell(Text(row.invoiceNumber ?? '-')),
-                        DataCell(Text(FormattingHelpers.currencyPkr(row.total))),
-                        DataCell(Text(FormattingHelpers.currencyPkr(row.paidAmount))),
-                        DataCell(Text(FormattingHelpers.currencyPkr(row.remainingBalance))),
+                        DataCell(
+                            Text(FormattingHelpers.currencyPkr(row.total))),
+                        DataCell(Text(
+                            FormattingHelpers.currencyPkr(row.paidAmount))),
+                        DataCell(Text(FormattingHelpers.currencyPkr(
+                            row.remainingBalance))),
                         DataCell(
                           OutlinedButton(
                             onPressed: () async {
@@ -1206,9 +1236,11 @@ class _SupplierLedgerView extends ConsumerWidget {
                 cells: <DataCell>[
                   DataCell(Text(row.supplierName)),
                   DataCell(Text(row.purchaseCount.toString())),
-                  DataCell(Text(FormattingHelpers.currencyPkr(row.totalPurchases))),
+                  DataCell(
+                      Text(FormattingHelpers.currencyPkr(row.totalPurchases))),
                   DataCell(Text(FormattingHelpers.currencyPkr(row.totalPaid))),
-                  DataCell(Text(FormattingHelpers.currencyPkr(row.pendingAmount))),
+                  DataCell(
+                      Text(FormattingHelpers.currencyPkr(row.pendingAmount))),
                 ],
               );
             }).toList(growable: false),
@@ -1248,9 +1280,11 @@ class _CashLedgerView extends ConsumerWidget {
                       context: context,
                       firstDate: DateTime(2020),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
-                      initialDate: ref.read(cashLedgerStartDateProvider) ?? DateTime.now(),
+                      initialDate: ref.read(cashLedgerStartDateProvider) ??
+                          DateTime.now(),
                     );
-                    ref.read(cashLedgerStartDateProvider.notifier).state = picked;
+                    ref.read(cashLedgerStartDateProvider.notifier).state =
+                        picked;
                   },
                   icon: const Icon(Icons.calendar_today),
                   label: Text(
@@ -1265,13 +1299,16 @@ class _CashLedgerView extends ConsumerWidget {
                       context: context,
                       firstDate: DateTime(2020),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
-                      initialDate: ref.read(cashLedgerEndDateProvider) ?? DateTime.now(),
+                      initialDate:
+                          ref.read(cashLedgerEndDateProvider) ?? DateTime.now(),
                     );
                     ref.read(cashLedgerEndDateProvider.notifier).state = picked;
                   },
                   icon: const Icon(Icons.event),
                   label: Text(
-                    endDate == null ? 'End Date' : FormattingHelpers.dateYmd(endDate),
+                    endDate == null
+                        ? 'End Date'
+                        : FormattingHelpers.dateYmd(endDate),
                   ),
                 ),
                 OutlinedButton.icon(
@@ -1307,7 +1344,8 @@ class _CashLedgerView extends ConsumerWidget {
                     const SizedBox(height: 8),
                     Expanded(
                       child: AppDataTable(
-                        emptyMessage: 'No cash flow rows in selected date range.',
+                        emptyMessage:
+                            'No cash flow rows in selected date range.',
                         columns: const <DataColumn>[
                           DataColumn(label: Text('Day')),
                           DataColumn(label: Text('Cash Sales In')),
@@ -1322,15 +1360,22 @@ class _CashLedgerView extends ConsumerWidget {
                           return DataRow(
                             cells: <DataCell>[
                               DataCell(Text(row.day)),
-                              DataCell(Text(FormattingHelpers.currencyPkr(row.cashSalesIn))),
-                              DataCell(Text(FormattingHelpers.currencyPkr(row.cashCollectionsIn))),
-                              DataCell(Text(FormattingHelpers.currencyPkr(row.totalCashIn))),
+                              DataCell(Text(FormattingHelpers.currencyPkr(
+                                  row.cashSalesIn))),
+                              DataCell(Text(FormattingHelpers.currencyPkr(
+                                  row.cashCollectionsIn))),
+                              DataCell(Text(FormattingHelpers.currencyPkr(
+                                  row.totalCashIn))),
                               DataCell(
-                                Text(FormattingHelpers.currencyPkr(row.purchasePaymentsOut)),
+                                Text(FormattingHelpers.currencyPkr(
+                                    row.purchasePaymentsOut)),
                               ),
-                              DataCell(Text(FormattingHelpers.currencyPkr(row.expensesOut))),
-                              DataCell(Text(FormattingHelpers.currencyPkr(row.totalCashOut))),
-                              DataCell(Text(FormattingHelpers.currencyPkr(row.netCash))),
+                              DataCell(Text(FormattingHelpers.currencyPkr(
+                                  row.expensesOut))),
+                              DataCell(Text(FormattingHelpers.currencyPkr(
+                                  row.totalCashOut))),
+                              DataCell(Text(
+                                  FormattingHelpers.currencyPkr(row.netCash))),
                             ],
                           );
                         }).toList(growable: false),
@@ -1420,7 +1465,9 @@ class _ExpensesView extends ConsumerWidget {
                   },
                   icon: const Icon(Icons.event),
                   label: Text(
-                    endDate == null ? 'End Date' : FormattingHelpers.dateYmd(endDate),
+                    endDate == null
+                        ? 'End Date'
+                        : FormattingHelpers.dateYmd(endDate),
                   ),
                 ),
                 SizedBox(
@@ -1443,9 +1490,10 @@ class _ExpensesView extends ConsumerWidget {
                         ),
                       ];
                       return DropdownButtonFormField<String>(
-                        value: items.any((item) => item.value == selectedValue)
-                            ? selectedValue
-                            : '',
+                        initialValue:
+                            items.any((item) => item.value == selectedValue)
+                                ? selectedValue
+                                : '',
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                           isDense: true,
@@ -1464,8 +1512,9 @@ class _ExpensesView extends ConsumerWidget {
                         isDense: true,
                         labelText: 'Category',
                       ),
-                      onChanged: (value) =>
-                          ref.read(expensesCategoryProvider.notifier).state = value,
+                      onChanged: (value) => ref
+                          .read(expensesCategoryProvider.notifier)
+                          .state = value,
                     ),
                   ),
                 ),
@@ -1500,9 +1549,11 @@ class _ExpensesView extends ConsumerWidget {
                   rows: rows.map((row) {
                     return DataRow(
                       cells: <DataCell>[
-                        DataCell(Text(FormattingHelpers.dateYmd(row.expenseDate))),
+                        DataCell(
+                            Text(FormattingHelpers.dateYmd(row.expenseDate))),
                         DataCell(Text(row.category)),
-                        DataCell(Text(FormattingHelpers.currencyPkr(row.amount))),
+                        DataCell(
+                            Text(FormattingHelpers.currencyPkr(row.amount))),
                         DataCell(Text(row.notes ?? '-')),
                         DataCell(
                           Wrap(
@@ -1534,13 +1585,15 @@ class _ExpensesView extends ConsumerWidget {
                                       ),
                                       actions: <Widget>[
                                         TextButton(
-                                          onPressed: () => Navigator.of(dialogContext)
-                                              .pop(false),
+                                          onPressed: () =>
+                                              Navigator.of(dialogContext)
+                                                  .pop(false),
                                           child: const Text('Cancel'),
                                         ),
                                         FilledButton.tonal(
                                           onPressed: () =>
-                                              Navigator.of(dialogContext).pop(true),
+                                              Navigator.of(dialogContext)
+                                                  .pop(true),
                                           child: const Text('Delete'),
                                         ),
                                       ],
@@ -1549,9 +1602,10 @@ class _ExpensesView extends ConsumerWidget {
                                   if (confirmed != true) {
                                     return;
                                   }
-                                  final repository =
-                                      await ref.read(expenseRepositoryProvider.future);
-                                  final result = await repository.deleteExpense(row.id);
+                                  final repository = await ref
+                                      .read(expenseRepositoryProvider.future);
+                                  final result =
+                                      await repository.deleteExpense(row.id);
                                   if (result.isFailure) {
                                     AppNotifier.error(
                                       result.asFailure!.error.message,
@@ -1670,7 +1724,8 @@ class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
             const SizedBox(height: 8),
             TextField(
               controller: _amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 labelText: 'Amount',
@@ -1692,7 +1747,8 @@ class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
       ),
       actions: <Widget>[
         TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(false),
+          onPressed:
+              _isSubmitting ? null : () => Navigator.of(context).pop(false),
           child: const Text('Cancel'),
         ),
         FilledButton(
@@ -1719,8 +1775,8 @@ class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
       AppNotifier.error('Amount must be greater than zero.');
       return;
     }
-    final notesError =
-        NotesSafety.validate(_notesController.text, fieldLabel: 'Expense notes');
+    final notesError = NotesSafety.validate(_notesController.text,
+        fieldLabel: 'Expense notes');
     if (notesError != null) {
       AppNotifier.error(notesError);
       return;
@@ -1756,7 +1812,8 @@ class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
       AppNotifier.error(result.asFailure!.error.message);
       return;
     }
-    AppNotifier.success(existing == null ? 'Expense added.' : 'Expense updated.');
+    AppNotifier.success(
+        existing == null ? 'Expense added.' : 'Expense updated.');
     Navigator.of(context).pop(true);
   }
 }
@@ -1788,10 +1845,13 @@ class _SalesInvoiceDialog extends ConsumerWidget {
                   runSpacing: 8,
                   children: <Widget>[
                     Text('Invoice: ${detail.sale.invoiceNumber}'),
-                    Text('Date: ${FormattingHelpers.dateYmd(detail.sale.saleDate)}'),
+                    Text(
+                        'Date: ${FormattingHelpers.dateYmd(detail.sale.saleDate)}'),
                     Text('Customer: ${detail.sale.customerName}'),
-                    Text('Total: ${FormattingHelpers.currencyPkr(detail.sale.total)}'),
-                    Text('Paid: ${FormattingHelpers.currencyPkr(detail.sale.paidAmount)}'),
+                    Text(
+                        'Total: ${FormattingHelpers.currencyPkr(detail.sale.total)}'),
+                    Text(
+                        'Paid: ${FormattingHelpers.currencyPkr(detail.sale.paidAmount)}'),
                     Text(
                       'Remaining: ${FormattingHelpers.currencyPkr(detail.sale.remainingBalance)}',
                     ),
@@ -1819,8 +1879,10 @@ class _SalesInvoiceDialog extends ConsumerWidget {
                           DataCell(Text(item.productName)),
                           DataCell(Text(item.imei ?? '-')),
                           DataCell(Text(item.quantity.toString())),
-                          DataCell(Text(FormattingHelpers.currencyPkr(item.unitPrice))),
-                          DataCell(Text(FormattingHelpers.currencyPkr(item.lineTotal))),
+                          DataCell(Text(
+                              FormattingHelpers.currencyPkr(item.unitPrice))),
+                          DataCell(Text(
+                              FormattingHelpers.currencyPkr(item.lineTotal))),
                           DataCell(Text(item.returnedQty.toString())),
                           DataCell(
                             item.returnableQty <= 0
@@ -1834,7 +1896,8 @@ class _SalesInvoiceDialog extends ConsumerWidget {
                                           item: item,
                                         ),
                                       );
-                                      ref.invalidate(salesInvoiceDetailProvider(saleId));
+                                      ref.invalidate(
+                                          salesInvoiceDetailProvider(saleId));
                                       ref.invalidate(salesHistoryRowsProvider);
                                     },
                                     child: const Text('Return'),
@@ -1868,7 +1931,8 @@ class _CollectPaymentDialog extends ConsumerStatefulWidget {
   final SalesHistoryRowEntity sale;
 
   @override
-  ConsumerState<_CollectPaymentDialog> createState() => _CollectPaymentDialogState();
+  ConsumerState<_CollectPaymentDialog> createState() =>
+      _CollectPaymentDialogState();
 }
 
 class _CollectPaymentDialogState extends ConsumerState<_CollectPaymentDialog> {
@@ -1903,7 +1967,8 @@ class _CollectPaymentDialogState extends ConsumerState<_CollectPaymentDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text('Outstanding: ${FormattingHelpers.currencyPkr(widget.sale.remainingBalance)}'),
+            Text(
+                'Outstanding: ${FormattingHelpers.currencyPkr(widget.sale.remainingBalance)}'),
             const SizedBox(height: 8),
             TextField(
               controller: _amountController,
@@ -1912,7 +1977,8 @@ class _CollectPaymentDialogState extends ConsumerState<_CollectPaymentDialog> {
                 labelText: 'Amount',
                 isDense: true,
               ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
@@ -2075,9 +2141,8 @@ class _ReturnItemDialogState extends ConsumerState<_ReturnItemDialog> {
   Future<void> _submit() async {
     setState(() => _isSubmitting = true);
     final service = await ref.read(operationsWorkflowServiceProvider.future);
-    final quantity = widget.item.hasImei
-        ? 1
-        : int.tryParse(_qtyController.text.trim()) ?? 0;
+    final quantity =
+        widget.item.hasImei ? 1 : int.tryParse(_qtyController.text.trim()) ?? 0;
     final result = await service.processReturn(
       saleId: widget.saleId,
       item: widget.item,
@@ -2125,10 +2190,13 @@ class _PurchaseDetailDialog extends ConsumerWidget {
                   runSpacing: 8,
                   children: <Widget>[
                     Text('Supplier: ${detail.purchase.supplierName}'),
-                    Text('Date: ${FormattingHelpers.dateYmd(detail.purchase.purchaseDate)}'),
+                    Text(
+                        'Date: ${FormattingHelpers.dateYmd(detail.purchase.purchaseDate)}'),
                     Text('Invoice: ${detail.purchase.invoiceNumber ?? '-'}'),
-                    Text('Total: ${FormattingHelpers.currencyPkr(detail.purchase.total)}'),
-                    Text('Paid: ${FormattingHelpers.currencyPkr(detail.purchase.paidAmount)}'),
+                    Text(
+                        'Total: ${FormattingHelpers.currencyPkr(detail.purchase.total)}'),
+                    Text(
+                        'Paid: ${FormattingHelpers.currencyPkr(detail.purchase.paidAmount)}'),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -2151,8 +2219,10 @@ class _PurchaseDetailDialog extends ConsumerWidget {
                           DataCell(Text(item.productName)),
                           DataCell(Text(item.imei ?? '-')),
                           DataCell(Text(item.quantity.toString())),
-                          DataCell(Text(FormattingHelpers.currencyPkr(item.unitCost))),
-                          DataCell(Text(FormattingHelpers.currencyPkr(item.lineTotal))),
+                          DataCell(Text(
+                              FormattingHelpers.currencyPkr(item.unitCost))),
+                          DataCell(Text(
+                              FormattingHelpers.currencyPkr(item.lineTotal))),
                         ],
                       );
                     }).toList(growable: false),

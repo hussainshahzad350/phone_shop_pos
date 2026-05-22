@@ -637,7 +637,10 @@ class OperationsWorkflowService with BaseRepositoryGuard {
     int offset = 0,
   }) {
     return guard<List<CashLedgerRowEntity>>(() async {
-      final args = <Object?>[PaymentMethod.cash, PaymentMethod.cash];
+      final salesArgs = <Object?>[PaymentMethod.cash];
+      final collectionsArgs = <Object?>[PaymentMethod.cash];
+      final purchasesArgs = <Object?>[];
+      final expensesArgs = <Object?>[];
       final salesWhere = StringBuffer('s.payment_method = ?');
       final collectionsWhere = StringBuffer('sp.payment_method = ?');
       final purchasesWhere = StringBuffer('1 = 1');
@@ -648,13 +651,13 @@ class OperationsWorkflowService with BaseRepositoryGuard {
             DateTime.utc(startDate.year, startDate.month, startDate.day);
         final startSql = DateTimeHelpers.toSql(startUtc);
         salesWhere.write(' AND s.sale_date >= ?');
-        args.add(startSql);
+        salesArgs.add(startSql);
         collectionsWhere.write(' AND sp.created_at >= ?');
-        args.add(startSql);
+        collectionsArgs.add(startSql);
         purchasesWhere.write(' AND p.purchase_date >= ?');
-        args.add(startSql);
+        purchasesArgs.add(startSql);
         expensesWhere.write(' AND e.expense_date >= ?');
-        args.add(startSql);
+        expensesArgs.add(startSql);
       }
 
       if (endDate != null) {
@@ -662,13 +665,13 @@ class OperationsWorkflowService with BaseRepositoryGuard {
             .add(const Duration(days: 1));
         final endSql = DateTimeHelpers.toSql(endUtc);
         salesWhere.write(' AND s.sale_date < ?');
-        args.add(endSql);
+        salesArgs.add(endSql);
         collectionsWhere.write(' AND sp.created_at < ?');
-        args.add(endSql);
+        collectionsArgs.add(endSql);
         purchasesWhere.write(' AND p.purchase_date < ?');
-        args.add(endSql);
+        purchasesArgs.add(endSql);
         expensesWhere.write(' AND e.expense_date < ?');
-        args.add(endSql);
+        expensesArgs.add(endSql);
       }
 
       final rows = await QueryDiagnostics.trace(
@@ -746,7 +749,14 @@ class OperationsWorkflowService with BaseRepositoryGuard {
           ORDER BY d.day DESC
           LIMIT ? OFFSET ?
           ''',
-          <Object?>[...args, limit, offset],
+          <Object?>[
+            ...salesArgs,
+            ...collectionsArgs,
+            ...purchasesArgs,
+            ...expensesArgs,
+            limit,
+            offset,
+          ],
         ),
       );
 
