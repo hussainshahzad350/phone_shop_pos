@@ -1287,7 +1287,7 @@ class _CashLedgerView extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      'Cash Flow (derived): (Cash Sales + Cash Collections) - (Purchases Paid + Expenses)',
+                      'Cash Flow components: Inflows (Cash Sales + Cash Collections), Outflows (Purchases Paid + Expenses)',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 4),

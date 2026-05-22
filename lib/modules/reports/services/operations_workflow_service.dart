@@ -637,10 +637,9 @@ class OperationsWorkflowService with BaseRepositoryGuard {
     int offset = 0,
   }) {
     return guard<List<CashLedgerRowEntity>>(() async {
-      final args = <Object?>[];
-      final salesWhere = StringBuffer("s.payment_method = '${PaymentMethod.cash}'");
-      final collectionsWhere =
-          StringBuffer("sp.payment_method = '${PaymentMethod.cash}'");
+      final args = <Object?>[PaymentMethod.cash, PaymentMethod.cash];
+      final salesWhere = StringBuffer('s.payment_method = ?');
+      final collectionsWhere = StringBuffer('sp.payment_method = ?');
       final purchasesWhere = StringBuffer('1 = 1');
       final expensesWhere = StringBuffer('1 = 1');
 
