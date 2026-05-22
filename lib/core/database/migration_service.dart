@@ -678,7 +678,8 @@ class MigrationService {
   }
 
   /// Migration v15: add used-phone tracking columns to serialized_stock.
-  /// All columns are nullable so existing rows default to NULL / 'new'.
+  /// `condition` is NOT NULL DEFAULT 'new'; all seller/condition detail columns
+  /// are nullable so existing rows remain valid without any backfill.
   Future<void> _applyMigrationV15(Database database) async {
     await database.execute(
       "ALTER TABLE ${TableNames.serializedStock} ADD COLUMN condition TEXT NOT NULL DEFAULT 'new' CHECK (condition IN ('new', 'used'));",
