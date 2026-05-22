@@ -68,6 +68,10 @@ class MigrationService {
       await _applyMigrationV14(database);
       return;
     }
+    if (version == 15) {
+      await _applyMigrationV15(database);
+      return;
+    }
     final statements = _migrationStatements[version];
     if (statements == null) {
       return;
@@ -673,6 +677,33 @@ class MigrationService {
     );
   }
 
+  /// Migration v15: add used-phone tracking columns to serialized_stock.
+  /// `condition` is NOT NULL DEFAULT 'new'; all seller/condition detail columns
+  /// are nullable so existing rows remain valid without any backfill.
+  Future<void> _applyMigrationV15(Database database) async {
+    await database.execute(
+      "ALTER TABLE ${TableNames.serializedStock} ADD COLUMN condition TEXT NOT NULL DEFAULT 'new' CHECK (condition IN ('new', 'used'));",
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN seller_name TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN seller_id_card TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN seller_address TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN remaining_warranty TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN accessories TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN phone_condition_notes TEXT;',
+    );
+  }
+
   Future<void> _dropTableBestEffort(Database database, String tableName) async {
     try {
       await database.execute('DROP TABLE $tableName;');
@@ -1092,5 +1123,9 @@ class MigrationService {
     // The empty list is kept here so that all version numbers are represented
     // in the map for documentation purposes (consistent with v7 and v9).
     12: <String>[],
+    // v16: add seller_phone to serialized_stock for used-phone seller contact.
+    16: <String>[
+      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN seller_phone TEXT;',
+    ],
   };
 }

@@ -15,6 +15,7 @@ class StockRowEntity {
     this.imei2,
     this.serialNumber,
     this.serializedStatus,
+    this.condition,
     this.costPrice,
     this.sellingPrice,
     this.inventoryStockId,
@@ -37,6 +38,7 @@ class StockRowEntity {
   final String? imei2;
   final String? serialNumber;
   final SerializedStockStatus? serializedStatus;
+  final SerializedStockCondition? condition;
   final double? costPrice;
   final double? sellingPrice;
 

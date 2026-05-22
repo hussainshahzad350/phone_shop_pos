@@ -264,6 +264,14 @@ class SqlitePurchaseRepository
                 'stock_status': SerializedStockStatus.inStock.value,
                 'supplier_id': item.supplierId ?? supplierId,
                 'notes': null,
+                'condition': entry.condition.value,
+                'seller_name': _normalizeOptional(entry.sellerName),
+                'seller_id_card': _normalizeOptional(entry.sellerIdCard),
+                'seller_address': _normalizeOptional(entry.sellerAddress),
+                'seller_phone': _normalizeOptional(entry.sellerPhone),
+                'remaining_warranty': _normalizeOptional(entry.remainingWarranty),
+                'accessories': _normalizeOptional(entry.accessories),
+                'phone_condition_notes': _normalizeOptional(entry.phoneConditionNotes),
                 'created_at': DateTimeHelpers.toSql(now),
                 'updated_at': DateTimeHelpers.toSql(now),
               });
@@ -416,5 +424,13 @@ class SqlitePurchaseRepository
             '${item.productName} cannot mix quantity and IMEI stock.');
       }
     }
+  }
+
+  static String? _normalizeOptional(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed;
   }
 }
