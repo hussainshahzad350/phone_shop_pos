@@ -72,6 +72,10 @@ class MigrationService {
       await _applyMigrationV15(database);
       return;
     }
+    if (version == 17) {
+      await _applyMigrationV17(database);
+      return;
+    }
     final statements = _migrationStatements[version];
     if (statements == null) {
       return;
@@ -704,6 +708,69 @@ class MigrationService {
     );
   }
 
+  /// Migration v17: normalize expenses schema for reports-driven expense
+  /// tracking with soft-delete support and category/date indexing.
+  Future<void> _applyMigrationV17(Database database) async {
+    await database.execute('PRAGMA foreign_keys = OFF;');
+    await database.execute('PRAGMA legacy_alter_table = ON;');
+    try {
+      await database.execute(
+        'ALTER TABLE ${TableNames.expenses} RENAME TO ${TableNames.expenses}_old;',
+      );
+      await database.execute(
+        '''
+        CREATE TABLE ${TableNames.expenses} (
+          id TEXT PRIMARY KEY,
+          expense_date TEXT NOT NULL,
+          category TEXT NOT NULL,
+          amount REAL NOT NULL CHECK(amount >= 0),
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT,
+          is_deleted INTEGER NOT NULL DEFAULT 0
+        );
+        ''',
+      );
+      await database.execute(
+        '''
+        INSERT INTO ${TableNames.expenses} (
+          id,
+          expense_date,
+          category,
+          amount,
+          notes,
+          created_at,
+          updated_at,
+          is_deleted
+        )
+        SELECT
+          id,
+          expense_date,
+          COALESCE(NULLIF(TRIM(category), ''), NULLIF(TRIM(title), ''), 'General'),
+          MAX(0.0, amount),
+          notes,
+          created_at,
+          NULLIF(updated_at, ''),
+          0
+        FROM ${TableNames.expenses}_old;
+        ''',
+      );
+      await _dropTableBestEffort(database, '${TableNames.expenses}_old');
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_expenses_date ON ${TableNames.expenses}(expense_date);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_expenses_category ON ${TableNames.expenses}(category);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_expenses_deleted ON ${TableNames.expenses}(is_deleted);',
+      );
+    } finally {
+      await database.execute('PRAGMA legacy_alter_table = OFF;');
+      await database.execute('PRAGMA foreign_keys = ON;');
+    }
+  }
+
   Future<void> _dropTableBestEffort(Database database, String tableName) async {
     try {
       await database.execute('DROP TABLE $tableName;');
@@ -1127,5 +1194,7 @@ class MigrationService {
     16: <String>[
       'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN seller_phone TEXT;',
     ],
+    // v17 is handled by dedicated _applyMigrationV17 above.
+    17: <String>[],
   };
 }

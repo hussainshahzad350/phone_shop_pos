@@ -7,6 +7,8 @@ import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/database/database_provider.dart';
 import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
+import 'package:phone_shop_pos/modules/reports/data/repositories/sqlite_expense_repository.dart';
+import 'package:phone_shop_pos/modules/reports/domain/entities/expense_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/customer_balance_report_row_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/daily_sales_report_row_entity.dart';
@@ -16,6 +18,7 @@ import 'package:phone_shop_pos/modules/reports/domain/entities/report_filter_ent
 import 'package:phone_shop_pos/modules/reports/domain/entities/sales_report_row_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/sold_phone_report_row_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/stock_report_row_entity.dart';
+import 'package:phone_shop_pos/modules/reports/domain/repositories/expense_repository.dart';
 import 'package:phone_shop_pos/modules/reports/services/inventory_report_service.dart';
 import 'package:phone_shop_pos/modules/reports/services/operations_workflow_service.dart';
 import 'package:phone_shop_pos/modules/reports/services/profit_report_service.dart';
@@ -34,6 +37,7 @@ enum ReportsTab {
   purchaseHistory,
   supplierLedger,
   cashLedger,
+  expenses,
 }
 
 class ReportFilterNotifier extends StateNotifier<ReportFilterEntity> {
@@ -137,6 +141,11 @@ final operationsWorkflowServiceProvider =
     FutureProvider<OperationsWorkflowService>((ref) async {
   final appDatabase = await ref.watch(appDatabaseProvider.future);
   return OperationsWorkflowService(appDatabase: appDatabase);
+});
+
+final expenseRepositoryProvider = FutureProvider<ExpenseRepository>((ref) async {
+  final appDatabase = await ref.watch(appDatabaseProvider.future);
+  return SqliteExpenseRepository(appDatabase: appDatabase);
 });
 
 final dailySalesReportProvider =
@@ -405,6 +414,32 @@ final cashLedgerRowsProvider = FutureProvider<List<CashLedgerRowEntity>>((
     startDate: ref.watch(cashLedgerStartDateProvider),
     endDate: ref.watch(cashLedgerEndDateProvider),
   );
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
+
+final expensesStartDateProvider = StateProvider<DateTime?>((ref) => null);
+final expensesEndDateProvider = StateProvider<DateTime?>((ref) => null);
+final expensesCategoryProvider = StateProvider<String>((ref) => '');
+
+final expensesRowsProvider = FutureProvider<List<ExpenseEntity>>((ref) async {
+  final repository = await ref.watch(expenseRepositoryProvider.future);
+  final result = await repository.getExpenses(
+    startDate: ref.watch(expensesStartDateProvider),
+    endDate: ref.watch(expensesEndDateProvider),
+    category: ref.watch(expensesCategoryProvider),
+  );
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
+
+final expenseCategoriesProvider = FutureProvider<List<String>>((ref) async {
+  final repository = await ref.watch(expenseRepositoryProvider.future);
+  final result = await repository.getExpenseCategories();
   return result.fold(
     onSuccess: (value) => value,
     onFailure: (error) => throw error,

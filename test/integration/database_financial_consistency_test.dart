@@ -1270,14 +1270,13 @@ void main() {
 
       await context.appDatabase.insert(TableNames.expenses, <String, Object?>{
         'id': 'exp_cash_flow_guard',
-        'title': 'Office tea',
         'category': 'office',
         'amount': 30,
         'expense_date': day2Sql,
-        'supplier_id': null,
         'notes': null,
         'created_at': day2Sql,
         'updated_at': day2Sql,
+        'is_deleted': 0,
       });
 
       await context.appDatabase.insert(TableNames.purchases, <String, Object?>{

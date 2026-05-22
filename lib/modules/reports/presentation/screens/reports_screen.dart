@@ -5,8 +5,12 @@ import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/errors/app_error.dart';
+import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
+import 'package:phone_shop_pos/core/utils/id_helpers.dart';
+import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
+import 'package:phone_shop_pos/modules/reports/domain/entities/expense_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_export_action_widget.dart';
@@ -40,6 +44,8 @@ class ReportsScreen extends ConsumerWidget {
     ref.invalidate(purchaseHistoryRowsProvider);
     ref.invalidate(supplierLedgerRowsProvider);
     ref.invalidate(cashLedgerRowsProvider);
+    ref.invalidate(expensesRowsProvider);
+    ref.invalidate(expenseCategoriesProvider);
     ref.invalidate(stockAdjustmentHistoryProvider);
   }
 
@@ -270,6 +276,7 @@ class ReportsScreen extends ConsumerWidget {
       case ReportsTab.purchaseHistory:
       case ReportsTab.supplierLedger:
       case ReportsTab.cashLedger:
+      case ReportsTab.expenses:
         return false;
     }
   }
@@ -324,6 +331,8 @@ class _ReportContent extends ConsumerWidget {
         return const _SupplierLedgerView();
       case ReportsTab.cashLedger:
         return const _CashLedgerView();
+      case ReportsTab.expenses:
+        return const _ExpensesView();
     }
   }
 }
@@ -1344,6 +1353,409 @@ class _CashLedgerView extends ConsumerWidget {
   }
 }
 
+class _ExpensesView extends ConsumerWidget {
+  const _ExpensesView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rowsAsync = ref.watch(expensesRowsProvider);
+    final categoriesAsync = ref.watch(expenseCategoriesProvider);
+    final startDate = ref.watch(expensesStartDateProvider);
+    final endDate = ref.watch(expensesEndDateProvider);
+    final categoryFilter = ref.watch(expensesCategoryProvider);
+
+    return Column(
+      children: <Widget>[
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                FilledButton.icon(
+                  onPressed: () async {
+                    final saved = await showDialog<bool>(
+                      context: context,
+                      builder: (_) => const _ExpenseFormDialog(),
+                    );
+                    if (saved == true) {
+                      ref.invalidate(expensesRowsProvider);
+                      ref.invalidate(expenseCategoriesProvider);
+                      ref.invalidate(cashLedgerRowsProvider);
+                    }
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Expense'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      initialDate:
+                          ref.read(expensesStartDateProvider) ?? DateTime.now(),
+                    );
+                    ref.read(expensesStartDateProvider.notifier).state = picked;
+                  },
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text(
+                    startDate == null
+                        ? 'Start Date'
+                        : FormattingHelpers.dateYmd(startDate),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      initialDate:
+                          ref.read(expensesEndDateProvider) ?? DateTime.now(),
+                    );
+                    ref.read(expensesEndDateProvider.notifier).state = picked;
+                  },
+                  icon: const Icon(Icons.event),
+                  label: Text(
+                    endDate == null ? 'End Date' : FormattingHelpers.dateYmd(endDate),
+                  ),
+                ),
+                SizedBox(
+                  width: 220,
+                  child: categoriesAsync.when(
+                    data: (categories) {
+                      final selectedValue = categoryFilter.trim().isEmpty
+                          ? ''
+                          : categoryFilter.trim();
+                      final items = <DropdownMenuItem<String>>[
+                        const DropdownMenuItem<String>(
+                          value: '',
+                          child: Text('All Categories'),
+                        ),
+                        ...categories.map(
+                          (category) => DropdownMenuItem<String>(
+                            value: category,
+                            child: Text(category),
+                          ),
+                        ),
+                      ];
+                      return DropdownButtonFormField<String>(
+                        value: items.any((item) => item.value == selectedValue)
+                            ? selectedValue
+                            : '',
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                          labelText: 'Category',
+                        ),
+                        items: items,
+                        onChanged: (value) => ref
+                            .read(expensesCategoryProvider.notifier)
+                            .state = value ?? '',
+                      );
+                    },
+                    loading: () => const LinearProgressIndicator(minHeight: 2),
+                    error: (_, __) => TextField(
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                        labelText: 'Category',
+                      ),
+                      onChanged: (value) =>
+                          ref.read(expensesCategoryProvider.notifier).state = value,
+                    ),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    ref.read(expensesStartDateProvider.notifier).state = null;
+                    ref.read(expensesEndDateProvider.notifier).state = null;
+                    ref.read(expensesCategoryProvider.notifier).state = '';
+                  },
+                  icon: const Icon(Icons.clear),
+                  label: const Text('Clear Filters'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: rowsAsync.when(
+            data: (rows) => Card(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: AppDataTable(
+                  emptyMessage: 'No expenses found.',
+                  columns: const <DataColumn>[
+                    DataColumn(label: Text('Date')),
+                    DataColumn(label: Text('Category')),
+                    DataColumn(label: Text('Amount')),
+                    DataColumn(label: Text('Notes')),
+                    DataColumn(label: Text('Actions')),
+                  ],
+                  rows: rows.map((row) {
+                    return DataRow(
+                      cells: <DataCell>[
+                        DataCell(Text(FormattingHelpers.dateYmd(row.expenseDate))),
+                        DataCell(Text(row.category)),
+                        DataCell(Text(FormattingHelpers.currencyPkr(row.amount))),
+                        DataCell(Text(row.notes ?? '-')),
+                        DataCell(
+                          Wrap(
+                            spacing: 6,
+                            children: <Widget>[
+                              OutlinedButton(
+                                onPressed: () async {
+                                  final saved = await showDialog<bool>(
+                                    context: context,
+                                    builder: (_) =>
+                                        _ExpenseFormDialog(initialExpense: row),
+                                  );
+                                  if (saved == true) {
+                                    ref.invalidate(expensesRowsProvider);
+                                    ref.invalidate(expenseCategoriesProvider);
+                                    ref.invalidate(cashLedgerRowsProvider);
+                                  }
+                                },
+                                child: const Text('Edit'),
+                              ),
+                              OutlinedButton(
+                                onPressed: () async {
+                                  final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (dialogContext) => AlertDialog(
+                                      title: const Text('Delete Expense'),
+                                      content: const Text(
+                                        'This will hide the expense from reports. Continue?',
+                                      ),
+                                      actions: <Widget>[
+                                        TextButton(
+                                          onPressed: () => Navigator.of(dialogContext)
+                                              .pop(false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        FilledButton.tonal(
+                                          onPressed: () =>
+                                              Navigator.of(dialogContext).pop(true),
+                                          child: const Text('Delete'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirmed != true) {
+                                    return;
+                                  }
+                                  final repository =
+                                      await ref.read(expenseRepositoryProvider.future);
+                                  final result = await repository.deleteExpense(row.id);
+                                  if (result.isFailure) {
+                                    AppNotifier.error(
+                                      result.asFailure!.error.message,
+                                    );
+                                    return;
+                                  }
+                                  ref.invalidate(expensesRowsProvider);
+                                  ref.invalidate(expenseCategoriesProvider);
+                                  ref.invalidate(cashLedgerRowsProvider);
+                                  AppNotifier.success('Expense deleted.');
+                                },
+                                child: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(growable: false),
+                ),
+              ),
+            ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, __) => _ReportErrorView(
+              message: 'Failed to load expenses.',
+              error: error,
+              onRetry: () {
+                ref.invalidate(expensesRowsProvider);
+                ref.invalidate(expenseCategoriesProvider);
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ExpenseFormDialog extends ConsumerStatefulWidget {
+  const _ExpenseFormDialog({this.initialExpense});
+
+  final ExpenseEntity? initialExpense;
+
+  @override
+  ConsumerState<_ExpenseFormDialog> createState() => _ExpenseFormDialogState();
+}
+
+class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
+  late final TextEditingController _categoryController;
+  late final TextEditingController _amountController;
+  late final TextEditingController _notesController;
+  late DateTime _expenseDate;
+  bool _isSubmitting = false;
+
+  bool get _isEdit => widget.initialExpense != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialExpense;
+    _expenseDate = initial?.expenseDate.toLocal() ?? DateTime.now();
+    _categoryController =
+        TextEditingController(text: initial == null ? '' : initial.category);
+    _amountController = TextEditingController(
+      text: initial == null ? '' : initial.amount.toStringAsFixed(2),
+    );
+    _notesController =
+        TextEditingController(text: initial == null ? '' : initial.notes ?? '');
+  }
+
+  @override
+  void dispose() {
+    _categoryController.dispose();
+    _amountController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(_isEdit ? 'Edit Expense' : 'Add Expense'),
+      content: SizedBox(
+        width: 440,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            OutlinedButton.icon(
+              onPressed: _isSubmitting
+                  ? null
+                  : () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                        initialDate: _expenseDate,
+                      );
+                      if (picked == null) {
+                        return;
+                      }
+                      setState(() => _expenseDate = picked);
+                    },
+              icon: const Icon(Icons.calendar_today),
+              label: Text(FormattingHelpers.dateYmd(_expenseDate)),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _categoryController,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Category',
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _amountController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Amount',
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _notesController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Notes (optional)',
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _isSubmitting ? null : _submit,
+          child: Text(_isSubmitting ? 'Saving...' : 'Save'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit() async {
+    final category = _categoryController.text.trim();
+    if (category.isEmpty) {
+      AppNotifier.error('Category is required.');
+      return;
+    }
+    final amount = FormattingHelpers.parseLocaleDecimal(_amountController.text);
+    if (amount < 0) {
+      AppNotifier.error('Amount cannot be negative.');
+      return;
+    }
+    final notesError =
+        NotesSafety.validate(_notesController.text, fieldLabel: 'Expense notes');
+    if (notesError != null) {
+      AppNotifier.error(notesError);
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    final repository = await ref.read(expenseRepositoryProvider.future);
+    final now = DateTimeHelpers.nowUtc();
+    final existing = widget.initialExpense;
+    final payload = ExpenseEntity(
+      id: existing?.id ?? IdHelpers.newId(prefix: 'exp'),
+      expenseDate: DateTime.utc(
+        _expenseDate.year,
+        _expenseDate.month,
+        _expenseDate.day,
+      ),
+      category: category,
+      amount: amount,
+      notes: _notesController.text,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: existing == null ? null : now,
+    );
+
+    final result = existing == null
+        ? await repository.addExpense(payload)
+        : await repository.updateExpense(payload);
+    if (!mounted) {
+      return;
+    }
+    setState(() => _isSubmitting = false);
+
+    if (result.isFailure) {
+      AppNotifier.error(result.asFailure!.error.message);
+      return;
+    }
+    AppNotifier.success(existing == null ? 'Expense added.' : 'Expense updated.');
+    Navigator.of(context).pop(true);
+  }
+}
+
 class _SalesInvoiceDialog extends ConsumerWidget {
   const _SalesInvoiceDialog({required this.saleId});
 
@@ -1788,5 +2200,7 @@ String _tabLabel(ReportsTab tab) {
       return 'Supplier Ledger';
     case ReportsTab.cashLedger:
       return 'Cash Flow';
+    case ReportsTab.expenses:
+      return 'Expenses';
   }
 }
