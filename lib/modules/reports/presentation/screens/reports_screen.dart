@@ -1302,7 +1302,7 @@ class _CashLedgerView extends ConsumerWidget {
                         columns: const <DataColumn>[
                           DataColumn(label: Text('Day')),
                           DataColumn(label: Text('Cash Sales In')),
-                          DataColumn(label: Text('Cash Collection In')),
+                          DataColumn(label: Text('Cash Collections In')),
                           DataColumn(label: Text('Total Cash In')),
                           DataColumn(label: Text('Purchase Paid Out')),
                           DataColumn(label: Text('Expenses Out')),
