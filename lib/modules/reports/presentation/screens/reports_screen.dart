@@ -1710,6 +1710,10 @@ class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
       return;
     }
     final amount = FormattingHelpers.parseLocaleDecimal(_amountController.text);
+    if (amount.isNaN) {
+      AppNotifier.error('Please enter a valid amount.');
+      return;
+    }
     if (amount < 0) {
       AppNotifier.error('Amount cannot be negative.');
       return;
