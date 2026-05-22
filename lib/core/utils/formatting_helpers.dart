@@ -24,6 +24,23 @@ class FormattingHelpers {
     return double.tryParse(normalized) ?? fallback;
   }
 
+  static double? tryParseGroupedDecimalStrict(String input) {
+    final compact = _translateArabicDigits(input).trim().replaceAll(' ', '');
+    if (compact.isEmpty) {
+      return null;
+    }
+
+    final validPattern = RegExp(
+      r'^-?(?:\d+|\d{1,3}(?:,\d{3})+)(?:[.٫]\d+)?$',
+    );
+    if (!validPattern.hasMatch(compact)) {
+      return null;
+    }
+
+    final normalized = compact.replaceAll(',', '').replaceAll('٫', '.');
+    return double.tryParse(normalized);
+  }
+
   static int? parsePositiveInt(String input) {
     final normalized = _normalizeLocalizedNumber(input);
     return int.tryParse(normalized);
@@ -72,7 +89,7 @@ class FormattingHelpers {
   static String _normalizeLocalizedNumber(String input) {
     final buffer = StringBuffer();
     var decimalAdded = false;
-    final trimmed = input.trim();
+    final trimmed = _translateArabicDigits(input).trim();
     for (var index = 0; index < trimmed.length; index++) {
       final character = trimmed[index];
       if (RegExp(r'[0-9-]').hasMatch(character)) {
@@ -86,22 +103,27 @@ class FormattingHelpers {
         }
         continue;
       }
-      const arabicDigits = <String, String>{
-        '٠': '0',
-        '١': '1',
-        '٢': '2',
-        '٣': '3',
-        '٤': '4',
-        '٥': '5',
-        '٦': '6',
-        '٧': '7',
-        '٨': '8',
-        '٩': '9',
-      };
-      final translated = arabicDigits[character];
-      if (translated != null) {
-        buffer.write(translated);
-      }
+    }
+    return buffer.toString();
+  }
+
+  static String _translateArabicDigits(String input) {
+    const arabicDigits = <String, String>{
+      '٠': '0',
+      '١': '1',
+      '٢': '2',
+      '٣': '3',
+      '٤': '4',
+      '٥': '5',
+      '٦': '6',
+      '٧': '7',
+      '٨': '8',
+      '٩': '9',
+    };
+    final buffer = StringBuffer();
+    for (var index = 0; index < input.length; index++) {
+      final char = input[index];
+      buffer.write(arabicDigits[char] ?? char);
     }
     return buffer.toString();
   }

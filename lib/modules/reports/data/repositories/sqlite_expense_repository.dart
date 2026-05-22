@@ -17,10 +17,15 @@ class SqliteExpenseRepository with BaseRepositoryGuard implements ExpenseReposit
   @override
   Future<Result<void>> addExpense(ExpenseEntity expense) {
     return guard<void>(() async {
+      _validateAmount(expense.amount);
+      final normalizedCategory = _normalizeCategory(expense.category);
+      if (normalizedCategory.isEmpty) {
+        throw StateError('Expense category is required.');
+      }
       await _appDatabase.insert(TableNames.expenses, <String, Object?>{
         'id': expense.id,
         'expense_date': DateTimeHelpers.toSql(expense.expenseDate),
-        'category': expense.category.trim(),
+        'category': normalizedCategory,
         'amount': expense.amount,
         'notes': NotesSafety.normalizeNullable(expense.notes),
         'created_at': DateTimeHelpers.toSql(expense.createdAt),
@@ -35,11 +40,16 @@ class SqliteExpenseRepository with BaseRepositoryGuard implements ExpenseReposit
   @override
   Future<Result<void>> updateExpense(ExpenseEntity expense) {
     return guard<void>(() async {
+      _validateAmount(expense.amount);
+      final normalizedCategory = _normalizeCategory(expense.category);
+      if (normalizedCategory.isEmpty) {
+        throw StateError('Expense category is required.');
+      }
       await _appDatabase.update(
         TableNames.expenses,
         <String, Object?>{
           'expense_date': DateTimeHelpers.toSql(expense.expenseDate),
-          'category': expense.category.trim(),
+          'category': normalizedCategory,
           'amount': expense.amount,
           'notes': NotesSafety.normalizeNullable(expense.notes),
           'updated_at': expense.updatedAt == null
@@ -134,6 +144,34 @@ class SqliteExpenseRepository with BaseRepositoryGuard implements ExpenseReposit
           .where((value) => value.isNotEmpty)
           .toList(growable: false);
     }, operation: 'get_expense_categories');
+  }
+
+  String _normalizeCategory(String input) {
+    final collapsed = input.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (collapsed.isEmpty) {
+      return '';
+    }
+    final lower = collapsed.toLowerCase();
+    final output = StringBuffer();
+    var capitalizeNext = true;
+    for (var index = 0; index < lower.length; index++) {
+      final char = lower[index];
+      final isAlphaNumeric = RegExp(r'[a-z0-9]').hasMatch(char);
+      if (isAlphaNumeric) {
+        output.write(capitalizeNext ? char.toUpperCase() : char);
+        capitalizeNext = false;
+        continue;
+      }
+      output.write(char);
+      capitalizeNext = true;
+    }
+    return output.toString();
+  }
+
+  void _validateAmount(double amount) {
+    if (!amount.isFinite || amount <= 0) {
+      throw StateError('Expense amount must be greater than zero.');
+    }
   }
 
   ExpenseEntity _toEntity(Map<String, Object?> row) {

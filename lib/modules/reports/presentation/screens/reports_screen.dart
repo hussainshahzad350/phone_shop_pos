@@ -1709,13 +1709,14 @@ class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
       AppNotifier.error('Category is required.');
       return;
     }
-    final amount = FormattingHelpers.parseLocaleDecimal(_amountController.text);
-    if (amount.isNaN) {
+    final amount =
+        FormattingHelpers.tryParseGroupedDecimalStrict(_amountController.text);
+    if (amount == null || amount.isNaN) {
       AppNotifier.error('Please enter a valid amount.');
       return;
     }
-    if (amount < 0) {
-      AppNotifier.error('Amount cannot be negative.');
+    if (amount <= 0) {
+      AppNotifier.error('Amount must be greater than zero.');
       return;
     }
     final notesError =
