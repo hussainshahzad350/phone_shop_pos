@@ -265,12 +265,12 @@ class SqlitePurchaseRepository
                 'supplier_id': item.supplierId ?? supplierId,
                 'notes': null,
                 'condition': entry.condition.value,
-                'seller_name': entry.sellerName?.trim().isEmpty == true ? null : entry.sellerName?.trim(),
-                'seller_id_card': entry.sellerIdCard?.trim().isEmpty == true ? null : entry.sellerIdCard?.trim(),
-                'seller_address': entry.sellerAddress?.trim().isEmpty == true ? null : entry.sellerAddress?.trim(),
-                'remaining_warranty': entry.remainingWarranty?.trim().isEmpty == true ? null : entry.remainingWarranty?.trim(),
-                'accessories': entry.accessories?.trim().isEmpty == true ? null : entry.accessories?.trim(),
-                'phone_condition_notes': entry.phoneConditionNotes?.trim().isEmpty == true ? null : entry.phoneConditionNotes?.trim(),
+                'seller_name': _normalizeOptional(entry.sellerName),
+                'seller_id_card': _normalizeOptional(entry.sellerIdCard),
+                'seller_address': _normalizeOptional(entry.sellerAddress),
+                'remaining_warranty': _normalizeOptional(entry.remainingWarranty),
+                'accessories': _normalizeOptional(entry.accessories),
+                'phone_condition_notes': _normalizeOptional(entry.phoneConditionNotes),
                 'created_at': DateTimeHelpers.toSql(now),
                 'updated_at': DateTimeHelpers.toSql(now),
               });
@@ -423,5 +423,13 @@ class SqlitePurchaseRepository
             '${item.productName} cannot mix quantity and IMEI stock.');
       }
     }
+  }
+
+  static String? _normalizeOptional(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed;
   }
 }
