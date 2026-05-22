@@ -641,7 +641,7 @@ class OperationsWorkflowService with BaseRepositoryGuard {
       final salesWhere = StringBuffer('s.payment_method = ?');
       final collectionsWhere = StringBuffer('sp.payment_method = ?');
       final purchasesWhere = StringBuffer('1 = 1');
-      final expensesWhere = StringBuffer('1 = 1');
+      final expensesWhere = StringBuffer('e.is_deleted = 0');
 
       if (startDate != null) {
         final startUtc =
