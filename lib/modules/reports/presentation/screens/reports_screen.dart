@@ -39,6 +39,7 @@ class ReportsScreen extends ConsumerWidget {
     ref.invalidate(salesHistoryRowsProvider);
     ref.invalidate(purchaseHistoryRowsProvider);
     ref.invalidate(supplierLedgerRowsProvider);
+    ref.invalidate(cashLedgerRowsProvider);
     ref.invalidate(stockAdjustmentHistoryProvider);
   }
 
@@ -268,6 +269,7 @@ class ReportsScreen extends ConsumerWidget {
       case ReportsTab.creditCollection:
       case ReportsTab.purchaseHistory:
       case ReportsTab.supplierLedger:
+      case ReportsTab.cashLedger:
         return false;
     }
   }
@@ -320,6 +322,8 @@ class _ReportContent extends ConsumerWidget {
         return const _PurchaseHistoryView();
       case ReportsTab.supplierLedger:
         return const _SupplierLedgerView();
+      case ReportsTab.cashLedger:
+        return const _CashLedgerView();
     }
   }
 }
@@ -1212,6 +1216,129 @@ class _SupplierLedgerView extends ConsumerWidget {
   }
 }
 
+class _CashLedgerView extends ConsumerWidget {
+  const _CashLedgerView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rowsAsync = ref.watch(cashLedgerRowsProvider);
+    final startDate = ref.watch(cashLedgerStartDateProvider);
+    final endDate = ref.watch(cashLedgerEndDateProvider);
+    return Column(
+      children: <Widget>[
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      initialDate: ref.read(cashLedgerStartDateProvider) ?? DateTime.now(),
+                    );
+                    ref.read(cashLedgerStartDateProvider.notifier).state = picked;
+                  },
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text(
+                    startDate == null
+                        ? 'Start Date'
+                        : FormattingHelpers.dateYmd(startDate),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      initialDate: ref.read(cashLedgerEndDateProvider) ?? DateTime.now(),
+                    );
+                    ref.read(cashLedgerEndDateProvider.notifier).state = picked;
+                  },
+                  icon: const Icon(Icons.event),
+                  label: Text(
+                    endDate == null ? 'End Date' : FormattingHelpers.dateYmd(endDate),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    ref.read(cashLedgerStartDateProvider.notifier).state = null;
+                    ref.read(cashLedgerEndDateProvider.notifier).state = null;
+                  },
+                  icon: const Icon(Icons.clear),
+                  label: const Text('Clear Dates'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: rowsAsync.when(
+            data: (rows) => Card(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'Cash Ledger (derived): cash sales + cash collections - purchase paid - expenses',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: AppDataTable(
+                        emptyMessage: 'No cash ledger rows in selected date range.',
+                        columns: const <DataColumn>[
+                          DataColumn(label: Text('Day')),
+                          DataColumn(label: Text('Cash Sales In')),
+                          DataColumn(label: Text('Cash Collection In')),
+                          DataColumn(label: Text('Total Cash In')),
+                          DataColumn(label: Text('Purchase Paid Out')),
+                          DataColumn(label: Text('Expenses Out')),
+                          DataColumn(label: Text('Total Cash Out')),
+                          DataColumn(label: Text('Net Cash')),
+                        ],
+                        rows: rows.map((row) {
+                          return DataRow(
+                            cells: <DataCell>[
+                              DataCell(Text(row.day)),
+                              DataCell(Text(FormattingHelpers.currencyPkr(row.cashSalesIn))),
+                              DataCell(Text(FormattingHelpers.currencyPkr(row.cashCollectionsIn))),
+                              DataCell(Text(FormattingHelpers.currencyPkr(row.totalCashIn))),
+                              DataCell(
+                                Text(FormattingHelpers.currencyPkr(row.purchasePaymentsOut)),
+                              ),
+                              DataCell(Text(FormattingHelpers.currencyPkr(row.expensesOut))),
+                              DataCell(Text(FormattingHelpers.currencyPkr(row.totalCashOut))),
+                              DataCell(Text(FormattingHelpers.currencyPkr(row.netCash))),
+                            ],
+                          );
+                        }).toList(growable: false),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, __) => _ReportErrorView(
+              message: 'Failed to load cash ledger.',
+              error: error,
+              onRetry: () => ref.invalidate(cashLedgerRowsProvider),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SalesInvoiceDialog extends ConsumerWidget {
   const _SalesInvoiceDialog({required this.saleId});
 
@@ -1432,6 +1559,7 @@ class _CollectPaymentDialogState extends ConsumerState<_CollectPaymentDialog> {
     }
     ref.invalidate(salesHistoryRowsProvider);
     ref.invalidate(customerBalanceReportProvider);
+    ref.invalidate(cashLedgerRowsProvider);
     AppNotifier.success('Payment collected successfully.');
     Navigator.of(context).pop();
   }
@@ -1653,5 +1781,7 @@ String _tabLabel(ReportsTab tab) {
       return 'Purchase History';
     case ReportsTab.supplierLedger:
       return 'Supplier Ledger';
+    case ReportsTab.cashLedger:
+      return 'Cash Ledger';
   }
 }

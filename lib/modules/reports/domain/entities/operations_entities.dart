@@ -151,6 +151,26 @@ class StockAdjustmentHistoryRowEntity {
   final String? imei;
 }
 
+class CashLedgerRowEntity {
+  const CashLedgerRowEntity({
+    required this.day,
+    required this.cashSalesIn,
+    required this.cashCollectionsIn,
+    required this.purchasePaymentsOut,
+    required this.expensesOut,
+  });
+
+  final String day;
+  final double cashSalesIn;
+  final double cashCollectionsIn;
+  final double purchasePaymentsOut;
+  final double expensesOut;
+
+  double get totalCashIn => cashSalesIn + cashCollectionsIn;
+  double get totalCashOut => purchasePaymentsOut + expensesOut;
+  double get netCash => totalCashIn - totalCashOut;
+}
+
 class PaymentCollectionEntity {
   const PaymentCollectionEntity({
     required this.newPaidAmount,

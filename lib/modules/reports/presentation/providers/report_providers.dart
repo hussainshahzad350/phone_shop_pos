@@ -33,6 +33,7 @@ enum ReportsTab {
   creditCollection,
   purchaseHistory,
   supplierLedger,
+  cashLedger,
 }
 
 class ReportFilterNotifier extends StateNotifier<ReportFilterEntity> {
@@ -386,6 +387,23 @@ final supplierLedgerRowsProvider =
   final result = await service.getSupplierLedger(
     startDate: ref.watch(purchaseHistoryStartDateProvider),
     endDate: ref.watch(purchaseHistoryEndDateProvider),
+  );
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
+
+final cashLedgerStartDateProvider = StateProvider<DateTime?>((ref) => null);
+final cashLedgerEndDateProvider = StateProvider<DateTime?>((ref) => null);
+
+final cashLedgerRowsProvider = FutureProvider<List<CashLedgerRowEntity>>((
+  ref,
+) async {
+  final service = await ref.watch(operationsWorkflowServiceProvider.future);
+  final result = await service.getCashLedger(
+    startDate: ref.watch(cashLedgerStartDateProvider),
+    endDate: ref.watch(cashLedgerEndDateProvider),
   );
   return result.fold(
     onSuccess: (value) => value,

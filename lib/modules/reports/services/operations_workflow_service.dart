@@ -630,6 +630,125 @@ class OperationsWorkflowService with BaseRepositoryGuard {
     }, operation: 'supplier_ledger');
   }
 
+  Future<Result<List<CashLedgerRowEntity>>> getCashLedger({
+    required DateTime? startDate,
+    required DateTime? endDate,
+    int limit = 200,
+    int offset = 0,
+  }) {
+    return guard<List<CashLedgerRowEntity>>(() async {
+      final args = <Object?>[];
+      final salesWhere = StringBuffer("s.payment_method = '${PaymentMethod.cash}'");
+      final collectionsWhere =
+          StringBuffer("sp.payment_method = '${PaymentMethod.cash}'");
+      final purchasesWhere = StringBuffer('1 = 1');
+      final expensesWhere = StringBuffer('1 = 1');
+
+      if (startDate != null) {
+        final startUtc =
+            DateTime.utc(startDate.year, startDate.month, startDate.day);
+        final startSql = DateTimeHelpers.toSql(startUtc);
+        salesWhere.write(' AND s.sale_date >= ?');
+        args.add(startSql);
+        collectionsWhere.write(' AND sp.created_at >= ?');
+        args.add(startSql);
+        purchasesWhere.write(' AND p.purchase_date >= ?');
+        args.add(startSql);
+        expensesWhere.write(' AND e.expense_date >= ?');
+        args.add(startSql);
+      }
+
+      if (endDate != null) {
+        final endUtc = DateTime.utc(endDate.year, endDate.month, endDate.day)
+            .add(const Duration(days: 1));
+        final endSql = DateTimeHelpers.toSql(endUtc);
+        salesWhere.write(' AND s.sale_date < ?');
+        args.add(endSql);
+        collectionsWhere.write(' AND sp.created_at < ?');
+        args.add(endSql);
+        purchasesWhere.write(' AND p.purchase_date < ?');
+        args.add(endSql);
+        expensesWhere.write(' AND e.expense_date < ?');
+        args.add(endSql);
+      }
+
+      final rows = await QueryDiagnostics.trace(
+        label: 'reports.operations.cash_ledger',
+        action: () => _appDatabase.database.rawQuery(
+          '''
+          WITH sales_cash AS (
+            SELECT
+              date(s.sale_date) AS day,
+              COALESCE(SUM(s.paid_amount), 0) AS cash_sales_in
+            FROM ${TableNames.sales} s
+            WHERE ${salesWhere.toString()}
+            GROUP BY date(s.sale_date)
+          ),
+          collections_cash AS (
+            SELECT
+              date(sp.created_at) AS day,
+              COALESCE(SUM(sp.amount), 0) AS cash_collections_in
+            FROM ${TableNames.salePayments} sp
+            WHERE ${collectionsWhere.toString()}
+            GROUP BY date(sp.created_at)
+          ),
+          purchase_out AS (
+            SELECT
+              date(p.purchase_date) AS day,
+              COALESCE(SUM(p.paid_amount), 0) AS purchase_payments_out
+            FROM ${TableNames.purchases} p
+            WHERE ${purchasesWhere.toString()}
+            GROUP BY date(p.purchase_date)
+          ),
+          expense_out AS (
+            SELECT
+              date(e.expense_date) AS day,
+              COALESCE(SUM(e.amount), 0) AS expenses_out
+            FROM ${TableNames.expenses} e
+            WHERE ${expensesWhere.toString()}
+            GROUP BY date(e.expense_date)
+          ),
+          all_days AS (
+            SELECT day FROM sales_cash
+            UNION
+            SELECT day FROM collections_cash
+            UNION
+            SELECT day FROM purchase_out
+            UNION
+            SELECT day FROM expense_out
+          )
+          SELECT
+            d.day,
+            COALESCE(sc.cash_sales_in, 0) AS cash_sales_in,
+            COALESCE(cc.cash_collections_in, 0) AS cash_collections_in,
+            COALESCE(po.purchase_payments_out, 0) AS purchase_payments_out,
+            COALESCE(eo.expenses_out, 0) AS expenses_out
+          FROM all_days d
+          LEFT JOIN sales_cash sc ON sc.day = d.day
+          LEFT JOIN collections_cash cc ON cc.day = d.day
+          LEFT JOIN purchase_out po ON po.day = d.day
+          LEFT JOIN expense_out eo ON eo.day = d.day
+          ORDER BY d.day DESC
+          LIMIT ? OFFSET ?
+          ''',
+          <Object?>[...args, limit, offset],
+        ),
+      );
+
+      return rows.map((row) {
+        return CashLedgerRowEntity(
+          day: row['day'] as String,
+          cashSalesIn: (row['cash_sales_in'] as num?)?.toDouble() ?? 0,
+          cashCollectionsIn:
+              (row['cash_collections_in'] as num?)?.toDouble() ?? 0,
+          purchasePaymentsOut:
+              (row['purchase_payments_out'] as num?)?.toDouble() ?? 0,
+          expensesOut: (row['expenses_out'] as num?)?.toDouble() ?? 0,
+        );
+      }).toList(growable: false);
+    }, operation: 'cash_ledger');
+  }
+
   Future<Result<int>> applyQuantityStockAdjustment({
     required String productModelId,
     required int delta,
