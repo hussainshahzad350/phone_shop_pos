@@ -711,6 +711,7 @@ class MigrationService {
   /// Migration v17: normalize expenses schema for reports-driven expense
   /// tracking with soft-delete support and category/date indexing.
   Future<void> _applyMigrationV17(Database database) async {
+    const defaultExpenseCategory = 'General';
     await database.execute('PRAGMA foreign_keys = OFF;');
     await database.execute('PRAGMA legacy_alter_table = ON;');
     try {
@@ -746,7 +747,11 @@ class MigrationService {
         SELECT
           id,
           expense_date,
-          COALESCE(NULLIF(TRIM(category), ''), NULLIF(TRIM(title), ''), 'General'),
+          COALESCE(
+            NULLIF(TRIM(category), ''),
+            NULLIF(TRIM(title), ''),
+            '$defaultExpenseCategory'
+          ),
           MAX(0.0, amount),
           notes,
           created_at,
