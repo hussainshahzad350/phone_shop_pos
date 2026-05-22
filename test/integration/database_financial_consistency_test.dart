@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/database/app_database.dart';
 import 'package:phone_shop_pos/core/database/migration_service.dart';
 import 'package:phone_shop_pos/core/database/sqlite_service.dart';
@@ -1134,6 +1135,199 @@ void main() {
       expect(dailyRows, isNotEmpty);
       expect(dailyRows.first.totalSales, closeTo(200, 0.0001));
       expect(dailyRows.first.pendingBalances, closeTo(100, 0.0001));
+    });
+
+    test(
+        'cash flow report avoids double counting and keeps sparse-day visibility',
+        () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final day1 = DateTime.utc(2026, 5, 16);
+      final day2 = DateTime.utc(2026, 5, 17);
+      final day3 = DateTime.utc(2026, 5, 18);
+      final day1Sql = DateTimeHelpers.toSql(day1);
+      final day2Sql = DateTimeHelpers.toSql(day2);
+      final day3Sql = DateTimeHelpers.toSql(day3);
+
+      await context.createProduct(
+        id: 'prd_cash_flow_guard',
+        name: 'Cash Flow Guard Accessory',
+        sku: 'ACC-CASH-FLOW-001',
+        purchasePrice: 50,
+        salePrice: 300,
+        hasImei: false,
+      );
+
+      await context.appDatabase.insert(TableNames.inventoryStock, <String, Object?>{
+        'id': 'stk_cash_flow_guard',
+        'product_model_id': 'prd_cash_flow_guard',
+        'quantity': 20,
+        'min_quantity': 0,
+        'unit_cost': 50,
+        'unit_price': 0,
+        'created_at': day1Sql,
+        'updated_at': day1Sql,
+      });
+
+      _expectSuccess(
+        await context.salesRepository.createSaleTransaction(
+          items: const <CartItemEntity>[
+            CartItemEntity(
+              productModelId: 'prd_cash_flow_guard',
+              productName: 'Cash Flow Guard Accessory',
+              hasImei: false,
+              quantity: 1,
+              unitPrice: 100,
+            ),
+          ],
+          totals: const SaleTotalsEntity(
+            subtotal: 100,
+            discount: 0,
+            tax: 0,
+            total: 100,
+            paidAmount: 100,
+          ),
+          saleDate: day1,
+          paymentMethod: PaymentMethod.cash,
+        ),
+      );
+
+      final creditSale = _expectSuccess(
+        await context.salesRepository.createSaleTransaction(
+          items: const <CartItemEntity>[
+            CartItemEntity(
+              productModelId: 'prd_cash_flow_guard',
+              productName: 'Cash Flow Guard Accessory',
+              hasImei: false,
+              quantity: 1,
+              unitPrice: 200,
+            ),
+          ],
+          totals: const SaleTotalsEntity(
+            subtotal: 200,
+            discount: 0,
+            tax: 0,
+            total: 200,
+            paidAmount: 0,
+          ),
+          saleDate: day1,
+          paymentMethod: PaymentMethod.credit,
+        ),
+      );
+
+      final partialCashSale = _expectSuccess(
+        await context.salesRepository.createSaleTransaction(
+          items: const <CartItemEntity>[
+            CartItemEntity(
+              productModelId: 'prd_cash_flow_guard',
+              productName: 'Cash Flow Guard Accessory',
+              hasImei: false,
+              quantity: 1,
+              unitPrice: 300,
+            ),
+          ],
+          totals: const SaleTotalsEntity(
+            subtotal: 300,
+            discount: 0,
+            tax: 0,
+            total: 300,
+            paidAmount: 100,
+          ),
+          saleDate: day1,
+          paymentMethod: PaymentMethod.cash,
+        ),
+      );
+
+      _expectSuccess(
+        await context.operationsService.collectPayment(
+          saleId: creditSale.saleId,
+          amount: 200,
+          paymentMethod: PaymentMethod.cash,
+          notes: 'Credit recovery in cash',
+        ),
+      );
+      _expectSuccess(
+        await context.operationsService.collectPayment(
+          saleId: partialCashSale.saleId,
+          amount: 200,
+          paymentMethod: PaymentMethod.cash,
+          notes: 'Remaining cash collection',
+        ),
+      );
+
+      await context.appDatabase.database.rawUpdate(
+        'UPDATE ${TableNames.salePayments} '
+        'SET created_at = ?, updated_at = ? '
+        'WHERE sale_id IN (?, ?)',
+        <Object?>[
+          day2Sql,
+          day2Sql,
+          creditSale.saleId,
+          partialCashSale.saleId,
+        ],
+      );
+
+      await context.appDatabase.insert(TableNames.expenses, <String, Object?>{
+        'id': 'exp_cash_flow_guard',
+        'title': 'Office tea',
+        'category': 'office',
+        'amount': 30,
+        'expense_date': day2Sql,
+        'supplier_id': null,
+        'notes': null,
+        'created_at': day2Sql,
+        'updated_at': day2Sql,
+      });
+
+      await context.appDatabase.insert(TableNames.purchases, <String, Object?>{
+        'id': 'pur_cash_flow_guard',
+        'supplier_id': null,
+        'invoice_number': 'INV-CASH-FLOW-0001',
+        'purchase_date': day3Sql,
+        'subtotal': 90,
+        'discount': 0,
+        'tax': 0,
+        'total': 90,
+        'paid_amount': 90,
+        'notes': null,
+        'created_at': day3Sql,
+        'updated_at': day3Sql,
+      });
+
+      final rows = _expectSuccess(
+        await context.operationsService.getCashLedger(
+          startDate: day1,
+          endDate: day3,
+        ),
+      );
+
+      final rowDays = rows.map((row) => row.day).toSet();
+      expect(
+        rowDays,
+        containsAll(<String>['2026-05-16', '2026-05-17', '2026-05-18']),
+      );
+
+      final day1Row = rows.firstWhere((row) => row.day == '2026-05-16');
+      expect(day1Row.cashSalesIn, closeTo(200, 0.0001));
+      expect(day1Row.cashCollectionsIn, closeTo(0, 0.0001));
+      expect(day1Row.totalCashIn, closeTo(200, 0.0001));
+
+      final day2Row = rows.firstWhere((row) => row.day == '2026-05-17');
+      expect(day2Row.cashSalesIn, closeTo(0, 0.0001));
+      expect(day2Row.cashCollectionsIn, closeTo(400, 0.0001));
+      expect(day2Row.expensesOut, closeTo(30, 0.0001));
+      expect(day2Row.totalCashIn, closeTo(400, 0.0001));
+
+      final day3Row = rows.firstWhere((row) => row.day == '2026-05-18');
+      expect(day3Row.cashSalesIn, closeTo(0, 0.0001));
+      expect(day3Row.cashCollectionsIn, closeTo(0, 0.0001));
+      expect(day3Row.purchasePaymentsOut, closeTo(90, 0.0001));
+      expect(day3Row.totalCashOut, closeTo(90, 0.0001));
+
+      final totalIn =
+          rows.fold<double>(0, (sum, row) => sum + row.totalCashIn);
+      expect(totalIn, closeTo(600, 0.0001));
     });
 
     // ── Payment integrity invariants ──────────────────────────────────────

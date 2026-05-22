@@ -676,11 +676,27 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         label: 'reports.operations.cash_ledger',
         action: () => _appDatabase.database.rawQuery(
           '''
-          WITH sales_cash AS (
+          WITH payments_by_sale AS (
+            SELECT
+              sp.sale_id AS sale_id,
+              COALESCE(SUM(sp.amount), 0) AS total_collected
+            FROM ${TableNames.salePayments} sp
+            GROUP BY sp.sale_id
+          ),
+          sales_cash AS (
             SELECT
               date(s.sale_date) AS day,
-              COALESCE(SUM(s.paid_amount), 0) AS cash_sales_in
+              COALESCE(
+                SUM(
+                  MAX(
+                    COALESCE(s.paid_amount, 0) - COALESCE(pbs.total_collected, 0),
+                    0
+                  )
+                ),
+                0
+              ) AS cash_sales_in
             FROM ${TableNames.sales} s
+            LEFT JOIN payments_by_sale pbs ON pbs.sale_id = s.id
             WHERE ${salesWhere.toString()}
             GROUP BY date(s.sale_date)
           ),

@@ -1287,13 +1287,18 @@ class _CashLedgerView extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      'Cash Ledger (derived): cash sales + cash collections - purchase paid - expenses',
+                      'Cash Flow (derived): cash sales + cash collections - purchase paid - expenses',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'This report shows cash movement only, not physical drawer cash-on-hand.',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 8),
                     Expanded(
                       child: AppDataTable(
-                        emptyMessage: 'No cash ledger rows in selected date range.',
+                        emptyMessage: 'No cash flow rows in selected date range.',
                         columns: const <DataColumn>[
                           DataColumn(label: Text('Day')),
                           DataColumn(label: Text('Cash Sales In')),
@@ -1328,7 +1333,7 @@ class _CashLedgerView extends ConsumerWidget {
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, __) => _ReportErrorView(
-              message: 'Failed to load cash ledger.',
+              message: 'Failed to load cash flow.',
               error: error,
               onRetry: () => ref.invalidate(cashLedgerRowsProvider),
             ),
@@ -1782,6 +1787,6 @@ String _tabLabel(ReportsTab tab) {
     case ReportsTab.supplierLedger:
       return 'Supplier Ledger';
     case ReportsTab.cashLedger:
-      return 'Cash Ledger';
+      return 'Cash Flow';
   }
 }
