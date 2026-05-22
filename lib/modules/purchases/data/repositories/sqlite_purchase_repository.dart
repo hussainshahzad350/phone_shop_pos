@@ -264,6 +264,13 @@ class SqlitePurchaseRepository
                 'stock_status': SerializedStockStatus.inStock.value,
                 'supplier_id': item.supplierId ?? supplierId,
                 'notes': null,
+                'condition': entry.condition.value,
+                'seller_name': entry.sellerName?.trim().isEmpty == true ? null : entry.sellerName?.trim(),
+                'seller_id_card': entry.sellerIdCard?.trim().isEmpty == true ? null : entry.sellerIdCard?.trim(),
+                'seller_address': entry.sellerAddress?.trim().isEmpty == true ? null : entry.sellerAddress?.trim(),
+                'remaining_warranty': entry.remainingWarranty?.trim().isEmpty == true ? null : entry.remainingWarranty?.trim(),
+                'accessories': entry.accessories?.trim().isEmpty == true ? null : entry.accessories?.trim(),
+                'phone_condition_notes': entry.phoneConditionNotes?.trim().isEmpty == true ? null : entry.phoneConditionNotes?.trim(),
                 'created_at': DateTimeHelpers.toSql(now),
                 'updated_at': DateTimeHelpers.toSql(now),
               });

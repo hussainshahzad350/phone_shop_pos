@@ -68,6 +68,10 @@ class MigrationService {
       await _applyMigrationV14(database);
       return;
     }
+    if (version == 15) {
+      await _applyMigrationV15(database);
+      return;
+    }
     final statements = _migrationStatements[version];
     if (statements == null) {
       return;
@@ -670,6 +674,32 @@ class MigrationService {
     );
     await database.execute(
       'CREATE INDEX IF NOT EXISTS idx_sale_returns_serialized ON ${TableNames.saleReturns}(serialized_stock_id);',
+    );
+  }
+
+  /// Migration v15: add used-phone tracking columns to serialized_stock.
+  /// All columns are nullable so existing rows default to NULL / 'new'.
+  Future<void> _applyMigrationV15(Database database) async {
+    await database.execute(
+      "ALTER TABLE ${TableNames.serializedStock} ADD COLUMN condition TEXT NOT NULL DEFAULT 'new' CHECK (condition IN ('new', 'used'));",
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN seller_name TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN seller_id_card TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN seller_address TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN remaining_warranty TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN accessories TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN phone_condition_notes TEXT;',
     );
   }
 

@@ -26,6 +26,7 @@ class StockTableWidget extends StatelessWidget {
       paginateThreshold: _kStockPaginateThreshold,
       columns: const <DataColumn>[
         DataColumn(label: Text('Type')),
+        DataColumn(label: Text('Condition')),
         DataColumn(label: Text('Product')),
         DataColumn(label: Text('Brand')),
         DataColumn(label: Text('Category')),
@@ -41,9 +42,15 @@ class StockTableWidget extends StatelessWidget {
 
   DataRow _buildRow(StockRowEntity row) {
     if (row.type == StockRowType.serialized) {
+      final isUsed = row.condition == SerializedStockCondition.used;
       return DataRow(
         cells: <DataCell>[
           const DataCell(Text('Phone')),
+          DataCell(
+            isUsed
+                ? _chipLabel('Used', Colors.orange)
+                : _chipLabel('New', Colors.teal),
+          ),
           DataCell(Text(row.productName)),
           DataCell(Text(row.brand ?? '')),
           DataCell(Text(row.category ?? '')),
@@ -84,6 +91,7 @@ class StockTableWidget extends StatelessWidget {
     return DataRow(
       cells: <DataCell>[
         const DataCell(Text('Accessory')),
+        const DataCell(Text('—')),
         DataCell(Text(row.productName)),
         DataCell(Text(row.brand ?? '')),
         DataCell(Text(row.category ?? '')),

@@ -1,3 +1,5 @@
+import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
+
 class ImeiEntry {
   const ImeiEntry({
     required this.imei1,
@@ -5,6 +7,13 @@ class ImeiEntry {
     this.imei2,
     this.serialNumber,
     this.sellingPrice,
+    this.condition = SerializedStockCondition.newPhone,
+    this.sellerName,
+    this.sellerIdCard,
+    this.sellerAddress,
+    this.remainingWarranty,
+    this.accessories,
+    this.phoneConditionNotes,
   });
 
   final String imei1;
@@ -13,12 +22,28 @@ class ImeiEntry {
   final double costPrice;
   final double? sellingPrice;
 
+  // Used-phone fields
+  final SerializedStockCondition condition;
+  final String? sellerName;
+  final String? sellerIdCard;
+  final String? sellerAddress;
+  final String? remainingWarranty;
+  final String? accessories;
+  final String? phoneConditionNotes;
+
   ImeiEntry copyWith({
     String? imei1,
     String? imei2,
     String? serialNumber,
     double? costPrice,
     double? sellingPrice,
+    SerializedStockCondition? condition,
+    String? sellerName,
+    String? sellerIdCard,
+    String? sellerAddress,
+    String? remainingWarranty,
+    String? accessories,
+    String? phoneConditionNotes,
     bool clearImei2 = false,
     bool clearSerialNumber = false,
     bool clearSellingPrice = false,
@@ -29,6 +54,13 @@ class ImeiEntry {
       serialNumber: clearSerialNumber ? null : serialNumber ?? this.serialNumber,
       costPrice: costPrice ?? this.costPrice,
       sellingPrice: clearSellingPrice ? null : sellingPrice ?? this.sellingPrice,
+      condition: condition ?? this.condition,
+      sellerName: sellerName ?? this.sellerName,
+      sellerIdCard: sellerIdCard ?? this.sellerIdCard,
+      sellerAddress: sellerAddress ?? this.sellerAddress,
+      remainingWarranty: remainingWarranty ?? this.remainingWarranty,
+      accessories: accessories ?? this.accessories,
+      phoneConditionNotes: phoneConditionNotes ?? this.phoneConditionNotes,
     );
   }
 }

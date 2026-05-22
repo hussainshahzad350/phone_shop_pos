@@ -39,6 +39,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
       TextEditingController(text: '0');
   final TextEditingController _notesController = TextEditingController();
   bool _isSubmitting = false;
+  bool _isUsedPurchase = false;
   int _handledShortcutToken = 0;
 
   @override
@@ -64,6 +65,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
       context: context,
       builder: (context) => ImeiEntryWidget(
         defaultCostPrice: item.unitCost,
+        isUsed: _isUsedPurchase,
       ),
     );
 
@@ -313,6 +315,25 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                   .setInvoiceNumber(v.isEmpty ? null : v);
             },
           ),
+        ),
+        const SizedBox(width: 12),
+        SegmentedButton<bool>(
+          segments: const <ButtonSegment<bool>>[
+            ButtonSegment<bool>(
+              value: false,
+              label: Text('New'),
+              icon: Icon(Icons.fiber_new),
+            ),
+            ButtonSegment<bool>(
+              value: true,
+              label: Text('Used'),
+              icon: Icon(Icons.recycling),
+            ),
+          ],
+          selected: <bool>{_isUsedPurchase},
+          onSelectionChanged: (Set<bool> selection) {
+            setState(() => _isUsedPurchase = selection.first);
+          },
         ),
       ],
     );

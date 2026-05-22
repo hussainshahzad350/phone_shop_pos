@@ -262,6 +262,7 @@ SELECT
   ss.imei2,
   ss.serial_number,
   ss.stock_status,
+  ss.condition,
   ss.cost_price,
   ss.selling_price,
   NULL AS inventory_stock_id,
@@ -433,6 +434,7 @@ LIMIT ?
         serializedStatus: row['stock_status'] != null
             ? SerializedStockStatus.fromValue(row['stock_status'] as String)
             : null,
+        condition: SerializedStockCondition.fromValue(row['condition'] as String?),
         costPrice: (row['cost_price'] as num?)?.toDouble(),
         sellingPrice: (row['selling_price'] as num?)?.toDouble(),
       );

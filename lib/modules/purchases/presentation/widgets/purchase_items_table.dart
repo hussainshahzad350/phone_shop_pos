@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
+import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 
 class PurchaseItemsTable extends StatelessWidget {
@@ -282,6 +283,7 @@ class _ImeiEntryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isUsed = entry.condition == SerializedStockCondition.used;
     return Row(
       children: <Widget>[
         const SizedBox(width: 16),
@@ -290,6 +292,25 @@ class _ImeiEntryRow extends StatelessWidget {
           style: const TextStyle(fontSize: 12),
         ),
         const SizedBox(width: 4),
+        if (isUsed) ...<Widget>[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade100,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.orange.shade400),
+            ),
+            child: Text(
+              'Used',
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.orange.shade800,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
         Expanded(
           child: Text(
             '${entry.imei1}'

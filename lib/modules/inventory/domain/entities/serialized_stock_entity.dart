@@ -1,3 +1,19 @@
+enum SerializedStockCondition {
+  newPhone('new'),
+  used('used');
+
+  const SerializedStockCondition(this.value);
+
+  final String value;
+
+  static SerializedStockCondition fromValue(String? value) {
+    return SerializedStockCondition.values.firstWhere(
+      (c) => c.value == value,
+      orElse: () => SerializedStockCondition.newPhone,
+    );
+  }
+}
+
 enum SerializedStockStatus {
   inStock('in_stock'),
   sold('sold'),
@@ -31,6 +47,13 @@ class SerializedStockEntity {
     this.sellingPrice,
     this.supplierId,
     this.notes,
+    this.condition = SerializedStockCondition.newPhone,
+    this.sellerName,
+    this.sellerIdCard,
+    this.sellerAddress,
+    this.remainingWarranty,
+    this.accessories,
+    this.phoneConditionNotes,
   });
 
   final String id;
@@ -45,4 +68,13 @@ class SerializedStockEntity {
   final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  // Used-phone fields
+  final SerializedStockCondition condition;
+  final String? sellerName;
+  final String? sellerIdCard;
+  final String? sellerAddress;
+  final String? remainingWarranty;
+  final String? accessories;
+  final String? phoneConditionNotes;
 }
