@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:phone_shop_pos/core/utils/cnic_helpers.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
@@ -26,6 +27,7 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
   final TextEditingController _warrantyController = TextEditingController();
   final TextEditingController _accessoriesController = TextEditingController();
   final TextEditingController _conditionNotesController = TextEditingController();
+  final TextEditingController _sellerPhoneController = TextEditingController();
 
   List<_ParsedImeiLine> _preview = const <_ParsedImeiLine>[];
   double _defaultCost = 0;
@@ -45,6 +47,7 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
     _warrantyController.dispose();
     _accessoriesController.dispose();
     _conditionNotesController.dispose();
+    _sellerPhoneController.dispose();
     super.dispose();
   }
 
@@ -81,6 +84,7 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
     if (widget.isUsed) {
       if (_sellerNameController.text.trim().isEmpty) return false;
       if (_sellerIdCardController.text.trim().isEmpty) return false;
+      if (CnicHelpers.errorText(_sellerIdCardController.text) != null) return false;
       if (_conditionNotesController.text.trim().isEmpty) return false;
     }
     return true;
@@ -189,10 +193,13 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
                   required: true,
                 ),
                 const SizedBox(height: 8),
+                _buildCnicField(),
+                const SizedBox(height: 8),
                 _buildField(
-                  controller: _sellerIdCardController,
-                  label: 'ID Card / CNIC *',
-                  required: true,
+                  controller: _sellerPhoneController,
+                  label: 'Seller Phone',
+                  hint: 'e.g. 03001234567',
+                  keyboardType: TextInputType.phone,
                 ),
                 const SizedBox(height: 8),
                 _buildField(
@@ -239,11 +246,15 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
                   final sellerName = widget.isUsed
                       ? _sellerNameController.text.trim()
                       : null;
+                  final rawCnic = _sellerIdCardController.text.trim();
                   final sellerIdCard = widget.isUsed
-                      ? _sellerIdCardController.text.trim()
+                      ? (CnicHelpers.normalizeCnic(rawCnic) ?? rawCnic)
                       : null;
                   final sellerAddress = widget.isUsed
                       ? _nullIfEmpty(_sellerAddressController.text)
+                      : null;
+                  final sellerPhone = widget.isUsed
+                      ? _nullIfEmpty(_sellerPhoneController.text)
                       : null;
                   final remainingWarranty = widget.isUsed
                       ? _nullIfEmpty(_warrantyController.text)
@@ -266,6 +277,7 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
                           sellerName: sellerName,
                           sellerIdCard: sellerIdCard,
                           sellerAddress: sellerAddress,
+                          sellerPhone: sellerPhone,
                           remainingWarranty: remainingWarranty,
                           accessories: accessories,
                           phoneConditionNotes: phoneConditionNotes,
@@ -280,16 +292,34 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
     );
   }
 
+  Widget _buildCnicField() {
+    final errorText = CnicHelpers.errorText(_sellerIdCardController.text);
+    return TextField(
+      controller: _sellerIdCardController,
+      keyboardType: TextInputType.number,
+      onChanged: (_) => setState(() {}),
+      decoration: InputDecoration(
+        isDense: true,
+        border: const OutlineInputBorder(),
+        labelText: 'ID Card / CNIC *',
+        hintText: 'XXXXX-XXXXXXX-X',
+        errorText: errorText,
+      ),
+    );
+  }
+
   Widget _buildField({
     required TextEditingController controller,
     required String label,
     String? hint,
     int maxLines = 1,
     bool required = false,
+    TextInputType? keyboardType,
   }) {
     return TextField(
       controller: controller,
       maxLines: maxLines,
+      keyboardType: keyboardType,
       onChanged: required ? (_) => setState(() {}) : null,
       decoration: InputDecoration(
         isDense: true,

@@ -268,6 +268,7 @@ class SqlitePurchaseRepository
                 'seller_name': _normalizeOptional(entry.sellerName),
                 'seller_id_card': _normalizeOptional(entry.sellerIdCard),
                 'seller_address': _normalizeOptional(entry.sellerAddress),
+                'seller_phone': _normalizeOptional(entry.sellerPhone),
                 'remaining_warranty': _normalizeOptional(entry.remainingWarranty),
                 'accessories': _normalizeOptional(entry.accessories),
                 'phone_condition_notes': _normalizeOptional(entry.phoneConditionNotes),

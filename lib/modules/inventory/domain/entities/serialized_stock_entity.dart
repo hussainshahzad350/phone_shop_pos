@@ -54,6 +54,7 @@ class SerializedStockEntity {
     this.remainingWarranty,
     this.accessories,
     this.phoneConditionNotes,
+    this.sellerPhone,
   });
 
   final String id;
@@ -77,4 +78,5 @@ class SerializedStockEntity {
   final String? remainingWarranty;
   final String? accessories;
   final String? phoneConditionNotes;
+  final String? sellerPhone;
 }

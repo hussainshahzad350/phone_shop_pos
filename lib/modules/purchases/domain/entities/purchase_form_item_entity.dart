@@ -14,6 +14,7 @@ class ImeiEntry {
     this.remainingWarranty,
     this.accessories,
     this.phoneConditionNotes,
+    this.sellerPhone,
   });
 
   final String imei1;
@@ -30,6 +31,7 @@ class ImeiEntry {
   final String? remainingWarranty;
   final String? accessories;
   final String? phoneConditionNotes;
+  final String? sellerPhone;
 
   ImeiEntry copyWith({
     String? imei1,
@@ -44,6 +46,7 @@ class ImeiEntry {
     String? remainingWarranty,
     String? accessories,
     String? phoneConditionNotes,
+    String? sellerPhone,
     bool clearImei2 = false,
     bool clearSerialNumber = false,
     bool clearSellingPrice = false,
@@ -61,6 +64,7 @@ class ImeiEntry {
       remainingWarranty: remainingWarranty ?? this.remainingWarranty,
       accessories: accessories ?? this.accessories,
       phoneConditionNotes: phoneConditionNotes ?? this.phoneConditionNotes,
+      sellerPhone: sellerPhone ?? this.sellerPhone,
     );
   }
 }

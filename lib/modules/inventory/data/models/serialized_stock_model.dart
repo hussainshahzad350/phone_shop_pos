@@ -23,6 +23,7 @@ class SerializedStockModel extends BaseDbModel {
     this.remainingWarranty,
     this.accessories,
     this.phoneConditionNotes,
+    this.sellerPhone,
   });
 
   final String productModelId;
@@ -43,6 +44,7 @@ class SerializedStockModel extends BaseDbModel {
   final String? remainingWarranty;
   final String? accessories;
   final String? phoneConditionNotes;
+  final String? sellerPhone;
 
   factory SerializedStockModel.fromMap(Map<String, Object?> map) {
     return SerializedStockModel(
@@ -65,6 +67,7 @@ class SerializedStockModel extends BaseDbModel {
       remainingWarranty: map['remaining_warranty'] as String?,
       accessories: map['accessories'] as String?,
       phoneConditionNotes: map['phone_condition_notes'] as String?,
+      sellerPhone: map['seller_phone'] as String?,
     );
   }
 
@@ -89,6 +92,7 @@ class SerializedStockModel extends BaseDbModel {
       remainingWarranty: entity.remainingWarranty,
       accessories: entity.accessories,
       phoneConditionNotes: entity.phoneConditionNotes,
+      sellerPhone: entity.sellerPhone,
     );
   }
 
@@ -111,6 +115,7 @@ class SerializedStockModel extends BaseDbModel {
       'remaining_warranty': remainingWarranty,
       'accessories': accessories,
       'phone_condition_notes': phoneConditionNotes,
+      'seller_phone': sellerPhone,
     };
   }
 
@@ -135,6 +140,7 @@ class SerializedStockModel extends BaseDbModel {
       remainingWarranty: remainingWarranty,
       accessories: accessories,
       phoneConditionNotes: phoneConditionNotes,
+      sellerPhone: sellerPhone,
     );
   }
 }

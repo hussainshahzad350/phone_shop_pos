@@ -71,6 +71,14 @@ class SqliteInventoryRepository
           sellingPrice: stock.sellingPrice,
           supplierId: stock.supplierId,
           notes: stock.notes,
+          condition: stock.condition,
+          sellerName: stock.sellerName,
+          sellerIdCard: stock.sellerIdCard,
+          sellerAddress: stock.sellerAddress,
+          remainingWarranty: stock.remainingWarranty,
+          accessories: stock.accessories,
+          phoneConditionNotes: stock.phoneConditionNotes,
+          sellerPhone: stock.sellerPhone,
         ),
       );
       await _appDatabase.insert(TableNames.serializedStock, model.toMap());
