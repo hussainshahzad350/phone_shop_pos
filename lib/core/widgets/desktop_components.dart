@@ -2,7 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 const int _kDefaultPaginateThreshold = 80;
-const double _kDesktopContentMaxWidth = 1440.0;
+const double _kDesktopContentMaxWidth = 1760.0;
+const double _kDesktopCardRadius = 16.0;
+
+InputDecoration appDesktopInputDecoration({
+  String? labelText,
+  String? hintText,
+  Widget? prefixIcon,
+  Widget? suffixIcon,
+  bool isDense = true,
+}) {
+  return InputDecoration(
+    labelText: labelText,
+    hintText: hintText,
+    prefixIcon: prefixIcon,
+    suffixIcon: suffixIcon,
+    isDense: isDense,
+    border: const OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(14)),
+    ),
+    enabledBorder: const OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(14)),
+      borderSide: BorderSide(color: Color(0xFFD7DBE7)),
+    ),
+    focusedBorder: const OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(14)),
+      borderSide: BorderSide(color: Color(0xFF5167F6), width: 1.2),
+    ),
+  );
+}
 
 class AppDesktopScaffold extends StatelessWidget {
   const AppDesktopScaffold({
@@ -63,11 +91,11 @@ class AppSidebar extends StatelessWidget {
     return NavigationRail(
       selectedIndex: selectedIndex,
       onDestinationSelected: onDestinationSelected,
-      labelType: width >= 1500
+      labelType: width >= 1600
           ? NavigationRailLabelType.none
           : NavigationRailLabelType.all,
-      extended: width >= 1500,
-      minExtendedWidth: 190,
+      extended: width >= 1600,
+      minExtendedWidth: 208,
       destinations: destinations,
     );
   }
@@ -86,15 +114,15 @@ class AppTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 52,
+      height: 56,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: <Widget>[
             Text(
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                   ),
             ),
             const Spacer(),
@@ -133,7 +161,7 @@ class AppSearchField extends StatelessWidget {
       onChanged: onChanged,
       onSubmitted: onSubmitted,
       textInputAction: TextInputAction.search,
-      decoration: InputDecoration(
+      decoration: appDesktopInputDecoration(
         hintText: hintText,
         prefixIcon: const Icon(Icons.search),
         suffixIcon: ValueListenableBuilder<TextEditingValue>(
@@ -152,14 +180,12 @@ class AppSearchField extends StatelessWidget {
             );
           },
         ),
-        border: const OutlineInputBorder(),
-        isDense: true,
       ),
     );
   }
 }
 
-class AppDataTable extends StatelessWidget {
+class AppDataTable extends StatefulWidget {
   const AppDataTable({
     super.key,
     required this.columns,
@@ -182,38 +208,114 @@ class AppDataTable extends StatelessWidget {
   final double columnSpacing;
 
   @override
+  State<AppDataTable> createState() => _AppDataTableState();
+}
+
+class _AppDataTableState extends State<AppDataTable> {
+  late final ScrollController _horizontalScrollController;
+  late final ScrollController _verticalScrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _horizontalScrollController = ScrollController();
+    _verticalScrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _horizontalScrollController.dispose();
+    _verticalScrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (rows.isEmpty) {
-      return Center(child: Text(emptyMessage));
+    if (widget.rows.isEmpty) {
+      return Center(child: Text(widget.emptyMessage));
     }
 
-    if (rows.length >= paginateThreshold) {
-      return ListView(
-        children: <Widget>[
-          PaginatedDataTable(
-            columns: columns,
-            source: _StaticDataSource(rows),
-            rowsPerPage: rowsPerPage,
-            availableRowsPerPage: const <int>[25, 50, 100],
-            columnSpacing: columnSpacing,
-            dataRowMinHeight: dataRowMinHeight,
-            dataRowMaxHeight: dataRowMaxHeight,
-            showCheckboxColumn: false,
+    final effectiveRows = List<DataRow>.generate(widget.rows.length, (index) {
+      final row = widget.rows[index];
+      return DataRow(
+        key: row.key,
+        selected: row.selected,
+        onSelectChanged: row.onSelectChanged,
+        onLongPress: row.onLongPress,
+        color: row.color ??
+            MaterialStateProperty.resolveWith<Color?>((states) {
+              if (states.contains(MaterialState.selected)) {
+                return Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.10);
+              }
+              return index.isEven
+                  ? Theme.of(context).colorScheme.surface
+                  : Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHighest
+                      .withValues(alpha: 0.35);
+            }),
+        cells: row.cells,
+      );
+    });
+
+    if (widget.rows.length >= widget.paginateThreshold) {
+      return Scrollbar(
+        controller: _horizontalScrollController,
+        thumbVisibility: true,
+        notificationPredicate: (notification) =>
+            notification.metrics.axis == Axis.horizontal,
+        child: SingleChildScrollView(
+          controller: _horizontalScrollController,
+          scrollDirection: Axis.horizontal,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(_kDesktopCardRadius),
+            child: PaginatedDataTable(
+              columns: widget.columns,
+              source: _StaticDataSource(effectiveRows),
+              rowsPerPage: widget.rowsPerPage,
+              availableRowsPerPage: const <int>[25, 50, 100],
+              columnSpacing: widget.columnSpacing,
+              dataRowMinHeight: widget.dataRowMinHeight,
+              dataRowMaxHeight: widget.dataRowMaxHeight,
+              headingRowHeight: 44,
+              showCheckboxColumn: false,
+              showFirstLastButtons: true,
+            ),
           ),
-        ],
+        ),
       );
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.vertical,
+    return Scrollbar(
+      controller: _verticalScrollController,
+      thumbVisibility: true,
       child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          columns: columns,
-          rows: rows,
-          columnSpacing: columnSpacing,
-          dataRowMinHeight: dataRowMinHeight,
-          dataRowMaxHeight: dataRowMaxHeight,
+        controller: _verticalScrollController,
+        scrollDirection: Axis.vertical,
+        child: Scrollbar(
+          controller: _horizontalScrollController,
+          thumbVisibility: true,
+          notificationPredicate: (notification) =>
+              notification.metrics.axis == Axis.horizontal,
+          child: SingleChildScrollView(
+            controller: _horizontalScrollController,
+            scrollDirection: Axis.horizontal,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(_kDesktopCardRadius),
+              child: DataTable(
+                columns: widget.columns,
+                rows: effectiveRows,
+                columnSpacing: widget.columnSpacing,
+                dataRowMinHeight: widget.dataRowMinHeight,
+                dataRowMaxHeight: widget.dataRowMaxHeight,
+                headingRowHeight: 44,
+                dividerThickness: 0.6,
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -337,7 +439,7 @@ class _DesktopContentArea extends StatelessWidget {
         return Align(
           alignment: Alignment.topCenter,
           child: SizedBox(
-            width: _kDesktopContentMaxWidth,
+            width: constraints.maxWidth.clamp(0.0, _kDesktopContentMaxWidth),
             child: child,
           ),
         );

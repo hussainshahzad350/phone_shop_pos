@@ -95,39 +95,40 @@ class ReportsScreen extends ConsumerWidget {
         },
         child: Scaffold(
           body: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: <Widget>[
-                    Text(
-                      'Reports',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    const Spacer(),
-                    IconButton(
+                    OutlinedButton.icon(
                       onPressed: () => _refreshAll(ref),
-                      tooltip: 'Refresh (F5)',
                       icon: const Icon(Icons.refresh),
+                      label: const Text('Refresh'),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: ReportsTab.values
-                      .map(
-                        (item) => ChoiceChip(
-                          label: Text(_tabLabel(item)),
-                          selected: item == tab,
-                          onSelected: (_) => ref
-                              .read(selectedReportsTabProvider.notifier)
-                              .state = item,
-                        ),
-                      )
-                      .toList(growable: false),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: ReportsTab.values
+                          .map(
+                            (item) => ChoiceChip(
+                              label: Text(_tabLabel(item)),
+                              selected: item == tab,
+                              onSelected: (_) => ref
+                                  .read(selectedReportsTabProvider.notifier)
+                                  .state = item,
+                            ),
+                          )
+                          .toList(growable: false),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 if (_usesLegacyFilters(tab)) ...<Widget>[

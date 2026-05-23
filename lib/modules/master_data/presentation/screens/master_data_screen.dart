@@ -13,15 +13,10 @@ class MasterDataScreen extends StatelessWidget {
       length: 4,
       child: Scaffold(
         body: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(
-                'Master Data Management',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 8),
               const TabBar(
                 isScrollable: true,
                 tabs: <Tab>[

@@ -203,7 +203,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
             isLoading: _isSubmitting,
             label: 'Saving purchase...',
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               child: Column(
                 children: <Widget>[
                   _buildTopBar(formState, suppliersAsync),
@@ -211,51 +211,72 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                   _buildProductSearch(formState, productsAsync),
                   const SizedBox(height: 8),
                   Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Expanded(
-                          flex: 3,
-                          child: Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(8),
-                              child: PurchaseItemsTable(
-                                items: formState.items,
-                                onRemoveItem: (index) {
-                                  ref
-                                      .read(purchaseFormStateProvider.notifier)
-                                      .removeItem(index);
-                                },
-                                onUpdateQuantity: (index, qty) {
-                                  ref
-                                      .read(purchaseFormStateProvider.notifier)
-                                      .updateQuantity(
-                                          index: index, quantity: qty);
-                                },
-                                onUpdateUnitCost: (index, cost) {
-                                  ref
-                                      .read(purchaseFormStateProvider.notifier)
-                                      .updateUnitCost(index: index, cost: cost);
-                                },
-                                onAddImeiEntries: _handleAddImeiEntries,
-                                onRemoveImeiEntry: (itemIdx, imeiIdx) {
-                                  ref
-                                      .read(purchaseFormStateProvider.notifier)
-                                      .removeImeiEntry(
-                                        itemIndex: itemIdx,
-                                        imeiIndex: imeiIdx,
-                                      );
-                                },
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final rightPanelWidth = constraints.maxWidth >= 1500
+                            ? 360.0
+                            : constraints.maxWidth >= 1200
+                                ? 320.0
+                                : 300.0;
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Expanded(
+                              child: Card(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8),
+                                  child: PurchaseItemsTable(
+                                    items: formState.items,
+                                    onRemoveItem: (index) {
+                                      ref
+                                          .read(
+                                            purchaseFormStateProvider.notifier,
+                                          )
+                                          .removeItem(index);
+                                    },
+                                    onUpdateQuantity: (index, qty) {
+                                      ref
+                                          .read(
+                                            purchaseFormStateProvider.notifier,
+                                          )
+                                          .updateQuantity(
+                                            index: index,
+                                            quantity: qty,
+                                          );
+                                    },
+                                    onUpdateUnitCost: (index, cost) {
+                                      ref
+                                          .read(
+                                            purchaseFormStateProvider.notifier,
+                                          )
+                                          .updateUnitCost(
+                                            index: index,
+                                            cost: cost,
+                                          );
+                                    },
+                                    onAddImeiEntries: _handleAddImeiEntries,
+                                    onRemoveImeiEntry: (itemIdx, imeiIdx) {
+                                      ref
+                                          .read(
+                                            purchaseFormStateProvider.notifier,
+                                          )
+                                          .removeImeiEntry(
+                                            itemIndex: itemIdx,
+                                            imeiIndex: imeiIdx,
+                                          );
+                                    },
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        SizedBox(
-                          width: 280,
-                          child: _buildRightPanel(formState, totals),
-                        ),
-                      ],
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              width: rightPanelWidth,
+                              child: _buildRightPanel(formState, totals),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                   if (formState.errorMessage != null)
@@ -304,11 +325,8 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
           width: 220,
           child: TextField(
             controller: _invoiceController,
-            decoration: const InputDecoration(
-              isDense: true,
-              border: OutlineInputBorder(),
-              labelText: 'Invoice Number (optional)',
-            ),
+            decoration:
+                appDesktopInputDecoration(labelText: 'Invoice Number (optional)'),
             onChanged: (v) {
               ref
                   .read(purchaseFormStateProvider.notifier)
@@ -349,11 +367,9 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
         TextField(
           controller: _productSearchController,
           focusNode: _productSearchFocus,
-          decoration: const InputDecoration(
-            isDense: true,
-            border: OutlineInputBorder(),
+          decoration: appDesktopInputDecoration(
             labelText: 'Search products to add',
-            prefixIcon: Icon(Icons.search),
+            prefixIcon: const Icon(Icons.search),
           ),
           onChanged: (value) {
             ref
@@ -363,23 +379,32 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
         ),
         const SizedBox(height: 4),
         SizedBox(
-          height: 130,
+          height: 156,
           child: Card(
             child: productsAsync.when(
               data: (products) {
                 if (products.isEmpty) {
                   return const Center(child: Text('No products found'));
                 }
-                return ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: products.length,
-                  itemBuilder: (context, index) {
-                    final product = products[index];
-                    return SizedBox(
-                      width: 240,
-                      child: Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: OutlinedButton(
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    final crossAxisCount =
+                        constraints.maxWidth >= 900 ? 2 : 1;
+                    return GridView.builder(
+                      padding: const EdgeInsets.all(8),
+                      scrollDirection: Axis.horizontal,
+                      gridDelegate:
+                          SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                        mainAxisExtent:
+                            constraints.maxWidth >= 1400 ? 220 : 240,
+                      ),
+                      itemCount: products.length,
+                      itemBuilder: (context, index) {
+                        final product = products[index];
+                        return OutlinedButton(
                           onPressed: () => _handleAddProduct(product),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -398,14 +423,14 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                               ),
                               Text(
                                 product.hasImei
-                                    ? 'Serialized (IMEI)'
+                                    ? 'Serialized • IMEI'
                                     : 'Qty-based',
                                 style: const TextStyle(fontSize: 11),
                               ),
                             ],
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     );
                   },
                 );
@@ -424,8 +449,10 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     PurchaseFormState formState,
     ({double subtotal, double total}) totals,
   ) {
-    return ListView(
-      children: <Widget>[
+    return Scrollbar(
+      thumbVisibility: true,
+      child: ListView(
+        children: <Widget>[
         Card(
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -444,11 +471,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                 const SizedBox(height: 8),
                 TextField(
                   controller: _discountController,
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                    labelText: 'Discount',
-                  ),
+                  decoration: appDesktopInputDecoration(labelText: 'Discount'),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   onChanged: (v) {
@@ -461,11 +484,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                 const SizedBox(height: 8),
                 TextField(
                   controller: _taxController,
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                    labelText: 'Tax',
-                  ),
+                  decoration: appDesktopInputDecoration(labelText: 'Tax'),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   onChanged: (v) {
@@ -482,11 +501,8 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                 const Divider(),
                 TextField(
                   controller: _paidController,
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                    labelText: 'Paid Amount',
-                  ),
+                  decoration:
+                      appDesktopInputDecoration(labelText: 'Paid Amount'),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   onChanged: (v) {
@@ -513,8 +529,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
               controller: _notesController,
               maxLines: 3,
               maxLength: NotesSafety.maxLength,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
+              decoration: appDesktopInputDecoration(
                 labelText: 'Notes (optional)',
               ),
               onChanged: (v) {
@@ -540,7 +555,8 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
             minimumSize: const Size(double.infinity, 48),
           ),
         ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -670,9 +686,7 @@ class _SupplierSearchDropdownState extends State<_SupplierSearchDropdown> {
           Expanded(
             child: TextField(
               controller: widget.searchController,
-              decoration: InputDecoration(
-                isDense: true,
-                border: const OutlineInputBorder(),
+              decoration: appDesktopInputDecoration(
                 labelText: selected != null
                     ? 'Supplier: ${selected.name}'
                     : 'Search supplier (optional)',

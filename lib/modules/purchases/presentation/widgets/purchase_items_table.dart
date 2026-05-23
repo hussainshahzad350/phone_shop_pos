@@ -31,20 +31,23 @@ class PurchaseItemsTable extends StatelessWidget {
       );
     }
 
-    return ListView.builder(
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return _PurchaseItemRow(
-          item: item,
-          itemIndex: index,
-          onRemove: () => onRemoveItem(index),
-          onUpdateQuantity: (qty) => onUpdateQuantity(index, qty),
-          onUpdateUnitCost: (cost) => onUpdateUnitCost(index, cost),
-          onAddImeiEntries: () => onAddImeiEntries(index),
-          onRemoveImeiEntry: (imeiIdx) => onRemoveImeiEntry(index, imeiIdx),
-        );
-      },
+    return Scrollbar(
+      thumbVisibility: true,
+      child: ListView.builder(
+        itemCount: items.length,
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return _PurchaseItemRow(
+            item: item,
+            itemIndex: index,
+            onRemove: () => onRemoveItem(index),
+            onUpdateQuantity: (qty) => onUpdateQuantity(index, qty),
+            onUpdateUnitCost: (cost) => onUpdateUnitCost(index, cost),
+            onAddImeiEntries: () => onAddImeiEntries(index),
+            onRemoveImeiEntry: (imeiIdx) => onRemoveImeiEntry(index, imeiIdx),
+          );
+        },
+      ),
     );
   }
 }

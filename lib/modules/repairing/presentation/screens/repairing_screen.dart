@@ -29,21 +29,17 @@ class RepairingScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       body: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: <Widget>[
-                Text(
-                  'Repairing',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const Spacer(),
-                IconButton(
+                OutlinedButton.icon(
                   onPressed: () => _refreshAll(ref),
-                  tooltip: 'Refresh',
                   icon: const Icon(Icons.refresh),
+                  label: const Text('Refresh'),
                 ),
               ],
             ),

@@ -186,14 +186,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         isLoading: _isProcessing,
         label: 'Processing...',
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(10),
           child: ListView(
             children: <Widget>[
               Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: <Widget>[
-                  Text('Settings',
-                      style: Theme.of(context).textTheme.headlineSmall),
-                  const Spacer(),
                   OutlinedButton.icon(
                     onPressed: _showAboutDialog,
                     icon: const Icon(Icons.info_outline),

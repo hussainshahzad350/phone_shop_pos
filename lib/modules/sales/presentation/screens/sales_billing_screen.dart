@@ -394,7 +394,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
             isLoading: _isCompleting,
             label: 'Completing sale...',
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               child: Column(
                 children: <Widget>[
                   FocusTraversalOrder(
@@ -412,19 +412,29 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                   ),
                   const SizedBox(height: 8),
                   SizedBox(
-                    height: 140,
+                    height: 156,
                     child: Card(
                       child: productsAsync.when(
-                        data: (products) => ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: products.length,
-                          itemBuilder: (context, index) {
-                            final product = products[index];
-                            return SizedBox(
-                              width: 260,
-                              child: Padding(
-                                padding: const EdgeInsets.all(8),
-                                child: OutlinedButton(
+                        data: (products) => LayoutBuilder(
+                          builder: (context, constraints) {
+                            final crossAxisCount =
+                                constraints.maxWidth >= 900 ? 2 : 1;
+                            final mainAxisExtent =
+                                constraints.maxWidth >= 1400 ? 220.0 : 240.0;
+                            return GridView.builder(
+                              padding: const EdgeInsets.all(8),
+                              scrollDirection: Axis.horizontal,
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                crossAxisSpacing: 8,
+                                mainAxisSpacing: 8,
+                                mainAxisExtent: mainAxisExtent,
+                              ),
+                              itemCount: products.length,
+                              itemBuilder: (context, index) {
+                                final product = products[index];
+                                return OutlinedButton(
                                   onPressed: () => _handleAddProduct(product),
                                   child: Column(
                                     crossAxisAlignment:
@@ -445,13 +455,13 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                                       const SizedBox(height: 4),
                                       Text(
                                         product.hasImei
-                                            ? 'Serialized (IMEI required)'
+                                            ? 'Serialized • IMEI required'
                                             : 'Quantity product',
                                       ),
                                     ],
                                   ),
-                                ),
-                              ),
+                                );
+                              },
                             );
                           },
                         ),
@@ -476,173 +486,196 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                   ),
                   const SizedBox(height: 8),
                   Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Expanded(
-                          flex: 3,
-                          child: Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(8),
-                              child: CartTableWidget(
-                                items: cartItems,
-                                selectedIndex: _selectedCartIndex,
-                                onSelectRow: (index) {
-                                  setState(() {
-                                    _selectedCartIndex = index;
-                                  });
-                                },
-                                onIncreaseQty: (index) {
-                                  final item = cartItems[index];
-                                  if (item.hasImei) {
-                                    return;
-                                  }
-                                  ref
-                                      .read(cartStateProvider.notifier)
-                                      .updateQty(
-                                        index: index,
-                                        quantity: item.quantity + 1,
-                                      );
-                                },
-                                onDecreaseQty: (index) {
-                                  final item = cartItems[index];
-                                  if (item.hasImei || item.quantity <= 1) {
-                                    return;
-                                  }
-                                  ref
-                                      .read(cartStateProvider.notifier)
-                                      .updateQty(
-                                        index: index,
-                                        quantity: item.quantity - 1,
-                                      );
-                                },
-                                onRemove: (index) {
-                                  ref
-                                      .read(cartStateProvider.notifier)
-                                      .removeFromCart(
-                                        index,
-                                      );
-                                },
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final leftFlex = constraints.maxWidth >= 1480 ? 7 : 6;
+                        final rightFlex = constraints.maxWidth >= 1480 ? 4 : 5;
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Expanded(
+                              flex: leftFlex,
+                              child: Card(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8),
+                                  child: CartTableWidget(
+                                    items: cartItems,
+                                    selectedIndex: _selectedCartIndex,
+                                    onSelectRow: (index) {
+                                      setState(() {
+                                        _selectedCartIndex = index;
+                                      });
+                                    },
+                                    onIncreaseQty: (index) {
+                                      final item = cartItems[index];
+                                      if (item.hasImei) {
+                                        return;
+                                      }
+                                      ref
+                                          .read(cartStateProvider.notifier)
+                                          .updateQty(
+                                            index: index,
+                                            quantity: item.quantity + 1,
+                                          );
+                                    },
+                                    onDecreaseQty: (index) {
+                                      final item = cartItems[index];
+                                      if (item.hasImei || item.quantity <= 1) {
+                                        return;
+                                      }
+                                      ref
+                                          .read(cartStateProvider.notifier)
+                                          .updateQty(
+                                            index: index,
+                                            quantity: item.quantity - 1,
+                                          );
+                                    },
+                                    onRemove: (index) {
+                                      ref
+                                          .read(cartStateProvider.notifier)
+                                          .removeFromCart(
+                                            index,
+                                          );
+                                    },
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          flex: 2,
-                          child: ListView(
-                            children: <Widget>[
-                              FocusTraversalOrder(
-                                order: const NumericFocusOrder(2),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: rightFlex,
+                              child: Scrollbar(
+                                thumbVisibility: true,
+                                child: ListView(
                                   children: <Widget>[
-                                    CustomerSelectorWidget(
-                                      customers: customersAsync.value ??
-                                          const <CustomerOptionEntity>[],
-                                      selectedCustomerId:
-                                          billing.selectedCustomerId,
-                                      onChanged: (value) {
-                                        ref
-                                            .read(billingStateProvider.notifier)
-                                            .setSelectedCustomerId(value);
-                                      },
-                                    ),
-                                    if (requiresRegisteredCustomerForCredit)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 8),
-                                        child: Text(
-                                          'Registered customer is required for credit (udhar) sale.',
-                                          style: TextStyle(
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.error,
+                                    FocusTraversalOrder(
+                                      order: const NumericFocusOrder(2),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: <Widget>[
+                                          CustomerSelectorWidget(
+                                            customers: customersAsync.value ??
+                                                const <CustomerOptionEntity>[],
+                                            selectedCustomerId:
+                                                billing.selectedCustomerId,
+                                            onChanged: (value) {
+                                              ref
+                                                  .read(
+                                                    billingStateProvider
+                                                        .notifier,
+                                                  )
+                                                  .setSelectedCustomerId(value);
+                                            },
                                           ),
-                                        ),
+                                          if (requiresRegisteredCustomerForCredit)
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.only(top: 8),
+                                              child: Text(
+                                                'Registered customer is required for credit (udhar) sale.',
+                                                style: TextStyle(
+                                                  color: Theme.of(
+                                                    context,
+                                                  ).colorScheme.error,
+                                                ),
+                                              ),
+                                            ),
+                                          if (customersAsync.isLoading) ...<Widget>[
+                                            const SizedBox(height: 6),
+                                            const LinearProgressIndicator(
+                                              minHeight: 2,
+                                            ),
+                                          ],
+                                          if (customersAsync.hasError) ...<Widget>[
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              customersAsync.error is AppError
+                                                  ? (customersAsync.error
+                                                          as AppError)
+                                                      .message
+                                                  : 'Failed to load customers.',
+                                            ),
+                                            const SizedBox(height: 8),
+                                            OutlinedButton.icon(
+                                              onPressed: _refreshSales,
+                                              icon: const Icon(Icons.refresh),
+                                              label: const Text('Retry'),
+                                            ),
+                                          ],
+                                        ],
                                       ),
-                                    if (customersAsync.isLoading) ...<Widget>[
-                                      const SizedBox(height: 6),
-                                      const LinearProgressIndicator(
-                                          minHeight: 2),
-                                    ],
-                                    if (customersAsync.hasError) ...<Widget>[
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        customersAsync.error is AppError
-                                            ? (customersAsync.error as AppError)
-                                                .message
-                                            : 'Failed to load customers.',
+                                    ),
+                                    const SizedBox(height: 8),
+                                    FocusTraversalOrder(
+                                      order: const NumericFocusOrder(3),
+                                      child: TotalsPanelWidget(
+                                        totals: totals,
+                                        enteredPaidAmount: billing.paidAmount,
+                                        onDiscountChanged: (value) {
+                                          ref
+                                              .read(
+                                                billingStateProvider.notifier,
+                                              )
+                                              .setDiscount(value);
+                                        },
+                                        onTaxChanged: (value) {
+                                          ref
+                                              .read(
+                                                billingStateProvider.notifier,
+                                              )
+                                              .setTax(value);
+                                        },
                                       ),
-                                      const SizedBox(height: 8),
-                                      OutlinedButton.icon(
-                                        onPressed: _refreshSales,
-                                        icon: const Icon(Icons.refresh),
-                                        label: const Text('Retry'),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    FocusTraversalOrder(
+                                      order: const NumericFocusOrder(4),
+                                      child: PaymentSectionWidget(
+                                        paymentMethod: billing.paymentMethod,
+                                        paidAmount: billing.paidAmount,
+                                        notes: billing.notes,
+                                        paymentMethodFocusNode:
+                                            _paymentMethodFocus,
+                                        paidAmountFocusNode: _paidAmountFocus,
+                                        notesFocusNode: _notesFocus,
+                                        onPaymentMethodChanged: (value) {
+                                          ref
+                                              .read(
+                                                billingStateProvider.notifier,
+                                              )
+                                              .setPaymentMethod(value);
+                                        },
+                                        onPaidAmountChanged: (value) {
+                                          ref
+                                              .read(
+                                                billingStateProvider.notifier,
+                                              )
+                                              .setPaidAmount(value);
+                                        },
+                                        onNotesChanged: (value) {
+                                          ref
+                                              .read(
+                                                billingStateProvider.notifier,
+                                              )
+                                              .setNotes(value);
+                                        },
+                                        onPaidAmountSubmitted: _completeSale,
+                                        onCompleteSale: _completeSale,
+                                        isProcessing: _isCompleting,
+                                        canCompleteSale:
+                                            !requiresRegisteredCustomerForCredit,
+                                        disabledReason:
+                                            'Credit sale requires a registered customer.',
                                       ),
-                                    ],
+                                    ),
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              FocusTraversalOrder(
-                                order: const NumericFocusOrder(3),
-                                child: TotalsPanelWidget(
-                                  totals: totals,
-                                  enteredPaidAmount: billing.paidAmount,
-                                  onDiscountChanged: (value) {
-                                    ref
-                                        .read(billingStateProvider.notifier)
-                                        .setDiscount(value);
-                                  },
-                                  onTaxChanged: (value) {
-                                    ref
-                                        .read(billingStateProvider.notifier)
-                                        .setTax(
-                                          value,
-                                        );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              FocusTraversalOrder(
-                                order: const NumericFocusOrder(4),
-                                child: PaymentSectionWidget(
-                                  paymentMethod: billing.paymentMethod,
-                                  paidAmount: billing.paidAmount,
-                                  notes: billing.notes,
-                                  paymentMethodFocusNode: _paymentMethodFocus,
-                                  paidAmountFocusNode: _paidAmountFocus,
-                                  notesFocusNode: _notesFocus,
-                                  onPaymentMethodChanged: (value) {
-                                    ref
-                                        .read(billingStateProvider.notifier)
-                                        .setPaymentMethod(value);
-                                  },
-                                  onPaidAmountChanged: (value) {
-                                    ref
-                                        .read(billingStateProvider.notifier)
-                                        .setPaidAmount(value);
-                                  },
-                                  onNotesChanged: (value) {
-                                    ref
-                                        .read(billingStateProvider.notifier)
-                                        .setNotes(
-                                          value,
-                                        );
-                                  },
-                                  onPaidAmountSubmitted: _completeSale,
-                                  onCompleteSale: _completeSale,
-                                  isProcessing: _isCompleting,
-                                  canCompleteSale:
-                                      !requiresRegisteredCustomerForCredit,
-                                  disabledReason:
-                                      'Credit sale requires a registered customer.',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ],

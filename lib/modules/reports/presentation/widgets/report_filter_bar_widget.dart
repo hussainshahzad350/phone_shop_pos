@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/report_filter_entity.dart';
 
 class ReportFilterBarWidget extends StatelessWidget {
@@ -42,122 +43,136 @@ class ReportFilterBarWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            OutlinedButton.icon(
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  firstDate: DateTime(DateTime.now().year - 5),
-                  lastDate: DateTime(DateTime.now().year + 1),
-                  initialDate: filter.startDate ?? DateTime.now(),
-                );
-                onStartDate(picked);
-              },
-              icon: const Icon(Icons.calendar_today),
-              label: Text(
-                filter.startDate == null
-                    ? 'Start Date'
-                    : _displayDate(filter.startDate!),
-              ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime(DateTime.now().year - 5),
+                      lastDate: DateTime(DateTime.now().year + 1),
+                      initialDate: filter.startDate ?? DateTime.now(),
+                    );
+                    onStartDate(picked);
+                  },
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text(
+                    filter.startDate == null
+                        ? 'Start Date'
+                        : _displayDate(filter.startDate!),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime(DateTime.now().year - 5),
+                      lastDate: DateTime(DateTime.now().year + 1),
+                      initialDate: filter.endDate ?? DateTime.now(),
+                    );
+                    onEndDate(picked);
+                  },
+                  icon: const Icon(Icons.event),
+                  label: Text(
+                    filter.endDate == null
+                        ? 'End Date'
+                        : _displayDate(filter.endDate!),
+                  ),
+                ),
+                _IdDropdown(
+                  label:
+                      customerOptionsLoading ? 'Customer (loading...)' : 'Customer',
+                  value: filter.customerId,
+                  items: customerOptions,
+                  onChanged: onCustomer,
+                ),
+                _IdDropdown(
+                  label:
+                      productOptionsLoading ? 'Product (loading...)' : 'Product',
+                  value: filter.productModelId,
+                  items: productOptions,
+                  onChanged: onProduct,
+                ),
+                _SimpleDropdown(
+                  label: 'Status',
+                  value: filter.status,
+                  items: const <String>['paid', 'pending'],
+                  onChanged: onStatus,
+                ),
+                _SimpleDropdown(
+                  label: 'Payment',
+                  value: filter.paymentMethod,
+                  items: PaymentMethod.values,
+                  onChanged: onPaymentMethod,
+                  labelBuilder: (item) => PaymentMethod.labels[item] ?? item,
+                ),
+                OutlinedButton.icon(
+                  onPressed: onClear,
+                  icon: const Icon(Icons.clear_all),
+                  label: const Text('Clear Filters'),
+                ),
+              ],
             ),
-            OutlinedButton.icon(
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  firstDate: DateTime(DateTime.now().year - 5),
-                  lastDate: DateTime(DateTime.now().year + 1),
-                  initialDate: filter.endDate ?? DateTime.now(),
-                );
-                onEndDate(picked);
-              },
-              icon: const Icon(Icons.event),
-              label: Text(
-                filter.endDate == null ? 'End Date' : _displayDate(filter.endDate!),
-              ),
-            ),
-            _IdDropdown(
-              label: customerOptionsLoading ? 'Customer (loading...)' : 'Customer',
-              value: filter.customerId,
-              items: customerOptions,
-              onChanged: onCustomer,
-            ),
-            _IdDropdown(
-              label: productOptionsLoading ? 'Product (loading...)' : 'Product',
-              value: filter.productModelId,
-              items: productOptions,
-              onChanged: onProduct,
-            ),
-            _SimpleDropdown(
-              label: 'Status',
-              value: filter.status,
-              items: const <String>['paid', 'pending'],
-              onChanged: onStatus,
-            ),
-            _SimpleDropdown(
-              label: 'Payment',
-              value: filter.paymentMethod,
-              items: PaymentMethod.values,
-              onChanged: onPaymentMethod,
-              labelBuilder: (item) => PaymentMethod.labels[item] ?? item,
-            ),
-            TextButton.icon(
-              onPressed: onClear,
-              icon: const Icon(Icons.clear_all),
-              label: const Text('Clear Filters'),
-            ),
+            if (customerOptionsError != null ||
+                productOptionsError != null) ...<Widget>[
+              const SizedBox(height: 8),
+              if (customerOptionsError != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          customerOptionsError!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: onRetryCustomerOptions,
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              if (productOptionsError != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          productOptionsError!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: onRetryProductOptions,
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ],
         ),
-        if (customerOptionsError != null || productOptionsError != null) ...<Widget>[
-          const SizedBox(height: 8),
-          if (customerOptionsError != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      customerOptionsError!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton.icon(
-                    onPressed: onRetryCustomerOptions,
-                    icon: const Icon(Icons.refresh, size: 16),
-                    label: const Text('Retry'),
-                  ),
-                ],
-              ),
-            ),
-          if (productOptionsError != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      productOptionsError!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton.icon(
-                    onPressed: onRetryProductOptions,
-                    icon: const Icon(Icons.refresh, size: 16),
-                    label: const Text('Retry'),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ],
+      ),
     );
   }
 
@@ -185,19 +200,22 @@ class _SimpleDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButton<String?>(
-      value: value,
-      hint: Text(label),
-      onChanged: onChanged,
-      items: <DropdownMenuItem<String?>>[
-        const DropdownMenuItem<String?>(value: null, child: Text('All')),
-        ...items.map(
-          (item) => DropdownMenuItem<String?>(
-            value: item,
-            child: Text(labelBuilder?.call(item) ?? item),
+    return SizedBox(
+      width: 180,
+      child: DropdownButtonFormField<String?>(
+        value: value,
+        decoration: appDesktopInputDecoration(labelText: label),
+        onChanged: onChanged,
+        items: <DropdownMenuItem<String?>>[
+          const DropdownMenuItem<String?>(value: null, child: Text('All')),
+          ...items.map(
+            (item) => DropdownMenuItem<String?>(
+              value: item,
+              child: Text(labelBuilder?.call(item) ?? item),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -217,19 +235,22 @@ class _IdDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButton<String?>(
-      value: value,
-      hint: Text(label),
-      onChanged: onChanged,
-      items: <DropdownMenuItem<String?>>[
-        const DropdownMenuItem<String?>(value: null, child: Text('All')),
-        ...items.map(
-          (item) => DropdownMenuItem<String?>(
-            value: item.key,
-            child: SizedBox(width: 180, child: Text(item.value)),
+    return SizedBox(
+      width: 220,
+      child: DropdownButtonFormField<String?>(
+        value: value,
+        decoration: appDesktopInputDecoration(labelText: label),
+        onChanged: onChanged,
+        items: <DropdownMenuItem<String?>>[
+          const DropdownMenuItem<String?>(value: null, child: Text('All')),
+          ...items.map(
+            (item) => DropdownMenuItem<String?>(
+              value: item.key,
+              child: SizedBox(width: 180, child: Text(item.value)),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
