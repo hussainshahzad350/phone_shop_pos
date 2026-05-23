@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:phone_shop_pos/core/widgets/desktop_navigation_shell.dart';
+import 'package:phone_shop_pos/modules/auth/presentation/screens/login_screen.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/screens/welcome_screen.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/screens/inventory_screen.dart';
@@ -36,6 +37,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/welcome',
         builder: (context, state) => const WelcomeScreen(),
+      ),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) => DesktopNavigationShell(
