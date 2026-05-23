@@ -7,6 +7,7 @@ import 'package:phone_shop_pos/modules/inventory/data/repositories/sqlite_produc
 import 'package:phone_shop_pos/modules/inventory/domain/repositories/brand_repository.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/repositories/inventory_repository.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/repositories/product_repository.dart';
+import 'package:phone_shop_pos/modules/inventory/services/inventory_handler.dart';
 import 'package:phone_shop_pos/modules/inventory/services/inventory_service.dart';
 
 final brandRepositoryProvider = FutureProvider<BrandRepository>((ref) async {
@@ -30,3 +31,7 @@ final inventoryServiceProvider = FutureProvider<InventoryService>((ref) async {
   final repository = await ref.watch(inventoryRepositoryProvider.future);
   return InventoryService(repository: repository);
 });
+
+final inventoryScannerHandlerProvider = Provider<InventoryScannerHandler>(
+  (ref) => InventoryScannerHandler(ref: ref),
+);
