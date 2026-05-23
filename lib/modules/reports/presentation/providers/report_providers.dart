@@ -7,6 +7,8 @@ import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/database/database_provider.dart';
 import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
+import 'package:phone_shop_pos/modules/repairing/data/repositories/sqlite_repairing_repository.dart';
+import 'package:phone_shop_pos/modules/repairing/domain/entities/repair_analytics_entity.dart';
 import 'package:phone_shop_pos/modules/reports/data/repositories/sqlite_expense_repository.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/expense_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
@@ -38,6 +40,7 @@ enum ReportsTab {
   supplierLedger,
   cashLedger,
   expenses,
+  repairAnalytics,
 }
 
 class ReportFilterNotifier extends StateNotifier<ReportFilterEntity> {
@@ -450,6 +453,25 @@ final stockAdjustmentHistoryProvider =
     FutureProvider<List<StockAdjustmentHistoryRowEntity>>((ref) async {
   final service = await ref.watch(operationsWorkflowServiceProvider.future);
   final result = await service.getStockAdjustments();
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
+
+final reportRepairAnalyticsStartDateProvider =
+    StateProvider<DateTime?>((ref) => null);
+final reportRepairAnalyticsEndDateProvider =
+    StateProvider<DateTime?>((ref) => null);
+
+final reportRepairAnalyticsProvider =
+    FutureProvider<RepairAnalyticsEntity>((ref) async {
+  final appDatabase = await ref.watch(appDatabaseProvider.future);
+  final repository = SqliteRepairingRepository(appDatabase: appDatabase);
+  final result = await repository.getRepairAnalytics(
+    startDate: ref.watch(reportRepairAnalyticsStartDateProvider),
+    endDate: ref.watch(reportRepairAnalyticsEndDateProvider),
+  );
   return result.fold(
     onSuccess: (value) => value,
     onFailure: (error) => throw error,

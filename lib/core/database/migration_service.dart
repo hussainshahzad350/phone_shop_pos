@@ -76,6 +76,10 @@ class MigrationService {
       await _applyMigrationV17(database);
       return;
     }
+    if (version == 18) {
+      await _applyMigrationV18(database);
+      return;
+    }
     final statements = _migrationStatements[version];
     if (statements == null) {
       return;
@@ -776,6 +780,51 @@ class MigrationService {
     }
   }
 
+  Future<void> _applyMigrationV18(Database database) async {
+    await database.execute(
+      '''
+      CREATE TABLE IF NOT EXISTS ${TableNames.repairJobs} (
+        id TEXT PRIMARY KEY,
+        created_at TEXT NOT NULL,
+        updated_at TEXT,
+        repair_date TEXT NOT NULL,
+        customer_name TEXT,
+        customer_phone TEXT,
+        phone_model TEXT NOT NULL,
+        imei TEXT,
+        problem_description TEXT NOT NULL,
+        accessories TEXT,
+        technician_name TEXT,
+        estimated_cost REAL,
+        advance_received REAL NOT NULL DEFAULT 0,
+        final_cost REAL,
+        repair_expense REAL NOT NULL DEFAULT 0,
+        status TEXT NOT NULL CHECK(
+          status IN (
+            'received',
+            'diagnosing',
+            'repairing',
+            'ready',
+            'delivered',
+            'cancelled'
+          )
+        ),
+        notes TEXT,
+        is_deleted INTEGER NOT NULL DEFAULT 0
+      );
+      ''',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_repair_jobs_date ON ${TableNames.repairJobs}(repair_date);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_repair_jobs_status ON ${TableNames.repairJobs}(status);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_repair_jobs_deleted ON ${TableNames.repairJobs}(is_deleted);',
+    );
+  }
+
   Future<void> _dropTableBestEffort(Database database, String tableName) async {
     try {
       await database.execute('DROP TABLE $tableName;');
@@ -1199,7 +1248,14 @@ class MigrationService {
     16: <String>[
       'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN seller_phone TEXT;',
     ],
-    // v17 is handled by dedicated _applyMigrationV17 above.
+    // v17 and v18 are handled by dedicated methods above.
+    // The empty lists are kept here so that all version numbers are represented
+    // in the map for documentation purposes (consistent with v7 and v9).
     17: <String>[],
+    18: <String>[],
+    // v19: add issue_type column to repair_jobs for structured issue categorisation.
+    19: <String>[
+      'ALTER TABLE ${TableNames.repairJobs} ADD COLUMN issue_type TEXT;',
+    ],
   };
 }

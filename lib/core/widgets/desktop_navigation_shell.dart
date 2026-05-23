@@ -175,6 +175,11 @@ const List<_NavItem> _desktopNavItems = <_NavItem>[
     route: '/master-data',
   ),
   _NavItem(
+    label: 'Repairing',
+    icon: Icons.build_outlined,
+    route: '/repairing',
+  ),
+  _NavItem(
     label: 'Reports',
     icon: Icons.bar_chart_outlined,
     route: '/reports',

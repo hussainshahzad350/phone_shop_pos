@@ -19,6 +19,8 @@ class TableNames {
   static const String saleReturns = 'sale_returns';
   static const String stockAdjustments = 'stock_adjustments';
 
+  static const String repairJobs = 'repair_jobs';
+
   /// Sequence table used for atomic, collision-free invoice number generation.
   static const String invoiceSequences = 'invoice_sequences';
 }
