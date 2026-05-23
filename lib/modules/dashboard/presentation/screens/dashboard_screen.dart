@@ -9,6 +9,11 @@ import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_recen
 import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/dashboard_kpi_card_widget.dart';
 
+const double _dashboardNarrowWidthBreakpoint = 1100;
+const double _dashboardCompactHeightThreshold = 820;
+const double _dashboardCompactPanelHeight = 340;
+const double _dashboardDefaultPanelHeight = 420;
+
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
@@ -41,8 +46,12 @@ class DashboardScreen extends ConsumerWidget {
         child: Scaffold(
           body: LayoutBuilder(
             builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 1100;
-              final panelHeight = constraints.maxHeight < 820 ? 340.0 : 420.0;
+              final isNarrow =
+                  constraints.maxWidth < _dashboardNarrowWidthBreakpoint;
+              final panelHeight =
+                  constraints.maxHeight < _dashboardCompactHeightThreshold
+                      ? _dashboardCompactPanelHeight
+                      : _dashboardDefaultPanelHeight;
               return ListView(
                 padding: const EdgeInsets.all(12),
                 children: <Widget>[
