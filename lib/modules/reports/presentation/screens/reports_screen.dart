@@ -114,6 +114,22 @@ class ReportsScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: ReportsTab.values
+                      .map(
+                        (item) => ChoiceChip(
+                          label: Text(_tabLabel(item)),
+                          selected: item == tab,
+                          onSelected: (_) => ref
+                              .read(selectedReportsTabProvider.notifier)
+                              .state = item,
+                        ),
+                      )
+                      .toList(growable: false),
+                ),
+                const SizedBox(height: 8),
                 if (_usesLegacyFilters(tab)) ...<Widget>[
                   ReportFilterBarWidget(
                     filter: filter,
@@ -150,22 +166,6 @@ class ReportsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                 ],
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: ReportsTab.values
-                      .map(
-                        (item) => ChoiceChip(
-                          label: Text(_tabLabel(item)),
-                          selected: item == tab,
-                          onSelected: (_) => ref
-                              .read(selectedReportsTabProvider.notifier)
-                              .state = item,
-                        ),
-                      )
-                      .toList(growable: false),
-                ),
-                const SizedBox(height: 8),
                 Expanded(
                   child: _ReportContent(tab: tab),
                 ),
@@ -939,7 +939,8 @@ class _SalesHistoryView extends ConsumerWidget {
                       DataColumn(label: Text('Paid')),
                       DataColumn(label: Text('Remaining')),
                       DataColumn(label: Text('Status')),
-                      DataColumn(label: Text('Actions')),
+                      DataColumn(label: Text('Details')),
+                      DataColumn(label: Text('Print')),
                     ],
                     rows: rows.map((row) {
                       return DataRow(
@@ -956,26 +957,24 @@ class _SalesHistoryView extends ConsumerWidget {
                               row.remainingBalance))),
                           DataCell(Text(row.isPaid ? 'Paid' : 'Pending')),
                           DataCell(
-                            Wrap(
-                              spacing: 4,
-                              children: <Widget>[
-                                OutlinedButton(
-                                  onPressed: () => _showInvoiceDialog(
-                                    context: context,
-                                    saleId: row.saleId,
-                                  ),
-                                  child: const Text('Open'),
-                                ),
-                                if (row.printJobId != null)
-                                  FilledButton.tonal(
+                            OutlinedButton(
+                              onPressed: () => _showInvoiceDialog(
+                                context: context,
+                                saleId: row.saleId,
+                              ),
+                              child: const Text('Open'),
+                            ),
+                          ),
+                          DataCell(
+                            row.printJobId == null
+                                ? const Text('-')
+                                : FilledButton.tonal(
                                     onPressed: () => _reprint(
                                       ref: ref,
                                       jobId: row.printJobId!,
                                     ),
                                     child: const Text('Reprint'),
                                   ),
-                              ],
-                            ),
                           ),
                         ],
                       );

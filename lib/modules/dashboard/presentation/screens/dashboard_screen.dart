@@ -39,83 +39,124 @@ class DashboardScreen extends ConsumerWidget {
           ),
         },
         child: Scaffold(
-          body: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Text(
-                      'Dashboard',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      onPressed: () => _refresh(ref),
-                      tooltip: 'Refresh (F5)',
-                      icon: const Icon(Icons.refresh),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                kpisAsync.when(
-                  data: (kpis) => _KpiGrid(kpis: kpis),
-                  loading: () => const SizedBox(
-                    height: 160,
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                  error: (_, __) => const SizedBox(
-                    height: 160,
-                    child: Center(
-                        child: Text('Failed to load dashboard metrics.')),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          body: LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 1100;
+              final panelHeight = constraints.maxHeight < 820 ? 340.0 : 420.0;
+              return ListView(
+                padding: const EdgeInsets.all(12),
+                children: <Widget>[
+                  Row(
                     children: <Widget>[
-                      Expanded(
-                        flex: 3,
-                        child: Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: recentSalesAsync.when(
-                              data: (rows) => _RecentSalesTable(rows: rows),
-                              loading: () => const Center(
-                                child: CircularProgressIndicator(),
-                              ),
-                              error: (_, __) => const Center(
-                                child: Text('Failed to load recent sales.'),
-                              ),
-                            ),
-                          ),
-                        ),
+                      Text(
+                        'Dashboard',
+                        style: Theme.of(context).textTheme.headlineSmall,
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 2,
-                        child: Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: lowStockAsync.when(
-                              data: (rows) => _LowStockPanel(rows: rows),
-                              loading: () => const Center(
-                                child: CircularProgressIndicator(),
-                              ),
-                              error: (_, __) => const Center(
-                                child: Text('Failed to load low stock data.'),
-                              ),
-                            ),
-                          ),
-                        ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: () => _refresh(ref),
+                        tooltip: 'Refresh (F5)',
+                        icon: const Icon(Icons.refresh),
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(height: 8),
+                  kpisAsync.when(
+                    data: (kpis) => _KpiGrid(kpis: kpis),
+                    loading: () => const SizedBox(
+                      height: 160,
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                    error: (_, __) => const SizedBox(
+                      height: 160,
+                      child: Center(
+                          child: Text('Failed to load dashboard metrics.')),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (isNarrow) ...<Widget>[
+                    SizedBox(
+                      height: panelHeight,
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: recentSalesAsync.when(
+                            data: (rows) => _RecentSalesTable(rows: rows),
+                            loading: () => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                            error: (_, __) => const Center(
+                              child: Text('Failed to load recent sales.'),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: panelHeight,
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: lowStockAsync.when(
+                            data: (rows) => _LowStockPanel(rows: rows),
+                            loading: () => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                            error: (_, __) => const Center(
+                              child: Text('Failed to load low stock data.'),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ] else
+                    SizedBox(
+                      height: panelHeight,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Expanded(
+                            flex: 3,
+                            child: Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: recentSalesAsync.when(
+                                  data: (rows) => _RecentSalesTable(rows: rows),
+                                  loading: () => const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                  error: (_, __) => const Center(
+                                    child: Text('Failed to load recent sales.'),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            flex: 2,
+                            child: Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: lowStockAsync.when(
+                                  data: (rows) => _LowStockPanel(rows: rows),
+                                  loading: () => const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                  error: (_, __) => const Center(
+                                    child: Text('Failed to load low stock data.'),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ),
       ),
