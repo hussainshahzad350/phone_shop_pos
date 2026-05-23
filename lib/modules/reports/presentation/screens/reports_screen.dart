@@ -957,22 +957,25 @@ class _SalesHistoryView extends ConsumerWidget {
                               row.remainingBalance))),
                           DataCell(Text(row.isPaid ? 'Paid' : 'Pending')),
                           DataCell(
-                            OutlinedButton(
+                            OutlinedButton.icon(
                               onPressed: () => _showInvoiceDialog(
                                 context: context,
                                 saleId: row.saleId,
                               ),
+                              icon: const Icon(Icons.open_in_new, size: 18),
                               child: const Text('Open'),
                             ),
                           ),
                           DataCell(
                             row.printJobId == null
                                 ? const Text('-')
-                                : FilledButton.tonal(
+                                : FilledButton.tonalIcon(
                                     onPressed: () => _reprint(
                                       ref: ref,
                                       jobId: row.printJobId!,
                                     ),
+                                    icon: const Icon(Icons.print_outlined,
+                                        size: 18),
                                     child: const Text('Reprint'),
                                   ),
                           ),
