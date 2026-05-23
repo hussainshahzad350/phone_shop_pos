@@ -124,13 +124,6 @@ class ScannerController extends StateNotifier<ScannerSessionState> {
         processedValue: payload.normalizedValue,
       ),
     );
-
-    if (result.resetSession) {
-      state = state.copyWith(
-        processedValues: const <String>{},
-        fastBillingActive: false,
-      );
-    }
   }
 
   void _emitFeedback(ScannerProcessFeedback feedback) {

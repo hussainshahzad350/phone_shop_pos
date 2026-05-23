@@ -63,9 +63,9 @@ class _GlobalScannerInputState extends ConsumerState<GlobalScannerInput>
 
   Future<void> _submit(String value) async {
     final normalized = value.trim();
-    _controller.clear();
-    _restoreFocus();
     if (normalized.isEmpty) {
+      _controller.clear();
+      _restoreFocus();
       return;
     }
     await ref.read(scannerControllerProvider.notifier).submitRawScan(value);
