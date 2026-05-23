@@ -136,7 +136,7 @@ class SalesScannerHandler implements ScannerModeHandler {
   }) {
     final lowerCode = code.toLowerCase();
     for (final product in products) {
-      if (product.barcode?.trim() == code ||
+      if (product.barcode?.trim().toLowerCase() == lowerCode ||
           product.sku?.trim().toLowerCase() == lowerCode) {
         return product;
       }
