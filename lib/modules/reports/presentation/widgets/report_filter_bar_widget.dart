@@ -118,7 +118,7 @@ class ReportFilterBarWidget extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: onClear,
                   icon: const Icon(Icons.clear_all),
-                  label: const Text('Clear'),
+                  label: const Text('Clear Filters'),
                 ),
               ],
             ),
