@@ -25,7 +25,7 @@ class _GlobalScannerInputState extends ConsumerState<GlobalScannerInput>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _focusTimer = Timer.periodic(const Duration(milliseconds: 250), (_) {
+    _focusTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
       _restoreFocus();
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => _restoreFocus());
