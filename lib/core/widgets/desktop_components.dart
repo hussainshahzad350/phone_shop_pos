@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 
 const int _kDefaultPaginateThreshold = 80;
 const double _kDesktopContentMaxWidth = 1760.0;
@@ -64,6 +65,8 @@ class AppDesktopScaffold extends StatelessWidget {
                     ),
                   ),
                 ),
+                const Divider(height: 1),
+                const _AppFooterBar(),
               ],
             ),
           ),
@@ -119,11 +122,21 @@ class AppTopBar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: <Widget>[
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Text(
+                  AppRuntimeConfig.appName,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
             ),
             const Spacer(),
             if (trailing != null) trailing!,
@@ -454,6 +467,33 @@ class _DialogCancelIntent extends Intent {
 
 class _DialogConfirmIntent extends Intent {
   const _DialogConfirmIntent();
+}
+
+class _AppFooterBar extends StatelessWidget {
+  const _AppFooterBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 34,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: <Widget>[
+            Text(
+              '${AppRuntimeConfig.appName} • ${AppRuntimeConfig.contactPhone}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const Spacer(),
+            Text(
+              'Developed by ${AppRuntimeConfig.developerName}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class AppStatusBadge extends StatelessWidget {

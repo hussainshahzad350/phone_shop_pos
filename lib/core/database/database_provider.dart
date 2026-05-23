@@ -7,6 +7,7 @@ import 'package:phone_shop_pos/core/database/app_database.dart';
 import 'package:phone_shop_pos/core/database/migration_service.dart';
 import 'package:phone_shop_pos/core/database/sqlite_service.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
+import 'package:phone_shop_pos/core/services/backup/database_backup_service.dart';
 import 'package:phone_shop_pos/core/services/startup/startup_health_service.dart';
 
 final databaseRecoveryEpochProvider = StateProvider<int>((ref) => 0);
@@ -36,6 +37,7 @@ final appDatabaseProvider = FutureProvider<AppDatabase>((ref) async {
   await appDatabase.initialize(
     seedDemoData: AppRuntimeConfig.enableDemoSeedData,
   );
+  await _runAutoBackupIfDue(appDatabase);
   ref.onDispose(appDatabase.close);
   return appDatabase;
 });
@@ -58,3 +60,27 @@ final startupHealthProvider = FutureProvider<StartupHealthStatus>((ref) async {
     backupDirectoryPath: backupDirectoryPath,
   );
 });
+
+Future<void> _runAutoBackupIfDue(AppDatabase appDatabase) async {
+  final intervalHours = AppRuntimeConfig.autoBackupIntervalHours;
+  if (intervalHours <= 0) {
+    return;
+  }
+
+  final backupService = DatabaseBackupService(appDatabase: appDatabase);
+  try {
+    final healthResult = await backupService.getDatabaseHealth();
+    final lastBackup = healthResult.asSuccess?.value.lastBackup;
+    final backupAge = lastBackup == null
+        ? null
+        : DateTime.now().difference(lastBackup.createdAt);
+    final shouldBackup = lastBackup == null ||
+        backupAge == null ||
+        backupAge >= Duration(hours: intervalHours);
+    if (shouldBackup) {
+      await backupService.createBackup();
+    }
+  } catch (_) {
+    // Ignore auto-backup failures so startup remains available for operators.
+  }
+}

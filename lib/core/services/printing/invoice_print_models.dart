@@ -1,4 +1,5 @@
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
+import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.dart';
 
@@ -33,7 +34,10 @@ class InvoicePrintDocument {
     this.customerLabel,
     this.notes,
     this.cashierName,
-    this.storeName = 'Phone Shop POS',
+    this.storeName = AppRuntimeConfig.appName,
+    this.storeContactPhone = AppRuntimeConfig.contactPhone,
+    this.storeContactEmail = AppRuntimeConfig.contactEmail,
+    this.storeContactAddress = AppRuntimeConfig.contactAddress,
   });
 
   final String saleId;
@@ -46,6 +50,9 @@ class InvoicePrintDocument {
   final String? notes;
   final String? cashierName;
   final String storeName;
+  final String storeContactPhone;
+  final String storeContactEmail;
+  final String storeContactAddress;
 
   Map<String, Object?> toMap() {
     return <String, Object?>{
@@ -73,6 +80,9 @@ class InvoicePrintDocument {
       'notes': notes,
       'cashierName': cashierName,
       'storeName': storeName,
+      'storeContactPhone': storeContactPhone,
+      'storeContactEmail': storeContactEmail,
+      'storeContactAddress': storeContactAddress,
     };
   }
 
@@ -108,7 +118,13 @@ class InvoicePrintDocument {
       customerLabel: map['customerLabel'] as String?,
       notes: map['notes'] as String?,
       cashierName: map['cashierName'] as String?,
-      storeName: map['storeName'] as String? ?? 'Phone Shop POS',
+      storeName: map['storeName'] as String? ?? AppRuntimeConfig.appName,
+      storeContactPhone:
+          map['storeContactPhone'] as String? ?? AppRuntimeConfig.contactPhone,
+      storeContactEmail:
+          map['storeContactEmail'] as String? ?? AppRuntimeConfig.contactEmail,
+      storeContactAddress: map['storeContactAddress'] as String? ??
+          AppRuntimeConfig.contactAddress,
     );
   }
 }

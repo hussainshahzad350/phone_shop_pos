@@ -1,0 +1,55 @@
+name: Bug Trend Control
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * 1'
+
+jobs:
+  trend-report:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: read
+    steps:
+      - name: Generate bug trend summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const now = new Date();
+            const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+            const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: 'all',
+              per_page: 100,
+            });
+
+            const bugs = issues.filter((issue) => !issue.pull_request && issue.labels.some((label) => String(label.name).toLowerCase() === 'bug'));
+            const openBugs = bugs.filter((issue) => issue.state === 'open');
+            const openedLast7 = bugs.filter((issue) => new Date(issue.created_at) >= sevenDaysAgo);
+            const closedLast7 = bugs.filter((issue) => issue.closed_at && new Date(issue.closed_at) >= sevenDaysAgo);
+            const openedLast30 = bugs.filter((issue) => new Date(issue.created_at) >= thirtyDaysAgo);
+            const closedLast30 = bugs.filter((issue) => issue.closed_at && new Date(issue.closed_at) >= thirtyDaysAgo);
+
+            core.summary
+              .addHeading('Bug Trend Control Report')
+              .addTable([
+                [{data: 'Metric', header: true}, {data: 'Value', header: true}],
+                ['Open bugs', String(openBugs.length)],
+                ['Opened (last 7 days)', String(openedLast7.length)],
+                ['Closed (last 7 days)', String(closedLast7.length)],
+                ['Opened (last 30 days)', String(openedLast30.length)],
+                ['Closed (last 30 days)', String(closedLast30.length)],
+              ])
+              .addHeading('Oldest open bugs')
+              .addList(
+                openBugs
+                  .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+                  .slice(0, 10)
+                  .map((issue) => `#${issue.number} - ${issue.title}`)
+              )
+              .write();

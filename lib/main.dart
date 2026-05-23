@@ -144,7 +144,7 @@ class _StartupLoadingScreen extends StatelessWidget {
           children: <Widget>[
             CircularProgressIndicator(),
             SizedBox(height: 12),
-            Text('Starting Phone Shop POS...'),
+            Text('Starting ${AppRuntimeConfig.appName}...'),
           ],
         ),
       ),
