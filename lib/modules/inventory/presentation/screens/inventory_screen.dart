@@ -351,7 +351,7 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
     return AlertDialog(
       title: const Text('Stock Adjustment'),
       content: SizedBox(
-        width: 980,
+        width: 860,
         height: 560,
         child: Column(
           mainAxisSize: MainAxisSize.min,

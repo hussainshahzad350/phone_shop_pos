@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 const int _kDefaultPaginateThreshold = 80;
+const double _kDesktopContentMaxWidth = 1440.0;
 
 class AppDesktopScaffold extends StatelessWidget {
   const AppDesktopScaffold({
@@ -28,9 +29,11 @@ class AppDesktopScaffold extends StatelessWidget {
                 topBar,
                 const Divider(height: 1),
                 Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 180),
-                    child: child,
+                  child: _DesktopContentArea(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 180),
+                      child: child,
+                    ),
                   ),
                 ),
               ],
@@ -315,6 +318,30 @@ class AppConfirmationDialog extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _DesktopContentArea extends StatelessWidget {
+  const _DesktopContentArea({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth <= _kDesktopContentMaxWidth) {
+          return child;
+        }
+        return Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: _kDesktopContentMaxWidth,
+            child: child,
+          ),
+        );
+      },
     );
   }
 }
