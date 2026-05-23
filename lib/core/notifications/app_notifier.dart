@@ -84,6 +84,7 @@ class AppNotifier {
     if (messenger == null) {
       return;
     }
+    final effectiveShowCloseIcon = showCloseIcon || action != null;
 
     final color = switch (type) {
       AppNotificationType.success => Colors.green.shade700,
@@ -101,7 +102,7 @@ class AppNotifier {
           behavior: SnackBarBehavior.floating,
           duration: duration,
           action: action,
-          showCloseIcon: showCloseIcon,
+          showCloseIcon: effectiveShowCloseIcon,
           closeIconColor: Colors.white,
         ),
       );
