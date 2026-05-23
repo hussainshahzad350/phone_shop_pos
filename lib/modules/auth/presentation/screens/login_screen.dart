@@ -16,7 +16,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
-  final _currentPinController = TextEditingController();
+  final _recoveryCodeController = TextEditingController();
   final _newPinController = TextEditingController();
   final _newPinConfirmController = TextEditingController();
 
@@ -24,7 +24,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void dispose() {
     _pinController.dispose();
     _confirmPinController.dispose();
-    _currentPinController.dispose();
+    _recoveryCodeController.dispose();
     _newPinController.dispose();
     _newPinConfirmController.dispose();
     super.dispose();
@@ -213,7 +213,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _showForgotPinDialog(BuildContext context) async {
-    _currentPinController.clear();
+    _recoveryCodeController.clear();
     _newPinController.clear();
     _newPinConfirmController.clear();
     final authController = ref.read(localPinAuthControllerProvider.notifier);
@@ -231,7 +231,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   TextField(
-                    controller: _currentPinController,
+                    controller: _recoveryCodeController,
                     decoration: appDesktopInputDecoration(
                       labelText: 'Recovery Code',
                     ),
@@ -290,7 +290,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ? null
                     : () async {
                         final ok = await authController.resetPinWithRecoveryCode(
-                          recoveryCode: _currentPinController.text,
+                          recoveryCode: _recoveryCodeController.text,
                           newPin: _newPinController.text,
                           confirmPin: _newPinConfirmController.text,
                         );
