@@ -26,14 +26,11 @@ class LocalPinAuthService {
   }
 
   Future<String> configurePin(String pin) async {
-    final pinSalt = _generateSalt();
-    final pinHash = _hashWithSalt(value: pin, salt: pinSalt);
+    await _writePinHash(pin);
     final recoveryCode = _generateRecoveryCode();
     final recoverySalt = _generateSalt();
     final recoveryHash = _hashWithSalt(value: recoveryCode, salt: recoverySalt);
 
-    await _writeSetting(_pinSaltKey, pinSalt);
-    await _writeSetting(_pinHashKey, pinHash);
     await _writeSetting(_recoverySaltKey, recoverySalt);
     await _writeSetting(_recoveryHashKey, recoveryHash);
     return recoveryCode;
@@ -57,7 +54,7 @@ class LocalPinAuthService {
     if (!validCurrent) {
       return false;
     }
-    await configurePin(newPin);
+    await _writePinHash(newPin);
     return true;
   }
 
@@ -74,7 +71,7 @@ class LocalPinAuthService {
     if (candidateHash != storedHash) {
       return false;
     }
-    await configurePin(newPin);
+    await _writePinHash(newPin);
     return true;
   }
 
@@ -102,6 +99,13 @@ class LocalPinAuthService {
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+  }
+
+  Future<void> _writePinHash(String pin) async {
+    final pinSalt = _generateSalt();
+    final pinHash = _hashWithSalt(value: pin, salt: pinSalt);
+    await _writeSetting(_pinSaltKey, pinSalt);
+    await _writeSetting(_pinHashKey, pinHash);
   }
 
   String _hashWithSalt({required String value, required String salt}) {
