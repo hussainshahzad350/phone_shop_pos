@@ -830,6 +830,7 @@ class _LowStockView extends ConsumerWidget {
 
 class _SalesHistoryView extends ConsumerWidget {
   const _SalesHistoryView();
+  static const double _actionIconSize = 18;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -962,7 +963,8 @@ class _SalesHistoryView extends ConsumerWidget {
                                 context: context,
                                 saleId: row.saleId,
                               ),
-                              icon: const Icon(Icons.open_in_new, size: 18),
+                              icon: const Icon(Icons.open_in_new,
+                                  size: _actionIconSize),
                               child: const Text('Open'),
                             ),
                           ),
@@ -975,7 +977,7 @@ class _SalesHistoryView extends ConsumerWidget {
                                       jobId: row.printJobId!,
                                     ),
                                     icon: const Icon(Icons.print_outlined,
-                                        size: 18),
+                                        size: _actionIconSize),
                                     child: const Text('Reprint'),
                                   ),
                           ),
