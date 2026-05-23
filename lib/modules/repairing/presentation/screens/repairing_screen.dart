@@ -359,6 +359,9 @@ class _RepairJobsTable extends ConsumerWidget {
             : '-';
 
     return DataRow(
+      color: job.status == RepairJobEntity.statusReady
+          ? WidgetStateProperty.all(Colors.green.shade50)
+          : null,
       cells: <DataCell>[
         DataCell(
           Tooltip(
@@ -545,6 +548,7 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
   final TextEditingController _notesController = TextEditingController();
 
   late String _status;
+  String? _issueType;
   final Set<String> _selectedAccessories = <String>{};
 
   bool _isSubmitting = false;
@@ -556,6 +560,7 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
     _repairDate =
         job != null ? job.repairDate.toLocal() : DateTimeHelpers.nowUtc();
     _status = job?.status ?? RepairJobEntity.statusReceived;
+    _issueType = job?.issueType;
 
     if (job != null) {
       _customerNameController.text = job.customerName ?? '';
@@ -682,6 +687,7 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
           ? null
           : _imeiController.text.trim(),
       problemDescription: problem,
+      issueType: _issueType,
       accessories: accessories.isEmpty ? null : accessories,
       technicianName: _technicianController.text.trim().isEmpty
           ? null
@@ -811,6 +817,30 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                       labelText: 'Problem Description *',
                     ),
                     onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _issueType,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                      labelText: 'Issue Type (optional)',
+                    ),
+                    items: <DropdownMenuItem<String>>[
+                      const DropdownMenuItem<String>(
+                        value: null,
+                        child: Text('— Not specified —'),
+                      ),
+                      ...RepairJobEntity.allIssueTypes.map(
+                        (t) => DropdownMenuItem<String>(
+                          value: t,
+                          child: Text(t),
+                        ),
+                      ),
+                    ],
+                    onChanged: _isSubmitting
+                        ? null
+                        : (v) => setState(() => _issueType = v),
                   ),
                   const SizedBox(height: 12),
                   _buildSectionHeader('Accessories Received'),

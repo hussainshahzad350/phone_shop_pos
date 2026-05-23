@@ -11,6 +11,7 @@ class RepairJobEntity {
     this.imei,
     this.accessories,
     this.technicianName,
+    this.issueType,
     this.estimatedCost,
     this.advanceReceived = 0,
     this.finalCost,
@@ -31,6 +32,8 @@ class RepairJobEntity {
   final String? imei;
   final String? accessories;
   final String? technicianName;
+  /// Optional structured issue category for cleaner analytics.
+  final String? issueType;
   final double? estimatedCost;
   final double advanceReceived;
   final double? finalCost;
@@ -58,6 +61,23 @@ class RepairJobEntity {
     statusCancelled,
   ];
 
+  static const List<String> allIssueTypes = <String>[
+    'LCD / Display',
+    'Battery',
+    'Charging',
+    'Mic',
+    'Speaker',
+    'Camera',
+    'Network / SIM',
+    'Water Damage',
+    'Software / Flash',
+    'Power Button',
+    'Volume Button',
+    'Back Cover',
+    'Dead',
+    'Other',
+  ];
+
   RepairJobEntity copyWith({
     String? id,
     DateTime? repairDate,
@@ -70,6 +90,7 @@ class RepairJobEntity {
     String? imei,
     String? accessories,
     String? technicianName,
+    String? issueType,
     double? estimatedCost,
     double? advanceReceived,
     double? finalCost,
@@ -81,6 +102,7 @@ class RepairJobEntity {
     bool clearImei = false,
     bool clearAccessories = false,
     bool clearTechnicianName = false,
+    bool clearIssueType = false,
     bool clearEstimatedCost = false,
     bool clearFinalCost = false,
     bool clearNotes = false,
@@ -102,6 +124,7 @@ class RepairJobEntity {
       technicianName: clearTechnicianName
           ? null
           : (technicianName ?? this.technicianName),
+      issueType: clearIssueType ? null : (issueType ?? this.issueType),
       estimatedCost:
           clearEstimatedCost ? null : (estimatedCost ?? this.estimatedCost),
       advanceReceived: advanceReceived ?? this.advanceReceived,

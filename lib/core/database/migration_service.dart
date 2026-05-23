@@ -1253,5 +1253,9 @@ class MigrationService {
     // in the map for documentation purposes (consistent with v7 and v9).
     17: <String>[],
     18: <String>[],
+    // v19: add issue_type column to repair_jobs for structured issue categorisation.
+    19: <String>[
+      'ALTER TABLE ${TableNames.repairJobs} ADD COLUMN issue_type TEXT;',
+    ],
   };
 }

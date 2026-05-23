@@ -101,10 +101,10 @@ class SqliteRepairingRepository
         INSERT INTO $_table (
           id, created_at, updated_at, repair_date,
           customer_name, customer_phone, phone_model, imei,
-          problem_description, accessories, technician_name,
+          problem_description, issue_type, accessories, technician_name,
           estimated_cost, advance_received, final_cost, repair_expense,
           status, notes, is_deleted
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
         ''',
         <Object?>[
           id,
@@ -122,6 +122,7 @@ class SqliteRepairingRepository
           job.phoneModel,
           job.imei,
           job.problemDescription,
+          job.issueType,
           job.accessories,
           job.technicianName,
           job.estimatedCost,
@@ -149,6 +150,7 @@ class SqliteRepairingRepository
           phone_model = ?,
           imei = ?,
           problem_description = ?,
+          issue_type = ?,
           accessories = ?,
           technician_name = ?,
           estimated_cost = ?,
@@ -173,6 +175,7 @@ class SqliteRepairingRepository
           job.phoneModel,
           job.imei,
           job.problemDescription,
+          job.issueType,
           job.accessories,
           job.technicianName,
           job.estimatedCost,
@@ -344,15 +347,13 @@ class SqliteRepairingRepository
           .toList(growable: false);
 
       final allJobs = await _appDatabase.database.rawQuery(
-        'SELECT problem_description FROM $_table WHERE $where',
+        'SELECT issue_type, problem_description FROM $_table WHERE $where',
         args,
       );
 
-      final issueGroups = _groupIssues(
-        allJobs
-            .map((r) => (r['problem_description'] as String?) ?? '')
-            .toList(growable: false),
-      );
+      // Use issue_type when set (clean data); fall back to keyword grouping
+      // only for rows where issue_type is NULL (legacy / free-text only).
+      final issueGroups = _groupIssues(allJobs);
 
       return RepairAnalyticsEntity(
         totalRepairs: totalRepairs,
@@ -368,15 +369,15 @@ class SqliteRepairingRepository
   }
 
   List<RepairIssueGroupEntity> _groupIssues(
-    List<String> descriptions,
+    List<Map<String, Object?>> rows,
   ) {
     const issueKeywords = <String, List<String>>{
       'LCD / Display': <String>['lcd', 'display', 'screen', 'touch'],
-      'Charging Problem': <String>['charg', 'pin', 'port'],
-      'Battery Issue': <String>['battery', 'batt', 'backup'],
-      'Speaker Issue': <String>['speaker', 'audio', 'sound', 'loud'],
-      'Mic Problem': <String>['mic', 'voice', 'call'],
-      'Camera Issue': <String>['camera', 'cam'],
+      'Charging': <String>['charg', 'pin', 'port'],
+      'Battery': <String>['battery', 'batt', 'backup'],
+      'Speaker': <String>['speaker', 'audio', 'sound', 'loud'],
+      'Mic': <String>['mic', 'voice', 'call'],
+      'Camera': <String>['camera', 'cam'],
       'Network / SIM': <String>['network', 'sim', 'signal', 'no service'],
       'Water Damage': <String>['water', 'wet', 'damp'],
       'Back Cover': <String>['back', 'cover', 'glass'],
@@ -393,7 +394,16 @@ class SqliteRepairingRepository
     };
 
     final counts = <String, int>{};
-    for (final desc in descriptions) {
+    for (final row in rows) {
+      // Prefer the structured issue_type when it has been set.
+      final structured = (row['issue_type'] as String?)?.trim();
+      if (structured != null && structured.isNotEmpty) {
+        counts[structured] = (counts[structured] ?? 0) + 1;
+        continue;
+      }
+
+      // Fall back to keyword grouping for legacy free-text descriptions.
+      final desc = (row['problem_description'] as String?) ?? '';
       final lower = desc.toLowerCase();
       var matched = false;
       for (final entry in issueKeywords.entries) {
@@ -435,6 +445,7 @@ class SqliteRepairingRepository
       phoneModel: row['phone_model'] as String,
       imei: row['imei'] as String?,
       problemDescription: row['problem_description'] as String,
+      issueType: row['issue_type'] as String?,
       accessories: row['accessories'] as String?,
       technicianName: row['technician_name'] as String?,
       estimatedCost: row['estimated_cost'] != null
