@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:phone_shop_pos/core/widgets/desktop_navigation_shell.dart';
+import 'package:phone_shop_pos/modules/auth/presentation/providers/local_pin_auth_providers.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/screens/login_screen.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/screens/welcome_screen.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/screens/dashboard_screen.dart';
@@ -16,8 +17,30 @@ import 'package:phone_shop_pos/modules/settings/presentation/screens/settings_sc
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final navigatorKey = ref.watch(rootNavigatorKeyProvider);
+  final authState = ref.watch(localPinAuthControllerProvider);
   return GoRouter(
     navigatorKey: navigatorKey,
+    redirect: (context, state) {
+      final path = state.uri.path;
+      final onPublicRoute = path == '/welcome' || path == '/login';
+
+      if (!authState.isInitialized) {
+        return onPublicRoute ? null : '/login';
+      }
+
+      if (!authState.hasPinConfigured) {
+        return onPublicRoute ? null : '/login';
+      }
+
+      if (!authState.isAuthenticated) {
+        return onPublicRoute ? null : '/login';
+      }
+
+      if (onPublicRoute) {
+        return '/dashboard';
+      }
+      return null;
+    },
     errorBuilder: (context, state) => Scaffold(
       body: Center(
         child: Column(

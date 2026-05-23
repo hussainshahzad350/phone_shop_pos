@@ -29,6 +29,11 @@ class WelcomeScreen extends StatelessWidget {
                     'Developed by ${AppRuntimeConfig.developerName}',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Local PIN login is required.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
                   const SizedBox(height: 20),
                   FilledButton.icon(
                     onPressed: () => context.go('/login'),
