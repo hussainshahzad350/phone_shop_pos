@@ -47,6 +47,7 @@ class ReportsScreen extends ConsumerWidget {
     ref.invalidate(expensesRowsProvider);
     ref.invalidate(expenseCategoriesProvider);
     ref.invalidate(stockAdjustmentHistoryProvider);
+    ref.invalidate(reportRepairAnalyticsProvider);
   }
 
   @override
@@ -281,6 +282,7 @@ class ReportsScreen extends ConsumerWidget {
       case ReportsTab.supplierLedger:
       case ReportsTab.cashLedger:
       case ReportsTab.expenses:
+      case ReportsTab.repairAnalytics:
         return false;
     }
   }
@@ -337,6 +339,8 @@ class _ReportContent extends ConsumerWidget {
         return const _CashLedgerView();
       case ReportsTab.expenses:
         return const _ExpensesView();
+      case ReportsTab.repairAnalytics:
+        return const _RepairAnalyticsView();
     }
   }
 }
@@ -2249,6 +2253,294 @@ class _RefreshReportsIntent extends Intent {
   const _RefreshReportsIntent();
 }
 
+class _RepairAnalyticsView extends ConsumerWidget {
+  const _RepairAnalyticsView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final startDate = ref.watch(reportRepairAnalyticsStartDateProvider);
+    final endDate = ref.watch(reportRepairAnalyticsEndDateProvider);
+    final analyticsAsync = ref.watch(reportRepairAnalyticsProvider);
+
+    return Column(
+      children: <Widget>[
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                FilledButton.icon(
+                  onPressed: () {
+                    final now = DateTime.now();
+                    ref
+                        .read(reportRepairAnalyticsStartDateProvider.notifier)
+                        .state = DateTime(now.year, now.month, 1);
+                    ref
+                        .read(reportRepairAnalyticsEndDateProvider.notifier)
+                        .state = DateTime(now.year, now.month + 1, 0);
+                  },
+                  icon: const Icon(Icons.calendar_view_month, size: 16),
+                  label: const Text('This Month'),
+                ),
+                FilledButton.tonal(
+                  onPressed: () {
+                    final now = DateTime.now();
+                    ref
+                        .read(reportRepairAnalyticsStartDateProvider.notifier)
+                        .state = DateTime(now.year, 1, 1);
+                    ref
+                        .read(reportRepairAnalyticsEndDateProvider.notifier)
+                        .state = DateTime(now.year, 12, 31);
+                  },
+                  child: const Text('This Year'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime(2020),
+                      lastDate:
+                          DateTime.now().add(const Duration(days: 365)),
+                      initialDate: startDate ?? DateTime.now(),
+                    );
+                    ref
+                        .read(reportRepairAnalyticsStartDateProvider.notifier)
+                        .state = picked;
+                  },
+                  icon: const Icon(Icons.calendar_today, size: 16),
+                  label: Text(
+                    startDate == null
+                        ? 'Start Date'
+                        : FormattingHelpers.dateYmd(startDate),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime(2020),
+                      lastDate:
+                          DateTime.now().add(const Duration(days: 365)),
+                      initialDate: endDate ?? DateTime.now(),
+                    );
+                    ref
+                        .read(reportRepairAnalyticsEndDateProvider.notifier)
+                        .state = picked;
+                  },
+                  icon: const Icon(Icons.event, size: 16),
+                  label: Text(
+                    endDate == null
+                        ? 'End Date'
+                        : FormattingHelpers.dateYmd(endDate),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    ref
+                        .read(reportRepairAnalyticsStartDateProvider.notifier)
+                        .state = null;
+                    ref
+                        .read(reportRepairAnalyticsEndDateProvider.notifier)
+                        .state = null;
+                  },
+                  icon: const Icon(Icons.clear, size: 16),
+                  label: const Text('All Time'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: analyticsAsync.when(
+            data: (analytics) => SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: ReportSummaryCardWidget(
+                          label: 'Total Repairs',
+                          value: analytics.totalRepairs.toString(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ReportSummaryCardWidget(
+                          label: 'Delivered',
+                          value: analytics.deliveredRepairs.toString(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ReportSummaryCardWidget(
+                          label: 'Pending',
+                          value: analytics.pendingRepairs.toString(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ReportSummaryCardWidget(
+                          label: 'Total Earnings',
+                          value: FormattingHelpers.currencyPkr(
+                            analytics.totalEarnings,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ReportSummaryCardWidget(
+                          label: 'Total Expenses',
+                          value: FormattingHelpers.currencyPkr(
+                            analytics.totalExpenses,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        child: _AnalyticsTable(
+                          title: 'Issue Analysis',
+                          columns: const <DataColumn>[
+                            DataColumn(label: Text('Issue')),
+                            DataColumn(label: Text('Count')),
+                          ],
+                          rows: analytics.issueGroups
+                              .map(
+                                (g) => DataRow(
+                                  cells: <DataCell>[
+                                    DataCell(Text(g.issue)),
+                                    DataCell(Text(g.count.toString())),
+                                  ],
+                                ),
+                              )
+                              .toList(growable: false),
+                          emptyMessage: 'No issues recorded.',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _AnalyticsTable(
+                          title: 'Top Phone Models',
+                          columns: const <DataColumn>[
+                            DataColumn(label: Text('Model')),
+                            DataColumn(label: Text('Repairs')),
+                          ],
+                          rows: analytics.topModels
+                              .map(
+                                (m) => DataRow(
+                                  cells: <DataCell>[
+                                    DataCell(Text(m.model)),
+                                    DataCell(Text(m.count.toString())),
+                                  ],
+                                ),
+                              )
+                              .toList(growable: false),
+                          emptyMessage: 'No data.',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _AnalyticsTable(
+                    title: 'Monthly Trend',
+                    columns: const <DataColumn>[
+                      DataColumn(label: Text('Month')),
+                      DataColumn(label: Text('Repairs')),
+                      DataColumn(label: Text('Earnings')),
+                    ],
+                    rows: analytics.monthlyTrend
+                        .map(
+                          (row) => DataRow(
+                            cells: <DataCell>[
+                              DataCell(Text(row.month)),
+                              DataCell(Text(row.repairs.toString())),
+                              DataCell(
+                                Text(
+                                  FormattingHelpers.currencyPkr(row.earnings),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                        .toList(growable: false),
+                    emptyMessage: 'No monthly data.',
+                  ),
+                ],
+              ),
+            ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Text('Failed to load repair analytics.'),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: () =>
+                        ref.invalidate(reportRepairAnalyticsProvider),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AnalyticsTable extends StatelessWidget {
+  const _AnalyticsTable({
+    required this.title,
+    required this.columns,
+    required this.rows,
+    required this.emptyMessage,
+  });
+
+  final String title;
+  final List<DataColumn> columns;
+  final List<DataRow> rows;
+  final String emptyMessage;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              title,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            AppDataTable(
+              columns: columns,
+              rows: rows,
+              emptyMessage: emptyMessage,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 String _tabLabel(ReportsTab tab) {
   switch (tab) {
     case ReportsTab.dailySales:
@@ -2277,5 +2569,7 @@ String _tabLabel(ReportsTab tab) {
       return 'Cash Flow';
     case ReportsTab.expenses:
       return 'Expenses';
+    case ReportsTab.repairAnalytics:
+      return 'Repair Analytics';
   }
 }
