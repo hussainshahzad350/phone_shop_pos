@@ -52,13 +52,15 @@ class LocalPinAuthState {
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
       failedAttempts: failedAttempts ?? this.failedAttempts,
       lockedUntil: clearLockedUntil ? null : lockedUntil ?? this.lockedUntil,
-      errorMessage: clearErrorMessage ? null : errorMessage ?? this.errorMessage,
+      errorMessage:
+          clearErrorMessage ? null : errorMessage ?? this.errorMessage,
     );
   }
 }
 
 class LocalPinAuthController extends StateNotifier<LocalPinAuthState> {
-  LocalPinAuthController(this._service) : super(const LocalPinAuthState.initial()) {
+  LocalPinAuthController(this._service)
+      : super(const LocalPinAuthState.initial()) {
     _initialize();
   }
 
@@ -162,7 +164,8 @@ class LocalPinAuthController extends StateNotifier<LocalPinAuthState> {
         isBusy: false,
         failedAttempts: _maxAttempts,
         lockedUntil: lockedUntil,
-        errorMessage: 'Too many wrong attempts. Login is locked for 60 seconds.',
+        errorMessage:
+            'Too many wrong attempts. Login is locked for 60 seconds.',
       );
       return false;
     }
@@ -170,7 +173,8 @@ class LocalPinAuthController extends StateNotifier<LocalPinAuthState> {
     state = state.copyWith(
       isBusy: false,
       failedAttempts: nextAttempts,
-      errorMessage: 'Invalid PIN. ${_maxAttempts - nextAttempts} attempts left.',
+      errorMessage:
+          'Invalid PIN. ${_maxAttempts - nextAttempts} attempts left.',
     );
     return false;
   }
@@ -186,7 +190,8 @@ class LocalPinAuthController extends StateNotifier<LocalPinAuthState> {
       return false;
     }
     if (newPin != confirmPin) {
-      state = state.copyWith(errorMessage: 'New PIN confirmation does not match.');
+      state =
+          state.copyWith(errorMessage: 'New PIN confirmation does not match.');
       return false;
     }
 
@@ -213,7 +218,8 @@ class LocalPinAuthController extends StateNotifier<LocalPinAuthState> {
       return false;
     }
     if (newPin != confirmPin) {
-      state = state.copyWith(errorMessage: 'New PIN confirmation does not match.');
+      state =
+          state.copyWith(errorMessage: 'New PIN confirmation does not match.');
       return false;
     }
     if (recoveryCode.trim().isEmpty) {
@@ -234,6 +240,34 @@ class LocalPinAuthController extends StateNotifier<LocalPinAuthState> {
       errorMessage: reset ? null : 'Recovery code is invalid.',
     );
     return reset;
+  }
+
+  void lock() {
+    if (!state.hasPinConfigured) {
+      return;
+    }
+    state = state.copyWith(
+      isAuthenticated: false,
+      clearErrorMessage: true,
+      failedAttempts: 0,
+      clearLockedUntil: true,
+    );
+  }
+
+  Future<String?> regenerateRecoveryCode({required String currentPin}) async {
+    final pinError = validatePin(currentPin);
+    if (pinError != null) {
+      state = state.copyWith(errorMessage: pinError);
+      return null;
+    }
+
+    state = state.copyWith(isBusy: true, clearErrorMessage: true);
+    final code = await _service.regenerateRecoveryCode(currentPin: currentPin);
+    state = state.copyWith(
+      isBusy: false,
+      errorMessage: code == null ? 'Current PIN is incorrect.' : null,
+    );
+    return code;
   }
 
   void clearError() {

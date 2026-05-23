@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/routing/navigation_leave_guard.dart';
+import 'package:phone_shop_pos/modules/auth/presentation/providers/local_pin_auth_providers.dart';
 
 enum AppShortcutEvent {
   focusSearch,
@@ -83,6 +84,10 @@ class AppShortcutManager extends ConsumerWidget {
           SingleActivator(LogicalKeyboardKey.f10): _SaveIntent(),
           SingleActivator(LogicalKeyboardKey.escape): _EscapeIntent(),
           SingleActivator(
+            LogicalKeyboardKey.keyL,
+            control: true,
+          ): _LockIntent(),
+          SingleActivator(
             LogicalKeyboardKey.keyB,
             control: true,
           ): _BackupIntent(),
@@ -136,6 +141,13 @@ class AppShortcutManager extends ConsumerWidget {
             _EscapeIntent: CallbackAction<_EscapeIntent>(
               onInvoke: (_) {
                 Navigator.of(context).maybePop();
+                return null;
+              },
+            ),
+            _LockIntent: CallbackAction<_LockIntent>(
+              onInvoke: (_) {
+                ref.read(localPinAuthControllerProvider.notifier).lock();
+                AppNotifier.info('App locked.');
                 return null;
               },
             ),
@@ -208,4 +220,8 @@ class _InventoryIntent extends Intent {
 
 class _SalesIntent extends Intent {
   const _SalesIntent();
+}
+
+class _LockIntent extends Intent {
+  const _LockIntent();
 }

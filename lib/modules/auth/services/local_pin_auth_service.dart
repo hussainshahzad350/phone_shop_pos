@@ -58,6 +58,21 @@ class LocalPinAuthService {
     return true;
   }
 
+  Future<String?> regenerateRecoveryCode({required String currentPin}) async {
+    final validCurrent = await verifyPin(currentPin);
+    if (!validCurrent) {
+      return null;
+    }
+
+    final recoveryCode = _generateRecoveryCode();
+    final recoverySalt = _generateSalt();
+    final recoveryHash = _hashWithSalt(value: recoveryCode, salt: recoverySalt);
+
+    await _writeSetting(_recoverySaltKey, recoverySalt);
+    await _writeSetting(_recoveryHashKey, recoveryHash);
+    return recoveryCode;
+  }
+
   Future<bool> resetPinWithRecoveryCode({
     required String recoveryCode,
     required String newPin,

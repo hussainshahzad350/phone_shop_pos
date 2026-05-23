@@ -23,19 +23,22 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
   final TextEditingController _bulkController = TextEditingController();
   final TextEditingController _sellerNameController = TextEditingController();
   final TextEditingController _sellerIdCardController = TextEditingController();
-  final TextEditingController _sellerAddressController = TextEditingController();
+  final TextEditingController _sellerAddressController =
+      TextEditingController();
   final TextEditingController _warrantyController = TextEditingController();
   final TextEditingController _accessoriesController = TextEditingController();
-  final TextEditingController _conditionNotesController = TextEditingController();
+  final TextEditingController _conditionNotesController =
+      TextEditingController();
   final TextEditingController _sellerPhoneController = TextEditingController();
 
-  List<_ParsedImeiLine> _preview = const <_ParsedImeiLine>[];
+  late final ValueNotifier<List<_ParsedImeiLine>> _previewNotifier;
   double _defaultCost = 0;
 
   @override
   void initState() {
     super.initState();
     _defaultCost = widget.defaultCostPrice;
+    _previewNotifier = ValueNotifier<List<_ParsedImeiLine>>(const []);
   }
 
   @override
@@ -48,6 +51,7 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
     _accessoriesController.dispose();
     _conditionNotesController.dispose();
     _sellerPhoneController.dispose();
+    _previewNotifier.dispose();
     super.dispose();
   }
 
@@ -74,18 +78,26 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
       ));
     }
 
-    setState(() {
-      _preview = parsed;
-    });
+    _previewNotifier.value = parsed;
   }
 
   bool get _canConfirm {
-    if (_preview.isEmpty) return false;
+    if (_previewNotifier.value.isEmpty) {
+      return false;
+    }
     if (widget.isUsed) {
-      if (_sellerNameController.text.trim().isEmpty) return false;
-      if (_sellerIdCardController.text.trim().isEmpty) return false;
-      if (CnicHelpers.errorText(_sellerIdCardController.text) != null) return false;
-      if (_conditionNotesController.text.trim().isEmpty) return false;
+      if (_sellerNameController.text.trim().isEmpty) {
+        return false;
+      }
+      if (_sellerIdCardController.text.trim().isEmpty) {
+        return false;
+      }
+      if (CnicHelpers.errorText(_sellerIdCardController.text) != null) {
+        return false;
+      }
+      if (_conditionNotesController.text.trim().isEmpty) {
+        return false;
+      }
     }
     return true;
   }
@@ -122,7 +134,8 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
                         border: OutlineInputBorder(),
                         labelText: 'Cost',
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                       onChanged: (v) {
                         final parsed = FormattingHelpers.parseLocaleDecimal(
                           v,
@@ -142,39 +155,53 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
                 maxLines: 8,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
-                  hintText: '356789101234561\n356789101234562,356789101234570\n...',
+                  hintText:
+                      '356789101234561\n356789101234562,356789101234570\n...',
                   labelText: 'Paste IMEIs here',
                 ),
                 onChanged: _parseInput,
               ),
               const SizedBox(height: 8),
-              if (_preview.isNotEmpty) ...<Widget>[
-                Text(
-                  'Preview: ${_preview.length} device(s)',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 120),
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: _preview.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final entry = _preview[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Text(
-                          '${index + 1}. ${entry.imei1}'
-                          '${entry.imei2 != null ? " / ${entry.imei2}" : ""}'
-                          '${entry.serialNumber != null ? " [${entry.serialNumber}]" : ""}',
-                          style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+              ValueListenableBuilder<List<_ParsedImeiLine>>(
+                valueListenable: _previewNotifier,
+                builder: (context, preview, _) {
+                  if (preview.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Preview: ${preview.length} device(s)',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 120),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: preview.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final entry = preview[index];
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              child: Text(
+                                '${index + 1}. ${entry.imei1}'
+                                '${entry.imei2 != null ? " / ${entry.imei2}" : ""}'
+                                '${entry.serialNumber != null ? " [${entry.serialNumber}]" : ""}',
+                                style: const TextStyle(
+                                    fontSize: 12, fontFamily: 'monospace'),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+                      ),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
               if (widget.isUsed) ...<Widget>[
                 const SizedBox(height: 12),
                 const Divider(),
@@ -243,9 +270,8 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
                   final condition = widget.isUsed
                       ? SerializedStockCondition.used
                       : SerializedStockCondition.newPhone;
-                  final sellerName = widget.isUsed
-                      ? _sellerNameController.text.trim()
-                      : null;
+                  final sellerName =
+                      widget.isUsed ? _sellerNameController.text.trim() : null;
                   final rawCnic = _sellerIdCardController.text.trim();
                   final sellerIdCard = widget.isUsed
                       ? (CnicHelpers.normalizeCnic(rawCnic) ?? rawCnic)
@@ -266,7 +292,7 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
                       ? _conditionNotesController.text.trim()
                       : null;
 
-                  final entries = _preview
+                  final entries = _previewNotifier.value
                       .map(
                         (p) => ImeiEntry(
                           imei1: p.imei1,
@@ -286,7 +312,7 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
                       .toList(growable: false);
                   Navigator.of(context).pop<List<ImeiEntry>>(entries);
                 },
-          child: Text('Add ${_preview.length} Device(s)'),
+          child: Text('Add ${_previewNotifier.value.length} Device(s)'),
         ),
       ],
     );
@@ -297,7 +323,6 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
     return TextField(
       controller: _sellerIdCardController,
       keyboardType: TextInputType.number,
-      onChanged: (_) => setState(() {}),
       decoration: InputDecoration(
         isDense: true,
         border: const OutlineInputBorder(),
@@ -320,7 +345,6 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
       controller: controller,
       maxLines: maxLines,
       keyboardType: keyboardType,
-      onChanged: required ? (_) => setState(() {}) : null,
       decoration: InputDecoration(
         isDense: true,
         border: const OutlineInputBorder(),

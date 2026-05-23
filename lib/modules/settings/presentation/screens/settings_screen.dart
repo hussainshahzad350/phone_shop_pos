@@ -76,6 +76,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     final confirmed = await showDialog<bool>(
       context: context,
+      useRootNavigator: true,
       builder: (context) => AppConfirmationDialog(
         title: 'Restore Backup',
         message: 'Restore database from ${p.basename(file.path)}?\n\n'
@@ -154,6 +155,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _cancelPrintJob(InvoicePrintJob job) async {
     final confirmed = await showDialog<bool>(
       context: context,
+      useRootNavigator: true,
       builder: (context) => const AppConfirmationDialog(
         title: 'Cancel queued receipt?',
         message:
@@ -185,6 +187,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     await showDialog<void>(
       context: context,
+      useRootNavigator: true,
       builder: (context) => Consumer(
         builder: (context, dialogRef, _) {
           final authState = dialogRef.watch(localPinAuthControllerProvider);
@@ -286,6 +289,108 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     confirmPinController.dispose();
   }
 
+  Future<void> _showRecoveryCodeDialog({required String recoveryCode}) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (context) => AlertDialog(
+        title: const Text('New Recovery Code'),
+        content: SelectableText(
+          'Store this code offline. Use it only if you forget your PIN:\n\n$recoveryCode',
+        ),
+        actions: <Widget>[
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('I saved it'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showRegenerateRecoveryCodeDialog() async {
+    final currentPinController = TextEditingController();
+    final authService = ref.read(localPinAuthServiceProvider);
+
+    await showDialog<void>(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          scrollable: true,
+          title: const Text('Regenerate Recovery Code'),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                const Text(
+                  'Enter current PIN to generate a new recovery code. The previous recovery code will stop working.',
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: currentPinController,
+                  decoration: appDesktopInputDecoration(
+                    labelText: 'Current PIN',
+                  ),
+                  keyboardType: TextInputType.number,
+                  obscureText: true,
+                  inputFormatters: <TextInputFormatter>[
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(6),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final pin = currentPinController.text.trim();
+                if (!RegExp(r'^\d{4,6}$').hasMatch(pin)) {
+                  if (!dialogContext.mounted) return;
+                  Navigator.of(dialogContext).pop();
+                  AppNotifier.error('PIN must be 4 to 6 digits.');
+                  return;
+                }
+
+                if (!mounted) {
+                  return;
+                }
+
+                final pinNav = Navigator.of(dialogContext);
+                pinNav.pop();
+
+                final regenerated = await authService.regenerateRecoveryCode(
+                  currentPin: pin,
+                );
+
+                if (regenerated == null) {
+                  AppNotifier.error('Current PIN is incorrect.');
+                  return;
+                }
+
+                await _showRecoveryCodeDialog(recoveryCode: regenerated);
+                AppNotifier.success('Recovery code regenerated.');
+              },
+              child: const Text('Generate New Code'),
+            ),
+          ],
+        );
+      },
+    );
+
+    currentPinController.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(backupSettingsProvider);
@@ -354,6 +459,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             : null,
                         icon: const Icon(Icons.password),
                         label: const Text('Change PIN'),
+                      ),
+                      const SizedBox(height: 8),
+                      FilledButton.tonalIcon(
+                        onPressed: authState.hasPinConfigured
+                            ? _showRegenerateRecoveryCodeDialog
+                            : null,
+                        icon: const Icon(Icons.key),
+                        label: const Text('Regenerate Recovery Code'),
+                      ),
+                      const SizedBox(height: 12),
+                      const Divider(),
+                      const SizedBox(height: 8),
+                      FilledButton.icon(
+                        onPressed: authState.hasPinConfigured &&
+                                authState.isAuthenticated
+                            ? () {
+                                ref
+                                    .read(
+                                        localPinAuthControllerProvider.notifier)
+                                    .lock();
+                                AppNotifier.info('App locked.');
+                              }
+                            : null,
+                        icon: const Icon(Icons.lock_outline),
+                        label: const Text('Lock App'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Theme.of(context).colorScheme.error,
+                          foregroundColor:
+                              Theme.of(context).colorScheme.onError,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Shortcut: Ctrl+L',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
                       ),
                     ],
                   ),

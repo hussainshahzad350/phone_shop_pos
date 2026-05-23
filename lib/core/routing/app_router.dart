@@ -17,22 +17,30 @@ import 'package:phone_shop_pos/modules/settings/presentation/screens/settings_sc
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final navigatorKey = ref.watch(rootNavigatorKeyProvider);
-  final authState = ref.watch(localPinAuthControllerProvider);
+  final isAuthInitialized = ref.watch(
+    localPinAuthControllerProvider.select((state) => state.isInitialized),
+  );
+  final hasPinConfigured = ref.watch(
+    localPinAuthControllerProvider.select((state) => state.hasPinConfigured),
+  );
+  final isAuthenticated = ref.watch(
+    localPinAuthControllerProvider.select((state) => state.isAuthenticated),
+  );
   return GoRouter(
     navigatorKey: navigatorKey,
     redirect: (context, state) {
       final path = state.uri.path;
       final onPublicRoute = path == '/welcome' || path == '/login';
 
-      if (!authState.isInitialized) {
+      if (!isAuthInitialized) {
         return onPublicRoute ? null : '/login';
       }
 
-      if (!authState.hasPinConfigured) {
+      if (!hasPinConfigured) {
         return onPublicRoute ? null : '/login';
       }
 
-      if (!authState.isAuthenticated) {
+      if (!isAuthenticated) {
         return onPublicRoute ? null : '/login';
       }
 

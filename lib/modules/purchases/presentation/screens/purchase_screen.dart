@@ -85,6 +85,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     final item = ref.read(purchaseFormStateProvider).items[itemIndex];
     final entries = await showDialog<List<ImeiEntry>>(
       context: context,
+      useRootNavigator: true,
       builder: (context) => ImeiEntryWidget(
         defaultCostPrice: item.unitCost,
         isUsed: _isUsedPurchase,

@@ -19,6 +19,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _recoveryCodeController = TextEditingController();
   final _newPinController = TextEditingController();
   final _newPinConfirmController = TextEditingController();
+  final _confirmPinFocus = FocusNode();
 
   @override
   void dispose() {
@@ -27,13 +28,44 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _recoveryCodeController.dispose();
     _newPinController.dispose();
     _newPinConfirmController.dispose();
+    _confirmPinFocus.dispose();
     super.dispose();
+  }
+
+  Future<void> _doLogin() async {
+    final ctx = context;
+    final authController = ref.read(localPinAuthControllerProvider.notifier);
+    if (ref.read(localPinAuthControllerProvider).isBusy) return;
+    final ok = await authController.loginWithPin(_pinController.text);
+    if (!ok) return;
+    if (!ctx.mounted) return;
+    _pinController.clear();
+    ctx.go('/dashboard');
+  }
+
+  Future<void> _doSetupPin() async {
+    final ctx = context;
+    final authController = ref.read(localPinAuthControllerProvider.notifier);
+    if (ref.read(localPinAuthControllerProvider).isBusy) return;
+    final recoveryCode = await authController.setupPin(
+      pin: _pinController.text,
+      confirmPin: _confirmPinController.text,
+    );
+    if (recoveryCode == null) return;
+    if (!ctx.mounted) return;
+    await _showRecoveryCodeDialog(
+      context: ctx,
+      recoveryCode: recoveryCode,
+    );
+    if (!ctx.mounted) return;
+    _pinController.clear();
+    _confirmPinController.clear();
+    ctx.go('/dashboard');
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(localPinAuthControllerProvider);
-    final authController = ref.read(localPinAuthControllerProvider.notifier);
 
     return Scaffold(
       body: Center(
@@ -65,32 +97,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         if (authState.hasPinConfigured) ...<Widget>[
                           TextField(
                             controller: _pinController,
+                            autofocus: true,
                             decoration: appDesktopInputDecoration(
                               labelText: 'PIN',
                             ),
                             keyboardType: TextInputType.number,
                             obscureText: true,
+                            textInputAction: TextInputAction.done,
                             inputFormatters: <TextInputFormatter>[
                               FilteringTextInputFormatter.digitsOnly,
                               LengthLimitingTextInputFormatter(6),
                             ],
+                            onSubmitted: (_) => _doLogin(),
                           ),
                           const SizedBox(height: 12),
                           Row(
                             children: <Widget>[
                               Expanded(
                                 child: FilledButton.icon(
-                                  onPressed: authState.isBusy
-                                      ? null
-                                      : () async {
-                                          final ok = await authController
-                                              .loginWithPin(_pinController.text);
-                                          if (!mounted || !ok) {
-                                            return;
-                                          }
-                                          _pinController.clear();
-                                          context.go('/dashboard');
-                                        },
+                                  onPressed: authState.isBusy ? null : _doLogin,
                                   icon: const Icon(Icons.lock_open),
                                   label: const Text('Login'),
                                 ),
@@ -107,58 +132,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ] else ...<Widget>[
                           TextField(
                             controller: _pinController,
+                            autofocus: true,
                             decoration: appDesktopInputDecoration(
                               labelText: 'New PIN (4-6 digits)',
                             ),
                             keyboardType: TextInputType.number,
                             obscureText: true,
+                            textInputAction: TextInputAction.next,
                             inputFormatters: <TextInputFormatter>[
                               FilteringTextInputFormatter.digitsOnly,
                               LengthLimitingTextInputFormatter(6),
                             ],
+                            onSubmitted: (_) =>
+                                FocusScope.of(context).requestFocus(
+                              _confirmPinFocus,
+                            ),
                           ),
                           const SizedBox(height: 10),
                           TextField(
                             controller: _confirmPinController,
+                            focusNode: _confirmPinFocus,
                             decoration: appDesktopInputDecoration(
                               labelText: 'Confirm PIN',
                             ),
                             keyboardType: TextInputType.number,
                             obscureText: true,
+                            textInputAction: TextInputAction.done,
                             inputFormatters: <TextInputFormatter>[
                               FilteringTextInputFormatter.digitsOnly,
                               LengthLimitingTextInputFormatter(6),
                             ],
+                            onSubmitted: (_) => _doSetupPin(),
                           ),
                           const SizedBox(height: 12),
                           Row(
                             children: <Widget>[
                               Expanded(
                                 child: FilledButton.icon(
-                                  onPressed: authState.isBusy
-                                      ? null
-                                      : () async {
-                                          final recoveryCode =
-                                              await authController.setupPin(
-                                            pin: _pinController.text,
-                                            confirmPin:
-                                                _confirmPinController.text,
-                                          );
-                                          if (!mounted ||
-                                              recoveryCode == null) {
-                                            return;
-                                          }
-                                          await _showRecoveryCodeDialog(
-                                            context: context,
-                                            recoveryCode: recoveryCode,
-                                          );
-                                          if (!mounted) {
-                                            return;
-                                          }
-                                          _pinController.clear();
-                                          _confirmPinController.clear();
-                                          context.go('/dashboard');
-                                        },
+                                  onPressed:
+                                      authState.isBusy ? null : _doSetupPin,
                                   icon: const Icon(Icons.verified_user),
                                   label: const Text('Save PIN and Continue'),
                                 ),
@@ -216,13 +228,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _recoveryCodeController.clear();
     _newPinController.clear();
     _newPinConfirmController.clear();
+
     final authController = ref.read(localPinAuthControllerProvider.notifier);
     authController.clearError();
+
     await showDialog<void>(
       context: context,
       builder: (context) => Consumer(
         builder: (context, dialogRef, _) {
           final authState = dialogRef.watch(localPinAuthControllerProvider);
+
           return AlertDialog(
             title: const Text('Reset PIN with Recovery Code'),
             content: SizedBox(
@@ -289,33 +304,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 onPressed: authState.isBusy
                     ? null
                     : () async {
-                        final ok = await authController.resetPinWithRecoveryCode(
+                        final ok =
+                            await authController.resetPinWithRecoveryCode(
                           recoveryCode: _recoveryCodeController.text,
                           newPin: _newPinController.text,
                           confirmPin: _newPinConfirmController.text,
                         );
-                        if (!mounted || !ok) {
+                        if (!mounted || !context.mounted || !ok) {
                           return;
                         }
+
                         authController.clearError();
-                        if (context.mounted) {
-                          Navigator.of(context).pop();
-                        }
-                        if (!mounted) {
-                          return;
-                        }
+                        Navigator.of(context).pop();
+
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content:
-                                Text('PIN reset successful. Log in with new PIN.'),
+                            content: Text(
+                                'PIN reset successful. Log in with new PIN.'),
                           ),
                         );
                       },
                 child: const Text('Reset PIN'),
               ),
-            ),
-          ),
-        ),
+            ],
+          );
+        },
       ),
     );
   }
