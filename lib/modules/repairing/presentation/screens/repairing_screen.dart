@@ -38,7 +38,6 @@ class RepairingScreen extends ConsumerWidget {
               children: <Widget>[
                 OutlinedButton.icon(
                   onPressed: () => _refreshAll(ref),
-                  tooltip: 'Refresh',
                   icon: const Icon(Icons.refresh),
                   label: const Text('Refresh'),
                 ),
