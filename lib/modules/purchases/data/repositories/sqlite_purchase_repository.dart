@@ -80,11 +80,12 @@ class SqlitePurchaseRepository
 
       if (trimmedQuery.isNotEmpty) {
         whereBuffer.write(
-          ' AND (name LIKE ? OR sku LIKE ? OR brand LIKE ?)',
+          ' AND (name LIKE ? OR sku LIKE ? OR barcode LIKE ? OR brand LIKE ?)',
         );
         final prefixQuery = '$trimmedQuery%';
         final likeQuery = '%$trimmedQuery%';
         args
+          ..add(prefixQuery)
           ..add(prefixQuery)
           ..add(prefixQuery)
           ..add(likeQuery);

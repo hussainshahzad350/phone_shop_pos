@@ -6,6 +6,9 @@ import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
+import 'package:phone_shop_pos/modules/scanner/domain/entities/scanner_mode.dart';
+import 'package:phone_shop_pos/modules/scanner/presentation/providers/scanner_providers.dart';
+import 'package:phone_shop_pos/modules/scanner/presentation/widgets/global_scanner_input.dart';
 
 bool desktopRouteMatches({
   required String currentPath,
@@ -67,6 +70,11 @@ class DesktopNavigationShell extends ConsumerWidget {
     final pendingPrintJobs = ref.watch(pendingPrintJobCountProvider);
     final selectedIndex = desktopNavigationSelectedIndexForPath(currentPath);
     final currentLabel = desktopNavigationLabelForPath(currentPath);
+    final scannerMode = ScannerModePath.fromPath(currentPath);
+    final scannerController = ref.read(scannerControllerProvider.notifier);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      scannerController.setActiveMode(scannerMode);
+    });
 
     return AppShortcutManager(
       child: AppDesktopScaffold(
@@ -130,7 +138,12 @@ class DesktopNavigationShell extends ConsumerWidget {
             ],
           ),
         ),
-        child: child,
+        child: Stack(
+          children: <Widget>[
+            Positioned.fill(child: child),
+            const GlobalScannerInput(),
+          ],
+        ),
       ),
     );
   }

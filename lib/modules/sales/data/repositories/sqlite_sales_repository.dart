@@ -40,15 +40,26 @@ class SqliteSalesRepository
 
       if (trimmedQuery.isNotEmpty) {
         whereBuffer.write(
-          ' AND (sku LIKE ? OR name LIKE ? OR brand LIKE ? OR category LIKE ?)',
+          ' AND (sku LIKE ? OR barcode LIKE ? OR name LIKE ? OR brand LIKE ? OR category LIKE ?'
+          ' OR EXISTS ('
+          'SELECT 1 FROM ${TableNames.serializedStock} ss '
+          'WHERE ss.product_model_id = ${TableNames.productModels}.id '
+          'AND ss.stock_status = ? '
+          'AND (ss.imei1 LIKE ? OR ss.imei2 LIKE ? OR ss.serial_number LIKE ?)'
+          '))',
         );
         final prefixQuery = '$trimmedQuery%';
         final containsQuery = '%$trimmedQuery%';
         args
           ..add(prefixQuery)
+          ..add(prefixQuery)
           ..add(containsQuery)
           ..add(containsQuery)
-          ..add(containsQuery);
+          ..add(containsQuery)
+          ..add(SerializedStockStatus.inStock.value)
+          ..add(prefixQuery)
+          ..add(prefixQuery)
+          ..add(prefixQuery);
       }
 
       final rows = await QueryDiagnostics.trace(
