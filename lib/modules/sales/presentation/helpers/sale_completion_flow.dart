@@ -1,4 +1,5 @@
 import 'package:phone_shop_pos/core/errors/result.dart';
+import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
@@ -50,6 +51,10 @@ class SaleCompletionFlow {
       customerLabel:
           billing.selectedCustomerId == null ? 'Walk-in Customer' : 'Customer',
       notes: NotesSafety.normalizeNullable(billing.notes),
+      storeName: AppRuntimeConfig.appName,
+      storeContactPhone: AppRuntimeConfig.contactPhone,
+      storeContactEmail: AppRuntimeConfig.contactEmail,
+      storeContactAddress: AppRuntimeConfig.contactAddress,
     );
     final enqueueResult = await enqueueInvoice(document);
 

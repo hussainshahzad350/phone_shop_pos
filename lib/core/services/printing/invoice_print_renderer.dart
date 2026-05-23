@@ -12,6 +12,9 @@ class InvoicePrintRenderer {
     final width = paperSize.charactersPerLine;
     final buffer = StringBuffer()
       ..writeln(_center(document.storeName, width))
+      ..writeln(_center(document.storeContactPhone, width))
+      ..writeln(_center(document.storeContactEmail, width))
+      ..writeln(_center(document.storeContactAddress, width))
       ..writeln(_center(document.invoiceNumber, width))
       ..writeln('-' * width)
       ..writeln('Date: ${FormattingHelpers.dateYmdHm(document.saleDate.toLocal())}')

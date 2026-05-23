@@ -97,7 +97,6 @@ class _PhoneShopPosAppState extends ConsumerState<PhoneShopPosApp>
   @override
   Widget build(BuildContext context) {
     final startup = ref.watch(appDatabaseProvider);
-    final router = ref.watch(appRouterProvider);
 
     if (startup.isLoading) {
       return MaterialApp(
@@ -125,6 +124,7 @@ class _PhoneShopPosAppState extends ConsumerState<PhoneShopPosApp>
       );
     }
 
+    final router = ref.watch(appRouterProvider);
     return MaterialApp.router(
       title: AppRuntimeConfig.appName,
       theme: AppTheme.light,
@@ -148,7 +148,7 @@ class _StartupLoadingScreen extends StatelessWidget {
           children: <Widget>[
             CircularProgressIndicator(),
             SizedBox(height: 12),
-            Text('Starting Phone Shop POS...'),
+            Text('Starting ${AppRuntimeConfig.appName}...'),
           ],
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:phone_shop_pos/core/database/database_provider.dart';
@@ -13,6 +14,7 @@ import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
+import 'package:phone_shop_pos/modules/auth/presentation/providers/local_pin_auth_providers.dart';
 import 'package:phone_shop_pos/modules/settings/presentation/providers/settings_providers.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -174,12 +176,123 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  Future<void> _showChangePinDialog() async {
+    final currentPinController = TextEditingController();
+    final newPinController = TextEditingController();
+    final confirmPinController = TextEditingController();
+    final authController = ref.read(localPinAuthControllerProvider.notifier);
+    authController.clearError();
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => Consumer(
+        builder: (context, dialogRef, _) {
+          final authState = dialogRef.watch(localPinAuthControllerProvider);
+          return AlertDialog(
+            title: const Text('Change PIN'),
+            content: SizedBox(
+              width: 420,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  TextField(
+                    controller: currentPinController,
+                    decoration: appDesktopInputDecoration(
+                      labelText: 'Current PIN',
+                    ),
+                    keyboardType: TextInputType.number,
+                    obscureText: true,
+                    inputFormatters: <TextInputFormatter>[
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(6),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: newPinController,
+                    decoration: appDesktopInputDecoration(
+                      labelText: 'New PIN (4-6 digits)',
+                    ),
+                    keyboardType: TextInputType.number,
+                    obscureText: true,
+                    inputFormatters: <TextInputFormatter>[
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(6),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: confirmPinController,
+                    decoration: appDesktopInputDecoration(
+                      labelText: 'Confirm New PIN',
+                    ),
+                    keyboardType: TextInputType.number,
+                    obscureText: true,
+                    inputFormatters: <TextInputFormatter>[
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(6),
+                    ],
+                  ),
+                  if (authState.errorMessage != null) ...<Widget>[
+                    const SizedBox(height: 8),
+                    Text(
+                      authState.errorMessage!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: authState.isBusy
+                    ? null
+                    : () {
+                        authController.clearError();
+                        Navigator.of(context).pop();
+                      },
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: authState.isBusy
+                    ? null
+                    : () async {
+                        final changed = await authController.changePin(
+                          currentPin: currentPinController.text,
+                          newPin: newPinController.text,
+                          confirmPin: confirmPinController.text,
+                        );
+                        if (!mounted || !changed) {
+                          return;
+                        }
+                        authController.clearError();
+                        if (context.mounted) {
+                          Navigator.of(context).pop();
+                        }
+                        AppNotifier.success('PIN changed successfully.');
+                      },
+                child: const Text('Change PIN'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    currentPinController.dispose();
+    newPinController.dispose();
+    confirmPinController.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(backupSettingsProvider);
     final healthAsync = ref.watch(databaseHealthProvider);
     final startupHealthAsync = ref.watch(startupHealthFromSettingsProvider);
     final printQueue = ref.watch(invoicePrintQueueProvider);
+    final authState = ref.watch(localPinAuthControllerProvider);
 
     return Scaffold(
       body: AppLoadingOverlay(
@@ -213,6 +326,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const SizedBox(height: 8),
                       Text('Version: ${AppRuntimeConfig.fullVersion}'),
                       const Text('Channel: ${AppRuntimeConfig.releaseChannel}'),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Security',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        authState.hasPinConfigured
+                            ? 'Local PIN is required for login.'
+                            : 'No PIN configured yet. Go to Login to set PIN.',
+                      ),
+                      const SizedBox(height: 8),
+                      FilledButton.tonalIcon(
+                        onPressed: authState.hasPinConfigured
+                            ? _showChangePinDialog
+                            : null,
+                        icon: const Icon(Icons.password),
+                        label: const Text('Change PIN'),
+                      ),
                     ],
                   ),
                 ),
