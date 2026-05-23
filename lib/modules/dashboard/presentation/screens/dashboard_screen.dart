@@ -9,7 +9,7 @@ import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_recen
 import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/dashboard_kpi_card_widget.dart';
 
-const double _dashboardNarrowWidthBreakpoint = 1100;
+const double _dashboardNarrowWidthBreakpoint = 1220;
 const double _dashboardCompactHeightThreshold = 820;
 const double _dashboardCompactPanelHeight = 340;
 const double _dashboardDefaultPanelHeight = 420;
@@ -53,19 +53,15 @@ class DashboardScreen extends ConsumerWidget {
                       ? _dashboardCompactPanelHeight
                       : _dashboardDefaultPanelHeight;
               return ListView(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 children: <Widget>[
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: <Widget>[
-                      Text(
-                        'Dashboard',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const Spacer(),
-                      IconButton(
+                      OutlinedButton.icon(
                         onPressed: () => _refresh(ref),
-                        tooltip: 'Refresh (F5)',
                         icon: const Icon(Icons.refresh),
+                        label: const Text('Refresh'),
                       ),
                     ],
                   ),
@@ -228,11 +224,13 @@ class _KpiGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final crossAxisCount = width >= 1100
-            ? 4
-            : width >= 750
-                ? 3
-                : 2;
+        final crossAxisCount = width >= 1500
+            ? 5
+            : width >= 1100
+                ? 4
+                : width >= 760
+                    ? 3
+                    : 2;
 
         return GridView.builder(
           shrinkWrap: true,
@@ -242,7 +240,7 @@ class _KpiGrid extends StatelessWidget {
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: 8,
             mainAxisSpacing: 8,
-            childAspectRatio: 2.3,
+            childAspectRatio: width >= 1500 ? 2.6 : 2.3,
           ),
           itemBuilder: (_, index) => cards[index],
         );

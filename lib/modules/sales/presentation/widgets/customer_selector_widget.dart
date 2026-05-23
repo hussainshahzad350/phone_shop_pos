@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_entity.dart';
 
 class CustomerSelectorWidget extends StatefulWidget {
@@ -84,13 +85,11 @@ class _CustomerSelectorWidgetState extends State<CustomerSelectorWidget> {
               controller: _displayController,
               readOnly: true,
               onTap: _toggleDropdown,
-              decoration: const InputDecoration(
+              decoration: appDesktopInputDecoration(
                 labelText: 'Customer',
                 hintText: 'Search customer',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
-                isDense: true,
-                suffixIcon: Icon(Icons.arrow_drop_down),
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: const Icon(Icons.arrow_drop_down),
               ),
             ),
             if (_isDropdownOpen) ...<Widget>[
@@ -98,11 +97,8 @@ class _CustomerSelectorWidgetState extends State<CustomerSelectorWidget> {
               TextField(
                 controller: _searchController,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Search customer',
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                ),
+                decoration:
+                    appDesktopInputDecoration(labelText: 'Search customer'),
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 8),

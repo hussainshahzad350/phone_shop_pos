@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.dart';
 
 class TotalsPanelWidget extends StatefulWidget {
@@ -75,11 +76,7 @@ class _TotalsPanelWidgetState extends State<TotalsPanelWidget> {
             TextField(
               controller: _discountController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Discount',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
+              decoration: appDesktopInputDecoration(labelText: 'Discount'),
               onChanged: (value) => widget.onDiscountChanged(
                 FormattingHelpers.parseLocaleDecimal(value),
               ),
@@ -88,11 +85,7 @@ class _TotalsPanelWidgetState extends State<TotalsPanelWidget> {
             TextField(
               controller: _taxController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Tax',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
+              decoration: appDesktopInputDecoration(labelText: 'Tax'),
               onChanged: (value) => widget.onTaxChanged(
                 FormattingHelpers.parseLocaleDecimal(value),
               ),

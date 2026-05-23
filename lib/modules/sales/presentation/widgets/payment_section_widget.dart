@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class PaymentSectionWidget extends StatefulWidget {
   const PaymentSectionWidget({
@@ -105,10 +106,7 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
                   widget.onPaymentMethodChanged(value);
                 }
               },
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
+              decoration: appDesktopInputDecoration(),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -116,11 +114,7 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
               focusNode: widget.paidAmountFocusNode,
               keyboardType: TextInputType.number,
               textInputAction: TextInputAction.done,
-              decoration: const InputDecoration(
-                labelText: 'Paid Amount',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
+              decoration: appDesktopInputDecoration(labelText: 'Paid Amount'),
               onChanged: (value) => widget.onPaidAmountChanged(
                 FormattingHelpers.parseLocaleDecimal(value),
               ),
@@ -137,11 +131,7 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
               focusNode: widget.notesFocusNode,
               maxLines: 2,
               maxLength: NotesSafety.maxLength,
-              decoration: const InputDecoration(
-                labelText: 'Notes',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
+              decoration: appDesktopInputDecoration(labelText: 'Notes'),
               onChanged: widget.onNotesChanged,
             ),
             const SizedBox(height: 12),

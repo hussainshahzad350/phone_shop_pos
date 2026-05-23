@@ -105,17 +105,13 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         },
         child: Scaffold(
           body: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: <Widget>[
-                    Text(
-                      'Inventory',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    const SizedBox(width: 8),
                     OutlinedButton.icon(
                       onPressed: () async {
                         final rows = stockAsync.valueOrNull ?? const <StockRowEntity>[];
@@ -128,11 +124,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                       icon: const Icon(Icons.tune),
                       label: const Text('Stock Adjustment'),
                     ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.refresh),
-                      tooltip: 'Refresh (F5)',
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
                       onPressed: _refresh,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Refresh'),
                     ),
                   ],
                 ),
@@ -214,44 +210,53 @@ class _SummaryCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: _SummaryCard(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final spacing = 8.0;
+        final cardWidth = constraints.maxWidth >= 1400
+            ? (constraints.maxWidth - (spacing * 3)) / 4
+            : constraints.maxWidth >= 900
+                ? (constraints.maxWidth - spacing) / 2
+                : constraints.maxWidth;
+        final cards = <Widget>[
+          _SummaryCard(
             label: 'Phones In Stock',
             value: summary.inStockPhones.toString(),
             icon: Icons.phone_android,
             color: Colors.green,
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _SummaryCard(
+          _SummaryCard(
             label: 'Sold Phones',
             value: summary.soldPhones.toString(),
             icon: Icons.sell,
             color: Colors.grey,
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _SummaryCard(
+          _SummaryCard(
             label: 'Accessory Units',
             value: summary.totalAccessoryUnits.toString(),
             icon: Icons.cable,
             color: Colors.blue,
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _SummaryCard(
+          _SummaryCard(
             label: 'Low Stock Alerts',
             value: summary.lowStockCount.toString(),
             icon: Icons.warning_amber,
             color: summary.lowStockCount > 0 ? Colors.red : Colors.green,
           ),
-        ),
-      ],
+        ];
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: cards
+              .map(
+                (card) => SizedBox(
+                  width: cardWidth,
+                  child: card,
+                ),
+              )
+              .toList(growable: false),
+        );
+      },
     );
   }
 }
