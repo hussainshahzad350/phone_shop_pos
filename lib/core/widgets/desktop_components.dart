@@ -439,9 +439,7 @@ class _DesktopContentArea extends StatelessWidget {
         return Align(
           alignment: Alignment.topCenter,
           child: SizedBox(
-            width: constraints.maxWidth
-                .clamp(0.0, _kDesktopContentMaxWidth)
-                .toDouble(),
+            width: constraints.maxWidth.clamp(0.0, _kDesktopContentMaxWidth),
             child: child,
           ),
         );
