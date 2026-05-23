@@ -1248,12 +1248,10 @@ class MigrationService {
     16: <String>[
       'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN seller_phone TEXT;',
     ],
-    // v17 is handled by dedicated _applyMigrationV17 above.
-    // v18 is handled by dedicated _applyMigrationV18 above.
+    // v17 and v18 are handled by dedicated methods above.
     // The empty lists are kept here so that all version numbers are represented
     // in the map for documentation purposes (consistent with v7 and v9).
     17: <String>[],
-    // v18 is handled by dedicated _applyMigrationV18 above.
     18: <String>[],
   };
 }
