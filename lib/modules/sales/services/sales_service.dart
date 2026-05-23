@@ -22,6 +22,8 @@ class SalesService {
     double? price,
     String? serializedStockId,
     String? imei,
+    String? imei2,
+    String? serialNumber,
   }) {
     if (product.hasImei) {
       if (serializedStockId == null || serializedStockId.isEmpty) {
@@ -56,6 +58,8 @@ class SalesService {
             unitPrice: price ?? product.salePrice,
             serializedStockId: serializedStockId,
             imei: imei,
+            imei2: imei2,
+            serialNumber: serialNumber,
           ),
         ],
       );

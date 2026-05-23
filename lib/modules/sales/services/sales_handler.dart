@@ -37,8 +37,8 @@ class SalesScannerHandler implements ScannerModeHandler {
     }
 
     final repository = await _ref.read(salesRepositoryProvider.future);
-    final productsResult =
-        await repository.searchSellableProducts(payload.normalizedValue, limit: 10);
+    final productsResult = await repository
+        .searchSellableProducts(payload.normalizedValue, limit: 10);
     if (productsResult.isFailure) {
       return ScannerHandlerResult(
         isSuccess: false,
@@ -111,6 +111,8 @@ class SalesScannerHandler implements ScannerModeHandler {
           quantity: 1,
           serializedStockId: selectedStock?.id,
           imei: selectedStock?.imei1,
+          imei2: selectedStock?.imei2,
+          serialNumber: selectedStock?.serialNumber,
           price: selectedStock?.sellingPrice ?? product.salePrice,
         );
 

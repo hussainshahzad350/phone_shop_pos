@@ -5,6 +5,7 @@ import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_state_provider.dart';
+import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_repository_provider.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_completion_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/supplier_option_entity.dart';
@@ -25,8 +26,8 @@ void main() {
     final product = _buildProduct(id: 'p1', hasImei: false, barcode: '12345678');
     final container = ProviderContainer(
       overrides: <Override>[
-        salesRepositoryProvider.overrideWithValue(
-          AsyncData<SalesRepository>(_FakeSalesRepository(product: product)),
+        salesRepositoryProvider.overrideWith(
+          (ref) async => _FakeSalesRepository(product: product),
         ),
       ],
     );
@@ -45,8 +46,8 @@ void main() {
     final product = _buildProduct(id: 'p2', hasImei: false, barcode: '23456789');
     final container = ProviderContainer(
       overrides: <Override>[
-        purchaseRepositoryProvider.overrideWithValue(
-          AsyncData<PurchaseRepository>(_FakePurchaseRepository(product: product)),
+        purchaseRepositoryProvider.overrideWith(
+          (ref) async => _FakePurchaseRepository(product: product),
         ),
       ],
     );

@@ -966,7 +966,7 @@ class _SalesHistoryView extends ConsumerWidget {
                               ),
                               icon: const Icon(Icons.open_in_new,
                                   size: _actionIconSize),
-                              child: const Text('Open'),
+                              label: const Text('Open'),
                             ),
                           ),
                           DataCell(
@@ -979,7 +979,7 @@ class _SalesHistoryView extends ConsumerWidget {
                                     ),
                                     icon: const Icon(Icons.print_outlined,
                                         size: _actionIconSize),
-                                    child: const Text('Reprint'),
+                                    label: const Text('Reprint'),
                                   ),
                           ),
                         ],

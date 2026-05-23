@@ -100,7 +100,7 @@ class AppTheme {
         thickness: 0.8,
       ),
       dataTableTheme: DataTableThemeData(
-        headingRowColor: MaterialStatePropertyAll<Color?>(
+        headingRowColor: WidgetStatePropertyAll<Color?>(
           brightness == Brightness.light
               ? const Color(0xFFEFF2FA)
               : colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),

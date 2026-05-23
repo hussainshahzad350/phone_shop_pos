@@ -202,7 +202,7 @@ class _FiltersRow extends ConsumerWidget {
             SizedBox(
               width: 180,
               child: DropdownButtonFormField<String>(
-                value: statusFilter.isEmpty ? '' : statusFilter,
+                initialValue: statusFilter.isEmpty ? '' : statusFilter,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   isDense: true,
@@ -316,8 +316,8 @@ class _RepairJobsTable extends ConsumerWidget {
               DataColumn(label: Text('Actions')),
             ],
             rows: jobs.map((job) => _buildRow(context, ref, job)).toList(
-              growable: false,
-            ),
+                  growable: false,
+                ),
           ),
         ),
       ),
@@ -344,7 +344,8 @@ class _RepairJobsTable extends ConsumerWidget {
     WidgetRef ref,
     RepairJobEntity job,
   ) {
-    final shortId = job.id.length > 12 ? job.id.substring(job.id.length - 8) : job.id;
+    final shortId =
+        job.id.length > 12 ? job.id.substring(job.id.length - 8) : job.id;
 
     final paymentText = job.finalCost != null
         ? 'Total: ${FormattingHelpers.currencyPkr(job.finalCost!)}\n'
@@ -450,8 +451,7 @@ class _RepairJobsTable extends ConsumerWidget {
                         ref.invalidate(repairKpisProvider);
                         AppNotifier.success('Repair job deleted.');
                       },
-                      onFailure: (error) =>
-                          AppNotifier.error(error.message),
+                      onFailure: (error) => AppNotifier.error(error.message),
                     );
                   }
                 },
@@ -565,16 +565,15 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
       _imeiController.text = job.imei ?? '';
       _problemController.text = job.problemDescription;
       _technicianController.text = job.technicianName ?? '';
-      _estimatedCostController.text =
-          job.estimatedCost != null ? job.estimatedCost!.toStringAsFixed(0) : '';
-      _advanceController.text = job.advanceReceived > 0
-          ? job.advanceReceived.toStringAsFixed(0)
+      _estimatedCostController.text = job.estimatedCost != null
+          ? job.estimatedCost!.toStringAsFixed(0)
           : '';
+      _advanceController.text =
+          job.advanceReceived > 0 ? job.advanceReceived.toStringAsFixed(0) : '';
       _finalCostController.text =
           job.finalCost != null ? job.finalCost!.toStringAsFixed(0) : '';
-      _repairExpenseController.text = job.repairExpense > 0
-          ? job.repairExpense.toStringAsFixed(0)
-          : '';
+      _repairExpenseController.text =
+          job.repairExpense > 0 ? job.repairExpense.toStringAsFixed(0) : '';
       _notesController.text = job.notes ?? '';
 
       if (job.accessories != null && job.accessories!.isNotEmpty) {
@@ -671,7 +670,8 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
 
     final job = RepairJobEntity(
       id: existing?.id ?? IdHelpers.newId(prefix: 'rep'),
-      repairDate: DateTime.utc(_repairDate.year, _repairDate.month, _repairDate.day),
+      repairDate:
+          DateTime.utc(_repairDate.year, _repairDate.month, _repairDate.day),
       customerName: _customerNameController.text.trim().isEmpty
           ? null
           : _customerNameController.text.trim(),
@@ -760,7 +760,7 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                         child: _buildTextField(
                           controller: _phoneModelController,
                           label: 'Phone Model *',
-                          onChanged: (_) => setState(() {}),
+                          onChanged: () => setState(() {}),
                         ),
                       ),
                     ],
@@ -816,7 +816,7 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: _issueType,
+                    initialValue: _issueType,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       isDense: true,
@@ -909,7 +909,7 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                   const SizedBox(height: 12),
                   _buildSectionHeader('Status'),
                   DropdownButtonFormField<String>(
-                    value: _status,
+                    initialValue: _status,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       isDense: true,
@@ -945,9 +945,8 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: (_isSubmitting || !_isValid)
-                  ? null
-                  : () => _submit(ref),
+              onPressed:
+                  (_isSubmitting || !_isValid) ? null : () => _submit(ref),
               child: Text(_isSubmitting
                   ? 'Saving…'
                   : (widget.initialJob != null ? 'Update' : 'Save')),

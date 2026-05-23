@@ -7,6 +7,8 @@ class CartItemEntity {
     required this.unitPrice,
     this.serializedStockId,
     this.imei,
+    this.imei2,
+    this.serialNumber,
   });
 
   final String productModelId;
@@ -16,6 +18,8 @@ class CartItemEntity {
   final double unitPrice;
   final String? serializedStockId;
   final String? imei;
+  final String? imei2;
+  final String? serialNumber;
 
   double get lineTotal => unitPrice * quantity;
 
@@ -27,8 +31,12 @@ class CartItemEntity {
     double? unitPrice,
     String? serializedStockId,
     String? imei,
+    String? imei2,
+    String? serialNumber,
     bool clearSerializedStockId = false,
     bool clearImei = false,
+    bool clearImei2 = false,
+    bool clearSerialNumber = false,
   }) {
     return CartItemEntity(
       productModelId: productModelId ?? this.productModelId,
@@ -40,6 +48,9 @@ class CartItemEntity {
           ? null
           : serializedStockId ?? this.serializedStockId,
       imei: clearImei ? null : imei ?? this.imei,
+      imei2: clearImei2 ? null : imei2 ?? this.imei2,
+      serialNumber:
+          clearSerialNumber ? null : serialNumber ?? this.serialNumber,
     );
   }
 }

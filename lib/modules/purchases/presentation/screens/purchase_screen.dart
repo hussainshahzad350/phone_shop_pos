@@ -38,6 +38,8 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   final TextEditingController _paidController =
       TextEditingController(text: '0');
   final TextEditingController _notesController = TextEditingController();
+  final ScrollController _productGridScrollController = ScrollController();
+  final ScrollController _rightPanelScrollController = ScrollController();
   bool _isSubmitting = false;
   bool _isUsedPurchase = false;
   int _handledShortcutToken = 0;
@@ -52,7 +54,27 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     _taxController.dispose();
     _paidController.dispose();
     _notesController.dispose();
+    _productGridScrollController.dispose();
+    _rightPanelScrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _scrollProductGrid(double delta) async {
+    if (!_productGridScrollController.hasClients) {
+      return;
+    }
+
+    final position = _productGridScrollController.position;
+    final target = (position.pixels + delta).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+
+    await _productGridScrollController.animateTo(
+      target.toDouble(),
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   Future<void> _handleAddProduct(ProductEntity product) async {
@@ -74,10 +96,11 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     }
 
     for (final entry in entries) {
-      final result = await ref.read(purchaseFormStateProvider.notifier).addImeiEntry(
-            index: itemIndex,
-            entry: entry,
-          );
+      final result =
+          await ref.read(purchaseFormStateProvider.notifier).addImeiEntry(
+                index: itemIndex,
+                entry: entry,
+              );
       if (result.isFailure) {
         _showSnack(result.asFailure!.error.message);
         break;
@@ -325,8 +348,8 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
           width: 220,
           child: TextField(
             controller: _invoiceController,
-            decoration:
-                appDesktopInputDecoration(labelText: 'Invoice Number (optional)'),
+            decoration: appDesktopInputDecoration(
+                labelText: 'Invoice Number (optional)'),
             onChanged: (v) {
               ref
                   .read(purchaseFormStateProvider.notifier)
@@ -388,49 +411,80 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                 }
                 return LayoutBuilder(
                   builder: (context, constraints) {
-                    final crossAxisCount =
-                        constraints.maxWidth >= 900 ? 2 : 1;
-                    return GridView.builder(
-                      padding: const EdgeInsets.all(8),
-                      scrollDirection: Axis.horizontal,
-                      gridDelegate:
-                          SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: crossAxisCount,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                        mainAxisExtent:
-                            constraints.maxWidth >= 1400 ? 220 : 240,
-                      ),
-                      itemCount: products.length,
-                      itemBuilder: (context, index) {
-                        final product = products[index];
-                        return OutlinedButton(
-                          onPressed: () => _handleAddProduct(product),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: <Widget>[
-                              Text(
-                                product.name,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 13),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Cost: ${FormattingHelpers.currencyPkr(product.purchasePrice)}',
-                                style: const TextStyle(fontSize: 11),
-                              ),
-                              Text(
-                                product.hasImei
-                                    ? 'Serialized • IMEI'
-                                    : 'Qty-based',
-                                style: const TextStyle(fontSize: 11),
-                              ),
-                            ],
+                    final crossAxisCount = 1;
+                    final mainAxisExtent =
+                        constraints.maxWidth >= 1400 ? 220.0 : 240.0;
+                    final scrollStep = constraints.maxWidth * 0.75;
+                    return Stack(
+                      children: <Widget>[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 34),
+                          child: GridView.builder(
+                            controller: _productGridScrollController,
+                            padding: const EdgeInsets.all(8),
+                            scrollDirection: Axis.horizontal,
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              crossAxisSpacing: 8,
+                              mainAxisSpacing: 8,
+                              mainAxisExtent: mainAxisExtent,
+                            ),
+                            itemCount: products.length,
+                            itemBuilder: (context, index) {
+                              final product = products[index];
+                              return OutlinedButton(
+                                onPressed: () => _handleAddProduct(product),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.all(10),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  alignment: Alignment.centerLeft,
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: <Widget>[
+                                    Text(
+                                      product.name,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 13),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Cost: ${FormattingHelpers.currencyPkr(product.purchasePrice)}',
+                                      style: const TextStyle(fontSize: 11),
+                                    ),
+                                    Text(
+                                      product.hasImei
+                                          ? 'Serialized • IMEI'
+                                          : 'Qty-based',
+                                      style: const TextStyle(fontSize: 11),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
+                        ),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: _GridNavArrowButton(
+                            icon: Icons.chevron_left,
+                            onPressed: () => _scrollProductGrid(-scrollStep),
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: _GridNavArrowButton(
+                            icon: Icons.chevron_right,
+                            onPressed: () => _scrollProductGrid(scrollStep),
+                          ),
+                        ),
+                      ],
                     );
                   },
                 );
@@ -450,112 +504,141 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     ({double subtotal, double total}) totals,
   ) {
     return Scrollbar(
+      controller: _rightPanelScrollController,
       thumbVisibility: true,
       child: ListView(
+        controller: _rightPanelScrollController,
         children: <Widget>[
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const Text(
-                  'Totals',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 8),
-                _TotalRow(
-                  label: 'Subtotal',
-                  value: totals.subtotal,
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _discountController,
-                  decoration: appDesktopInputDecoration(labelText: 'Discount'),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  onChanged: (v) {
-                    final val = FormattingHelpers.parseLocaleDecimal(v);
-                    ref
-                        .read(purchaseFormStateProvider.notifier)
-                        .setDiscount(val);
-                  },
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _taxController,
-                  decoration: appDesktopInputDecoration(labelText: 'Tax'),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  onChanged: (v) {
-                    final val = FormattingHelpers.parseLocaleDecimal(v);
-                    ref.read(purchaseFormStateProvider.notifier).setTax(val);
-                  },
-                ),
-                const SizedBox(height: 8),
-                _TotalRow(
-                  label: 'Total',
-                  value: totals.total,
-                  bold: true,
-                ),
-                const Divider(),
-                TextField(
-                  controller: _paidController,
-                  decoration:
-                      appDesktopInputDecoration(labelText: 'Paid Amount'),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  onChanged: (v) {
-                    final val = FormattingHelpers.parseLocaleDecimal(v);
-                    ref
-                        .read(purchaseFormStateProvider.notifier)
-                        .setPaidAmount(val);
-                  },
-                ),
-                const SizedBox(height: 8),
-                _TotalRow(
-                  label: 'Balance Due',
-                  value: totals.total - formState.paidAmount,
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: TextField(
-              controller: _notesController,
-              maxLines: 3,
-              maxLength: NotesSafety.maxLength,
-              decoration: appDesktopInputDecoration(
-                labelText: 'Notes (optional)',
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Text(
+                    'Totals',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  _TotalRow(
+                    label: 'Subtotal',
+                    value: totals.subtotal,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _discountController,
+                    decoration:
+                        appDesktopInputDecoration(labelText: 'Discount'),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (v) {
+                      final val = FormattingHelpers.parseLocaleDecimal(v);
+                      ref
+                          .read(purchaseFormStateProvider.notifier)
+                          .setDiscount(val);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _taxController,
+                    decoration: appDesktopInputDecoration(labelText: 'Tax'),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (v) {
+                      final val = FormattingHelpers.parseLocaleDecimal(v);
+                      ref.read(purchaseFormStateProvider.notifier).setTax(val);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _TotalRow(
+                    label: 'Total',
+                    value: totals.total,
+                    bold: true,
+                  ),
+                  const Divider(),
+                  TextField(
+                    controller: _paidController,
+                    decoration:
+                        appDesktopInputDecoration(labelText: 'Paid Amount'),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (v) {
+                      final val = FormattingHelpers.parseLocaleDecimal(v);
+                      ref
+                          .read(purchaseFormStateProvider.notifier)
+                          .setPaidAmount(val);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _TotalRow(
+                    label: 'Balance Due',
+                    value: totals.total - formState.paidAmount,
+                  ),
+                ],
               ),
-              onChanged: (v) {
-                ref
-                    .read(purchaseFormStateProvider.notifier)
-                    .setNotes(v.isEmpty ? null : v);
-              },
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        FilledButton.icon(
-          onPressed: _isSubmitting ? null : _savePurchase,
-          icon: _isSubmitting
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.save),
-          label: const Text('Save Purchase (F10)'),
-          style: FilledButton.styleFrom(
-            minimumSize: const Size(double.infinity, 48),
+          const SizedBox(height: 8),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: TextField(
+                controller: _notesController,
+                maxLines: 3,
+                maxLength: NotesSafety.maxLength,
+                decoration: appDesktopInputDecoration(
+                  labelText: 'Notes (optional)',
+                ),
+                onChanged: (v) {
+                  ref
+                      .read(purchaseFormStateProvider.notifier)
+                      .setNotes(v.isEmpty ? null : v);
+                },
+              ),
+            ),
           ),
-        ),
+          const SizedBox(height: 8),
+          FilledButton.icon(
+            onPressed: _isSubmitting ? null : _savePurchase,
+            icon: _isSubmitting
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.save),
+            label: const Text('Save Purchase (F10)'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(double.infinity, 48),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _GridNavArrowButton extends StatelessWidget {
+  const _GridNavArrowButton({
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.92),
+      elevation: 1,
+      shape: const CircleBorder(),
+      child: IconButton(
+        visualDensity: VisualDensity.compact,
+        icon: Icon(icon),
+        onPressed: onPressed,
+        tooltip:
+            icon == Icons.chevron_left ? 'Previous products' : 'Next products',
       ),
     );
   }

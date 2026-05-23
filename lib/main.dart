@@ -10,17 +10,21 @@ import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/routing/app_router.dart';
 import 'package:phone_shop_pos/core/theme/app_theme.dart';
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  FlutterError.onError = (details) {
-    FlutterError.presentError(details);
-    Zone.current.handleUncaughtError(
-        details.exception, details.stack ?? StackTrace.empty);
-  };
-
+void main() {
   runZonedGuarded(
-    () => runApp(const ProviderScope(child: PhoneShopPosApp())),
+    () {
+      WidgetsFlutterBinding.ensureInitialized();
+
+      FlutterError.onError = (details) {
+        FlutterError.presentError(details);
+        Zone.current.handleUncaughtError(
+          details.exception,
+          details.stack ?? StackTrace.empty,
+        );
+      };
+
+      runApp(const ProviderScope(child: PhoneShopPosApp()));
+    },
     (error, stackTrace) {
       debugPrint('Unhandled startup/runtime error: $error');
       debugPrintStack(stackTrace: stackTrace);

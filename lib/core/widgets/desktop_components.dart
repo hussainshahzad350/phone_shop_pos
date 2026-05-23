@@ -196,6 +196,7 @@ class AppDataTable extends StatefulWidget {
     this.dataRowMinHeight = 38,
     this.dataRowMaxHeight = 46,
     this.columnSpacing = 16,
+    this.showCheckboxColumn = true,
   });
 
   final List<DataColumn> columns;
@@ -206,6 +207,7 @@ class AppDataTable extends StatefulWidget {
   final double dataRowMinHeight;
   final double dataRowMaxHeight;
   final double columnSpacing;
+  final bool showCheckboxColumn;
 
   @override
   State<AppDataTable> createState() => _AppDataTableState();
@@ -243,8 +245,8 @@ class _AppDataTableState extends State<AppDataTable> {
         onSelectChanged: row.onSelectChanged,
         onLongPress: row.onLongPress,
         color: row.color ??
-            MaterialStateProperty.resolveWith<Color?>((states) {
-              if (states.contains(MaterialState.selected)) {
+            WidgetStateProperty.resolveWith<Color?>((states) {
+              if (states.contains(WidgetState.selected)) {
                 return Theme.of(context)
                     .colorScheme
                     .primary
@@ -281,7 +283,7 @@ class _AppDataTableState extends State<AppDataTable> {
               dataRowMinHeight: widget.dataRowMinHeight,
               dataRowMaxHeight: widget.dataRowMaxHeight,
               headingRowHeight: 44,
-              showCheckboxColumn: false,
+              showCheckboxColumn: widget.showCheckboxColumn,
               showFirstLastButtons: true,
             ),
           ),
@@ -313,6 +315,7 @@ class _AppDataTableState extends State<AppDataTable> {
                 dataRowMaxHeight: widget.dataRowMaxHeight,
                 headingRowHeight: 44,
                 dividerThickness: 0.6,
+                showCheckboxColumn: widget.showCheckboxColumn,
               ),
             ),
           ),

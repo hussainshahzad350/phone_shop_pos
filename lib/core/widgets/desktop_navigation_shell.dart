@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phone_shop_pos/core/routing/navigation_leave_guard.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
@@ -31,8 +32,8 @@ int desktopNavigationSelectedIndexForPath(String currentPath) {
 String desktopNavigationLabelForPath(String currentPath) {
   return _desktopNavItems
       .firstWhere(
-        (item) =>
-            desktopRouteMatches(currentPath: currentPath, routePrefix: item.route),
+        (item) => desktopRouteMatches(
+            currentPath: currentPath, routePrefix: item.route),
         orElse: () => _desktopNavItems.first,
       )
       .label;
@@ -76,13 +77,25 @@ class DesktopNavigationShell extends ConsumerWidget {
       scannerController.setActiveMode(scannerMode);
     });
 
+    Future<void> handleDestinationSelection(int index) async {
+      final targetPath = _desktopNavItems[index].route;
+      final shouldProceed = await confirmAndHandleCartLeave(
+        context: context,
+        ref: ref,
+        currentPath: currentPath,
+        targetPath: targetPath,
+      );
+      if (!shouldProceed || !context.mounted) {
+        return;
+      }
+      context.go(targetPath);
+    }
+
     return AppShortcutManager(
       child: AppDesktopScaffold(
         sidebar: AppSidebar(
           selectedIndex: selectedIndex,
-          onDestinationSelected: (index) {
-            context.go(_desktopNavItems[index].route);
-          },
+          onDestinationSelected: handleDestinationSelection,
           destinations: _desktopNavItems
               .map(
                 (item) => NavigationRailDestination(

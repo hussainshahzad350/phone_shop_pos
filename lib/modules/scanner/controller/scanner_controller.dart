@@ -5,7 +5,6 @@ import 'package:phone_shop_pos/modules/scanner/domain/entities/scanner_mode.dart
 import 'package:phone_shop_pos/modules/scanner/domain/entities/scanner_process_feedback.dart';
 import 'package:phone_shop_pos/modules/scanner/domain/entities/scanner_session_state.dart';
 import 'package:phone_shop_pos/modules/scanner/services/scanner_mode_router.dart';
-import 'package:phone_shop_pos/modules/scanner/services/scanner_mode_handler.dart';
 import 'package:phone_shop_pos/modules/scanner/services/scanner_service.dart';
 
 class ScannerController extends StateNotifier<ScannerSessionState> {

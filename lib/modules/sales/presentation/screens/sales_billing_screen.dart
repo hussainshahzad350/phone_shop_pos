@@ -43,6 +43,8 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
   final FocusNode _paymentMethodFocus = FocusNode();
   final FocusNode _paidAmountFocus = FocusNode();
   final FocusNode _notesFocus = FocusNode();
+  final ScrollController _productGridScrollController = ScrollController();
+  final ScrollController _rightPanelScrollController = ScrollController();
   bool _isCompleting = false;
   int _selectedCartIndex = 0;
   int _handledShortcutToken = 0;
@@ -56,7 +58,27 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     _paymentMethodFocus.dispose();
     _paidAmountFocus.dispose();
     _notesFocus.dispose();
+    _productGridScrollController.dispose();
+    _rightPanelScrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _scrollProductGrid(double delta) async {
+    if (!_productGridScrollController.hasClients) {
+      return;
+    }
+
+    final position = _productGridScrollController.position;
+    final target = (position.pixels + delta).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+
+    await _productGridScrollController.animateTo(
+      target.toDouble(),
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   Future<void> _handleAddProduct(ProductEntity product) async {
@@ -81,6 +103,8 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
           product: product,
           serializedStockId: selected.id,
           imei: selected.imei1,
+          imei2: selected.imei2,
+          serialNumber: selected.serialNumber,
           price: selected.sellingPrice ?? product.salePrice,
         );
     _showResultError(result);
@@ -417,51 +441,87 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                       child: productsAsync.when(
                         data: (products) => LayoutBuilder(
                           builder: (context, constraints) {
-                            final crossAxisCount =
-                                constraints.maxWidth >= 900 ? 2 : 1;
+                            final crossAxisCount = 1;
                             final mainAxisExtent =
                                 constraints.maxWidth >= 1400 ? 220.0 : 240.0;
-                            return GridView.builder(
-                              padding: const EdgeInsets.all(8),
-                              scrollDirection: Axis.horizontal,
-                              gridDelegate:
-                                  SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: crossAxisCount,
-                                crossAxisSpacing: 8,
-                                mainAxisSpacing: 8,
-                                mainAxisExtent: mainAxisExtent,
-                              ),
-                              itemCount: products.length,
-                              itemBuilder: (context, index) {
-                                final product = products[index];
-                                return OutlinedButton(
-                                  onPressed: () => _handleAddProduct(product),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: <Widget>[
-                                      Text(
-                                        product.name,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        FormattingHelpers.currencyPkr(
-                                          product.salePrice,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        product.hasImei
-                                            ? 'Serialized • IMEI required'
-                                            : 'Quantity product',
-                                      ),
-                                    ],
+                            final scrollStep = constraints.maxWidth * 0.75;
+                            return Stack(
+                              children: <Widget>[
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 34,
                                   ),
-                                );
-                              },
+                                  child: GridView.builder(
+                                    controller: _productGridScrollController,
+                                    padding: const EdgeInsets.all(8),
+                                    scrollDirection: Axis.horizontal,
+                                    gridDelegate:
+                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: crossAxisCount,
+                                      crossAxisSpacing: 8,
+                                      mainAxisSpacing: 8,
+                                      mainAxisExtent: mainAxisExtent,
+                                    ),
+                                    itemCount: products.length,
+                                    itemBuilder: (context, index) {
+                                      final product = products[index];
+                                      return OutlinedButton(
+                                        onPressed: () =>
+                                            _handleAddProduct(product),
+                                        style: OutlinedButton.styleFrom(
+                                          padding: const EdgeInsets.all(10),
+                                          minimumSize: Size.zero,
+                                          tapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
+                                          alignment: Alignment.centerLeft,
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: <Widget>[
+                                            Text(
+                                              product.name,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              FormattingHelpers.currencyPkr(
+                                                product.salePrice,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              product.hasImei
+                                                  ? 'Serialized • IMEI required'
+                                                  : 'Quantity product',
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: _GridNavArrowButton(
+                                    icon: Icons.chevron_left,
+                                    onPressed: () =>
+                                        _scrollProductGrid(-scrollStep),
+                                  ),
+                                ),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: _GridNavArrowButton(
+                                    icon: Icons.chevron_right,
+                                    onPressed: () =>
+                                        _scrollProductGrid(scrollStep),
+                                  ),
+                                ),
+                              ],
                             );
                           },
                         ),
@@ -545,8 +605,10 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                             Expanded(
                               flex: rightFlex,
                               child: Scrollbar(
+                                controller: _rightPanelScrollController,
                                 thumbVisibility: true,
                                 child: ListView(
+                                  controller: _rightPanelScrollController,
                                   children: <Widget>[
                                     FocusTraversalOrder(
                                       order: const NumericFocusOrder(2),
@@ -581,13 +643,15 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                                                 ),
                                               ),
                                             ),
-                                          if (customersAsync.isLoading) ...<Widget>[
+                                          if (customersAsync
+                                              .isLoading) ...<Widget>[
                                             const SizedBox(height: 6),
                                             const LinearProgressIndicator(
                                               minHeight: 2,
                                             ),
                                           ],
-                                          if (customersAsync.hasError) ...<Widget>[
+                                          if (customersAsync
+                                              .hasError) ...<Widget>[
                                             const SizedBox(height: 8),
                                             Text(
                                               customersAsync.error is AppError
@@ -683,6 +747,32 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _GridNavArrowButton extends StatelessWidget {
+  const _GridNavArrowButton({
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.92),
+      elevation: 1,
+      shape: const CircleBorder(),
+      child: IconButton(
+        visualDensity: VisualDensity.compact,
+        icon: Icon(icon),
+        onPressed: onPressed,
+        tooltip:
+            icon == Icons.chevron_left ? 'Previous products' : 'Next products',
       ),
     );
   }

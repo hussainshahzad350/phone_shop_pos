@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
+import 'package:phone_shop_pos/core/routing/navigation_leave_guard.dart';
 
 enum AppShortcutEvent {
   focusSearch,
@@ -41,8 +42,8 @@ class AppShortcutEventNotifier extends StateNotifier<AppShortcutEventState> {
 
 final appShortcutEventBusProvider =
     StateNotifierProvider<AppShortcutEventNotifier, AppShortcutEventState>(
-      (ref) => AppShortcutEventNotifier(),
-    );
+  (ref) => AppShortcutEventNotifier(),
+);
 
 class AppShortcutManager extends ConsumerWidget {
   const AppShortcutManager({
@@ -54,6 +55,20 @@ class AppShortcutManager extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    Future<void> guardedGo(String route) async {
+      final currentPath = GoRouterState.of(context).uri.path;
+      final shouldProceed = await confirmAndHandleCartLeave(
+        context: context,
+        ref: ref,
+        currentPath: currentPath,
+        targetPath: route,
+      );
+      if (!shouldProceed || !context.mounted) {
+        return;
+      }
+      context.go(route);
+    }
+
     return FocusTraversalGroup(
       policy: OrderedTraversalPolicy(),
       child: Shortcuts(
@@ -126,7 +141,7 @@ class AppShortcutManager extends ConsumerWidget {
             ),
             _BackupIntent: CallbackAction<_BackupIntent>(
               onInvoke: (_) {
-                context.go('/settings');
+                guardedGo('/settings');
                 AppNotifier.info(
                   'Ctrl+B opened Settings. Use One-Click Backup there to start backup.',
                 );
@@ -135,19 +150,19 @@ class AppShortcutManager extends ConsumerWidget {
             ),
             _ReportsIntent: CallbackAction<_ReportsIntent>(
               onInvoke: (_) {
-                context.go('/reports');
+                guardedGo('/reports');
                 return null;
               },
             ),
             _InventoryIntent: CallbackAction<_InventoryIntent>(
               onInvoke: (_) {
-                context.go('/inventory');
+                guardedGo('/inventory');
                 return null;
               },
             ),
             _SalesIntent: CallbackAction<_SalesIntent>(
               onInvoke: (_) {
-                context.go('/sales');
+                guardedGo('/sales');
                 return null;
               },
             ),

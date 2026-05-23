@@ -5,7 +5,7 @@ import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 
-class PurchaseItemsTable extends StatelessWidget {
+class PurchaseItemsTable extends StatefulWidget {
   const PurchaseItemsTable({
     required this.items,
     required this.onRemoveItem,
@@ -24,27 +24,43 @@ class PurchaseItemsTable extends StatelessWidget {
   final void Function(int itemIndex, int imeiIndex) onRemoveImeiEntry;
 
   @override
+  State<PurchaseItemsTable> createState() => _PurchaseItemsTableState();
+}
+
+class _PurchaseItemsTableState extends State<PurchaseItemsTable> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) {
+    if (widget.items.isEmpty) {
       return const Center(
         child: Text('No items added. Search for a product to begin.'),
       );
     }
 
     return Scrollbar(
+      controller: _scrollController,
       thumbVisibility: true,
       child: ListView.builder(
-        itemCount: items.length,
+        controller: _scrollController,
+        itemCount: widget.items.length,
         itemBuilder: (context, index) {
-          final item = items[index];
+          final item = widget.items[index];
           return _PurchaseItemRow(
             item: item,
             itemIndex: index,
-            onRemove: () => onRemoveItem(index),
-            onUpdateQuantity: (qty) => onUpdateQuantity(index, qty),
-            onUpdateUnitCost: (cost) => onUpdateUnitCost(index, cost),
-            onAddImeiEntries: () => onAddImeiEntries(index),
-            onRemoveImeiEntry: (imeiIdx) => onRemoveImeiEntry(index, imeiIdx),
+            onRemove: () => widget.onRemoveItem(index),
+            onUpdateQuantity: (qty) => widget.onUpdateQuantity(index, qty),
+            onUpdateUnitCost: (cost) => widget.onUpdateUnitCost(index, cost),
+            onAddImeiEntries: () => widget.onAddImeiEntries(index),
+            onRemoveImeiEntry: (imeiIdx) =>
+                widget.onRemoveImeiEntry(index, imeiIdx),
           );
         },
       ),
@@ -316,9 +332,7 @@ class _ImeiEntryRow extends StatelessWidget {
         ],
         Expanded(
           child: Text(
-            '${entry.imei1}'
-            '${entry.imei2 != null ? " / ${entry.imei2}" : ""}'
-            '${entry.serialNumber != null ? " [${entry.serialNumber}]" : ""}',
+            _imeiDisplayText(),
             style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
           ),
         ),
@@ -334,5 +348,17 @@ class _ImeiEntryRow extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _imeiDisplayText() {
+    final imeiParts = <String>[entry.imei1.trim()];
+    if (entry.imei2?.trim().isNotEmpty == true) {
+      imeiParts.add(entry.imei2!.trim());
+    }
+    final serial = entry.serialNumber?.trim();
+    if (serial == null || serial.isEmpty) {
+      return imeiParts.join(' / ');
+    }
+    return '${imeiParts.join(' / ')} [S/N: $serial]';
   }
 }

@@ -18,6 +18,8 @@ class CartStateNotifier extends StateNotifier<List<CartItemEntity>> {
     double? price,
     String? serializedStockId,
     String? imei,
+    String? imei2,
+    String? serialNumber,
   }) async {
     final service = await _ref.read(salesServiceProvider.future);
     final result = service.addToCart(
@@ -27,6 +29,8 @@ class CartStateNotifier extends StateNotifier<List<CartItemEntity>> {
       price: price,
       serializedStockId: serializedStockId,
       imei: imei,
+      imei2: imei2,
+      serialNumber: serialNumber,
     );
 
     if (result.isSuccess) {
@@ -49,9 +53,11 @@ class CartStateNotifier extends StateNotifier<List<CartItemEntity>> {
     return Failure<void>(result.asFailure!.error);
   }
 
-  Future<Result<void>> updateQty({required int index, required int quantity}) async {
+  Future<Result<void>> updateQty(
+      {required int index, required int quantity}) async {
     final service = await _ref.read(salesServiceProvider.future);
-    final result = service.updateQty(items: state, index: index, quantity: quantity);
+    final result =
+        service.updateQty(items: state, index: index, quantity: quantity);
 
     if (result.isSuccess) {
       state = result.asSuccess!.value;
@@ -93,6 +99,7 @@ class CartStateNotifier extends StateNotifier<List<CartItemEntity>> {
   }
 }
 
-final cartStateProvider = StateNotifierProvider<CartStateNotifier, List<CartItemEntity>>(
+final cartStateProvider =
+    StateNotifierProvider<CartStateNotifier, List<CartItemEntity>>(
   (ref) => CartStateNotifier(ref),
 );

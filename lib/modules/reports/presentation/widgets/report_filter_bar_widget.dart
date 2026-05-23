@@ -89,15 +89,17 @@ class ReportFilterBarWidget extends StatelessWidget {
                   ),
                 ),
                 _IdDropdown(
-                  label:
-                      customerOptionsLoading ? 'Customer (loading...)' : 'Customer',
+                  label: customerOptionsLoading
+                      ? 'Customer (loading...)'
+                      : 'Customer',
                   value: filter.customerId,
                   items: customerOptions,
                   onChanged: onCustomer,
                 ),
                 _IdDropdown(
-                  label:
-                      productOptionsLoading ? 'Product (loading...)' : 'Product',
+                  label: productOptionsLoading
+                      ? 'Product (loading...)'
+                      : 'Product',
                   value: filter.productModelId,
                   items: productOptions,
                   onChanged: onProduct,
@@ -203,7 +205,8 @@ class _SimpleDropdown extends StatelessWidget {
     return SizedBox(
       width: 180,
       child: DropdownButtonFormField<String?>(
-        value: value,
+        initialValue: value,
+        isExpanded: true,
         decoration: appDesktopInputDecoration(labelText: label),
         onChanged: onChanged,
         items: <DropdownMenuItem<String?>>[
@@ -238,7 +241,8 @@ class _IdDropdown extends StatelessWidget {
     return SizedBox(
       width: 220,
       child: DropdownButtonFormField<String?>(
-        value: value,
+        initialValue: value,
+        isExpanded: true,
         decoration: appDesktopInputDecoration(labelText: label),
         onChanged: onChanged,
         items: <DropdownMenuItem<String?>>[
