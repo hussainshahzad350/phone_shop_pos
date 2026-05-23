@@ -178,9 +178,9 @@ class _KpiGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final crossAxisCount = width >= 1600
+        final crossAxisCount = width >= 1100
             ? 4
-            : width >= 1200
+            : width >= 750
                 ? 3
                 : 2;
 
