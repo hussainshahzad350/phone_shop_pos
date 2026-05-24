@@ -18,115 +18,283 @@ class StockTableWidget extends StatelessWidget {
       return const Center(child: Text('No stock records found.'));
     }
 
-    return AppDataTable(
-      columnSpacing: 16,
-      dataRowMinHeight: 36,
-      dataRowMaxHeight: 44,
-      rowsPerPage: 50,
-      paginateThreshold: _kStockPaginateThreshold,
-      columns: const <DataColumn>[
-        DataColumn(label: Text('Type')),
-        DataColumn(label: Text('Condition')),
-        DataColumn(label: Text('Product')),
-        DataColumn(label: Text('Brand')),
-        DataColumn(label: Text('Category')),
-        DataColumn(label: Text('IMEI / Qty')),
-        DataColumn(label: Text('Status / Stock')),
-        DataColumn(label: Text('Cost'), numeric: true),
-        DataColumn(label: Text('Price'), numeric: true),
-        DataColumn(label: Text('Location')),
-      ],
-      rows: rows.map(_buildRow).toList(growable: false),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final layout = _StockTableLayout.fromWidth(constraints.maxWidth);
+        final visibleColumns = _visibleColumns(layout);
+        return AppDataTable(
+          columnSpacing: layout.columnSpacing,
+          dataRowMinHeight: layout.dataRowMinHeight,
+          dataRowMaxHeight: layout.dataRowMaxHeight,
+          rowsPerPage: 50,
+          paginateThreshold: _kStockPaginateThreshold,
+          columns: visibleColumns
+              .map((column) => _buildDataColumn(column, layout))
+              .toList(growable: false),
+          rows: rows
+              .map((row) => _buildResponsiveRow(row, visibleColumns, layout))
+              .toList(growable: false),
+        );
+      },
     );
   }
 
-  DataRow _buildRow(StockRowEntity row) {
-    if (row.type == StockRowType.serialized) {
-      final isUsed = row.condition == SerializedStockCondition.used;
-      return DataRow(
-        cells: <DataCell>[
-          const DataCell(Text('Phone')),
-          DataCell(
-            isUsed
-                ? _chipLabel('Used', Colors.orange)
-                : _chipLabel('New', Colors.teal),
-          ),
-          DataCell(Text(row.productName)),
-          DataCell(Text(row.brand ?? '')),
-          DataCell(Text(row.category ?? '')),
-          DataCell(
-            Text(
-              row.imei1 != null && row.imei1!.length > 10
-                  ? '${row.imei1!.substring(0, 10)}…'
-                  : (row.imei1 ?? '—'),
-            ),
-          ),
-          DataCell(_statusBadge(row.serializedStatus)),
-          DataCell(
-            Text(
-              row.costPrice != null
-                  ? FormattingHelpers.decimal(
-                      row.costPrice!,
-                      fractionDigits: 0,
-                    )
-                  : '—',
-            ),
-          ),
-          DataCell(
-            Text(
-              row.sellingPrice != null
-                  ? FormattingHelpers.decimal(
-                      row.sellingPrice!,
-                      fractionDigits: 0,
-                    )
-                  : '—',
-            ),
-          ),
-          const DataCell(Text('—')),
-        ],
-      );
+  List<_StockTableColumn> _visibleColumns(_StockTableLayout layout) {
+    if (layout.showCompactColumns) {
+      return const <_StockTableColumn>[
+        _StockTableColumn.type,
+        _StockTableColumn.product,
+        _StockTableColumn.imeiOrQty,
+        _StockTableColumn.statusOrStock,
+        _StockTableColumn.price,
+      ];
     }
+    if (layout.showMediumColumns) {
+      return const <_StockTableColumn>[
+        _StockTableColumn.type,
+        _StockTableColumn.product,
+        _StockTableColumn.brand,
+        _StockTableColumn.imeiOrQty,
+        _StockTableColumn.statusOrStock,
+        _StockTableColumn.cost,
+        _StockTableColumn.price,
+      ];
+    }
+    return const <_StockTableColumn>[
+      _StockTableColumn.type,
+      _StockTableColumn.condition,
+      _StockTableColumn.product,
+      _StockTableColumn.brand,
+      _StockTableColumn.category,
+      _StockTableColumn.imeiOrQty,
+      _StockTableColumn.statusOrStock,
+      _StockTableColumn.cost,
+      _StockTableColumn.price,
+      _StockTableColumn.location,
+    ];
+  }
 
-    final isLow = row.isLowStock;
+  DataColumn _buildDataColumn(
+    _StockTableColumn column,
+    _StockTableLayout layout,
+  ) {
+    final label = _columnLabel(column);
+    return DataColumn(
+      numeric:
+          column == _StockTableColumn.cost || column == _StockTableColumn.price,
+      label: _labelCell(
+        label,
+        width: layout.labelWidth(column),
+        textAlign: (column == _StockTableColumn.cost ||
+                column == _StockTableColumn.price)
+            ? TextAlign.right
+            : TextAlign.left,
+      ),
+    );
+  }
+
+  DataRow _buildResponsiveRow(
+    StockRowEntity row,
+    List<_StockTableColumn> columns,
+    _StockTableLayout layout,
+  ) {
     return DataRow(
-      cells: <DataCell>[
-        const DataCell(Text('Accessory')),
-        const DataCell(Text('—')),
-        DataCell(Text(row.productName)),
-        DataCell(Text(row.brand ?? '')),
-        DataCell(Text(row.category ?? '')),
-        DataCell(
-          Text(
+      cells: columns
+          .map((column) => _buildDataCell(row, column, layout))
+          .toList(growable: false),
+    );
+  }
+
+  DataCell _buildDataCell(
+    StockRowEntity row,
+    _StockTableColumn column,
+    _StockTableLayout layout,
+  ) {
+    final isSerialized = row.type == StockRowType.serialized;
+    switch (column) {
+      case _StockTableColumn.type:
+        return DataCell(
+          _textCell(
+            isSerialized ? 'Phone' : 'Accessory',
+            width: layout.valueWidth(column),
+          ),
+        );
+      case _StockTableColumn.condition:
+        if (!isSerialized) {
+          return DataCell(_textCell('—', width: layout.valueWidth(column)));
+        }
+        final isUsed = row.condition == SerializedStockCondition.used;
+        return DataCell(
+          SizedBox(
+            width: layout.valueWidth(column),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: isUsed
+                  ? _chipLabel('Used', Colors.orange)
+                  : _chipLabel('New', Colors.teal),
+            ),
+          ),
+        );
+      case _StockTableColumn.product:
+        return DataCell(
+          _textCell(
+            row.productName,
+            width: layout.valueWidth(column),
+            maxLines: 1,
+          ),
+        );
+      case _StockTableColumn.brand:
+        return DataCell(
+          _textCell(row.brand ?? '—', width: layout.valueWidth(column)),
+        );
+      case _StockTableColumn.category:
+        return DataCell(
+          _textCell(row.category ?? '—', width: layout.valueWidth(column)),
+        );
+      case _StockTableColumn.imeiOrQty:
+        if (isSerialized) {
+          return DataCell(
+            _textCell(_formatImei(row.imei1), width: layout.valueWidth(column)),
+          );
+        }
+        return DataCell(
+          _textCell(
             row.quantity?.toString() ?? '—',
-            style: isLow
+            width: layout.valueWidth(column),
+            style: row.isLowStock
                 ? const TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                  )
+                    color: Colors.red, fontWeight: FontWeight.bold)
                 : null,
           ),
-        ),
-        DataCell(
-          isLow
-              ? _chipLabel('Low Stock', Colors.red)
-              : _chipLabel('In Stock', Colors.green),
-        ),
-        DataCell(
-          Text(
-            row.unitCost != null
-                ? FormattingHelpers.decimal(row.unitCost!, fractionDigits: 0)
-                : '—',
+        );
+      case _StockTableColumn.statusOrStock:
+        if (isSerialized) {
+          return DataCell(
+            SizedBox(
+              width: layout.valueWidth(column),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: _statusBadge(row.serializedStatus),
+              ),
+            ),
+          );
+        }
+        return DataCell(
+          SizedBox(
+            width: layout.valueWidth(column),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: row.isLowStock
+                  ? _chipLabel('Low Stock', Colors.red)
+                  : _chipLabel('In Stock', Colors.green),
+            ),
           ),
-        ),
-        DataCell(
-          Text(
-            row.unitPrice != null
-                ? FormattingHelpers.decimal(row.unitPrice!, fractionDigits: 0)
-                : '—',
+        );
+      case _StockTableColumn.cost:
+        return DataCell(
+          _textCell(
+            isSerialized
+                ? (row.costPrice != null
+                    ? FormattingHelpers.decimal(row.costPrice!,
+                        fractionDigits: 0)
+                    : '—')
+                : (row.unitCost != null
+                    ? FormattingHelpers.decimal(row.unitCost!,
+                        fractionDigits: 0)
+                    : '—'),
+            width: layout.valueWidth(column),
+            textAlign: TextAlign.right,
           ),
-        ),
-        DataCell(Text(row.location ?? '—')),
-      ],
+        );
+      case _StockTableColumn.price:
+        return DataCell(
+          _textCell(
+            isSerialized
+                ? (row.sellingPrice != null
+                    ? FormattingHelpers.decimal(row.sellingPrice!,
+                        fractionDigits: 0)
+                    : '—')
+                : (row.unitPrice != null
+                    ? FormattingHelpers.decimal(row.unitPrice!,
+                        fractionDigits: 0)
+                    : '—'),
+            width: layout.valueWidth(column),
+            textAlign: TextAlign.right,
+          ),
+        );
+      case _StockTableColumn.location:
+        return DataCell(
+          _textCell(row.location ?? '—', width: layout.valueWidth(column)),
+        );
+    }
+  }
+
+  String _columnLabel(_StockTableColumn column) {
+    switch (column) {
+      case _StockTableColumn.type:
+        return 'Type';
+      case _StockTableColumn.condition:
+        return 'Condition';
+      case _StockTableColumn.product:
+        return 'Product';
+      case _StockTableColumn.brand:
+        return 'Brand';
+      case _StockTableColumn.category:
+        return 'Category';
+      case _StockTableColumn.imeiOrQty:
+        return 'IMEI / Qty';
+      case _StockTableColumn.statusOrStock:
+        return 'Status / Stock';
+      case _StockTableColumn.cost:
+        return 'Cost';
+      case _StockTableColumn.price:
+        return 'Price';
+      case _StockTableColumn.location:
+        return 'Location';
+    }
+  }
+
+  String _formatImei(String? imei) {
+    if (imei == null || imei.isEmpty) {
+      return '—';
+    }
+    if (imei.length <= 14) {
+      return imei;
+    }
+    return '${imei.substring(0, 14)}…';
+  }
+
+  Widget _labelCell(
+    String label, {
+    required double width,
+    TextAlign textAlign = TextAlign.left,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Text(
+        label,
+        textAlign: textAlign,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  Widget _textCell(
+    String value, {
+    required double width,
+    TextStyle? style,
+    TextAlign textAlign = TextAlign.left,
+    int maxLines = 1,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Text(
+        value,
+        style: style,
+        textAlign: textAlign,
+        maxLines: maxLines,
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 
@@ -166,5 +334,141 @@ class StockTableWidget extends StatelessWidget {
       label: label,
       color: color,
     );
+  }
+}
+
+enum _StockTableColumn {
+  type,
+  condition,
+  product,
+  brand,
+  category,
+  imeiOrQty,
+  statusOrStock,
+  cost,
+  price,
+  location,
+}
+
+class _StockTableLayout {
+  const _StockTableLayout({
+    required this.columnSpacing,
+    required this.dataRowMinHeight,
+    required this.dataRowMaxHeight,
+    required this.showMediumColumns,
+    required this.showCompactColumns,
+    required this.isWideDesktop,
+  });
+
+  final double columnSpacing;
+  final double dataRowMinHeight;
+  final double dataRowMaxHeight;
+  final bool showMediumColumns;
+  final bool showCompactColumns;
+  final bool isWideDesktop;
+
+  factory _StockTableLayout.fromWidth(double width) {
+    if (width >= 1600) {
+      return const _StockTableLayout(
+        columnSpacing: 28,
+        dataRowMinHeight: 52,
+        dataRowMaxHeight: 60,
+        showMediumColumns: false,
+        showCompactColumns: false,
+        isWideDesktop: true,
+      );
+    }
+    if (width >= 1220) {
+      return const _StockTableLayout(
+        columnSpacing: 20,
+        dataRowMinHeight: 46,
+        dataRowMaxHeight: 54,
+        showMediumColumns: true,
+        showCompactColumns: false,
+        isWideDesktop: false,
+      );
+    }
+    return const _StockTableLayout(
+      columnSpacing: 14,
+      dataRowMinHeight: 40,
+      dataRowMaxHeight: 48,
+      showMediumColumns: false,
+      showCompactColumns: true,
+      isWideDesktop: false,
+    );
+  }
+
+  double labelWidth(_StockTableColumn column) {
+    return valueWidth(column);
+  }
+
+  double valueWidth(_StockTableColumn column) {
+    if (isWideDesktop) {
+      switch (column) {
+        case _StockTableColumn.type:
+          return 92;
+        case _StockTableColumn.condition:
+          return 120;
+        case _StockTableColumn.product:
+          return 320;
+        case _StockTableColumn.brand:
+          return 180;
+        case _StockTableColumn.category:
+          return 170;
+        case _StockTableColumn.imeiOrQty:
+          return 170;
+        case _StockTableColumn.statusOrStock:
+          return 170;
+        case _StockTableColumn.cost:
+        case _StockTableColumn.price:
+          return 132;
+        case _StockTableColumn.location:
+          return 180;
+      }
+    }
+    if (showMediumColumns) {
+      switch (column) {
+        case _StockTableColumn.type:
+          return 88;
+        case _StockTableColumn.condition:
+          return 100;
+        case _StockTableColumn.product:
+          return 250;
+        case _StockTableColumn.brand:
+          return 150;
+        case _StockTableColumn.category:
+          return 130;
+        case _StockTableColumn.imeiOrQty:
+          return 140;
+        case _StockTableColumn.statusOrStock:
+          return 150;
+        case _StockTableColumn.cost:
+        case _StockTableColumn.price:
+          return 110;
+        case _StockTableColumn.location:
+          return 140;
+      }
+    }
+    switch (column) {
+      case _StockTableColumn.type:
+        return 84;
+      case _StockTableColumn.condition:
+        return 100;
+      case _StockTableColumn.product:
+        return 220;
+      case _StockTableColumn.brand:
+        return 120;
+      case _StockTableColumn.category:
+        return 120;
+      case _StockTableColumn.imeiOrQty:
+        return 120;
+      case _StockTableColumn.statusOrStock:
+        return 130;
+      case _StockTableColumn.cost:
+      case _StockTableColumn.price:
+        return 96;
+      case _StockTableColumn.location:
+        return 120;
+    }
   }
 }

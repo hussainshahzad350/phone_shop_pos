@@ -1,5 +1,6 @@
 class DashboardRecentSaleEntity {
   const DashboardRecentSaleEntity({
+    required this.saleId,
     required this.invoiceNumber,
     required this.saleDate,
     required this.customerName,
@@ -8,6 +9,7 @@ class DashboardRecentSaleEntity {
     required this.paymentMethod,
   });
 
+  final String? saleId;
   final String invoiceNumber;
   final DateTime saleDate;
   final String customerName;

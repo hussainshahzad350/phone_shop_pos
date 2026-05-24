@@ -163,11 +163,13 @@ class DashboardService with BaseRepositoryGuard {
     }
   }
 
-  Future<Result<List<DashboardRecentSaleEntity>>> getRecentSales({int limit = 10}) {
+  Future<Result<List<DashboardRecentSaleEntity>>> getRecentSales(
+      {int limit = 10}) {
     return guard<List<DashboardRecentSaleEntity>>(() async {
       final rows = await _appDatabase.database.rawQuery(
         '''
         SELECT
+          s.id AS sale_id,
           s.invoice_number,
           s.sale_date,
           COALESCE(c.name, 'Walk-in Customer') AS customer_name,
@@ -182,22 +184,25 @@ class DashboardService with BaseRepositoryGuard {
         <Object?>[limit],
       );
 
-      return rows
-          .map(
-            (row) => DashboardRecentSaleEntity(
-              invoiceNumber: row['invoice_number'] as String,
-              saleDate: DateTimeHelpers.fromSql(row['sale_date'] as String),
-              customerName: row['customer_name'] as String,
-              total: (row['total'] as num?)?.toDouble() ?? 0,
-              paidAmount: (row['paid_amount'] as num?)?.toDouble() ?? 0,
-              paymentMethod: row['payment_method'] as String?,
-            ),
-          )
-          .toList(growable: false);
+      return rows.map(
+        (row) {
+          final rawSaleId = row['sale_id'] ?? row['id'];
+          return DashboardRecentSaleEntity(
+            saleId: rawSaleId?.toString(),
+            invoiceNumber: row['invoice_number'] as String,
+            saleDate: DateTimeHelpers.fromSql(row['sale_date'] as String),
+            customerName: row['customer_name'] as String,
+            total: (row['total'] as num?)?.toDouble() ?? 0,
+            paidAmount: (row['paid_amount'] as num?)?.toDouble() ?? 0,
+            paymentMethod: row['payment_method'] as String?,
+          );
+        },
+      ).toList(growable: false);
     }, operation: 'get_recent_sales');
   }
 
-  Future<Result<List<DashboardLowStockEntity>>> getLowStockWarnings({int limit = 8}) {
+  Future<Result<List<DashboardLowStockEntity>>> getLowStockWarnings(
+      {int limit = 8}) {
     return guard<List<DashboardLowStockEntity>>(() async {
       final rows = await _appDatabase.database.rawQuery(
         '''

@@ -933,6 +933,12 @@ class _SalesHistoryView extends ConsumerWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(8),
                   child: AppDataTable(
+                    columnSpacing: _reportTableLayoutFor(context).columnSpacing,
+                    dataRowMinHeight:
+                        _reportTableLayoutFor(context).dataRowMinHeight,
+                    dataRowMaxHeight:
+                        _reportTableLayoutFor(context).dataRowMaxHeight,
+                    showCheckboxColumn: false,
                     columns: const <DataColumn>[
                       DataColumn(label: Text('Invoice')),
                       DataColumn(label: Text('Date')),
@@ -1042,6 +1048,10 @@ class _CreditCollectionView extends ConsumerWidget {
             padding: const EdgeInsets.all(8),
             child: AppDataTable(
               emptyMessage: 'No pending credit sales.',
+              columnSpacing: _reportTableLayoutFor(context).columnSpacing,
+              dataRowMinHeight: _reportTableLayoutFor(context).dataRowMinHeight,
+              dataRowMaxHeight: _reportTableLayoutFor(context).dataRowMaxHeight,
+              showCheckboxColumn: false,
               columns: const <DataColumn>[
                 DataColumn(label: Text('Invoice')),
                 DataColumn(label: Text('Customer')),
@@ -1168,6 +1178,12 @@ class _PurchaseHistoryView extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.all(8),
                 child: AppDataTable(
+                  columnSpacing: _reportTableLayoutFor(context).columnSpacing,
+                  dataRowMinHeight:
+                      _reportTableLayoutFor(context).dataRowMinHeight,
+                  dataRowMaxHeight:
+                      _reportTableLayoutFor(context).dataRowMaxHeight,
+                  showCheckboxColumn: false,
                   columns: const <DataColumn>[
                     DataColumn(label: Text('Date')),
                     DataColumn(label: Text('Supplier')),
@@ -1233,6 +1249,10 @@ class _SupplierLedgerView extends ConsumerWidget {
         child: Padding(
           padding: const EdgeInsets.all(8),
           child: AppDataTable(
+            columnSpacing: _reportTableLayoutFor(context).columnSpacing,
+            dataRowMinHeight: _reportTableLayoutFor(context).dataRowMinHeight,
+            dataRowMaxHeight: _reportTableLayoutFor(context).dataRowMaxHeight,
+            showCheckboxColumn: false,
             columns: const <DataColumn>[
               DataColumn(label: Text('Supplier')),
               DataColumn(label: Text('Purchases')),
@@ -1355,6 +1375,13 @@ class _CashLedgerView extends ConsumerWidget {
                       child: AppDataTable(
                         emptyMessage:
                             'No cash flow rows in selected date range.',
+                        columnSpacing:
+                            _reportTableLayoutFor(context).columnSpacing,
+                        dataRowMinHeight:
+                            _reportTableLayoutFor(context).dataRowMinHeight,
+                        dataRowMaxHeight:
+                            _reportTableLayoutFor(context).dataRowMaxHeight,
+                        showCheckboxColumn: false,
                         columns: const <DataColumn>[
                           DataColumn(label: Text('Day')),
                           DataColumn(label: Text('Cash Sales In')),
@@ -1548,6 +1575,12 @@ class _ExpensesView extends ConsumerWidget {
                 padding: const EdgeInsets.all(8),
                 child: AppDataTable(
                   emptyMessage: 'No expenses found.',
+                  columnSpacing: _reportTableLayoutFor(context).columnSpacing,
+                  dataRowMinHeight:
+                      _reportTableLayoutFor(context).dataRowMinHeight,
+                  dataRowMaxHeight:
+                      _reportTableLayoutFor(context).dataRowMaxHeight,
+                  showCheckboxColumn: false,
                   columns: const <DataColumn>[
                     DataColumn(label: Text('Date')),
                     DataColumn(label: Text('Category')),
@@ -1873,6 +1906,12 @@ class _SalesInvoiceDialog extends ConsumerWidget {
                 ],
                 Expanded(
                   child: AppDataTable(
+                    columnSpacing: _reportTableLayoutFor(context).columnSpacing,
+                    dataRowMinHeight:
+                        _reportTableLayoutFor(context).dataRowMinHeight,
+                    dataRowMaxHeight:
+                        _reportTableLayoutFor(context).dataRowMaxHeight,
+                    showCheckboxColumn: false,
                     columns: const <DataColumn>[
                       DataColumn(label: Text('Product')),
                       DataColumn(label: Text('IMEI')),
@@ -2215,6 +2254,12 @@ class _PurchaseDetailDialog extends ConsumerWidget {
                 ],
                 Expanded(
                   child: AppDataTable(
+                    columnSpacing: _reportTableLayoutFor(context).columnSpacing,
+                    dataRowMinHeight:
+                        _reportTableLayoutFor(context).dataRowMinHeight,
+                    dataRowMaxHeight:
+                        _reportTableLayoutFor(context).dataRowMaxHeight,
+                    showCheckboxColumn: false,
                     columns: const <DataColumn>[
                       DataColumn(label: Text('Product')),
                       DataColumn(label: Text('IMEI')),
@@ -2307,8 +2352,7 @@ class _RepairAnalyticsView extends ConsumerWidget {
                     final picked = await showDatePicker(
                       context: context,
                       firstDate: DateTime(2020),
-                      lastDate:
-                          DateTime.now().add(const Duration(days: 365)),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
                       initialDate: startDate ?? DateTime.now(),
                     );
                     ref
@@ -2327,8 +2371,7 @@ class _RepairAnalyticsView extends ConsumerWidget {
                     final picked = await showDatePicker(
                       context: context,
                       firstDate: DateTime(2020),
-                      lastDate:
-                          DateTime.now().add(const Duration(days: 365)),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
                       initialDate: endDate ?? DateTime.now(),
                     );
                     ref
@@ -2535,6 +2578,10 @@ class _AnalyticsTable extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             AppDataTable(
+              columnSpacing: _reportTableLayoutFor(context).columnSpacing,
+              dataRowMinHeight: _reportTableLayoutFor(context).dataRowMinHeight,
+              dataRowMaxHeight: _reportTableLayoutFor(context).dataRowMaxHeight,
+              showCheckboxColumn: false,
               columns: columns,
               rows: rows,
               emptyMessage: emptyMessage,
@@ -2544,6 +2591,44 @@ class _AnalyticsTable extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ReportTableLayout {
+  const _ReportTableLayout({
+    required this.columnSpacing,
+    required this.dataRowMinHeight,
+    required this.dataRowMaxHeight,
+  });
+
+  final double columnSpacing;
+  final double dataRowMinHeight;
+  final double dataRowMaxHeight;
+
+  factory _ReportTableLayout.fromWidth(double width) {
+    if (width >= 1600) {
+      return const _ReportTableLayout(
+        columnSpacing: 28,
+        dataRowMinHeight: 52,
+        dataRowMaxHeight: 60,
+      );
+    }
+    if (width >= 1220) {
+      return const _ReportTableLayout(
+        columnSpacing: 20,
+        dataRowMinHeight: 46,
+        dataRowMaxHeight: 54,
+      );
+    }
+    return const _ReportTableLayout(
+      columnSpacing: 14,
+      dataRowMinHeight: 40,
+      dataRowMaxHeight: 48,
+    );
+  }
+}
+
+_ReportTableLayout _reportTableLayoutFor(BuildContext context) {
+  return _ReportTableLayout.fromWidth(MediaQuery.sizeOf(context).width);
 }
 
 String _tabLabel(ReportsTab tab) {

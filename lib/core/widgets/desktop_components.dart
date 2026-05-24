@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 
 const int _kDefaultPaginateThreshold = 80;
-const double _kDesktopContentMaxWidth = 1760.0;
+const double _kDesktopContentMaxWidth = 2200.0;
 const double _kDesktopCardRadius = 16.0;
 
 InputDecoration appDesktopInputDecoration({

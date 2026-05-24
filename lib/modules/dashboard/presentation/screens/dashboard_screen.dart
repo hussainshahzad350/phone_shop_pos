@@ -8,11 +8,22 @@ import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_low_s
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_recent_sale_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/dashboard_kpi_card_widget.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 
 const double _dashboardNarrowWidthBreakpoint = 1220;
-const double _dashboardCompactHeightThreshold = 820;
-const double _dashboardCompactPanelHeight = 340;
-const double _dashboardDefaultPanelHeight = 420;
+
+double _dashboardPanelHeightFor(double viewportHeight) {
+  if (viewportHeight < 760) {
+    return 280;
+  }
+  if (viewportHeight < 900) {
+    return 340;
+  }
+  if (viewportHeight < 1080) {
+    return 400;
+  }
+  return 480;
+}
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -49,9 +60,7 @@ class DashboardScreen extends ConsumerWidget {
               final isNarrow =
                   constraints.maxWidth < _dashboardNarrowWidthBreakpoint;
               final panelHeight =
-                  constraints.maxHeight < _dashboardCompactHeightThreshold
-                      ? _dashboardCompactPanelHeight
-                      : _dashboardDefaultPanelHeight;
+                  _dashboardPanelHeightFor(constraints.maxHeight);
               return ListView(
                 padding: const EdgeInsets.all(10),
                 children: <Widget>[
@@ -122,7 +131,7 @@ class DashboardScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Expanded(
-                            flex: 3,
+                            flex: 5,
                             child: Card(
                               child: Padding(
                                 padding: const EdgeInsets.all(10),
@@ -140,7 +149,7 @@ class DashboardScreen extends ConsumerWidget {
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            flex: 2,
+                            flex: 3,
                             child: Card(
                               child: Padding(
                                 padding: const EdgeInsets.all(10),
@@ -150,7 +159,8 @@ class DashboardScreen extends ConsumerWidget {
                                     child: CircularProgressIndicator(),
                                   ),
                                   error: (_, __) => const Center(
-                                    child: Text('Failed to load low stock data.'),
+                                    child:
+                                        Text('Failed to load low stock data.'),
                                   ),
                                 ),
                               ),
@@ -264,35 +274,396 @@ class _RecentSalesTable extends StatelessWidget {
         Expanded(
           child: rows.isEmpty
               ? const Center(child: Text('No sales found.'))
-              : AppDataTable(
-                  columns: const <DataColumn>[
-                    DataColumn(label: Text('Invoice')),
-                    DataColumn(label: Text('Date')),
-                    DataColumn(label: Text('Customer')),
-                    DataColumn(label: Text('Total')),
-                    DataColumn(label: Text('Pending')),
-                    DataColumn(label: Text('Payment')),
-                  ],
-                  rows: rows
-                      .map(
-                        (row) => DataRow(
-                          cells: <DataCell>[
-                            DataCell(Text(row.invoiceNumber)),
-                            DataCell(Text(
-                                FormattingHelpers.dateYmdHm(row.saleDate))),
-                            DataCell(Text(row.customerName)),
-                            DataCell(
-                                Text(FormattingHelpers.currencyPkr(row.total))),
-                            DataCell(
-                              Text(FormattingHelpers.currencyPkr(
-                                  row.pendingAmount)),
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final layout = _DashboardRecentSalesLayout.fromWidth(
+                        constraints.maxWidth);
+                    final visibleColumns = _visibleColumns(layout);
+                    return AppDataTable(
+                      columnSpacing: layout.columnSpacing,
+                      dataRowMinHeight: layout.dataRowMinHeight,
+                      dataRowMaxHeight: layout.dataRowMaxHeight,
+                      showCheckboxColumn: false,
+                      columns: visibleColumns
+                          .map(
+                            (column) => DataColumn(
+                              label: _labelCell(
+                                _columnLabel(column),
+                                width: layout.valueWidth(column),
+                                textAlign: _isNumericColumn(column)
+                                    ? TextAlign.right
+                                    : TextAlign.left,
+                              ),
+                              numeric: _isNumericColumn(column),
                             ),
-                            DataCell(Text(row.paymentMethod ?? '-')),
-                          ],
-                        ),
-                      )
-                      .toList(growable: false),
+                          )
+                          .toList(growable: false),
+                      rows: rows
+                          .map(
+                            (row) => DataRow(
+                              cells: visibleColumns
+                                  .map(
+                                    (column) => _buildDataCell(
+                                      context: context,
+                                      row: row,
+                                      column: column,
+                                      layout: layout,
+                                    ),
+                                  )
+                                  .toList(growable: false),
+                            ),
+                          )
+                          .toList(growable: false),
+                    );
+                  },
                 ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _openInvoiceDialog(
+    BuildContext context,
+    DashboardRecentSaleEntity row,
+  ) async {
+    final saleId = row.saleId;
+    if (saleId == null || saleId.isEmpty) {
+      return;
+    }
+    await showDialog<void>(
+      context: context,
+      builder: (context) => _DashboardSalesInvoiceDialog(saleId: saleId),
+    );
+  }
+
+  List<_DashboardRecentSalesColumn> _visibleColumns(
+    _DashboardRecentSalesLayout layout,
+  ) {
+    if (layout.showCompactColumns) {
+      return const <_DashboardRecentSalesColumn>[
+        _DashboardRecentSalesColumn.invoice,
+        _DashboardRecentSalesColumn.date,
+        _DashboardRecentSalesColumn.customer,
+        _DashboardRecentSalesColumn.total,
+        _DashboardRecentSalesColumn.view,
+      ];
+    }
+
+    return const <_DashboardRecentSalesColumn>[
+      _DashboardRecentSalesColumn.invoice,
+      _DashboardRecentSalesColumn.date,
+      _DashboardRecentSalesColumn.customer,
+      _DashboardRecentSalesColumn.total,
+      _DashboardRecentSalesColumn.pending,
+      _DashboardRecentSalesColumn.payment,
+      _DashboardRecentSalesColumn.view,
+    ];
+  }
+
+  bool _isNumericColumn(_DashboardRecentSalesColumn column) {
+    return false;
+  }
+
+  String _columnLabel(_DashboardRecentSalesColumn column) {
+    switch (column) {
+      case _DashboardRecentSalesColumn.invoice:
+        return 'Invoice';
+      case _DashboardRecentSalesColumn.date:
+        return 'Date';
+      case _DashboardRecentSalesColumn.customer:
+        return 'Customer';
+      case _DashboardRecentSalesColumn.total:
+        return 'Total';
+      case _DashboardRecentSalesColumn.pending:
+        return 'Pending';
+      case _DashboardRecentSalesColumn.payment:
+        return 'Payment';
+      case _DashboardRecentSalesColumn.view:
+        return 'Open';
+    }
+  }
+
+  DataCell _buildDataCell({
+    required BuildContext context,
+    required DashboardRecentSaleEntity row,
+    required _DashboardRecentSalesColumn column,
+    required _DashboardRecentSalesLayout layout,
+  }) {
+    switch (column) {
+      case _DashboardRecentSalesColumn.invoice:
+        return DataCell(
+          _valueCell(row.invoiceNumber, width: layout.valueWidth(column)),
+        );
+      case _DashboardRecentSalesColumn.date:
+        return DataCell(
+          _valueCell(
+            FormattingHelpers.dateYmdHm(row.saleDate),
+            width: layout.valueWidth(column),
+          ),
+        );
+      case _DashboardRecentSalesColumn.customer:
+        return DataCell(
+          _valueCell(row.customerName, width: layout.valueWidth(column)),
+        );
+      case _DashboardRecentSalesColumn.total:
+        return DataCell(
+          _valueCell(
+            FormattingHelpers.currencyPkr(row.total),
+            width: layout.valueWidth(column),
+          ),
+        );
+      case _DashboardRecentSalesColumn.pending:
+        return DataCell(
+          _valueCell(
+            FormattingHelpers.currencyPkr(row.pendingAmount),
+            width: layout.valueWidth(column),
+          ),
+        );
+      case _DashboardRecentSalesColumn.payment:
+        return DataCell(
+          _valueCell(row.paymentMethod ?? '-',
+              width: layout.valueWidth(column)),
+        );
+      case _DashboardRecentSalesColumn.view:
+        return DataCell(
+          SizedBox(
+            width: layout.valueWidth(column),
+            child: Align(
+              alignment: Alignment.center,
+              child: IconButton(
+                tooltip: 'View invoice',
+                onPressed: (row.saleId == null || row.saleId!.isEmpty)
+                    ? null
+                    : () => _openInvoiceDialog(context, row),
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints.tightFor(
+                  width: 32,
+                  height: 32,
+                ),
+                icon: const Icon(Icons.open_in_new, size: 18),
+              ),
+            ),
+          ),
+        );
+    }
+  }
+
+  Widget _labelCell(
+    String text, {
+    required double width,
+    TextAlign textAlign = TextAlign.left,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Text(
+        text,
+        textAlign: textAlign,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  Widget _valueCell(
+    String text, {
+    required double width,
+    TextAlign textAlign = TextAlign.left,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Text(
+        text,
+        textAlign: textAlign,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+}
+
+enum _DashboardRecentSalesColumn {
+  invoice,
+  date,
+  customer,
+  total,
+  pending,
+  payment,
+  view,
+}
+
+class _DashboardRecentSalesLayout {
+  const _DashboardRecentSalesLayout({
+    required this.columnSpacing,
+    required this.dataRowMinHeight,
+    required this.dataRowMaxHeight,
+    required this.showMediumColumns,
+    required this.showCompactColumns,
+    required this.isWideDesktop,
+  });
+
+  final double columnSpacing;
+  final double dataRowMinHeight;
+  final double dataRowMaxHeight;
+  final bool showMediumColumns;
+  final bool showCompactColumns;
+  final bool isWideDesktop;
+
+  factory _DashboardRecentSalesLayout.fromWidth(double width) {
+    if (width >= 1400) {
+      return const _DashboardRecentSalesLayout(
+        columnSpacing: 24,
+        dataRowMinHeight: 50,
+        dataRowMaxHeight: 58,
+        showMediumColumns: false,
+        showCompactColumns: false,
+        isWideDesktop: true,
+      );
+    }
+    if (width >= 1080) {
+      return const _DashboardRecentSalesLayout(
+        columnSpacing: 18,
+        dataRowMinHeight: 44,
+        dataRowMaxHeight: 52,
+        showMediumColumns: true,
+        showCompactColumns: false,
+        isWideDesktop: false,
+      );
+    }
+    return const _DashboardRecentSalesLayout(
+      columnSpacing: 14,
+      dataRowMinHeight: 40,
+      dataRowMaxHeight: 48,
+      showMediumColumns: false,
+      showCompactColumns: true,
+      isWideDesktop: false,
+    );
+  }
+
+  double valueWidth(_DashboardRecentSalesColumn column) {
+    if (isWideDesktop) {
+      switch (column) {
+        case _DashboardRecentSalesColumn.invoice:
+          return 140;
+        case _DashboardRecentSalesColumn.date:
+          return 180;
+        case _DashboardRecentSalesColumn.customer:
+          return 260;
+        case _DashboardRecentSalesColumn.total:
+          return 150;
+        case _DashboardRecentSalesColumn.pending:
+          return 150;
+        case _DashboardRecentSalesColumn.payment:
+          return 130;
+        case _DashboardRecentSalesColumn.view:
+          return 56;
+      }
+    }
+
+    switch (column) {
+      case _DashboardRecentSalesColumn.invoice:
+        return 120;
+      case _DashboardRecentSalesColumn.date:
+        return 150;
+      case _DashboardRecentSalesColumn.customer:
+        return 210;
+      case _DashboardRecentSalesColumn.total:
+        return 126;
+      case _DashboardRecentSalesColumn.pending:
+        return 126;
+      case _DashboardRecentSalesColumn.payment:
+        return 110;
+      case _DashboardRecentSalesColumn.view:
+        return 52;
+    }
+  }
+}
+
+class _DashboardSalesInvoiceDialog extends ConsumerWidget {
+  const _DashboardSalesInvoiceDialog({required this.saleId});
+
+  final String saleId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final detailAsync = ref.watch(salesInvoiceDetailProvider(saleId));
+    return AlertDialog(
+      title: const Text('Invoice Details'),
+      content: SizedBox(
+        width: 960,
+        height: 500,
+        child: detailAsync.when(
+          data: (detail) {
+            if (detail == null) {
+              return const Text('Invoice not found.');
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    Text('Invoice: ${detail.sale.invoiceNumber}'),
+                    Text(
+                        'Date: ${FormattingHelpers.dateYmd(detail.sale.saleDate)}'),
+                    Text('Customer: ${detail.sale.customerName}'),
+                    Text(
+                        'Total: ${FormattingHelpers.currencyPkr(detail.sale.total)}'),
+                    Text(
+                        'Paid: ${FormattingHelpers.currencyPkr(detail.sale.paidAmount)}'),
+                    Text(
+                      'Remaining: ${FormattingHelpers.currencyPkr(detail.sale.remainingBalance)}',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if ((detail.notes ?? '').isNotEmpty) ...<Widget>[
+                  Text('Notes: ${detail.notes}'),
+                  const SizedBox(height: 8),
+                ],
+                Expanded(
+                  child: AppDataTable(
+                    showCheckboxColumn: false,
+                    columns: const <DataColumn>[
+                      DataColumn(label: Text('Product')),
+                      DataColumn(label: Text('IMEI')),
+                      DataColumn(label: Text('Qty')),
+                      DataColumn(label: Text('Price')),
+                      DataColumn(label: Text('Line Total')),
+                      DataColumn(label: Text('Returned')),
+                    ],
+                    rows: detail.items
+                        .map(
+                          (item) => DataRow(
+                            cells: <DataCell>[
+                              DataCell(Text(item.productName)),
+                              DataCell(Text(item.imei ?? '-')),
+                              DataCell(Text(item.quantity.toString())),
+                              DataCell(
+                                Text(FormattingHelpers.currencyPkr(
+                                    item.unitPrice)),
+                              ),
+                              DataCell(
+                                Text(FormattingHelpers.currencyPkr(
+                                    item.lineTotal)),
+                              ),
+                              DataCell(Text(item.returnedQty.toString())),
+                            ],
+                          ),
+                        )
+                        .toList(growable: false),
+                  ),
+                ),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, __) => const Text('Failed to load invoice details.'),
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
         ),
       ],
     );

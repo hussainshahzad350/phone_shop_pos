@@ -115,6 +115,153 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
     }
   }
 
+  Widget _buildCustomersTable(List<CustomerEntity> items) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final layout = _CustomersTableLayout.fromWidth(constraints.maxWidth);
+        final visibleColumns = _visibleColumns(layout);
+        return AppDataTable(
+          columnSpacing: layout.columnSpacing,
+          dataRowMinHeight: layout.dataRowMinHeight,
+          dataRowMaxHeight: layout.dataRowMaxHeight,
+          columns: visibleColumns
+              .map((column) => _buildCustomerColumn(column, layout))
+              .toList(growable: false),
+          rows: items
+              .map(
+                (item) => DataRow(
+                  cells: visibleColumns
+                      .map(
+                        (column) => _buildCustomerCell(item, column, layout),
+                      )
+                      .toList(growable: false),
+                ),
+              )
+              .toList(growable: false),
+        );
+      },
+    );
+  }
+
+  List<_CustomersTableColumn> _visibleColumns(_CustomersTableLayout layout) {
+    if (layout.showCompactColumns) {
+      return const <_CustomersTableColumn>[
+        _CustomersTableColumn.name,
+        _CustomersTableColumn.phone,
+        _CustomersTableColumn.actions,
+      ];
+    }
+    if (layout.showMediumColumns) {
+      return const <_CustomersTableColumn>[
+        _CustomersTableColumn.name,
+        _CustomersTableColumn.phone,
+        _CustomersTableColumn.status,
+        _CustomersTableColumn.actions,
+      ];
+    }
+    return const <_CustomersTableColumn>[
+      _CustomersTableColumn.name,
+      _CustomersTableColumn.phone,
+      _CustomersTableColumn.email,
+      _CustomersTableColumn.status,
+      _CustomersTableColumn.actions,
+    ];
+  }
+
+  DataColumn _buildCustomerColumn(
+    _CustomersTableColumn column,
+    _CustomersTableLayout layout,
+  ) {
+    return DataColumn(
+      label: _labelCell(_columnLabel(column), width: layout.valueWidth(column)),
+    );
+  }
+
+  DataCell _buildCustomerCell(
+    CustomerEntity item,
+    _CustomersTableColumn column,
+    _CustomersTableLayout layout,
+  ) {
+    switch (column) {
+      case _CustomersTableColumn.name:
+        return DataCell(_textCell(item.name, width: layout.valueWidth(column)));
+      case _CustomersTableColumn.phone:
+        return DataCell(
+          _textCell(item.phone ?? '-', width: layout.valueWidth(column)),
+        );
+      case _CustomersTableColumn.email:
+        return DataCell(
+          _textCell(item.email ?? '-', width: layout.valueWidth(column)),
+        );
+      case _CustomersTableColumn.status:
+        return DataCell(
+          _textCell(
+            item.isActive ? 'Active' : 'Archived',
+            width: layout.valueWidth(column),
+          ),
+        );
+      case _CustomersTableColumn.actions:
+        return DataCell(
+          SizedBox(
+            width: layout.valueWidth(column),
+            child: Wrap(
+              spacing: 4,
+              children: <Widget>[
+                IconButton(
+                  onPressed: () => _editCustomer(item),
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+                IconButton(
+                  onPressed: () => _toggleActive(item),
+                  icon: Icon(
+                    item.isActive
+                        ? Icons.archive_outlined
+                        : Icons.check_circle_outline,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+    }
+  }
+
+  String _columnLabel(_CustomersTableColumn column) {
+    switch (column) {
+      case _CustomersTableColumn.name:
+        return 'Name';
+      case _CustomersTableColumn.phone:
+        return 'Phone';
+      case _CustomersTableColumn.email:
+        return 'Email';
+      case _CustomersTableColumn.status:
+        return 'Status';
+      case _CustomersTableColumn.actions:
+        return 'Actions';
+    }
+  }
+
+  Widget _labelCell(String label, {required double width}) {
+    return SizedBox(
+      width: width,
+      child: Text(
+        label,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  Widget _textCell(String value, {required double width}) {
+    return SizedBox(
+      width: width,
+      child: Text(
+        value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final includeInactive = ref.watch(customerIncludeInactiveProvider);
@@ -154,47 +301,7 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
             child: Padding(
               padding: const EdgeInsets.all(8),
               child: customersAsync.when(
-                data: (items) => AppDataTable(
-                  columns: const <DataColumn>[
-                    DataColumn(label: Text('Name')),
-                    DataColumn(label: Text('Phone')),
-                    DataColumn(label: Text('Email')),
-                    DataColumn(label: Text('Status')),
-                    DataColumn(label: Text('Actions')),
-                  ],
-                  rows: items
-                      .map(
-                        (item) => DataRow(
-                          cells: <DataCell>[
-                            DataCell(Text(item.name)),
-                            DataCell(Text(item.phone ?? '-')),
-                            DataCell(Text(item.email ?? '-')),
-                            DataCell(
-                                Text(item.isActive ? 'Active' : 'Archived')),
-                            DataCell(
-                              Wrap(
-                                spacing: 4,
-                                children: <Widget>[
-                                  IconButton(
-                                    onPressed: () => _editCustomer(item),
-                                    icon: const Icon(Icons.edit_outlined),
-                                  ),
-                                  IconButton(
-                                    onPressed: () => _toggleActive(item),
-                                    icon: Icon(
-                                      item.isActive
-                                          ? Icons.archive_outlined
-                                          : Icons.check_circle_outline,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                      .toList(growable: false),
-                ),
+                data: _buildCustomersTable,
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, _) => Center(child: Text('Error: $error')),
               ),
@@ -203,5 +310,105 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
         ),
       ],
     );
+  }
+}
+
+enum _CustomersTableColumn {
+  name,
+  phone,
+  email,
+  status,
+  actions,
+}
+
+class _CustomersTableLayout {
+  const _CustomersTableLayout({
+    required this.columnSpacing,
+    required this.dataRowMinHeight,
+    required this.dataRowMaxHeight,
+    required this.showMediumColumns,
+    required this.showCompactColumns,
+    required this.isWideDesktop,
+  });
+
+  final double columnSpacing;
+  final double dataRowMinHeight;
+  final double dataRowMaxHeight;
+  final bool showMediumColumns;
+  final bool showCompactColumns;
+  final bool isWideDesktop;
+
+  factory _CustomersTableLayout.fromWidth(double width) {
+    if (width >= 1600) {
+      return const _CustomersTableLayout(
+        columnSpacing: 28,
+        dataRowMinHeight: 52,
+        dataRowMaxHeight: 60,
+        showMediumColumns: false,
+        showCompactColumns: false,
+        isWideDesktop: true,
+      );
+    }
+    if (width >= 1220) {
+      return const _CustomersTableLayout(
+        columnSpacing: 20,
+        dataRowMinHeight: 46,
+        dataRowMaxHeight: 54,
+        showMediumColumns: true,
+        showCompactColumns: false,
+        isWideDesktop: false,
+      );
+    }
+    return const _CustomersTableLayout(
+      columnSpacing: 14,
+      dataRowMinHeight: 40,
+      dataRowMaxHeight: 48,
+      showMediumColumns: false,
+      showCompactColumns: true,
+      isWideDesktop: false,
+    );
+  }
+
+  double valueWidth(_CustomersTableColumn column) {
+    if (isWideDesktop) {
+      switch (column) {
+        case _CustomersTableColumn.name:
+          return 320;
+        case _CustomersTableColumn.phone:
+          return 170;
+        case _CustomersTableColumn.email:
+          return 260;
+        case _CustomersTableColumn.status:
+          return 120;
+        case _CustomersTableColumn.actions:
+          return 120;
+      }
+    }
+    if (showMediumColumns) {
+      switch (column) {
+        case _CustomersTableColumn.name:
+          return 260;
+        case _CustomersTableColumn.phone:
+          return 160;
+        case _CustomersTableColumn.email:
+          return 190;
+        case _CustomersTableColumn.status:
+          return 110;
+        case _CustomersTableColumn.actions:
+          return 110;
+      }
+    }
+    switch (column) {
+      case _CustomersTableColumn.name:
+        return 220;
+      case _CustomersTableColumn.phone:
+        return 150;
+      case _CustomersTableColumn.email:
+        return 160;
+      case _CustomersTableColumn.status:
+        return 95;
+      case _CustomersTableColumn.actions:
+        return 100;
+    }
   }
 }

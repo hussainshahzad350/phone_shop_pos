@@ -117,6 +117,154 @@ class _SuppliersPanelState extends ConsumerState<SuppliersPanel> {
     }
   }
 
+  Widget _buildSuppliersTable(List<SupplierEntity> items) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final layout = _SuppliersTableLayout.fromWidth(constraints.maxWidth);
+        final visibleColumns = _visibleColumns(layout);
+        return AppDataTable(
+          columnSpacing: layout.columnSpacing,
+          dataRowMinHeight: layout.dataRowMinHeight,
+          dataRowMaxHeight: layout.dataRowMaxHeight,
+          columns: visibleColumns
+              .map((column) => _buildSupplierColumn(column, layout))
+              .toList(growable: false),
+          rows: items
+              .map(
+                (item) => DataRow(
+                  cells: visibleColumns
+                      .map(
+                        (column) => _buildSupplierCell(item, column, layout),
+                      )
+                      .toList(growable: false),
+                ),
+              )
+              .toList(growable: false),
+        );
+      },
+    );
+  }
+
+  List<_SuppliersTableColumn> _visibleColumns(_SuppliersTableLayout layout) {
+    if (layout.showCompactColumns) {
+      return const <_SuppliersTableColumn>[
+        _SuppliersTableColumn.name,
+        _SuppliersTableColumn.phone,
+        _SuppliersTableColumn.actions,
+      ];
+    }
+    if (layout.showMediumColumns) {
+      return const <_SuppliersTableColumn>[
+        _SuppliersTableColumn.name,
+        _SuppliersTableColumn.phone,
+        _SuppliersTableColumn.status,
+        _SuppliersTableColumn.actions,
+      ];
+    }
+    return const <_SuppliersTableColumn>[
+      _SuppliersTableColumn.name,
+      _SuppliersTableColumn.phone,
+      _SuppliersTableColumn.contact,
+      _SuppliersTableColumn.status,
+      _SuppliersTableColumn.actions,
+    ];
+  }
+
+  DataColumn _buildSupplierColumn(
+    _SuppliersTableColumn column,
+    _SuppliersTableLayout layout,
+  ) {
+    return DataColumn(
+      label: _labelCell(_columnLabel(column), width: layout.valueWidth(column)),
+    );
+  }
+
+  DataCell _buildSupplierCell(
+    SupplierEntity item,
+    _SuppliersTableColumn column,
+    _SuppliersTableLayout layout,
+  ) {
+    switch (column) {
+      case _SuppliersTableColumn.name:
+        return DataCell(_textCell(item.name, width: layout.valueWidth(column)));
+      case _SuppliersTableColumn.phone:
+        return DataCell(
+          _textCell(item.phone ?? '-', width: layout.valueWidth(column)),
+        );
+      case _SuppliersTableColumn.contact:
+        return DataCell(
+          _textCell(item.contactPerson ?? '-',
+              width: layout.valueWidth(column)),
+        );
+      case _SuppliersTableColumn.status:
+        return DataCell(
+          _textCell(
+            item.isActive ? 'Active' : 'Archived',
+            width: layout.valueWidth(column),
+          ),
+        );
+      case _SuppliersTableColumn.actions:
+        return DataCell(
+          SizedBox(
+            width: layout.valueWidth(column),
+            child: Wrap(
+              spacing: 4,
+              children: <Widget>[
+                IconButton(
+                  onPressed: () => _editSupplier(item),
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+                IconButton(
+                  onPressed: () => _toggleActive(item),
+                  icon: Icon(
+                    item.isActive
+                        ? Icons.archive_outlined
+                        : Icons.check_circle_outline,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+    }
+  }
+
+  String _columnLabel(_SuppliersTableColumn column) {
+    switch (column) {
+      case _SuppliersTableColumn.name:
+        return 'Name';
+      case _SuppliersTableColumn.phone:
+        return 'Phone';
+      case _SuppliersTableColumn.contact:
+        return 'Contact';
+      case _SuppliersTableColumn.status:
+        return 'Status';
+      case _SuppliersTableColumn.actions:
+        return 'Actions';
+    }
+  }
+
+  Widget _labelCell(String label, {required double width}) {
+    return SizedBox(
+      width: width,
+      child: Text(
+        label,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  Widget _textCell(String value, {required double width}) {
+    return SizedBox(
+      width: width,
+      child: Text(
+        value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final includeInactive = ref.watch(supplierIncludeInactiveProvider);
@@ -156,47 +304,7 @@ class _SuppliersPanelState extends ConsumerState<SuppliersPanel> {
             child: Padding(
               padding: const EdgeInsets.all(8),
               child: suppliersAsync.when(
-                data: (items) => AppDataTable(
-                  columns: const <DataColumn>[
-                    DataColumn(label: Text('Name')),
-                    DataColumn(label: Text('Phone')),
-                    DataColumn(label: Text('Contact')),
-                    DataColumn(label: Text('Status')),
-                    DataColumn(label: Text('Actions')),
-                  ],
-                  rows: items
-                      .map(
-                        (item) => DataRow(
-                          cells: <DataCell>[
-                            DataCell(Text(item.name)),
-                            DataCell(Text(item.phone ?? '-')),
-                            DataCell(Text(item.contactPerson ?? '-')),
-                            DataCell(
-                                Text(item.isActive ? 'Active' : 'Archived')),
-                            DataCell(
-                              Wrap(
-                                spacing: 4,
-                                children: <Widget>[
-                                  IconButton(
-                                    onPressed: () => _editSupplier(item),
-                                    icon: const Icon(Icons.edit_outlined),
-                                  ),
-                                  IconButton(
-                                    onPressed: () => _toggleActive(item),
-                                    icon: Icon(
-                                      item.isActive
-                                          ? Icons.archive_outlined
-                                          : Icons.check_circle_outline,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                      .toList(growable: false),
-                ),
+                data: _buildSuppliersTable,
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, _) => Center(child: Text('Error: $error')),
               ),
@@ -205,5 +313,105 @@ class _SuppliersPanelState extends ConsumerState<SuppliersPanel> {
         ),
       ],
     );
+  }
+}
+
+enum _SuppliersTableColumn {
+  name,
+  phone,
+  contact,
+  status,
+  actions,
+}
+
+class _SuppliersTableLayout {
+  const _SuppliersTableLayout({
+    required this.columnSpacing,
+    required this.dataRowMinHeight,
+    required this.dataRowMaxHeight,
+    required this.showMediumColumns,
+    required this.showCompactColumns,
+    required this.isWideDesktop,
+  });
+
+  final double columnSpacing;
+  final double dataRowMinHeight;
+  final double dataRowMaxHeight;
+  final bool showMediumColumns;
+  final bool showCompactColumns;
+  final bool isWideDesktop;
+
+  factory _SuppliersTableLayout.fromWidth(double width) {
+    if (width >= 1600) {
+      return const _SuppliersTableLayout(
+        columnSpacing: 28,
+        dataRowMinHeight: 52,
+        dataRowMaxHeight: 60,
+        showMediumColumns: false,
+        showCompactColumns: false,
+        isWideDesktop: true,
+      );
+    }
+    if (width >= 1220) {
+      return const _SuppliersTableLayout(
+        columnSpacing: 20,
+        dataRowMinHeight: 46,
+        dataRowMaxHeight: 54,
+        showMediumColumns: true,
+        showCompactColumns: false,
+        isWideDesktop: false,
+      );
+    }
+    return const _SuppliersTableLayout(
+      columnSpacing: 14,
+      dataRowMinHeight: 40,
+      dataRowMaxHeight: 48,
+      showMediumColumns: false,
+      showCompactColumns: true,
+      isWideDesktop: false,
+    );
+  }
+
+  double valueWidth(_SuppliersTableColumn column) {
+    if (isWideDesktop) {
+      switch (column) {
+        case _SuppliersTableColumn.name:
+          return 320;
+        case _SuppliersTableColumn.phone:
+          return 170;
+        case _SuppliersTableColumn.contact:
+          return 220;
+        case _SuppliersTableColumn.status:
+          return 120;
+        case _SuppliersTableColumn.actions:
+          return 120;
+      }
+    }
+    if (showMediumColumns) {
+      switch (column) {
+        case _SuppliersTableColumn.name:
+          return 260;
+        case _SuppliersTableColumn.phone:
+          return 160;
+        case _SuppliersTableColumn.contact:
+          return 170;
+        case _SuppliersTableColumn.status:
+          return 110;
+        case _SuppliersTableColumn.actions:
+          return 110;
+      }
+    }
+    switch (column) {
+      case _SuppliersTableColumn.name:
+        return 220;
+      case _SuppliersTableColumn.phone:
+        return 140;
+      case _SuppliersTableColumn.contact:
+        return 140;
+      case _SuppliersTableColumn.status:
+        return 95;
+      case _SuppliersTableColumn.actions:
+        return 100;
+    }
   }
 }
