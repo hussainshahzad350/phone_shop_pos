@@ -9,6 +9,8 @@ class MasterDataScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return DefaultTabController(
       length: 4,
       child: Scaffold(
@@ -17,13 +19,24 @@ class MasterDataScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const TabBar(
+              TabBar(
                 isScrollable: true,
-                tabs: <Tab>[
-                  Tab(text: 'Products'),
-                  Tab(text: 'Brands'),
-                  Tab(text: 'Suppliers'),
-                  Tab(text: 'Customers'),
+                tabAlignment: TabAlignment.start,
+                dividerColor: Colors.transparent,
+                labelColor: colorScheme.onPrimary,
+                unselectedLabelColor: colorScheme.onSurfaceVariant,
+                indicatorSize: TabBarIndicatorSize.tab,
+                indicator: BoxDecoration(
+                  color: colorScheme.primary,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                splashBorderRadius: BorderRadius.circular(999),
+                labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+                tabs: const <Tab>[
+                  Tab(child: _MasterDataTabLabel(text: 'Products')),
+                  Tab(child: _MasterDataTabLabel(text: 'Brands')),
+                  Tab(child: _MasterDataTabLabel(text: 'Suppliers')),
+                  Tab(child: _MasterDataTabLabel(text: 'Customers')),
                 ],
               ),
               const SizedBox(height: 8),
@@ -41,6 +54,26 @@ class MasterDataScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _MasterDataTabLabel extends StatelessWidget {
+  const _MasterDataTabLabel({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      child: Text(text),
     );
   }
 }

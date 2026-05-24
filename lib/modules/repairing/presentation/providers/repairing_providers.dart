@@ -15,6 +15,7 @@ final repairJobsSearchQueryProvider = StateProvider<String>((ref) => '');
 final repairJobsStatusFilterProvider = StateProvider<String>((ref) => '');
 final repairJobsStartDateProvider = StateProvider<DateTime?>((ref) => null);
 final repairJobsEndDateProvider = StateProvider<DateTime?>((ref) => null);
+final repairJobsIncludeArchivedProvider = StateProvider<bool>((ref) => false);
 
 final repairJobsProvider = FutureProvider<List<RepairJobEntity>>((ref) async {
   final repository = await ref.watch(repairingRepositoryProvider.future);
@@ -23,6 +24,7 @@ final repairJobsProvider = FutureProvider<List<RepairJobEntity>>((ref) async {
     status: ref.watch(repairJobsStatusFilterProvider),
     startDate: ref.watch(repairJobsStartDateProvider),
     endDate: ref.watch(repairJobsEndDateProvider),
+    includeArchived: ref.watch(repairJobsIncludeArchivedProvider),
   );
   return result.fold(
     onSuccess: (value) => value,
@@ -39,7 +41,8 @@ final repairKpisProvider = FutureProvider<RepairKpiEntity>((ref) async {
   );
 });
 
-final repairAnalyticsStartDateProvider = StateProvider<DateTime?>((ref) => null);
+final repairAnalyticsStartDateProvider =
+    StateProvider<DateTime?>((ref) => null);
 final repairAnalyticsEndDateProvider = StateProvider<DateTime?>((ref) => null);
 
 final repairAnalyticsProvider =

@@ -58,10 +58,18 @@ class RepairKpiEntity {
     required this.readyForDelivery,
     required this.pendingRepairs,
     required this.todayEarnings,
-  });
+    double? allTimeEarnings,
+    int? allJobsDone,
+  })  : _allTimeEarnings = allTimeEarnings,
+        _allJobsDone = allJobsDone;
 
   final int receivedToday;
   final int readyForDelivery;
   final int pendingRepairs;
   final double todayEarnings;
+  final double? _allTimeEarnings;
+  final int? _allJobsDone;
+
+  double get allTimeEarnings => _allTimeEarnings ?? 0;
+  int get allJobsDone => _allJobsDone ?? 0;
 }

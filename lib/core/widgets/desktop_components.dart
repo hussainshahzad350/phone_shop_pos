@@ -227,19 +227,16 @@ class AppDataTable extends StatefulWidget {
 }
 
 class _AppDataTableState extends State<AppDataTable> {
-  late final ScrollController _horizontalScrollController;
   late final ScrollController _verticalScrollController;
 
   @override
   void initState() {
     super.initState();
-    _horizontalScrollController = ScrollController();
     _verticalScrollController = ScrollController();
   }
 
   @override
   void dispose() {
-    _horizontalScrollController.dispose();
     _verticalScrollController.dispose();
     super.dispose();
   }
@@ -276,30 +273,37 @@ class _AppDataTableState extends State<AppDataTable> {
       );
     });
 
-    if (widget.rows.length >= widget.paginateThreshold) {
-      return Scrollbar(
-        controller: _horizontalScrollController,
-        thumbVisibility: true,
-        notificationPredicate: (notification) =>
-            notification.metrics.axis == Axis.horizontal,
-        child: SingleChildScrollView(
-          controller: _horizontalScrollController,
-          scrollDirection: Axis.horizontal,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(_kDesktopCardRadius),
-            child: PaginatedDataTable(
-              columns: widget.columns,
-              source: _StaticDataSource(effectiveRows),
-              rowsPerPage: widget.rowsPerPage,
-              availableRowsPerPage: const <int>[25, 50, 100],
-              columnSpacing: widget.columnSpacing,
-              dataRowMinHeight: widget.dataRowMinHeight,
-              dataRowMaxHeight: widget.dataRowMaxHeight,
-              headingRowHeight: 44,
-              showCheckboxColumn: widget.showCheckboxColumn,
-              showFirstLastButtons: true,
+    final effectiveColumns = widget.columns
+        .map(
+          (column) => DataColumn(
+            label: DefaultTextStyle.merge(
+              softWrap: true,
+              overflow: TextOverflow.visible,
+              maxLines: 2,
+              child: column.label,
             ),
+            tooltip: column.tooltip,
+            numeric: column.numeric,
+            onSort: column.onSort,
+            mouseCursor: column.mouseCursor,
           ),
+        )
+        .toList(growable: false);
+
+    if (widget.rows.length >= widget.paginateThreshold) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(_kDesktopCardRadius),
+        child: PaginatedDataTable(
+          columns: effectiveColumns,
+          source: _StaticDataSource(effectiveRows),
+          rowsPerPage: widget.rowsPerPage,
+          availableRowsPerPage: const <int>[25, 50, 100],
+          columnSpacing: widget.columnSpacing,
+          dataRowMinHeight: widget.dataRowMinHeight,
+          dataRowMaxHeight: widget.dataRowMaxHeight,
+          headingRowHeight: 56,
+          showCheckboxColumn: widget.showCheckboxColumn,
+          showFirstLastButtons: true,
         ),
       );
     }
@@ -310,27 +314,17 @@ class _AppDataTableState extends State<AppDataTable> {
       child: SingleChildScrollView(
         controller: _verticalScrollController,
         scrollDirection: Axis.vertical,
-        child: Scrollbar(
-          controller: _horizontalScrollController,
-          thumbVisibility: true,
-          notificationPredicate: (notification) =>
-              notification.metrics.axis == Axis.horizontal,
-          child: SingleChildScrollView(
-            controller: _horizontalScrollController,
-            scrollDirection: Axis.horizontal,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(_kDesktopCardRadius),
-              child: DataTable(
-                columns: widget.columns,
-                rows: effectiveRows,
-                columnSpacing: widget.columnSpacing,
-                dataRowMinHeight: widget.dataRowMinHeight,
-                dataRowMaxHeight: widget.dataRowMaxHeight,
-                headingRowHeight: 44,
-                dividerThickness: 0.6,
-                showCheckboxColumn: widget.showCheckboxColumn,
-              ),
-            ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(_kDesktopCardRadius),
+          child: DataTable(
+            columns: effectiveColumns,
+            rows: effectiveRows,
+            columnSpacing: widget.columnSpacing,
+            dataRowMinHeight: widget.dataRowMinHeight,
+            dataRowMaxHeight: widget.dataRowMaxHeight,
+            headingRowHeight: 56,
+            dividerThickness: 0.6,
+            showCheckboxColumn: widget.showCheckboxColumn,
           ),
         ),
       ),

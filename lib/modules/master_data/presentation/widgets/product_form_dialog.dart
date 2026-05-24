@@ -28,9 +28,14 @@ class ProductFormData {
 }
 
 class ProductFormDialog extends StatefulWidget {
-  const ProductFormDialog({super.key, this.initial});
+  const ProductFormDialog({
+    super.key,
+    this.initial,
+    this.brandOptions = const <String>[],
+  });
 
   final ProductEntity? initial;
+  final List<String> brandOptions;
 
   @override
   State<ProductFormDialog> createState() => _ProductFormDialogState();
@@ -39,7 +44,6 @@ class ProductFormDialog extends StatefulWidget {
 class _ProductFormDialogState extends State<ProductFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
-  late final TextEditingController _brandController;
   late final TextEditingController _categoryController;
   late final TextEditingController _skuController;
   late final TextEditingController _barcodeController;
@@ -48,7 +52,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
   late final TextEditingController _saleController;
 
   final _nameFocus = FocusNode();
-  final _brandFocus = FocusNode();
   final _categoryFocus = FocusNode();
   final _skuFocus = FocusNode();
   final _barcodeFocus = FocusNode();
@@ -57,13 +60,13 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
   final _minStockFocus = FocusNode();
 
   late bool _hasImei;
+  String? _selectedBrand;
 
   @override
   void initState() {
     super.initState();
     final initial = widget.initial;
     _nameController = TextEditingController(text: initial?.name ?? '');
-    _brandController = TextEditingController(text: initial?.brand ?? '');
     _categoryController = TextEditingController(text: initial?.category ?? '');
     _skuController = TextEditingController(text: initial?.sku ?? '');
     _barcodeController = TextEditingController(text: initial?.barcode ?? '');
@@ -76,12 +79,12 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
       text: FormattingHelpers.decimal(initial?.salePrice ?? 0),
     );
     _hasImei = initial?.hasImei ?? false;
+    _selectedBrand = _normalizedBrandOrNull(initial?.brand);
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _brandController.dispose();
     _categoryController.dispose();
     _skuController.dispose();
     _barcodeController.dispose();
@@ -89,7 +92,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
     _purchaseController.dispose();
     _saleController.dispose();
     _nameFocus.dispose();
-    _brandFocus.dispose();
     _categoryFocus.dispose();
     _skuFocus.dispose();
     _barcodeFocus.dispose();
@@ -105,7 +107,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
     }
     final data = ProductFormData(
       name: _nameController.text.trim(),
-      brand: _nullIfBlank(_brandController.text),
+      brand: _selectedBrand,
       category: _nullIfBlank(_categoryController.text),
       sku: _nullIfBlank(_skuController.text),
       barcode: _nullIfBlank(_barcodeController.text),
@@ -127,9 +129,30 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
     return trimmed;
   }
 
+  String? _normalizedBrandOrNull(String? value) {
+    if (value == null) {
+      return null;
+    }
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.initial != null;
+    final availableBrands = widget.brandOptions
+        .map((name) => name.trim())
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    if (_selectedBrand != null && !availableBrands.contains(_selectedBrand)) {
+      availableBrands.add(_selectedBrand!);
+    }
+
     return AlertDialog(
       title: Text(isEditing ? 'Edit Product' : 'Add Product'),
       content: SizedBox(
@@ -144,7 +167,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                 focusNode: _nameFocus,
                 autofocus: true,
                 textInputAction: TextInputAction.next,
-                onFieldSubmitted: (_) => _brandFocus.requestFocus(),
+                onFieldSubmitted: (_) => _categoryFocus.requestFocus(),
                 decoration: const InputDecoration(
                   labelText: 'Product Name',
                   border: OutlineInputBorder(),
@@ -158,16 +181,31 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
               Row(
                 children: <Widget>[
                   Expanded(
-                    child: TextFormField(
-                      controller: _brandController,
-                      focusNode: _brandFocus,
-                      textInputAction: TextInputAction.next,
-                      onFieldSubmitted: (_) => _categoryFocus.requestFocus(),
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _selectedBrand,
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Brand',
                         border: OutlineInputBorder(),
                         isDense: true,
                       ),
+                      items: <DropdownMenuItem<String>>[
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          child: Text('Select brand'),
+                        ),
+                        ...availableBrands.map(
+                          (brand) => DropdownMenuItem<String>(
+                            value: brand,
+                            child: Text(brand),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedBrand = value;
+                        });
+                      },
                     ),
                   ),
                   const SizedBox(width: 8),

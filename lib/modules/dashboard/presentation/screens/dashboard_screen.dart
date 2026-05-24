@@ -224,6 +224,12 @@ class _KpiGrid extends StatelessWidget {
         color: Colors.deepPurple,
       ),
       DashboardKpiCardWidget(
+        label: 'Total Stock Worth',
+        value: FormattingHelpers.currencyPkr(kpis.totalStockWorth),
+        icon: Icons.savings_outlined,
+        color: Colors.amber,
+      ),
+      DashboardKpiCardWidget(
         label: 'Pending Balances',
         value: FormattingHelpers.currencyPkr(kpis.pendingBalances),
         icon: Icons.account_balance_wallet_outlined,
@@ -277,43 +283,54 @@ class _RecentSalesTable extends StatelessWidget {
               : LayoutBuilder(
                   builder: (context, constraints) {
                     final layout = _DashboardRecentSalesLayout.fromWidth(
-                        constraints.maxWidth);
-                    final visibleColumns = _visibleColumns(layout);
-                    return AppDataTable(
-                      columnSpacing: layout.columnSpacing,
-                      dataRowMinHeight: layout.dataRowMinHeight,
-                      dataRowMaxHeight: layout.dataRowMaxHeight,
-                      showCheckboxColumn: false,
-                      columns: visibleColumns
-                          .map(
-                            (column) => DataColumn(
-                              label: _labelCell(
-                                _columnLabel(column),
-                                width: layout.valueWidth(column),
-                                textAlign: _isNumericColumn(column)
-                                    ? TextAlign.right
-                                    : TextAlign.left,
-                              ),
-                              numeric: _isNumericColumn(column),
-                            ),
-                          )
-                          .toList(growable: false),
-                      rows: rows
-                          .map(
-                            (row) => DataRow(
-                              cells: visibleColumns
-                                  .map(
-                                    (column) => _buildDataCell(
-                                      context: context,
-                                      row: row,
-                                      column: column,
-                                      layout: layout,
-                                    ),
-                                  )
-                                  .toList(growable: false),
-                            ),
-                          )
-                          .toList(growable: false),
+                      MediaQuery.sizeOf(context).width,
+                    );
+                    final visibleColumns = _visibleColumns();
+                    return Column(
+                      children: <Widget>[
+                        Container(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            children: visibleColumns
+                                .map(
+                                  (column) => _headerCell(
+                                    _columnLabel(column),
+                                    width: layout.valueWidth(column),
+                                  ),
+                                )
+                                .toList(growable: false),
+                          ),
+                        ),
+                        const Divider(height: 1),
+                        Expanded(
+                          child: ListView.separated(
+                            itemCount: rows.length,
+                            separatorBuilder: (_, __) =>
+                                const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final row = rows[index];
+                              return SizedBox(
+                                height: layout.dataRowMinHeight,
+                                child: Row(
+                                  children: visibleColumns
+                                      .map(
+                                        (column) => _buildRowCell(
+                                          context: context,
+                                          row: row,
+                                          column: column,
+                                          layout: layout,
+                                        ),
+                                      )
+                                      .toList(growable: false),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     );
                   },
                 ),
@@ -336,32 +353,14 @@ class _RecentSalesTable extends StatelessWidget {
     );
   }
 
-  List<_DashboardRecentSalesColumn> _visibleColumns(
-    _DashboardRecentSalesLayout layout,
-  ) {
-    if (layout.showCompactColumns) {
-      return const <_DashboardRecentSalesColumn>[
-        _DashboardRecentSalesColumn.invoice,
-        _DashboardRecentSalesColumn.date,
-        _DashboardRecentSalesColumn.customer,
-        _DashboardRecentSalesColumn.total,
-        _DashboardRecentSalesColumn.view,
-      ];
-    }
-
+  List<_DashboardRecentSalesColumn> _visibleColumns() {
     return const <_DashboardRecentSalesColumn>[
       _DashboardRecentSalesColumn.invoice,
       _DashboardRecentSalesColumn.date,
-      _DashboardRecentSalesColumn.customer,
       _DashboardRecentSalesColumn.total,
-      _DashboardRecentSalesColumn.pending,
-      _DashboardRecentSalesColumn.payment,
+      _DashboardRecentSalesColumn.customer,
       _DashboardRecentSalesColumn.view,
     ];
-  }
-
-  bool _isNumericColumn(_DashboardRecentSalesColumn column) {
-    return false;
   }
 
   String _columnLabel(_DashboardRecentSalesColumn column) {
@@ -374,16 +373,12 @@ class _RecentSalesTable extends StatelessWidget {
         return 'Customer';
       case _DashboardRecentSalesColumn.total:
         return 'Total';
-      case _DashboardRecentSalesColumn.pending:
-        return 'Pending';
-      case _DashboardRecentSalesColumn.payment:
-        return 'Payment';
       case _DashboardRecentSalesColumn.view:
         return 'Open';
     }
   }
 
-  DataCell _buildDataCell({
+  Widget _buildRowCell({
     required BuildContext context,
     required DashboardRecentSaleEntity row,
     required _DashboardRecentSalesColumn column,
@@ -391,73 +386,53 @@ class _RecentSalesTable extends StatelessWidget {
   }) {
     switch (column) {
       case _DashboardRecentSalesColumn.invoice:
-        return DataCell(
-          _valueCell(row.invoiceNumber, width: layout.valueWidth(column)),
+        return _valueCell(
+          row.invoiceNumber,
+          width: layout.valueWidth(column),
         );
       case _DashboardRecentSalesColumn.date:
-        return DataCell(
-          _valueCell(
-            FormattingHelpers.dateYmdHm(row.saleDate),
-            width: layout.valueWidth(column),
-          ),
+        return _valueCell(
+          FormattingHelpers.dateYmdHm(row.saleDate),
+          width: layout.valueWidth(column),
         );
       case _DashboardRecentSalesColumn.customer:
-        return DataCell(
-          _valueCell(row.customerName, width: layout.valueWidth(column)),
+        return _valueCell(
+          row.customerName,
+          width: layout.valueWidth(column),
         );
       case _DashboardRecentSalesColumn.total:
-        return DataCell(
-          _valueCell(
-            FormattingHelpers.currencyPkr(row.total),
-            width: layout.valueWidth(column),
-          ),
-        );
-      case _DashboardRecentSalesColumn.pending:
-        return DataCell(
-          _valueCell(
-            FormattingHelpers.currencyPkr(row.pendingAmount),
-            width: layout.valueWidth(column),
-          ),
-        );
-      case _DashboardRecentSalesColumn.payment:
-        return DataCell(
-          _valueCell(row.paymentMethod ?? '-',
-              width: layout.valueWidth(column)),
+        return _valueCell(
+          FormattingHelpers.currencyPkr(row.total),
+          width: layout.valueWidth(column),
         );
       case _DashboardRecentSalesColumn.view:
-        return DataCell(
-          SizedBox(
-            width: layout.valueWidth(column),
-            child: Align(
-              alignment: Alignment.center,
-              child: IconButton(
-                tooltip: 'View invoice',
-                onPressed: (row.saleId == null || row.saleId!.isEmpty)
-                    ? null
-                    : () => _openInvoiceDialog(context, row),
-                visualDensity: VisualDensity.compact,
-                constraints: const BoxConstraints.tightFor(
-                  width: 32,
-                  height: 32,
-                ),
-                icon: const Icon(Icons.open_in_new, size: 18),
+        return SizedBox(
+          width: layout.valueWidth(column),
+          child: Align(
+            alignment: Alignment.center,
+            child: IconButton(
+              tooltip: 'View invoice',
+              onPressed: (row.saleId == null || row.saleId!.isEmpty)
+                  ? null
+                  : () => _openInvoiceDialog(context, row),
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints.tightFor(
+                width: 32,
+                height: 32,
               ),
+              icon: const Icon(Icons.open_in_new, size: 18),
             ),
           ),
         );
     }
   }
 
-  Widget _labelCell(
-    String text, {
-    required double width,
-    TextAlign textAlign = TextAlign.left,
-  }) {
+  Widget _headerCell(String text, {required double width}) {
     return SizedBox(
       width: width,
       child: Text(
         text,
-        textAlign: textAlign,
+        maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
     );
@@ -485,8 +460,6 @@ enum _DashboardRecentSalesColumn {
   date,
   customer,
   total,
-  pending,
-  payment,
   view,
 }
 
@@ -510,7 +483,7 @@ class _DashboardRecentSalesLayout {
   factory _DashboardRecentSalesLayout.fromWidth(double width) {
     if (width >= 1400) {
       return const _DashboardRecentSalesLayout(
-        columnSpacing: 24,
+        columnSpacing: 16,
         dataRowMinHeight: 50,
         dataRowMaxHeight: 58,
         showMediumColumns: false,
@@ -520,7 +493,7 @@ class _DashboardRecentSalesLayout {
     }
     if (width >= 1080) {
       return const _DashboardRecentSalesLayout(
-        columnSpacing: 18,
+        columnSpacing: 14,
         dataRowMinHeight: 44,
         dataRowMaxHeight: 52,
         showMediumColumns: true,
@@ -542,35 +515,27 @@ class _DashboardRecentSalesLayout {
     if (isWideDesktop) {
       switch (column) {
         case _DashboardRecentSalesColumn.invoice:
-          return 140;
+          return 145;
         case _DashboardRecentSalesColumn.date:
-          return 180;
+          return 170;
         case _DashboardRecentSalesColumn.customer:
-          return 260;
+          return 250;
         case _DashboardRecentSalesColumn.total:
-          return 150;
-        case _DashboardRecentSalesColumn.pending:
-          return 150;
-        case _DashboardRecentSalesColumn.payment:
-          return 130;
+          return 120;
         case _DashboardRecentSalesColumn.view:
-          return 56;
+          return 52;
       }
     }
 
     switch (column) {
       case _DashboardRecentSalesColumn.invoice:
-        return 120;
+        return 140;
       case _DashboardRecentSalesColumn.date:
-        return 150;
+        return 165;
       case _DashboardRecentSalesColumn.customer:
-        return 210;
+        return 230;
       case _DashboardRecentSalesColumn.total:
         return 126;
-      case _DashboardRecentSalesColumn.pending:
-        return 126;
-      case _DashboardRecentSalesColumn.payment:
-        return 110;
       case _DashboardRecentSalesColumn.view:
         return 52;
     }

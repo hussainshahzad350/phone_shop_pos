@@ -99,6 +99,21 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
   }
 
   Future<void> _toggleActive(CustomerEntity customer) async {
+    final isArchiving = customer.isActive;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AppConfirmationDialog(
+        title: isArchiving ? 'Archive Customer' : 'Unarchive Customer',
+        message: isArchiving
+            ? 'Archive ${customer.name}?'
+            : 'Unarchive ${customer.name}?',
+        confirmLabel: isArchiving ? 'Archive' : 'Unarchive',
+      ),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
     final repository = await ref.read(customerRepositoryProvider.future);
     final result = await repository.setActive(
       customer.id,
@@ -120,32 +135,85 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
       builder: (context, constraints) {
         final layout = _CustomersTableLayout.fromWidth(constraints.maxWidth);
         final visibleColumns = _visibleColumns(layout);
+        final columnWidths = _columnWidths(
+          layout: layout,
+          visibleColumns: visibleColumns,
+          availableWidth: constraints.maxWidth,
+        );
+
         return AppDataTable(
+          showCheckboxColumn: false,
           columnSpacing: layout.columnSpacing,
           dataRowMinHeight: layout.dataRowMinHeight,
           dataRowMaxHeight: layout.dataRowMaxHeight,
           columns: visibleColumns
-              .map((column) => _buildCustomerColumn(column, layout))
+              .map((column) => _buildCustomerColumn(column, columnWidths))
               .toList(growable: false),
-          rows: items
-              .map(
-                (item) => DataRow(
-                  cells: visibleColumns
-                      .map(
-                        (column) => _buildCustomerCell(item, column, layout),
-                      )
-                      .toList(growable: false),
-                ),
-              )
-              .toList(growable: false),
+          rows: items.asMap().entries.map((entry) {
+            final rowIndex = entry.key;
+            final item = entry.value;
+            return DataRow(
+              cells: visibleColumns
+                  .map(
+                    (column) => _buildCustomerCell(
+                      item,
+                      rowNumber: rowIndex + 1,
+                      column: column,
+                      columnWidths: columnWidths,
+                    ),
+                  )
+                  .toList(growable: false),
+            );
+          }).toList(growable: false),
         );
       },
     );
   }
 
+  Map<_CustomersTableColumn, double> _columnWidths({
+    required _CustomersTableLayout layout,
+    required List<_CustomersTableColumn> visibleColumns,
+    required double availableWidth,
+  }) {
+    final widths = <_CustomersTableColumn, double>{
+      for (final column in visibleColumns) column: layout.baseWidth(column),
+    };
+
+    final baseWidth =
+        widths.values.fold<double>(0, (sum, value) => sum + value);
+    final spacingWidth = (visibleColumns.length - 1) * layout.columnSpacing;
+    final extraWidth = availableWidth - baseWidth - spacingWidth - 24;
+
+    if (extraWidth > 0) {
+      const weightedColumns = <_CustomersTableColumn, int>{
+        _CustomersTableColumn.name: 5,
+        _CustomersTableColumn.phone: 3,
+        _CustomersTableColumn.email: 5,
+        _CustomersTableColumn.status: 2,
+      };
+      final totalWeight = visibleColumns.fold<int>(
+        0,
+        (sum, column) => sum + (weightedColumns[column] ?? 0),
+      );
+      if (totalWeight > 0) {
+        for (final column in visibleColumns) {
+          final weight = weightedColumns[column] ?? 0;
+          if (weight == 0) {
+            continue;
+          }
+          widths[column] =
+              widths[column]! + (extraWidth * weight / totalWeight);
+        }
+      }
+    }
+
+    return widths;
+  }
+
   List<_CustomersTableColumn> _visibleColumns(_CustomersTableLayout layout) {
     if (layout.showCompactColumns) {
       return const <_CustomersTableColumn>[
+        _CustomersTableColumn.sr,
         _CustomersTableColumn.name,
         _CustomersTableColumn.phone,
         _CustomersTableColumn.actions,
@@ -153,6 +221,7 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
     }
     if (layout.showMediumColumns) {
       return const <_CustomersTableColumn>[
+        _CustomersTableColumn.sr,
         _CustomersTableColumn.name,
         _CustomersTableColumn.phone,
         _CustomersTableColumn.status,
@@ -160,6 +229,7 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
       ];
     }
     return const <_CustomersTableColumn>[
+      _CustomersTableColumn.sr,
       _CustomersTableColumn.name,
       _CustomersTableColumn.phone,
       _CustomersTableColumn.email,
@@ -170,54 +240,58 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
 
   DataColumn _buildCustomerColumn(
     _CustomersTableColumn column,
-    _CustomersTableLayout layout,
+    Map<_CustomersTableColumn, double> widths,
   ) {
     return DataColumn(
-      label: _labelCell(_columnLabel(column), width: layout.valueWidth(column)),
+      numeric: false,
+      label: _labelCell(_columnLabel(column), width: widths[column]!),
     );
   }
 
   DataCell _buildCustomerCell(
-    CustomerEntity item,
-    _CustomersTableColumn column,
-    _CustomersTableLayout layout,
-  ) {
+    CustomerEntity item, {
+    required int rowNumber,
+    required _CustomersTableColumn column,
+    required Map<_CustomersTableColumn, double> columnWidths,
+  }) {
     switch (column) {
+      case _CustomersTableColumn.sr:
+        return DataCell(
+            _textCell(rowNumber.toString(), width: columnWidths[column]!));
       case _CustomersTableColumn.name:
-        return DataCell(_textCell(item.name, width: layout.valueWidth(column)));
+        return DataCell(_textCell(item.name, width: columnWidths[column]!));
       case _CustomersTableColumn.phone:
         return DataCell(
-          _textCell(item.phone ?? '-', width: layout.valueWidth(column)),
-        );
+            _textCell(item.phone ?? '-', width: columnWidths[column]!));
       case _CustomersTableColumn.email:
         return DataCell(
-          _textCell(item.email ?? '-', width: layout.valueWidth(column)),
-        );
+            _textCell(item.email ?? '-', width: columnWidths[column]!));
       case _CustomersTableColumn.status:
         return DataCell(
-          _textCell(
-            item.isActive ? 'Active' : 'Archived',
-            width: layout.valueWidth(column),
-          ),
-        );
+            _statusCell(item.isActive, width: columnWidths[column]!));
       case _CustomersTableColumn.actions:
         return DataCell(
           SizedBox(
-            width: layout.valueWidth(column),
-            child: Wrap(
-              spacing: 4,
+            width: columnWidths[column],
+            child: Row(
               children: <Widget>[
-                IconButton(
+                IconButton.filledTonal(
+                  tooltip: 'Edit',
                   onPressed: () => _editCustomer(item),
-                  icon: const Icon(Icons.edit_outlined),
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  visualDensity: VisualDensity.compact,
                 ),
-                IconButton(
+                const SizedBox(width: 6),
+                IconButton.filledTonal(
+                  tooltip: item.isActive ? 'Archive' : 'Unarchive',
                   onPressed: () => _toggleActive(item),
                   icon: Icon(
                     item.isActive
                         ? Icons.archive_outlined
                         : Icons.check_circle_outline,
+                    size: 18,
                   ),
+                  visualDensity: VisualDensity.compact,
                 ),
               ],
             ),
@@ -228,6 +302,8 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
 
   String _columnLabel(_CustomersTableColumn column) {
     switch (column) {
+      case _CustomersTableColumn.sr:
+        return 'SR#';
       case _CustomersTableColumn.name:
         return 'Name';
       case _CustomersTableColumn.phone:
@@ -242,10 +318,16 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
   }
 
   Widget _labelCell(String label, {required double width}) {
+    final theme = Theme.of(context);
     return SizedBox(
       width: width,
       child: Text(
         label,
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
+        ),
         overflow: TextOverflow.ellipsis,
       ),
     );
@@ -258,6 +340,38 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
         value,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  Widget _statusCell(bool isActive, {required double width}) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final bgColor = isActive
+        ? colorScheme.primaryContainer
+        : colorScheme.surfaceContainerHighest;
+    final fgColor = isActive
+        ? colorScheme.onPrimaryContainer
+        : colorScheme.onSurfaceVariant;
+
+    return SizedBox(
+      width: width,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            isActive ? 'Active' : 'Archived',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: fgColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -299,7 +413,7 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
         Expanded(
           child: Card(
             child: Padding(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: customersAsync.when(
                 data: _buildCustomersTable,
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -314,6 +428,7 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
 }
 
 enum _CustomersTableColumn {
+  sr,
   name,
   phone,
   email,
@@ -369,36 +484,42 @@ class _CustomersTableLayout {
     );
   }
 
-  double valueWidth(_CustomersTableColumn column) {
+  double baseWidth(_CustomersTableColumn column) {
     if (isWideDesktop) {
       switch (column) {
+        case _CustomersTableColumn.sr:
+          return 56;
         case _CustomersTableColumn.name:
-          return 320;
+          return 300;
         case _CustomersTableColumn.phone:
           return 170;
         case _CustomersTableColumn.email:
           return 260;
         case _CustomersTableColumn.status:
-          return 120;
+          return 130;
         case _CustomersTableColumn.actions:
-          return 120;
+          return 136;
       }
     }
     if (showMediumColumns) {
       switch (column) {
+        case _CustomersTableColumn.sr:
+          return 52;
         case _CustomersTableColumn.name:
-          return 260;
+          return 250;
         case _CustomersTableColumn.phone:
           return 160;
         case _CustomersTableColumn.email:
           return 190;
         case _CustomersTableColumn.status:
-          return 110;
+          return 120;
         case _CustomersTableColumn.actions:
-          return 110;
+          return 132;
       }
     }
     switch (column) {
+      case _CustomersTableColumn.sr:
+        return 48;
       case _CustomersTableColumn.name:
         return 220;
       case _CustomersTableColumn.phone:
@@ -406,9 +527,9 @@ class _CustomersTableLayout {
       case _CustomersTableColumn.email:
         return 160;
       case _CustomersTableColumn.status:
-        return 95;
+        return 112;
       case _CustomersTableColumn.actions:
-        return 100;
+        return 128;
     }
   }
 }

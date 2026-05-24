@@ -38,10 +38,33 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
     });
   }
 
+  Future<List<String>> _loadBrandOptions() async {
+    final repository = await ref.read(brandRepositoryProvider.future);
+    final result = await repository.searchBrands(
+      '',
+      isActive: true,
+      limit: 500,
+    );
+    if (result.isFailure) {
+      return const <String>[];
+    }
+    final names = result.asSuccess!.value
+        .map((brand) => brand.name.trim())
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return names;
+  }
+
   Future<void> _createProduct() async {
+    final brandOptions = await _loadBrandOptions();
+    if (!mounted) {
+      return;
+    }
     final data = await showDialog<ProductFormData>(
       context: context,
-      builder: (context) => const ProductFormDialog(),
+      builder: (context) => ProductFormDialog(brandOptions: brandOptions),
     );
     if (data == null) {
       return;
@@ -83,9 +106,14 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
   }
 
   Future<void> _editProduct(ProductEntity product) async {
+    final brandOptions = await _loadBrandOptions();
+    if (!mounted) {
+      return;
+    }
     final data = await showDialog<ProductFormData>(
       context: context,
-      builder: (context) => ProductFormDialog(initial: product),
+      builder: (context) =>
+          ProductFormDialog(initial: product, brandOptions: brandOptions),
     );
     if (data == null) {
       return;
@@ -126,6 +154,21 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
   }
 
   Future<void> _toggleActive(ProductEntity product) async {
+    final isArchiving = product.isActive;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AppConfirmationDialog(
+        title: isArchiving ? 'Archive Product' : 'Unarchive Product',
+        message: isArchiving
+            ? 'Archive ${product.name}?'
+            : 'Unarchive ${product.name}?',
+        confirmLabel: isArchiving ? 'Archive' : 'Unarchive',
+      ),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
     final repository = await ref.read(productRepositoryProvider.future);
     final result = product.isActive
         ? await repository.deactivateProduct(product.id)
@@ -134,7 +177,8 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
     if (result.isSuccess) {
       ref.invalidate(managedProductsProvider);
       AppNotifier.info(
-          product.isActive ? 'Product archived.' : 'Product re-activated.');
+        product.isActive ? 'Product archived.' : 'Product re-activated.',
+      );
     } else {
       AppNotifier.error(result.asFailure!.error.message);
     }
@@ -145,51 +189,112 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
       builder: (context, constraints) {
         final layout = _ProductsTableLayout.fromWidth(constraints.maxWidth);
         final visibleColumns = _visibleColumns(layout);
+        final columnWidths = _columnWidths(
+          layout: layout,
+          visibleColumns: visibleColumns,
+          availableWidth: constraints.maxWidth,
+        );
+
         return AppDataTable(
+          showCheckboxColumn: false,
           columnSpacing: layout.columnSpacing,
           dataRowMinHeight: layout.dataRowMinHeight,
           dataRowMaxHeight: layout.dataRowMaxHeight,
           columns: visibleColumns
-              .map((column) => _buildProductColumn(column, layout))
+              .map((column) => _buildProductColumn(column, columnWidths))
               .toList(growable: false),
-          rows: items
-              .map(
-                (item) => DataRow(
-                  cells: visibleColumns
-                      .map((column) => _buildProductCell(item, column, layout))
-                      .toList(growable: false),
-                ),
-              )
-              .toList(growable: false),
+          rows: items.asMap().entries.map((entry) {
+            final rowIndex = entry.key;
+            final item = entry.value;
+            return DataRow(
+              cells: visibleColumns
+                  .map(
+                    (column) => _buildProductCell(
+                      item,
+                      rowNumber: rowIndex + 1,
+                      column: column,
+                      columnWidths: columnWidths,
+                    ),
+                  )
+                  .toList(growable: false),
+            );
+          }).toList(growable: false),
         );
       },
     );
   }
 
+  Map<_ProductsTableColumn, double> _columnWidths({
+    required _ProductsTableLayout layout,
+    required List<_ProductsTableColumn> visibleColumns,
+    required double availableWidth,
+  }) {
+    final widths = <_ProductsTableColumn, double>{
+      for (final column in visibleColumns) column: layout.baseWidth(column),
+    };
+
+    final baseWidth =
+        widths.values.fold<double>(0, (sum, value) => sum + value);
+    final spacingWidth = (visibleColumns.length - 1) * layout.columnSpacing;
+    final extraWidth = availableWidth - baseWidth - spacingWidth - 24;
+
+    if (extraWidth > 0) {
+      const weightedColumns = <_ProductsTableColumn, int>{
+        _ProductsTableColumn.name: 6,
+        _ProductsTableColumn.brand: 3,
+        _ProductsTableColumn.sku: 2,
+        _ProductsTableColumn.buyPrice: 2,
+        _ProductsTableColumn.sellPrice: 2,
+      };
+      final totalWeight = visibleColumns.fold<int>(
+        0,
+        (sum, column) => sum + (weightedColumns[column] ?? 0),
+      );
+      if (totalWeight > 0) {
+        for (final column in visibleColumns) {
+          final weight = weightedColumns[column] ?? 0;
+          if (weight == 0) {
+            continue;
+          }
+          widths[column] =
+              widths[column]! + (extraWidth * weight / totalWeight);
+        }
+      }
+    }
+
+    return widths;
+  }
+
   List<_ProductsTableColumn> _visibleColumns(_ProductsTableLayout layout) {
     if (layout.showCompactColumns) {
       return const <_ProductsTableColumn>[
+        _ProductsTableColumn.sr,
         _ProductsTableColumn.name,
-        _ProductsTableColumn.price,
+        _ProductsTableColumn.sellPrice,
+        _ProductsTableColumn.buyPrice,
         _ProductsTableColumn.status,
         _ProductsTableColumn.actions,
       ];
     }
     if (layout.showMediumColumns) {
       return const <_ProductsTableColumn>[
+        _ProductsTableColumn.sr,
         _ProductsTableColumn.name,
         _ProductsTableColumn.brand,
-        _ProductsTableColumn.price,
+        _ProductsTableColumn.buyPrice,
+        _ProductsTableColumn.sellPrice,
         _ProductsTableColumn.type,
         _ProductsTableColumn.status,
         _ProductsTableColumn.actions,
       ];
     }
     return const <_ProductsTableColumn>[
+      _ProductsTableColumn.sr,
       _ProductsTableColumn.name,
       _ProductsTableColumn.brand,
       _ProductsTableColumn.sku,
-      _ProductsTableColumn.price,
+      _ProductsTableColumn.buyPrice,
+      _ProductsTableColumn.sellPrice,
       _ProductsTableColumn.type,
       _ProductsTableColumn.status,
       _ProductsTableColumn.actions,
@@ -198,70 +303,86 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
 
   DataColumn _buildProductColumn(
     _ProductsTableColumn column,
-    _ProductsTableLayout layout,
+    Map<_ProductsTableColumn, double> widths,
   ) {
     return DataColumn(
-      label: _labelCell(_columnLabel(column), width: layout.valueWidth(column)),
+      numeric: false,
+      label: _labelCell(_columnLabel(column), width: widths[column]!),
     );
   }
 
   DataCell _buildProductCell(
-    ProductEntity item,
-    _ProductsTableColumn column,
-    _ProductsTableLayout layout,
-  ) {
+    ProductEntity item, {
+    required int rowNumber,
+    required _ProductsTableColumn column,
+    required Map<_ProductsTableColumn, double> columnWidths,
+  }) {
     switch (column) {
+      case _ProductsTableColumn.sr:
+        return DataCell(
+          _textCell(
+            rowNumber.toString(),
+            width: columnWidths[column]!,
+            textAlign: TextAlign.left,
+          ),
+        );
       case _ProductsTableColumn.name:
-        return DataCell(_textCell(item.name, width: layout.valueWidth(column)));
+        return DataCell(_textCell(item.name, width: columnWidths[column]!));
       case _ProductsTableColumn.brand:
         return DataCell(
-          _textCell(item.brand ?? '-', width: layout.valueWidth(column)),
+          _textCell(item.brand ?? '-', width: columnWidths[column]!),
         );
       case _ProductsTableColumn.sku:
         return DataCell(
-          _textCell(item.sku ?? '-', width: layout.valueWidth(column)),
+          _textCell(item.sku ?? '-', width: columnWidths[column]!),
         );
-      case _ProductsTableColumn.price:
+      case _ProductsTableColumn.buyPrice:
         return DataCell(
           _textCell(
-            layout.showCompactColumns
-                ? FormattingHelpers.currencyPkr(item.salePrice)
-                : '${FormattingHelpers.currencyPkr(item.purchasePrice)} / ${FormattingHelpers.currencyPkr(item.salePrice)}',
-            width: layout.valueWidth(column),
+            _priceValue(item.purchasePrice),
+            width: columnWidths[column]!,
+            textAlign: TextAlign.left,
+          ),
+        );
+      case _ProductsTableColumn.sellPrice:
+        return DataCell(
+          _textCell(
+            _priceValue(item.salePrice),
+            width: columnWidths[column]!,
+            textAlign: TextAlign.left,
           ),
         );
       case _ProductsTableColumn.type:
         return DataCell(
           _textCell(item.hasImei ? 'IMEI' : 'Qty',
-              width: layout.valueWidth(column)),
+              width: columnWidths[column]!),
         );
       case _ProductsTableColumn.status:
         return DataCell(
-          _textCell(
-            item.isActive ? 'Active' : 'Archived',
-            width: layout.valueWidth(column),
-          ),
-        );
+            _statusCell(item.isActive, width: columnWidths[column]!));
       case _ProductsTableColumn.actions:
         return DataCell(
           SizedBox(
-            width: layout.valueWidth(column),
-            child: Wrap(
-              spacing: 4,
+            width: columnWidths[column],
+            child: Row(
               children: <Widget>[
-                IconButton(
+                IconButton.filledTonal(
                   tooltip: 'Edit',
                   onPressed: () => _editProduct(item),
-                  icon: const Icon(Icons.edit_outlined),
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  visualDensity: VisualDensity.compact,
                 ),
-                IconButton(
-                  tooltip: item.isActive ? 'Archive' : 'Activate',
+                const SizedBox(width: 6),
+                IconButton.filledTonal(
+                  tooltip: item.isActive ? 'Archive' : 'Unarchive',
                   onPressed: () => _toggleActive(item),
                   icon: Icon(
                     item.isActive
                         ? Icons.archive_outlined
                         : Icons.check_circle_outline,
+                    size: 18,
                   ),
+                  visualDensity: VisualDensity.compact,
                 ),
               ],
             ),
@@ -270,16 +391,24 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
     }
   }
 
+  String _priceValue(double value) {
+    return FormattingHelpers.decimal(value, fractionDigits: 0);
+  }
+
   String _columnLabel(_ProductsTableColumn column) {
     switch (column) {
+      case _ProductsTableColumn.sr:
+        return 'SR#';
       case _ProductsTableColumn.name:
         return 'Name';
       case _ProductsTableColumn.brand:
         return 'Brand';
       case _ProductsTableColumn.sku:
         return 'SKU';
-      case _ProductsTableColumn.price:
-        return 'Price';
+      case _ProductsTableColumn.buyPrice:
+        return 'Buy Price (PKR)';
+      case _ProductsTableColumn.sellPrice:
+        return 'Sell Price (PKR)';
       case _ProductsTableColumn.type:
         return 'Type';
       case _ProductsTableColumn.status:
@@ -290,22 +419,65 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
   }
 
   Widget _labelCell(String label, {required double width}) {
+    final theme = Theme.of(context);
     return SizedBox(
       width: width,
       child: Text(
         label,
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
+        ),
         overflow: TextOverflow.ellipsis,
       ),
     );
   }
 
-  Widget _textCell(String value, {required double width}) {
+  Widget _textCell(
+    String value, {
+    required double width,
+    TextAlign textAlign = TextAlign.left,
+  }) {
     return SizedBox(
       width: width,
       child: Text(
         value,
+        textAlign: textAlign,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  Widget _statusCell(bool isActive, {required double width}) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final bgColor = isActive
+        ? colorScheme.primaryContainer
+        : colorScheme.surfaceContainerHighest;
+    final fgColor = isActive
+        ? colorScheme.onPrimaryContainer
+        : colorScheme.onSurfaceVariant;
+
+    return SizedBox(
+      width: width,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            isActive ? 'Active' : 'Archived',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: fgColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -348,7 +520,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
         Expanded(
           child: Card(
             child: Padding(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: productsAsync.when(
                 data: _buildProductsTable,
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -377,10 +549,12 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
 }
 
 enum _ProductsTableColumn {
+  sr,
   name,
   brand,
   sku,
-  price,
+  buyPrice,
+  sellPrice,
   type,
   status,
   actions,
@@ -434,58 +608,69 @@ class _ProductsTableLayout {
     );
   }
 
-  double valueWidth(_ProductsTableColumn column) {
+  double baseWidth(_ProductsTableColumn column) {
     if (isWideDesktop) {
       switch (column) {
+        case _ProductsTableColumn.sr:
+          return 56;
         case _ProductsTableColumn.name:
           return 320;
         case _ProductsTableColumn.brand:
           return 170;
         case _ProductsTableColumn.sku:
           return 170;
-        case _ProductsTableColumn.price:
-          return 230;
+        case _ProductsTableColumn.buyPrice:
+          return 140;
+        case _ProductsTableColumn.sellPrice:
+          return 140;
         case _ProductsTableColumn.type:
           return 100;
         case _ProductsTableColumn.status:
-          return 120;
+          return 140;
         case _ProductsTableColumn.actions:
-          return 120;
+          return 140;
       }
     }
     if (showMediumColumns) {
       switch (column) {
+        case _ProductsTableColumn.sr:
+          return 52;
         case _ProductsTableColumn.name:
           return 250;
         case _ProductsTableColumn.brand:
           return 145;
         case _ProductsTableColumn.sku:
           return 140;
-        case _ProductsTableColumn.price:
-          return 200;
+        case _ProductsTableColumn.buyPrice:
+          return 130;
+        case _ProductsTableColumn.sellPrice:
+          return 130;
         case _ProductsTableColumn.type:
           return 90;
         case _ProductsTableColumn.status:
-          return 105;
+          return 125;
         case _ProductsTableColumn.actions:
-          return 110;
+          return 132;
       }
     }
     switch (column) {
+      case _ProductsTableColumn.sr:
+        return 48;
       case _ProductsTableColumn.name:
-        return 220;
+        return 210;
       case _ProductsTableColumn.brand:
         return 120;
       case _ProductsTableColumn.sku:
         return 120;
-      case _ProductsTableColumn.price:
-        return 145;
+      case _ProductsTableColumn.buyPrice:
+      case _ProductsTableColumn.sellPrice:
+        return 118;
       case _ProductsTableColumn.type:
         return 80;
       case _ProductsTableColumn.status:
-        return 95;
+        return 112;
       case _ProductsTableColumn.actions:
-        return 100;
+        return 128;
     }
   }
 }

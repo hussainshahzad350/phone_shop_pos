@@ -69,12 +69,14 @@ class SqliteProductRepository
       if (isActive != null) {
         where.write('is_active = ?');
         args.add(isActive ? 1 : 0);
-      } else {
-        where.write('is_active = 1');
       }
       if (trimmed.isNotEmpty) {
+        if (where.isNotEmpty) {
+          where.write(' AND ');
+        }
         where.write(
-            ' AND (name LIKE ? OR sku LIKE ? OR brand LIKE ? OR category LIKE ? OR barcode LIKE ?)');
+          '(name LIKE ? OR sku LIKE ? OR brand LIKE ? OR category LIKE ? OR barcode LIKE ?)',
+        );
         final pq = '$trimmed%';
         final lq = '%$trimmed%';
         args
@@ -85,14 +87,17 @@ class SqliteProductRepository
           ..add(lq);
       }
       if (hasImei != null) {
-        where.write(' AND has_imei = ?');
+        if (where.isNotEmpty) {
+          where.write(' AND ');
+        }
+        where.write('has_imei = ?');
         args.add(hasImei ? 1 : 0);
       }
       final rows = await QueryDiagnostics.trace(
         label: 'inventory.search_products',
         action: () => _appDatabase.queryTable(
           TableNames.productModels,
-          where: where.toString(),
+          where: where.isEmpty ? null : where.toString(),
           whereArgs: args,
           orderBy: 'name COLLATE NOCASE ASC',
           limit: limit,

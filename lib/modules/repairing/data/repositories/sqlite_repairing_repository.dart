@@ -25,9 +25,15 @@ class SqliteRepairingRepository
     String? status,
     DateTime? startDate,
     DateTime? endDate,
+    bool includeArchived = false,
   }) {
     return guard<List<RepairJobEntity>>(() async {
-      final whereClauses = <String>['is_deleted = 0'];
+      final whereClauses = <String>[];
+      if (includeArchived) {
+        whereClauses.add('is_deleted = 1');
+      } else {
+        whereClauses.add('is_deleted = 0');
+      }
       final args = <Object?>[];
 
       final query = searchQuery?.trim() ?? '';
@@ -56,19 +62,19 @@ class SqliteRepairingRepository
       }
 
       if (endDate != null) {
-        final endUtc =
-            DateTime.utc(endDate.year, endDate.month, endDate.day)
-                .add(const Duration(days: 1));
+        final endUtc = DateTime.utc(endDate.year, endDate.month, endDate.day)
+            .add(const Duration(days: 1));
         whereClauses.add('repair_date < ?');
         args.add(DateTimeHelpers.toSql(endUtc));
       }
 
       final where = whereClauses.join(' AND ');
+      final whereSql = where.isEmpty ? '' : 'WHERE $where';
 
       final rows = await QueryDiagnostics.trace(
         label: 'repairing.get_jobs',
         action: () => _appDatabase.database.rawQuery(
-          'SELECT * FROM $_table WHERE $where ORDER BY repair_date DESC, created_at DESC',
+          'SELECT * FROM $_table $whereSql ORDER BY repair_date DESC, created_at DESC',
           args,
         ),
       );
@@ -191,8 +197,94 @@ class SqliteRepairingRepository
   }
 
   @override
+  Future<Result<void>> collectPayment(
+    String id,
+    double amount, {
+    String? notes,
+  }) {
+    return guard<void>(() async {
+      if (amount <= 0) {
+        throw StateError('Collected amount must be greater than zero.');
+      }
+
+      final rows = await _appDatabase.database.query(
+        _table,
+        where: 'id = ? AND is_deleted = 0',
+        whereArgs: <Object?>[id],
+        limit: 1,
+      );
+      if (rows.isEmpty) {
+        throw StateError('Repair job not found.');
+      }
+
+      final job = _rowToEntity(rows.first);
+      if (job.status == RepairJobEntity.statusDelivered) {
+        throw StateError('Delivered repair jobs cannot collect more payment.');
+      }
+
+      final updatedReceived = job.advanceReceived + amount;
+      final finalAmount = job.finalCost;
+      if (finalAmount != null && finalAmount > 0.009) {
+        if (updatedReceived > finalAmount + 0.009) {
+          throw StateError('Collected amount cannot exceed the final cost.');
+        }
+      }
+
+      final now = DateTimeHelpers.nowUtc();
+      final nowSql = DateTimeHelpers.toSql(now);
+      final trimmedNote = notes?.trim();
+      final amountText = amount == amount.roundToDouble()
+          ? amount.toStringAsFixed(0)
+          : amount.toStringAsFixed(2);
+      final paymentLine = [
+        '[Payment ${nowSql.replaceFirst('T', ' ')}] Collected PKR $amountText',
+        if (trimmedNote != null && trimmedNote.isNotEmpty) trimmedNote,
+      ].join(' — ');
+      final updatedNotes = [
+        if (job.notes != null && job.notes!.trim().isNotEmpty)
+          job.notes!.trim(),
+        paymentLine,
+      ].join('\n');
+
+      await _appDatabase.database.rawUpdate(
+        '''
+        UPDATE $_table SET
+          advance_received = ?,
+          notes = ?,
+          updated_at = ?
+        WHERE id = ? AND is_deleted = 0
+        ''',
+        <Object?>[
+          updatedReceived,
+          updatedNotes,
+          nowSql,
+          id,
+        ],
+      );
+    }, operation: 'collect_repair_payment');
+  }
+
+  @override
   Future<Result<void>> updateStatus(String id, String status) {
     return guard<void>(() async {
+      if (status == RepairJobEntity.statusDelivered) {
+        final rows = await _appDatabase.database.query(
+          _table,
+          where: 'id = ? AND is_deleted = 0',
+          whereArgs: <Object?>[id],
+          limit: 1,
+        );
+        if (rows.isEmpty) {
+          throw StateError('Repair job not found.');
+        }
+        final job = _rowToEntity(rows.first);
+        if (!job.canMarkDelivered) {
+          throw StateError(
+            'Set the final cost and clear all pending payment before marking this repair as delivered.',
+          );
+        }
+      }
+
       final now = DateTimeHelpers.toSql(DateTimeHelpers.nowUtc());
       await _appDatabase.database.rawUpdate(
         'UPDATE $_table SET status = ?, updated_at = ? WHERE id = ? AND is_deleted = 0',
@@ -213,6 +305,17 @@ class SqliteRepairingRepository
   }
 
   @override
+  Future<Result<void>> restoreRepairJob(String id) {
+    return guard<void>(() async {
+      final now = DateTimeHelpers.toSql(DateTimeHelpers.nowUtc());
+      await _appDatabase.database.rawUpdate(
+        'UPDATE $_table SET is_deleted = 0, updated_at = ? WHERE id = ?',
+        <Object?>[now, id],
+      );
+    }, operation: 'restore_repair_job');
+  }
+
+  @override
   Future<Result<RepairKpiEntity>> getRepairKpis() {
     return guard<RepairKpiEntity>(() async {
       final now = DateTimeHelpers.nowUtc();
@@ -230,7 +333,11 @@ class SqliteRepairingRepository
           SUM(CASE WHEN status IN ('received', 'diagnosing', 'repairing') THEN 1 ELSE 0 END) AS pending_repairs,
           SUM(CASE WHEN status = 'delivered' AND repair_date >= ? AND repair_date < ?
                    THEN COALESCE(final_cost, 0) - COALESCE(repair_expense, 0)
-                   ELSE 0 END) AS today_earnings
+                   ELSE 0 END) AS today_earnings,
+          SUM(CASE WHEN status = 'delivered'
+                   THEN COALESCE(final_cost, 0) - COALESCE(repair_expense, 0)
+                   ELSE 0 END) AS all_time_earnings,
+          COUNT(CASE WHEN status = 'delivered' THEN 1 END) AS all_jobs_done
         FROM $_table
         WHERE is_deleted = 0
         ''',
@@ -243,6 +350,8 @@ class SqliteRepairingRepository
         readyForDelivery: (row['ready_for_delivery'] as num?)?.toInt() ?? 0,
         pendingRepairs: (row['pending_repairs'] as num?)?.toInt() ?? 0,
         todayEarnings: (row['today_earnings'] as num?)?.toDouble() ?? 0,
+        allTimeEarnings: (row['all_time_earnings'] as num?)?.toDouble() ?? 0,
+        allJobsDone: (row['all_jobs_done'] as num?)?.toInt() ?? 0,
       );
     }, operation: 'get_repair_kpis');
   }
@@ -264,9 +373,8 @@ class SqliteRepairingRepository
       }
 
       if (endDate != null) {
-        final endUtc =
-            DateTime.utc(endDate.year, endDate.month, endDate.day)
-                .add(const Duration(days: 1));
+        final endUtc = DateTime.utc(endDate.year, endDate.month, endDate.day)
+            .add(const Duration(days: 1));
         whereClauses.add('repair_date < ?');
         args.add(DateTimeHelpers.toSql(endUtc));
       }
@@ -451,14 +559,13 @@ class SqliteRepairingRepository
       estimatedCost: row['estimated_cost'] != null
           ? (row['estimated_cost'] as num).toDouble()
           : null,
-      advanceReceived:
-          ((row['advance_received'] as num?) ?? 0).toDouble(),
+      advanceReceived: ((row['advance_received'] as num?) ?? 0).toDouble(),
       finalCost: row['final_cost'] != null
           ? (row['final_cost'] as num).toDouble()
           : null,
-      repairExpense:
-          ((row['repair_expense'] as num?) ?? 0).toDouble(),
+      repairExpense: ((row['repair_expense'] as num?) ?? 0).toDouble(),
       status: row['status'] as String,
+      isArchived: ((row['is_deleted'] as num?) ?? 0) == 1,
       notes: row['notes'] as String?,
     );
   }

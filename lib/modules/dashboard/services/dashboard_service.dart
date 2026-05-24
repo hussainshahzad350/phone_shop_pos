@@ -130,22 +130,52 @@ class DashboardService with BaseRepositoryGuard {
         ),
       );
 
+      final stockWorthRows = await QueryDiagnostics.trace(
+        label: 'dashboard.total_stock_worth',
+        action: () => _appDatabase.database.rawQuery(
+          '''
+        SELECT
+          (
+            COALESCE((
+              SELECT SUM(
+                ist.quantity *
+                COALESCE(NULLIF(ist.unit_cost, 0), pm.purchase_price, 0)
+              )
+              FROM ${TableNames.inventoryStock} ist
+              JOIN ${TableNames.productModels} pm ON pm.id = ist.product_model_id
+              WHERE pm.is_active = 1 AND pm.has_imei = 0
+            ), 0)
+            +
+            COALESCE((
+              SELECT SUM(
+                COALESCE(NULLIF(ss.cost_price, 0), pm.purchase_price, 0)
+              )
+              FROM ${TableNames.serializedStock} ss
+              JOIN ${TableNames.productModels} pm ON pm.id = ss.product_model_id
+              WHERE pm.is_active = 1 AND ss.stock_status = 'in_stock'
+            ), 0)
+          ) AS total_stock_worth
+        ''',
+        ),
+      );
+
       final sales = salesRows.first;
       final items = itemRows.first;
       final stock = stockRows.first;
       final serialized = serializedRows.first;
       final pending = pendingRows.first;
+      final stockWorth = stockWorthRows.first;
 
       final entity = DashboardKpisEntity(
-        todaySales: (sales['today_sales'] as num?)?.toDouble() ?? 0,
-        todayProfit: (items['today_profit'] as num?)?.toDouble() ?? 0,
-        phonesSoldToday: (items['phones_sold'] as num?)?.toInt() ?? 0,
-        accessoriesSoldToday: (items['accessories_sold'] as num?)?.toInt() ?? 0,
-        lowStockCount: (stock['low_stock_count'] as num?)?.toInt() ?? 0,
-        availableStockCount:
-            ((stock['accessory_units'] as num?)?.toInt() ?? 0) +
-                ((serialized['in_stock_serialized'] as num?)?.toInt() ?? 0),
-        pendingBalances: (pending['pending_balances'] as num?)?.toDouble() ?? 0,
+        todaySales: _asDouble(sales['today_sales']),
+        todayProfit: _asDouble(items['today_profit']),
+        phonesSoldToday: _asInt(items['phones_sold']),
+        accessoriesSoldToday: _asInt(items['accessories_sold']),
+        lowStockCount: _asInt(stock['low_stock_count']),
+        availableStockCount: _asInt(stock['accessory_units']) +
+            _asInt(serialized['in_stock_serialized']),
+        pendingBalances: _asDouble(pending['pending_balances']),
+        totalStockWorth: _asDouble(stockWorth['total_stock_worth']),
       );
 
       _cachedKpis = entity;
@@ -231,5 +261,25 @@ class DashboardService with BaseRepositoryGuard {
           )
           .toList(growable: false);
     }, operation: 'get_low_stock_warnings');
+  }
+
+  double _asDouble(Object? value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    if (value is String) {
+      return double.tryParse(value) ?? 0;
+    }
+    return 0;
+  }
+
+  int _asInt(Object? value) {
+    if (value is num) {
+      return value.toInt();
+    }
+    if (value is String) {
+      return int.tryParse(value) ?? 0;
+    }
+    return 0;
   }
 }

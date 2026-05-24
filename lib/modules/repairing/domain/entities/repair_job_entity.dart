@@ -6,6 +6,7 @@ class RepairJobEntity {
     required this.problemDescription,
     required this.status,
     required this.createdAt,
+    this.isArchived = false,
     this.customerName,
     this.customerPhone,
     this.imei,
@@ -26,12 +27,14 @@ class RepairJobEntity {
   final String problemDescription;
   final String status;
   final DateTime createdAt;
+  final bool isArchived;
 
   final String? customerName;
   final String? customerPhone;
   final String? imei;
   final String? accessories;
   final String? technicianName;
+
   /// Optional structured issue category for cleaner analytics.
   final String? issueType;
   final double? estimatedCost;
@@ -43,7 +46,40 @@ class RepairJobEntity {
 
   double get netProfit => (finalCost ?? 0) - repairExpense;
 
-  double get remainingPayment => (finalCost ?? 0) - advanceReceived;
+  double get totalReceived {
+    final finalAmount = finalCost;
+    if (finalAmount == null || finalAmount <= 0) {
+      return advanceReceived;
+    }
+    if (status == statusDelivered) {
+      return finalAmount;
+    }
+    return advanceReceived;
+  }
+
+  double get remainingPayment {
+    final finalAmount = finalCost;
+    if (finalAmount == null || finalAmount <= 0) {
+      return 0;
+    }
+    if (status == statusDelivered) {
+      return 0;
+    }
+    final remaining = finalAmount - totalReceived;
+    return remaining < 0 ? 0 : remaining;
+  }
+
+  bool get hasFinalPaymentAmount => (finalCost ?? 0) > 0.009;
+
+  bool get hasPendingPayment {
+    final finalAmount = finalCost;
+    if (finalAmount == null || finalAmount <= 0) {
+      return true;
+    }
+    return advanceReceived + 0.009 < finalAmount;
+  }
+
+  bool get canMarkDelivered => !hasPendingPayment;
 
   static const String statusReceived = 'received';
   static const String statusDiagnosing = 'diagnosing';
@@ -85,6 +121,7 @@ class RepairJobEntity {
     String? problemDescription,
     String? status,
     DateTime? createdAt,
+    bool? isArchived,
     String? customerName,
     String? customerPhone,
     String? imei,
@@ -115,15 +152,15 @@ class RepairJobEntity {
       problemDescription: problemDescription ?? this.problemDescription,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
+      isArchived: isArchived ?? this.isArchived,
       customerName:
           clearCustomerName ? null : (customerName ?? this.customerName),
       customerPhone:
           clearCustomerPhone ? null : (customerPhone ?? this.customerPhone),
       imei: clearImei ? null : (imei ?? this.imei),
       accessories: clearAccessories ? null : (accessories ?? this.accessories),
-      technicianName: clearTechnicianName
-          ? null
-          : (technicianName ?? this.technicianName),
+      technicianName:
+          clearTechnicianName ? null : (technicianName ?? this.technicianName),
       issueType: clearIssueType ? null : (issueType ?? this.issueType),
       estimatedCost:
           clearEstimatedCost ? null : (estimatedCost ?? this.estimatedCost),
