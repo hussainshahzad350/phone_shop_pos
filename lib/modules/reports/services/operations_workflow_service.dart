@@ -415,7 +415,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         final salePaymentMethod = PaymentMethod.normalizeNullable(
           saleRows.first['payment_method'] as String?,
         );
-        final newTotal = math.max(currentTotal - returnAmount, 0.0);
+        final newTotal =
+            (currentTotal - returnAmount).clamp(0.0, currentTotal).toDouble();
         final newPaid = currentPaid.clamp(0.0, newTotal).toDouble();
         final refundedPaidAmount =
             (currentPaid - newPaid).clamp(0, currentPaid).toDouble();
@@ -453,6 +454,9 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         final refundedCashSoFar =
             (priorRefundRows.first['refunded_cash_total'] as num?)?.toDouble() ??
                 0;
+        // The sales row only stores the current paid_amount after collections
+        // and prior refunds, so returns need this reconstruction to estimate the
+        // original amount paid before allocating another refund.
         final estimatedOriginalPaidAmount =
             math.max(currentPaid - totalCollected + refundedPaidSoFar, 0);
         // Rebuild the cash still represented by this sale before the new return:
