@@ -415,8 +415,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         final salePaymentMethod = PaymentMethod.normalizeNullable(
           saleRows.first['payment_method'] as String?,
         );
-        final newTotal = (currentTotal - returnAmount).clamp(0.0, currentTotal);
-        final newPaid = currentPaid.clamp(0, newTotal);
+        final newTotal = math.max(currentTotal - returnAmount, 0.0);
+        final newPaid = currentPaid.clamp(0.0, newTotal).toDouble();
         final refundedPaidAmount =
             (currentPaid - newPaid).clamp(0, currentPaid).toDouble();
 

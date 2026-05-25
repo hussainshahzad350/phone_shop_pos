@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:phone_shop_pos/core/database/database_provider.dart';
@@ -274,7 +272,6 @@ class LocalPinAuthController extends StateNotifier<LocalPinAuthState> {
     if (!state.hasPinConfigured) {
       return;
     }
-    unawaited(_service.clearLockoutState());
     state = state.copyWith(
       isAuthenticated: false,
       clearErrorMessage: true,
