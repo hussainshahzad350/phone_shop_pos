@@ -453,11 +453,13 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         final refundedCashSoFar =
             (priorRefundRows.first['refunded_cash_total'] as num?)?.toDouble() ??
                 0;
-        final reconstructedInitialPaid =
+        final estimatedOriginalPaidAmount =
             math.max(currentPaid - totalCollected + refundedPaidSoFar, 0);
+        // Rebuild the cash still represented by this sale before the new return:
+        // original cash paid at sale time + later cash collections - prior cash refunds.
         final cashPaidBeforeReturn = math.max(
           (salePaymentMethod == PaymentMethod.cash
-                  ? reconstructedInitialPaid
+                  ? estimatedOriginalPaidAmount
                   : 0) +
               cashCollected -
               refundedCashSoFar,
