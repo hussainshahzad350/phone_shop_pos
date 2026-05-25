@@ -8,6 +8,20 @@ import 'package:phone_shop_pos/core/database/app_database.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 
+class LocalPinLockoutState {
+  const LocalPinLockoutState({
+    required this.failedAttempts,
+    required this.lockedUntil,
+  });
+
+  const LocalPinLockoutState.initial()
+      : failedAttempts = 0,
+        lockedUntil = null;
+
+  final int failedAttempts;
+  final DateTime? lockedUntil;
+}
+
 class LocalPinAuthService {
   LocalPinAuthService({required AppDatabase appDatabase})
       : _appDatabase = appDatabase;
@@ -18,6 +32,8 @@ class LocalPinAuthService {
   static const String _pinSaltKey = 'auth.pin.salt';
   static const String _recoveryHashKey = 'auth.recovery.hash';
   static const String _recoverySaltKey = 'auth.recovery.salt';
+  static const String _failedAttemptsKey = 'auth.pin.failed_attempts';
+  static const String _lockedUntilKey = 'auth.pin.locked_until';
 
   Future<bool> hasPinConfigured() async {
     final hash = await _readSetting(_pinHashKey);
@@ -27,6 +43,7 @@ class LocalPinAuthService {
 
   Future<String> configurePin(String pin) async {
     await _writePinHash(pin);
+    await clearLockoutState();
     final recoveryCode = _generateRecoveryCode();
     final recoverySalt = _generateSalt();
     final recoveryHash = _hashWithSalt(value: recoveryCode, salt: recoverySalt);
@@ -55,6 +72,7 @@ class LocalPinAuthService {
       return false;
     }
     await _writePinHash(newPin);
+    await clearLockoutState();
     return true;
   }
 
@@ -87,7 +105,37 @@ class LocalPinAuthService {
       return false;
     }
     await _writePinHash(newPin);
+    await clearLockoutState();
     return true;
+  }
+
+  Future<LocalPinLockoutState> getLockoutState() async {
+    final failedAttemptsRaw = await _readSetting(_failedAttemptsKey);
+    final lockedUntilRaw = await _readSetting(_lockedUntilKey);
+
+    return LocalPinLockoutState(
+      failedAttempts: int.tryParse(failedAttemptsRaw ?? '') ?? 0,
+      lockedUntil: lockedUntilRaw == null || lockedUntilRaw.trim().isEmpty
+          ? null
+          : DateTimeHelpers.fromSql(lockedUntilRaw),
+    );
+  }
+
+  Future<void> persistLockoutState({
+    required int failedAttempts,
+    DateTime? lockedUntil,
+  }) async {
+    await _writeSetting(_failedAttemptsKey, failedAttempts.toString());
+    if (lockedUntil == null) {
+      await _deleteSetting(_lockedUntilKey);
+      return;
+    }
+    await _writeSetting(_lockedUntilKey, DateTimeHelpers.toSql(lockedUntil));
+  }
+
+  Future<void> clearLockoutState() async {
+    await _deleteSetting(_failedAttemptsKey);
+    await _deleteSetting(_lockedUntilKey);
   }
 
   Future<String?> _readSetting(String key) async {
@@ -113,6 +161,14 @@ class LocalPinAuthService {
         'updated_at': DateTimeHelpers.toSql(DateTimeHelpers.nowUtc()),
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> _deleteSetting(String key) async {
+    await _appDatabase.database.delete(
+      TableNames.appSettings,
+      where: 'key = ?',
+      whereArgs: <Object?>[key],
     );
   }
 

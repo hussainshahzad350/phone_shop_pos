@@ -1257,5 +1257,10 @@ class MigrationService {
     19: <String>[
       'ALTER TABLE ${TableNames.repairJobs} ADD COLUMN issue_type TEXT;',
     ],
+    20: <String>[
+      'ALTER TABLE ${TableNames.saleReturns} ADD COLUMN refunded_paid_amount REAL NOT NULL DEFAULT 0;',
+      'ALTER TABLE ${TableNames.saleReturns} ADD COLUMN refunded_cash_amount REAL NOT NULL DEFAULT 0;',
+      'CREATE INDEX IF NOT EXISTS idx_sale_returns_created_at ON ${TableNames.saleReturns}(created_at);',
+    ],
   };
 }

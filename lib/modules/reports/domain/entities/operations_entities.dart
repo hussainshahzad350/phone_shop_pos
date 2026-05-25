@@ -156,6 +156,7 @@ class CashLedgerRowEntity {
     required this.day,
     required this.cashSalesIn,
     required this.cashCollectionsIn,
+    required this.cashRefundsOut,
     required this.purchasePaymentsOut,
     required this.expensesOut,
   });
@@ -163,11 +164,12 @@ class CashLedgerRowEntity {
   final String day;
   final double cashSalesIn;
   final double cashCollectionsIn;
+  final double cashRefundsOut;
   final double purchasePaymentsOut;
   final double expensesOut;
 
   double get totalCashIn => cashSalesIn + cashCollectionsIn;
-  double get totalCashOut => purchasePaymentsOut + expensesOut;
+  double get totalCashOut => cashRefundsOut + purchasePaymentsOut + expensesOut;
   double get netCash => totalCashIn - totalCashOut;
 }
 

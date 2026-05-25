@@ -33,10 +33,10 @@ class SqlitePurchaseRepository
     return guard<List<SupplierOptionEntity>>(() async {
       final trimmedQuery = query.trim();
       final args = <Object?>[];
-      String? where;
+      final whereBuffer = StringBuffer('is_active = 1');
 
       if (trimmedQuery.isNotEmpty) {
-        where = 'name LIKE ? OR phone LIKE ?';
+        whereBuffer.write(' AND (name LIKE ? OR phone LIKE ?)');
         final phonePrefix = '$trimmedQuery%';
         final likeQuery = '%$trimmedQuery%';
         args
@@ -48,7 +48,7 @@ class SqlitePurchaseRepository
         label: 'purchases.search_suppliers',
         action: () => _appDatabase.queryTable(
           TableNames.suppliers,
-          where: where,
+          where: whereBuffer.toString(),
           whereArgs: args,
           orderBy: 'name COLLATE NOCASE ASC',
           limit: limit,

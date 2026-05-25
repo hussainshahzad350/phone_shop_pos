@@ -259,6 +259,7 @@ void main() {
           startDate: null,
           endDate: null,
           pendingOnly: true,
+          collectibleOnly: true,
         ),
       );
 

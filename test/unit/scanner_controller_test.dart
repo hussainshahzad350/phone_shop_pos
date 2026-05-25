@@ -32,6 +32,39 @@ void main() {
       expect(controller.state.lastFeedback?.code, 'duplicate_scan');
     });
 
+    test('failed scans stay retryable until a successful scan is processed',
+        () async {
+      final fakeHandler = _SequencedModeHandler(
+        results: const <ScannerHandlerResult>[
+          ScannerHandlerResult(
+            isSuccess: false,
+            code: 'product_not_found',
+            message: 'Missing',
+          ),
+          ScannerHandlerResult(
+            isSuccess: true,
+            code: 'sales_scan_added',
+            message: 'Added',
+          ),
+        ],
+      );
+      final controller = ScannerController(
+        scannerService: const ScannerService(),
+        modeRouter: ScannerModeRouter(
+          salesHandler: fakeHandler,
+          purchaseHandler: fakeHandler,
+          inventoryHandler: fakeHandler,
+        ),
+      )..setActiveMode(ScannerMode.sales);
+
+      await controller.submitRawScan('12345678');
+      await controller.submitRawScan('12345678');
+
+      expect(fakeHandler.calls, 2);
+      expect(controller.state.processedValues, contains('12345678'));
+      expect(controller.state.lastFeedback?.code, 'sales_scan_added');
+    });
+
     test('resets session when handler requests reset (finish flow)', () async {
       final fakeHandler = _FakeModeHandler(
         result: const ScannerHandlerResult(
@@ -91,5 +124,19 @@ class _FakeModeHandler implements ScannerModeHandler {
   Future<ScannerHandlerResult> handle(ScannerScanPayload payload) async {
     calls += 1;
     return result;
+  }
+}
+
+class _SequencedModeHandler implements ScannerModeHandler {
+  _SequencedModeHandler({required this.results});
+
+  final List<ScannerHandlerResult> results;
+  int calls = 0;
+
+  @override
+  Future<ScannerHandlerResult> handle(ScannerScanPayload payload) async {
+    final index = calls >= results.length ? results.length - 1 : calls;
+    calls += 1;
+    return results[index];
   }
 }

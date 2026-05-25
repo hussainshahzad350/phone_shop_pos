@@ -88,10 +88,10 @@ class SqliteSalesRepository
     return guard<List<CustomerOptionEntity>>(() async {
       final trimmedQuery = query.trim();
       final args = <Object?>[];
-      String? where;
+      final whereBuffer = StringBuffer('is_active = 1');
 
       if (trimmedQuery.isNotEmpty) {
-        where = 'phone LIKE ? OR name LIKE ?';
+        whereBuffer.write(' AND (phone LIKE ? OR name LIKE ?)');
         final prefixQuery = '$trimmedQuery%';
         final containsQuery = '%$trimmedQuery%';
         args
@@ -103,7 +103,7 @@ class SqliteSalesRepository
         label: 'sales.search_customers',
         action: () => _appDatabase.queryTable(
           TableNames.customers,
-          where: where,
+          where: whereBuffer.toString(),
           whereArgs: args,
           orderBy: 'name COLLATE NOCASE ASC',
           limit: limit,
