@@ -453,9 +453,9 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         final refundedCashSoFar =
             (priorRefundRows.first['refunded_cash_total'] as num?)?.toDouble() ??
                 0;
-        // The sales row only stores the current paid_amount after collections
-        // and prior refunds, so returns need this reconstruction to estimate the
-        // original amount paid before allocating another refund.
+        // currentPaid = original paid at sale time + later collections
+        //               - prior refunded paid amounts, so reversing the known
+        // adjustments reconstructs the original paid amount before this return.
         final estimatedOriginalPaidAmount =
             math.max(currentPaid - totalCollected + refundedPaidSoFar, 0);
         // Rebuild the cash still represented by this sale before the new return:
@@ -468,6 +468,9 @@ class OperationsWorkflowService with BaseRepositoryGuard {
               refundedCashSoFar,
           0,
         );
+        // A return can only refund cash that is still represented by the sale,
+        // so cap the refunded cash portion by the cash still attributable to
+        // the invoice before this return.
         final refundedCashAmount = refundedPaidAmount <= 0
             ? 0.0
             : math.min(refundedPaidAmount, cashPaidBeforeReturn);
