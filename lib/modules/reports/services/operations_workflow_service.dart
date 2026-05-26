@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/database/app_database.dart';
 import 'package:phone_shop_pos/core/database/base_repository.dart';
@@ -21,6 +23,7 @@ class OperationsWorkflowService with BaseRepositoryGuard {
     required DateTime? startDate,
     required DateTime? endDate,
     bool pendingOnly = false,
+    bool collectibleOnly = false,
     int limit = 100,
     int offset = 0,
   }) {
@@ -60,8 +63,11 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         args.add(DateTimeHelpers.toSql(endUtc));
       }
 
-      if (pendingOnly) {
+      if (pendingOnly || collectibleOnly) {
         whereClauses.add('s.paid_amount < s.total');
+      }
+
+      if (collectibleOnly) {
         whereClauses.add("s.payment_method = 'credit'");
         whereClauses.add(
           "s.customer_id IS NOT NULL AND TRIM(s.customer_id) != '' AND LOWER(s.customer_id) != 'walk_in'",
@@ -393,26 +399,9 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         }
 
         // ── Insert return audit record ────────────────────────────────────
-        await transaction.insert(TableNames.saleReturns, <String, Object?>{
-          'id': IdHelpers.newId(prefix: 'ret'),
-          'sale_id': saleId,
-          'sale_item_id': item.saleItemId,
-          'product_model_id': item.productModelId,
-          'serialized_stock_id': returnedSerializedId,
-          'return_type': returnType,
-          'return_qty': quantity,
-          'return_amount': returnAmount,
-          'cost_price': unitCostPrice,
-          'reason': trimmedReason,
-          'notes': normalizedNotes,
-          'created_at': DateTimeHelpers.toSql(now),
-          'updated_at': DateTimeHelpers.toSql(now),
-        });
-
-        // ── Refund Model: reduce sale total and clamp paid_amount ─────────
         final saleRows = await transaction.query(
           TableNames.sales,
-          columns: <String>['total', 'paid_amount'],
+          columns: <String>['total', 'paid_amount', 'payment_method'],
           where: 'id = ?',
           whereArgs: <Object?>[saleId],
           limit: 1,
@@ -423,9 +412,88 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         final currentTotal = (saleRows.first['total'] as num?)?.toDouble() ?? 0;
         final currentPaid =
             (saleRows.first['paid_amount'] as num?)?.toDouble() ?? 0;
+        final salePaymentMethod = PaymentMethod.normalizeNullable(
+          saleRows.first['payment_method'] as String?,
+        );
         final newTotal = (currentTotal - returnAmount).clamp(0.0, currentTotal);
-        final newPaid = currentPaid.clamp(0, newTotal);
+        final newPaid = currentPaid.clamp(0.0, newTotal).toDouble();
+        final refundedPaidAmount =
+            (currentPaid - newPaid).clamp(0, currentPaid).toDouble();
 
+        final paymentRows = await transaction.rawQuery(
+          '''
+          SELECT
+            COALESCE(SUM(amount), 0) AS total_collected,
+            COALESCE(SUM(CASE
+              WHEN payment_method = '${PaymentMethod.cash}' THEN amount
+              ELSE 0
+            END), 0) AS cash_collected
+          FROM ${TableNames.salePayments}
+          WHERE sale_id = ?
+          ''',
+          <Object?>[saleId],
+        );
+        final priorRefundRows = await transaction.rawQuery(
+          '''
+          SELECT
+            COALESCE(SUM(refunded_paid_amount), 0) AS refunded_paid_total,
+            COALESCE(SUM(refunded_cash_amount), 0) AS refunded_cash_total
+          FROM ${TableNames.saleReturns}
+          WHERE sale_id = ?
+          ''',
+          <Object?>[saleId],
+        );
+        final totalCollected =
+            (paymentRows.first['total_collected'] as num?)?.toDouble() ?? 0;
+        final cashCollected =
+            (paymentRows.first['cash_collected'] as num?)?.toDouble() ?? 0;
+        final refundedPaidSoFar =
+            (priorRefundRows.first['refunded_paid_total'] as num?)?.toDouble() ??
+                0;
+        final refundedCashSoFar =
+            (priorRefundRows.first['refunded_cash_total'] as num?)?.toDouble() ??
+                0;
+        // currentPaid = original paid at sale time + later collections
+        //               - prior refunded paid amounts, so reversing the known
+        // adjustments reconstructs the original paid amount before this return.
+        final estimatedOriginalPaidAmount =
+            math.max(currentPaid - totalCollected + refundedPaidSoFar, 0);
+        // Rebuild the cash still represented by this sale before the new return:
+        // original cash paid at sale time + later cash collections - prior cash refunds.
+        final cashPaidBeforeReturn = math.max(
+          (salePaymentMethod == PaymentMethod.cash
+                  ? estimatedOriginalPaidAmount
+                  : 0) +
+              cashCollected -
+              refundedCashSoFar,
+          0,
+        );
+        // A return can only refund cash that is still represented by the sale,
+        // so cap the refunded cash portion by the cash still attributable to
+        // the invoice before this return.
+        final refundedCashAmount = refundedPaidAmount <= 0
+            ? 0.0
+            : math.min(refundedPaidAmount, cashPaidBeforeReturn);
+
+        await transaction.insert(TableNames.saleReturns, <String, Object?>{
+          'id': IdHelpers.newId(prefix: 'ret'),
+          'sale_id': saleId,
+          'sale_item_id': item.saleItemId,
+          'product_model_id': item.productModelId,
+          'serialized_stock_id': returnedSerializedId,
+          'return_type': returnType,
+          'return_qty': quantity,
+          'return_amount': returnAmount,
+          'cost_price': unitCostPrice,
+          'refunded_paid_amount': refundedPaidAmount,
+          'refunded_cash_amount': refundedCashAmount,
+          'reason': trimmedReason,
+          'notes': normalizedNotes,
+          'created_at': DateTimeHelpers.toSql(now),
+          'updated_at': DateTimeHelpers.toSql(now),
+        });
+
+        // ── Refund Model: reduce sale total and clamp paid_amount ─────────
         await transaction.update(
           TableNames.sales,
           <String, Object?>{
@@ -637,12 +705,14 @@ class OperationsWorkflowService with BaseRepositoryGuard {
     int offset = 0,
   }) {
     return guard<List<CashLedgerRowEntity>>(() async {
-      final salesArgs = <Object?>[PaymentMethod.cash];
+      final salesArgs = <Object?>[];
       final collectionsArgs = <Object?>[PaymentMethod.cash];
+      final returnsArgs = <Object?>[];
       final purchasesArgs = <Object?>[];
       final expensesArgs = <Object?>[];
-      final salesWhere = StringBuffer('s.payment_method = ?');
+      final salesWhere = StringBuffer('1 = 1');
       final collectionsWhere = StringBuffer('sp.payment_method = ?');
+      final returnsWhere = StringBuffer('1 = 1');
       final purchasesWhere = StringBuffer('1 = 1');
       final expensesWhere = StringBuffer('e.is_deleted = 0');
 
@@ -654,6 +724,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         salesArgs.add(startSql);
         collectionsWhere.write(' AND sp.created_at >= ?');
         collectionsArgs.add(startSql);
+        returnsWhere.write(' AND sr.created_at >= ?');
+        returnsArgs.add(startSql);
         purchasesWhere.write(' AND p.purchase_date >= ?');
         purchasesArgs.add(startSql);
         expensesWhere.write(' AND e.expense_date >= ?');
@@ -668,6 +740,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         salesArgs.add(endSql);
         collectionsWhere.write(' AND sp.created_at < ?');
         collectionsArgs.add(endSql);
+        returnsWhere.write(' AND sr.created_at < ?');
+        returnsArgs.add(endSql);
         purchasesWhere.write(' AND p.purchase_date < ?');
         purchasesArgs.add(endSql);
         expensesWhere.write(' AND e.expense_date < ?');
@@ -685,20 +759,34 @@ class OperationsWorkflowService with BaseRepositoryGuard {
             FROM ${TableNames.salePayments} sp
             GROUP BY sp.sale_id
           ),
+          refunds_by_sale AS (
+            SELECT
+              sr.sale_id AS sale_id,
+              COALESCE(SUM(sr.refunded_paid_amount), 0) AS refunded_paid_total,
+              COALESCE(SUM(sr.refunded_cash_amount), 0) AS refunded_cash_total
+            FROM ${TableNames.saleReturns} sr
+            GROUP BY sr.sale_id
+          ),
           sales_cash AS (
             SELECT
               date(s.sale_date) AS day,
               COALESCE(
                 SUM(
-                  MAX(
-                    COALESCE(s.paid_amount, 0) - COALESCE(pbs.total_collected, 0),
-                    0
-                  )
+                  CASE
+                    WHEN s.payment_method = '${PaymentMethod.cash}' THEN MAX(
+                      COALESCE(s.paid_amount, 0)
+                        - COALESCE(pbs.total_collected, 0)
+                        + COALESCE(rbs.refunded_paid_total, 0),
+                      0
+                    )
+                    ELSE 0
+                  END
                 ),
                 0
               ) AS cash_sales_in
             FROM ${TableNames.sales} s
             LEFT JOIN payments_by_sale pbs ON pbs.sale_id = s.id
+            LEFT JOIN refunds_by_sale rbs ON rbs.sale_id = s.id
             WHERE ${salesWhere.toString()}
             GROUP BY date(s.sale_date)
           ),
@@ -709,6 +797,14 @@ class OperationsWorkflowService with BaseRepositoryGuard {
             FROM ${TableNames.salePayments} sp
             WHERE ${collectionsWhere.toString()}
             GROUP BY date(sp.created_at)
+          ),
+          refunds_cash AS (
+            SELECT
+              date(sr.created_at) AS day,
+              COALESCE(SUM(sr.refunded_cash_amount), 0) AS cash_refunds_out
+            FROM ${TableNames.saleReturns} sr
+            WHERE ${returnsWhere.toString()}
+            GROUP BY date(sr.created_at)
           ),
           purchase_out AS (
             SELECT
@@ -731,6 +827,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
             UNION
             SELECT day FROM collections_cash
             UNION
+            SELECT day FROM refunds_cash
+            UNION
             SELECT day FROM purchase_out
             UNION
             SELECT day FROM expense_out
@@ -739,11 +837,13 @@ class OperationsWorkflowService with BaseRepositoryGuard {
             d.day,
             COALESCE(sc.cash_sales_in, 0) AS cash_sales_in,
             COALESCE(cc.cash_collections_in, 0) AS cash_collections_in,
+            COALESCE(rc.cash_refunds_out, 0) AS cash_refunds_out,
             COALESCE(po.purchase_payments_out, 0) AS purchase_payments_out,
             COALESCE(eo.expenses_out, 0) AS expenses_out
           FROM all_days d
           LEFT JOIN sales_cash sc ON sc.day = d.day
           LEFT JOIN collections_cash cc ON cc.day = d.day
+          LEFT JOIN refunds_cash rc ON rc.day = d.day
           LEFT JOIN purchase_out po ON po.day = d.day
           LEFT JOIN expense_out eo ON eo.day = d.day
           ORDER BY d.day DESC
@@ -752,6 +852,7 @@ class OperationsWorkflowService with BaseRepositoryGuard {
           <Object?>[
             ...salesArgs,
             ...collectionsArgs,
+            ...returnsArgs,
             ...purchasesArgs,
             ...expensesArgs,
             limit,
@@ -766,6 +867,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
           cashSalesIn: (row['cash_sales_in'] as num?)?.toDouble() ?? 0,
           cashCollectionsIn:
               (row['cash_collections_in'] as num?)?.toDouble() ?? 0,
+          cashRefundsOut:
+              (row['cash_refunds_out'] as num?)?.toDouble() ?? 0,
           purchasePaymentsOut:
               (row['purchase_payments_out'] as num?)?.toDouble() ?? 0,
           expensesOut: (row['expenses_out'] as num?)?.toDouble() ?? 0,

@@ -41,6 +41,7 @@ class ReportsScreen extends ConsumerWidget {
     ref.invalidate(customerBalanceReportProvider);
     ref.invalidate(lowStockReportProvider);
     ref.invalidate(salesHistoryRowsProvider);
+    ref.invalidate(creditCollectionRowsProvider);
     ref.invalidate(purchaseHistoryRowsProvider);
     ref.invalidate(supplierLedgerRowsProvider);
     ref.invalidate(cashLedgerRowsProvider);
@@ -1038,7 +1039,7 @@ class _CreditCollectionView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final rowsAsync = ref.watch(salesHistoryRowsProvider);
+    final rowsAsync = ref.watch(creditCollectionRowsProvider);
     return rowsAsync.when(
       data: (rows) {
         final pendingRows =
@@ -1093,7 +1094,7 @@ class _CreditCollectionView extends ConsumerWidget {
       error: (error, __) => _ReportErrorView(
         message: 'Failed to load credit sales.',
         error: error,
-        onRetry: () => ref.invalidate(salesHistoryRowsProvider),
+        onRetry: () => ref.invalidate(creditCollectionRowsProvider),
       ),
     );
   }
@@ -1362,7 +1363,7 @@ class _CashLedgerView extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      'Cash Flow components: Inflows (Cash Sales + Cash Collections), Outflows (Purchases Paid + Expenses)',
+                      'Cash Flow components: Inflows (Cash Sales + Cash Collections), Outflows (Cash Refunds + Purchases Paid + Expenses)',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 4),
@@ -1387,6 +1388,7 @@ class _CashLedgerView extends ConsumerWidget {
                           DataColumn(label: Text('Cash Sales In')),
                           DataColumn(label: Text('Collections In')),
                           DataColumn(label: Text('Total Cash In')),
+                          DataColumn(label: Text('Cash Refunds Out')),
                           DataColumn(label: Text('Purchases Paid Out')),
                           DataColumn(label: Text('Expenses Out')),
                           DataColumn(label: Text('Total Cash Out')),
@@ -1402,6 +1404,8 @@ class _CashLedgerView extends ConsumerWidget {
                                   row.cashCollectionsIn))),
                               DataCell(Text(FormattingHelpers.currencyPkr(
                                   row.totalCashIn))),
+                              DataCell(Text(FormattingHelpers.currencyPkr(
+                                  row.cashRefundsOut))),
                               DataCell(
                                 Text(FormattingHelpers.currencyPkr(
                                     row.purchasePaymentsOut)),
@@ -1947,6 +1951,7 @@ class _SalesInvoiceDialog extends ConsumerWidget {
                                       ref.invalidate(
                                           salesInvoiceDetailProvider(saleId));
                                       ref.invalidate(salesHistoryRowsProvider);
+                                      ref.invalidate(creditCollectionRowsProvider);
                                     },
                                     child: const Text('Return'),
                                   ),
@@ -2094,6 +2099,7 @@ class _CollectPaymentDialogState extends ConsumerState<_CollectPaymentDialog> {
       return;
     }
     ref.invalidate(salesHistoryRowsProvider);
+    ref.invalidate(creditCollectionRowsProvider);
     ref.invalidate(customerBalanceReportProvider);
     ref.invalidate(cashLedgerRowsProvider);
     AppNotifier.success('Payment collected successfully.');

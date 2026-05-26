@@ -349,6 +349,24 @@ final salesHistoryRowsProvider = FutureProvider<List<SalesHistoryRowEntity>>((
   );
 });
 
+final creditCollectionRowsProvider = FutureProvider<List<SalesHistoryRowEntity>>((
+  ref,
+) async {
+  final service = await ref.watch(operationsWorkflowServiceProvider.future);
+  final result = await service.searchSalesHistory(
+    invoiceQuery: ref.watch(salesHistoryInvoiceQueryProvider),
+    customerQuery: ref.watch(salesHistoryCustomerQueryProvider),
+    startDate: ref.watch(salesHistoryStartDateProvider),
+    endDate: ref.watch(salesHistoryEndDateProvider),
+    pendingOnly: true,
+    collectibleOnly: true,
+  );
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
+
 final salesInvoiceDetailProvider =
     FutureProvider.autoDispose.family<SalesInvoiceDetailEntity?, String>((
   ref,

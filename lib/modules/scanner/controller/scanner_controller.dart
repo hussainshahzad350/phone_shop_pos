@@ -96,7 +96,9 @@ class ScannerController extends StateNotifier<ScannerSessionState> {
 
     final nextProcessedValues = result.resetSession
         ? const <String>{}
-        : <String>{...state.processedValues, payload.normalizedValue};
+        : result.isSuccess && !payload.isFinishCode
+            ? <String>{...state.processedValues, payload.normalizedValue}
+            : state.processedValues;
 
     final shouldActivateFastBilling =
         mode == ScannerMode.sales && state.fastModeEnabled && result.isSuccess;

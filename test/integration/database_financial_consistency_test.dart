@@ -544,6 +544,254 @@ void main() {
       expect(rows.first.profit, closeTo(5000, 0.0001));
     });
 
+    test('sold phones report excludes fully returned IMEI sales', () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final saleDay = DateTime.utc(2026, 5, 16, 10);
+      final filterDay = DateTime.utc(2026, 5, 16);
+
+      await context.createProduct(
+        id: 'prd_returned_phone_hidden',
+        name: 'Returned Phone',
+        sku: 'PHONE-RETURNED-001',
+        purchasePrice: 40000,
+        salePrice: 45000,
+        hasImei: true,
+      );
+
+      _expectSuccess(
+        await context.purchaseRepository.createPurchaseTransaction(
+          items: const <PurchaseFormItem>[
+            PurchaseFormItem(
+              productModelId: 'prd_returned_phone_hidden',
+              productName: 'Returned Phone',
+              hasImei: true,
+              imeiEntries: <ImeiEntry>[
+                ImeiEntry(
+                  imei1: '356789101234680',
+                  imei2: '356789101234698',
+                  serialNumber: 'RETURNED-IMEI-001',
+                  costPrice: 40000,
+                  sellingPrice: 45000,
+                ),
+              ],
+            ),
+          ],
+          discount: 0,
+          tax: 0,
+          paidAmount: 40000,
+        ),
+      );
+
+      final serializedRows = await context.appDatabase.queryTable(
+        TableNames.serializedStock,
+        where: 'product_model_id = ?',
+        whereArgs: const <Object?>['prd_returned_phone_hidden'],
+        limit: 1,
+      );
+      final serializedId = serializedRows.first['id'] as String;
+
+      final sale = _expectSuccess(
+        await context.salesRepository.createSaleTransaction(
+          items: <CartItemEntity>[
+            CartItemEntity(
+              productModelId: 'prd_returned_phone_hidden',
+              productName: 'Returned Phone',
+              hasImei: true,
+              quantity: 1,
+              unitPrice: 45000,
+              serializedStockId: serializedId,
+              imei: '356789101234680',
+            ),
+          ],
+          totals: const SaleTotalsEntity(
+            subtotal: 45000,
+            discount: 0,
+            tax: 0,
+            total: 45000,
+            paidAmount: 45000,
+          ),
+          saleDate: saleDay,
+        ),
+      );
+
+      final detail = _expectSuccess(
+        await context.operationsService.getSalesInvoiceDetail(sale.saleId),
+      );
+      _expectSuccess(
+        await context.operationsService.processReturn(
+          saleId: sale.saleId,
+          item: detail!.items.first,
+          quantity: 1,
+          reason: 'device swapped',
+        ),
+      );
+
+      final rows = _expectSuccess(
+        await context.salesReportService.getSoldPhonesReport(
+          ReportFilterEntity(startDate: filterDay, endDate: filterDay),
+        ),
+      );
+
+      expect(rows, isEmpty);
+    });
+
+    test('pending sales status includes partially unpaid non-credit invoices',
+        () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final today = DateTime.utc(2026, 5, 16, 11);
+      final day = DateTime.utc(2026, 5, 16);
+
+      await context.createProduct(
+        id: 'prd_pending_cash_status',
+        name: 'Pending Cash Accessory',
+        sku: 'ACC-PENDING-CASH-001',
+        purchasePrice: 50,
+        salePrice: 100,
+        hasImei: false,
+      );
+
+      _expectSuccess(
+        await context.purchaseRepository.createPurchaseTransaction(
+          items: const <PurchaseFormItem>[
+            PurchaseFormItem(
+              productModelId: 'prd_pending_cash_status',
+              productName: 'Pending Cash Accessory',
+              hasImei: false,
+              quantity: 5,
+              unitCost: 50,
+            ),
+          ],
+          discount: 0,
+          tax: 0,
+          paidAmount: 250,
+        ),
+      );
+
+      _expectSuccess(
+        await context.salesRepository.createSaleTransaction(
+          items: const <CartItemEntity>[
+            CartItemEntity(
+              productModelId: 'prd_pending_cash_status',
+              productName: 'Pending Cash Accessory',
+              hasImei: false,
+              quantity: 1,
+              unitPrice: 100,
+            ),
+          ],
+          totals: const SaleTotalsEntity(
+            subtotal: 100,
+            discount: 0,
+            tax: 0,
+            total: 100,
+            paidAmount: 40,
+          ),
+          saleDate: today,
+          paymentMethod: PaymentMethod.cash,
+        ),
+      );
+
+      final rows = _expectSuccess(
+        await context.salesReportService.getDateRangeSalesReport(
+          ReportFilterEntity(
+            startDate: day,
+            endDate: day,
+            status: 'pending',
+          ),
+        ),
+      );
+      final salesHistoryRows = _expectSuccess(
+        await context.operationsService.searchSalesHistory(
+          invoiceQuery: '',
+          customerQuery: '',
+          startDate: day,
+          endDate: day,
+          pendingOnly: true,
+        ),
+      );
+
+      expect(rows, hasLength(1));
+      expect(rows.first.paymentMethod, PaymentMethod.cash);
+      expect(rows.first.balance, closeTo(60, 0.0001));
+      expect(salesHistoryRows, hasLength(1));
+      expect(salesHistoryRows.first.paymentMethod, PaymentMethod.cash);
+      expect(salesHistoryRows.first.remainingBalance, closeTo(60, 0.0001));
+    });
+
+    test('sales and purchase pickers exclude inactive customers and suppliers',
+        () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final nowSql = DateTimeHelpers.toSql(DateTime.utc(2026, 5, 16));
+
+      await context.appDatabase.insert(TableNames.customers, <String, Object?>{
+        'id': 'cus_picker_active',
+        'name': 'Picker Active Customer',
+        'phone': '03000000010',
+        'email': null,
+        'address': null,
+        'notes': null,
+        'is_active': 1,
+        'created_at': nowSql,
+        'updated_at': nowSql,
+      });
+      await context.appDatabase.insert(TableNames.customers, <String, Object?>{
+        'id': 'cus_picker_inactive',
+        'name': 'Picker Inactive Customer',
+        'phone': '03000000011',
+        'email': null,
+        'address': null,
+        'notes': null,
+        'is_active': 0,
+        'created_at': nowSql,
+        'updated_at': nowSql,
+      });
+      await context.appDatabase.insert(TableNames.suppliers, <String, Object?>{
+        'id': 'sup_picker_active',
+        'name': 'Picker Active Supplier',
+        'contact_person': null,
+        'phone': '03110000010',
+        'email': null,
+        'address': null,
+        'notes': null,
+        'is_active': 1,
+        'created_at': nowSql,
+        'updated_at': nowSql,
+      });
+      await context.appDatabase.insert(TableNames.suppliers, <String, Object?>{
+        'id': 'sup_picker_inactive',
+        'name': 'Picker Inactive Supplier',
+        'contact_person': null,
+        'phone': '03110000011',
+        'email': null,
+        'address': null,
+        'notes': null,
+        'is_active': 0,
+        'created_at': nowSql,
+        'updated_at': nowSql,
+      });
+
+      final customerRows = _expectSuccess(
+        await context.salesRepository.searchCustomers('Picker'),
+      );
+      final supplierRows = _expectSuccess(
+        await context.purchaseRepository.searchSuppliers('Picker'),
+      );
+
+      expect(
+        customerRows.map((row) => row.id).toList(growable: false),
+        <String>['cus_picker_active'],
+      );
+      expect(
+        supplierRows.map((row) => row.id).toList(growable: false),
+        <String>['sup_picker_active'],
+      );
+    });
+
     test('purchase repository rejects invalid IMEI format on direct call',
         () async {
       final context = await _ConsistencyContext.createTemporary();
@@ -1135,6 +1383,229 @@ void main() {
       expect(dailyRows, isNotEmpty);
       expect(dailyRows.first.totalSales, closeTo(200, 0.0001));
       expect(dailyRows.first.pendingBalances, closeTo(100, 0.0001));
+    });
+
+    test(
+        'returns posted on a later day preserve sale-day history and move deltas to the return day',
+        () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final saleDay = DateTime.utc(2026, 5, 16, 10);
+      final returnDay = DateTime.utc(2026, 5, 17, 12);
+      final saleFilterDay = DateTime.utc(2026, 5, 16);
+      final returnFilterDay = DateTime.utc(2026, 5, 17);
+
+      await context.createProduct(
+        id: 'prd_return_timing',
+        name: 'Return Timing Accessory',
+        sku: 'ACC-RET-TIMING-001',
+        purchasePrice: 100,
+        salePrice: 300,
+        hasImei: false,
+      );
+
+      _expectSuccess(
+        await context.purchaseRepository.createPurchaseTransaction(
+          items: const <PurchaseFormItem>[
+            PurchaseFormItem(
+              productModelId: 'prd_return_timing',
+              productName: 'Return Timing Accessory',
+              hasImei: false,
+              quantity: 5,
+              unitCost: 100,
+            ),
+          ],
+          discount: 0,
+          tax: 0,
+          paidAmount: 500,
+        ),
+      );
+
+      final sale = _expectSuccess(
+        await context.salesRepository.createSaleTransaction(
+          items: const <CartItemEntity>[
+            CartItemEntity(
+              productModelId: 'prd_return_timing',
+              productName: 'Return Timing Accessory',
+              hasImei: false,
+              quantity: 1,
+              unitPrice: 300,
+            ),
+          ],
+          totals: const SaleTotalsEntity(
+            subtotal: 300,
+            discount: 0,
+            tax: 0,
+            total: 300,
+            paidAmount: 300,
+          ),
+          saleDate: saleDay,
+          paymentMethod: PaymentMethod.cash,
+        ),
+      );
+
+      final detail = _expectSuccess(
+        await context.operationsService.getSalesInvoiceDetail(sale.saleId),
+      );
+      _expectSuccess(
+        await context.operationsService.processReturn(
+          saleId: sale.saleId,
+          item: detail!.items.first,
+          quantity: 1,
+          reason: 'customer cancelled later',
+        ),
+      );
+
+      final returnDaySql = DateTimeHelpers.toSql(returnDay);
+      await context.appDatabase.database.rawUpdate(
+        'UPDATE ${TableNames.saleReturns} '
+        'SET created_at = ?, updated_at = ? '
+        'WHERE sale_id = ?',
+        <Object?>[returnDaySql, returnDaySql, sale.saleId],
+      );
+
+      final saleDayRows = _expectSuccess(
+        await context.salesReportService.getDailySalesReport(
+          ReportFilterEntity(startDate: saleFilterDay, endDate: saleFilterDay),
+        ),
+      );
+      final returnDayRows = _expectSuccess(
+        await context.salesReportService.getDailySalesReport(
+          ReportFilterEntity(
+            startDate: returnFilterDay,
+            endDate: returnFilterDay,
+          ),
+        ),
+      );
+      final saleDayProfit = _expectSuccess(
+        await context.profitReportService.getProfitReport(
+          ReportFilterEntity(startDate: saleFilterDay, endDate: saleFilterDay),
+        ),
+      );
+      final returnDayProfit = _expectSuccess(
+        await context.profitReportService.getProfitReport(
+          ReportFilterEntity(
+            startDate: returnFilterDay,
+            endDate: returnFilterDay,
+          ),
+        ),
+      );
+
+      expect(saleDayRows, hasLength(1));
+      expect(saleDayRows.first.totalSales, closeTo(300, 0.0001));
+      expect(saleDayRows.first.totalProfit, closeTo(200, 0.0001));
+      expect(saleDayProfit.totalProfit, closeTo(200, 0.0001));
+
+      expect(returnDayRows, hasLength(1));
+      expect(returnDayRows.first.totalSales, closeTo(-300, 0.0001));
+      expect(returnDayRows.first.totalProfit, closeTo(-200, 0.0001));
+      expect(returnDayProfit.totalProfit, closeTo(-200, 0.0001));
+    });
+
+    test('dashboard and cash flow apply refund deltas on the return day',
+        () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final saleDay = DateTime.utc(2026, 5, 16, 9);
+      final returnDay = DateTime.utc(2026, 5, 17, 14);
+      final returnDaySql = DateTimeHelpers.toSql(returnDay);
+
+      await context.createProduct(
+        id: 'prd_return_cash_dashboard',
+        name: 'Return Cash Dashboard Accessory',
+        sku: 'ACC-RET-CASH-001',
+        purchasePrice: 50,
+        salePrice: 100,
+        hasImei: false,
+      );
+
+      _expectSuccess(
+        await context.purchaseRepository.createPurchaseTransaction(
+          items: const <PurchaseFormItem>[
+            PurchaseFormItem(
+              productModelId: 'prd_return_cash_dashboard',
+              productName: 'Return Cash Dashboard Accessory',
+              hasImei: false,
+              quantity: 4,
+              unitCost: 50,
+            ),
+          ],
+          discount: 0,
+          tax: 0,
+          paidAmount: 200,
+        ),
+      );
+
+      final sale = _expectSuccess(
+        await context.salesRepository.createSaleTransaction(
+          items: const <CartItemEntity>[
+            CartItemEntity(
+              productModelId: 'prd_return_cash_dashboard',
+              productName: 'Return Cash Dashboard Accessory',
+              hasImei: false,
+              quantity: 1,
+              unitPrice: 100,
+            ),
+          ],
+          totals: const SaleTotalsEntity(
+            subtotal: 100,
+            discount: 0,
+            tax: 0,
+            total: 100,
+            paidAmount: 100,
+          ),
+          saleDate: saleDay,
+          paymentMethod: PaymentMethod.cash,
+        ),
+      );
+
+      final detail = _expectSuccess(
+        await context.operationsService.getSalesInvoiceDetail(sale.saleId),
+      );
+      _expectSuccess(
+        await context.operationsService.processReturn(
+          saleId: sale.saleId,
+          item: detail!.items.first,
+          quantity: 1,
+          reason: 'cash refund next day',
+        ),
+      );
+
+      await context.appDatabase.database.rawUpdate(
+        'UPDATE ${TableNames.saleReturns} '
+        'SET created_at = ?, updated_at = ? '
+        'WHERE sale_id = ?',
+        <Object?>[returnDaySql, returnDaySql, sale.saleId],
+      );
+
+      final day2Dashboard = DashboardService(
+        appDatabase: context.appDatabase,
+        nowProvider: () => returnDay,
+      );
+      final kpis = _expectSuccess(await day2Dashboard.getDashboardKpis());
+      expect(kpis.todaySales, closeTo(-100, 0.0001));
+      expect(kpis.todayProfit, closeTo(-50, 0.0001));
+      expect(kpis.phonesSoldToday, 0);
+      expect(kpis.accessoriesSoldToday, 0);
+
+      final cashRows = _expectSuccess(
+        await context.operationsService.getCashLedger(
+          startDate: DateTime.utc(2026, 5, 16),
+          endDate: DateTime.utc(2026, 5, 17),
+        ),
+      );
+
+      final saleDayRow = cashRows.firstWhere((row) => row.day == '2026-05-16');
+      final returnDayRow = cashRows.firstWhere((row) => row.day == '2026-05-17');
+
+      expect(saleDayRow.cashSalesIn, closeTo(100, 0.0001));
+      expect(saleDayRow.cashRefundsOut, closeTo(0, 0.0001));
+      expect(returnDayRow.cashSalesIn, closeTo(0, 0.0001));
+      expect(returnDayRow.cashRefundsOut, closeTo(100, 0.0001));
+      expect(returnDayRow.totalCashOut, closeTo(100, 0.0001));
+      expect(returnDayRow.netCash, closeTo(-100, 0.0001));
     });
 
     test(

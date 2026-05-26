@@ -54,12 +54,33 @@ class DashboardService with BaseRepositoryGuard {
         label: 'dashboard.today_sales',
         action: () => _appDatabase.database.rawQuery(
           '''
+        WITH sale_return_totals AS (
+          SELECT
+            sale_id,
+            COALESCE(SUM(return_amount), 0) AS returned_total
+          FROM ${TableNames.saleReturns}
+          GROUP BY sale_id
+        ),
+        return_events AS (
+          SELECT
+            COALESCE(SUM(return_amount), 0) AS returned_today
+          FROM ${TableNames.saleReturns}
+          WHERE created_at >= ? AND created_at < ?
+        )
         SELECT
-          COALESCE(SUM(s.total), 0) AS today_sales
+          COALESCE(SUM(s.total + COALESCE(srt.returned_total, 0)), 0)
+            - COALESCE((SELECT returned_today FROM return_events), 0)
+            AS today_sales
         FROM ${TableNames.sales} s
+        LEFT JOIN sale_return_totals srt ON srt.sale_id = s.id
         WHERE s.sale_date >= ? AND s.sale_date < ?
         ''',
-          <Object?>[DateTimeHelpers.toSql(start), DateTimeHelpers.toSql(end)],
+          <Object?>[
+            DateTimeHelpers.toSql(start),
+            DateTimeHelpers.toSql(end),
+            DateTimeHelpers.toSql(start),
+            DateTimeHelpers.toSql(end),
+          ],
         ),
       );
 
@@ -67,26 +88,33 @@ class DashboardService with BaseRepositoryGuard {
         label: 'dashboard.today_item_aggregates',
         action: () => _appDatabase.database.rawQuery(
           '''
+        WITH return_events AS (
+          SELECT
+            COALESCE(SUM(sr.return_amount), 0) AS returned_revenue,
+            COALESCE(SUM(sr.cost_price * sr.return_qty), 0) AS returned_cost
+          FROM ${TableNames.saleReturns} sr
+          WHERE sr.created_at >= ? AND sr.created_at < ?
+        )
         SELECT
           COALESCE(SUM(CASE WHEN pm.has_imei = 1 THEN 1 ELSE 0 END), 0) AS phones_sold,
           COALESCE(SUM(CASE WHEN pm.has_imei = 0 THEN si.quantity ELSE 0 END), 0) AS accessories_sold,
           COALESCE(SUM(
             si.line_total - (si.cost_price * si.quantity)
-            - COALESCE(ri.return_amount, 0) + COALESCE(ri.return_cost, 0)
-          ), 0) AS today_profit
+          ), 0)
+            - COALESCE((SELECT returned_revenue FROM return_events), 0)
+            + COALESCE((SELECT returned_cost FROM return_events), 0)
+            AS today_profit
         FROM ${TableNames.saleItems} si
         JOIN ${TableNames.sales} s ON s.id = si.sale_id
         JOIN ${TableNames.productModels} pm ON pm.id = si.product_model_id
-        LEFT JOIN (
-          SELECT sale_item_id,
-                 SUM(return_amount) AS return_amount,
-                 SUM(cost_price * return_qty) AS return_cost
-          FROM ${TableNames.saleReturns}
-          GROUP BY sale_item_id
-        ) ri ON ri.sale_item_id = si.id
         WHERE s.sale_date >= ? AND s.sale_date < ?
         ''',
-          <Object?>[DateTimeHelpers.toSql(start), DateTimeHelpers.toSql(end)],
+          <Object?>[
+            DateTimeHelpers.toSql(start),
+            DateTimeHelpers.toSql(end),
+            DateTimeHelpers.toSql(start),
+            DateTimeHelpers.toSql(end),
+          ],
         ),
       );
 

@@ -14,30 +14,47 @@ class ProfitReportService with BaseRepositoryGuard {
 
   Future<Result<ProfitReportEntity>> getProfitReport(ReportFilterEntity filter) {
     return guard<ProfitReportEntity>(() async {
-      final args = <Object?>[];
-      final where = _buildWhereClause(filter, args: args);
+      final saleArgs = <Object?>[];
+      final returnArgs = <Object?>[];
+      final saleWhere = _buildWhereClause(
+        filter,
+        args: saleArgs,
+        dateColumn: 's.sale_date',
+      );
+      final returnWhere = _buildWhereClause(
+        filter,
+        args: returnArgs,
+        dateColumn: 'sr.created_at',
+        productModelColumn: 'si.product_model_id',
+      );
 
       final rows = await QueryDiagnostics.trace(
         label: 'reports.profit',
         action: () => _appDatabase.database.rawQuery(
           '''
         SELECT
-          COALESCE(SUM(si.line_total), 0)
-            - COALESCE(SUM(COALESCE(ri.return_amount, 0)), 0) AS total_revenue,
-          COALESCE(SUM(si.cost_price * si.quantity), 0)
-            - COALESCE(SUM(COALESCE(ri.return_cost, 0)), 0) AS total_cost
-        FROM ${TableNames.sales} s
-        JOIN ${TableNames.saleItems} si ON si.sale_id = s.id
-        LEFT JOIN (
-          SELECT sale_item_id,
-                 SUM(return_amount) AS return_amount,
-                 SUM(cost_price * return_qty) AS return_cost
-          FROM ${TableNames.saleReturns}
-          GROUP BY sale_item_id
-        ) ri ON ri.sale_item_id = si.id
-        WHERE $where
+          COALESCE(SUM(revenue_delta), 0) AS total_revenue,
+          COALESCE(SUM(cost_delta), 0) AS total_cost
+        FROM (
+          SELECT
+            si.line_total AS revenue_delta,
+            si.cost_price * si.quantity AS cost_delta
+          FROM ${TableNames.sales} s
+          JOIN ${TableNames.saleItems} si ON si.sale_id = s.id
+          WHERE $saleWhere
+
+          UNION ALL
+
+          SELECT
+            -sr.return_amount AS revenue_delta,
+            -(sr.cost_price * sr.return_qty) AS cost_delta
+          FROM ${TableNames.saleReturns} sr
+          JOIN ${TableNames.sales} s ON s.id = sr.sale_id
+          JOIN ${TableNames.saleItems} si ON si.id = sr.sale_item_id
+          WHERE $returnWhere
+        ) profit_events
         ''',
-          args,
+          <Object?>[...saleArgs, ...returnArgs],
         ),
       );
 
@@ -53,13 +70,18 @@ class ProfitReportService with BaseRepositoryGuard {
     }, operation: 'profit_report');
   }
 
-  String _buildWhereClause(ReportFilterEntity filter, {required List<Object?> args}) {
+  String _buildWhereClause(
+    ReportFilterEntity filter, {
+    required List<Object?> args,
+    required String dateColumn,
+    String? productModelColumn,
+  }) {
     final clauses = <String>['1 = 1'];
 
     final start = filter.startDate;
     if (start != null) {
       final startUtc = DateTime.utc(start.year, start.month, start.day);
-      clauses.add('s.sale_date >= ?');
+      clauses.add('$dateColumn >= ?');
       args.add(DateTimeHelpers.toSql(startUtc));
     }
 
@@ -68,7 +90,7 @@ class ProfitReportService with BaseRepositoryGuard {
       final endUtc = DateTime.utc(end.year, end.month, end.day).add(
         const Duration(days: 1),
       );
-      clauses.add('s.sale_date < ?');
+      clauses.add('$dateColumn < ?');
       args.add(DateTimeHelpers.toSql(endUtc));
     }
 
@@ -86,7 +108,7 @@ class ProfitReportService with BaseRepositoryGuard {
 
     final productModelId = filter.productModelId?.trim();
     if (productModelId != null && productModelId.isNotEmpty) {
-      clauses.add('si.product_model_id = ?');
+      clauses.add('${productModelColumn ?? 'si.product_model_id'} = ?');
       args.add(productModelId);
     }
 

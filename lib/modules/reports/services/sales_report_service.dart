@@ -19,55 +19,92 @@ class SalesReportService with BaseRepositoryGuard {
     ReportFilterEntity filter,
   ) {
     return guard<List<DailySalesReportRowEntity>>(() async {
-      final args = <Object?>[];
-      final where = _buildSalesWhereClause(filter, args: args);
+      final saleArgs = <Object?>[];
+      final returnArgs = <Object?>[];
+      final saleWhere = _buildSalesWhereClause(
+        filter,
+        args: saleArgs,
+        dateColumn: 's.sale_date',
+      );
+      final returnWhere = _buildSalesWhereClause(
+        filter,
+        args: returnArgs,
+        dateColumn: 'sr.created_at',
+        productModelMatchColumn: 'si.product_model_id',
+      );
 
       final rows = await QueryDiagnostics.trace(
         label: 'reports.daily_sales',
         action: () => _appDatabase.database.rawQuery(
           '''
-        WITH invoice_rollup AS (
+        WITH sale_return_totals AS (
           SELECT
-            s.id AS sale_id,
-            date(s.sale_date) AS sale_day,
-            s.total,
-            s.paid_amount,
+            sale_id,
+            COALESCE(SUM(return_amount), 0) AS returned_total
+          FROM ${TableNames.saleReturns}
+          GROUP BY sale_id
+        ),
+        sale_events AS (
+          SELECT
+            date(s.sale_date) AS event_day,
+            1 AS invoice_count,
+            COALESCE(s.total + COALESCE(srt.returned_total, 0), 0) AS total_sales,
             COALESCE(SUM(
               si.line_total - (si.cost_price * si.quantity)
-              - COALESCE(ri.return_amount, 0) + COALESCE(ri.return_cost, 0)
-            ), 0) AS invoice_profit,
+            ), 0) AS total_profit,
             COALESCE(SUM(CASE WHEN pm.has_imei = 1 THEN 1 ELSE 0 END), 0) AS phones_sold,
-            COALESCE(SUM(CASE WHEN pm.has_imei = 0 THEN si.quantity ELSE 0 END), 0) AS accessories_sold
+            COALESCE(SUM(CASE WHEN pm.has_imei = 0 THEN si.quantity ELSE 0 END), 0) AS accessories_sold,
+            COALESCE(CASE
+              WHEN s.total > s.paid_amount THEN s.total - s.paid_amount
+              ELSE 0
+            END, 0) AS pending_balances
           FROM ${TableNames.sales} s
           LEFT JOIN ${TableNames.saleItems} si ON si.sale_id = s.id
           LEFT JOIN ${TableNames.productModels} pm ON pm.id = si.product_model_id
-          LEFT JOIN (
-            SELECT sale_item_id,
-                   SUM(return_amount) AS return_amount,
-                   SUM(cost_price * return_qty) AS return_cost
-            FROM ${TableNames.saleReturns}
-            GROUP BY sale_item_id
-          ) ri ON ri.sale_item_id = si.id
-          WHERE $where
-          GROUP BY s.id, sale_day, s.total, s.paid_amount
+          LEFT JOIN sale_return_totals srt ON srt.sale_id = s.id
+          WHERE $saleWhere
+          GROUP BY s.id, event_day, s.total, s.paid_amount, srt.returned_total
+        ),
+        return_events AS (
+          SELECT
+            date(sr.created_at) AS event_day,
+            0 AS invoice_count,
+            -COALESCE(SUM(sr.return_amount), 0) AS total_sales,
+            COALESCE(SUM(
+              (sr.cost_price * sr.return_qty) - sr.return_amount
+            ), 0) AS total_profit,
+            0 AS phones_sold,
+            0 AS accessories_sold,
+            0 AS pending_balances
+          FROM ${TableNames.saleReturns} sr
+          JOIN ${TableNames.sales} s ON s.id = sr.sale_id
+          JOIN ${TableNames.saleItems} si ON si.id = sr.sale_item_id
+          WHERE $returnWhere
+          GROUP BY date(sr.created_at)
         )
         SELECT
-          sale_day,
-          COUNT(*) AS invoice_count,
-          COALESCE(SUM(total), 0) AS total_sales,
-          COALESCE(SUM(invoice_profit), 0) AS total_profit,
+          event_day AS sale_day,
+          COALESCE(SUM(invoice_count), 0) AS invoice_count,
+          COALESCE(SUM(total_sales), 0) AS total_sales,
+          COALESCE(SUM(total_profit), 0) AS total_profit,
           COALESCE(SUM(phones_sold), 0) AS phones_sold,
           COALESCE(SUM(accessories_sold), 0) AS accessories_sold,
-          COALESCE(SUM(CASE
-            WHEN total > paid_amount THEN total - paid_amount
-            ELSE 0
-          END), 0) AS pending_balances
-        FROM invoice_rollup
-        GROUP BY sale_day
-        ORDER BY sale_day DESC
+          COALESCE(SUM(pending_balances), 0) AS pending_balances
+        FROM (
+          SELECT * FROM sale_events
+          UNION ALL
+          SELECT * FROM return_events
+        ) report_events
+        GROUP BY event_day
+        ORDER BY event_day DESC
         LIMIT ? OFFSET ?
         ''',
-          <Object?>[...args, filter.pageSize, filter.offset],
+          <Object?>[
+            ...saleArgs,
+            ...returnArgs,
+            filter.pageSize,
+            filter.offset,
+          ],
         ),
       );
 
@@ -93,7 +130,11 @@ class SalesReportService with BaseRepositoryGuard {
   ) {
     return guard<List<SalesReportRowEntity>>(() async {
       final args = <Object?>[];
-      final where = _buildSalesWhereClause(filter, args: args);
+      final where = _buildSalesWhereClause(
+        filter,
+        args: args,
+        dateColumn: 's.sale_date',
+      );
 
       final rows = await QueryDiagnostics.trace(
         label: 'reports.date_range_sales',
@@ -138,7 +179,11 @@ class SalesReportService with BaseRepositoryGuard {
   ) {
     return guard<List<SoldPhoneReportRowEntity>>(() async {
       final args = <Object?>[];
-      final where = _buildSalesWhereClause(filter, args: args);
+      final where = _buildSalesWhereClause(
+        filter,
+        args: args,
+        dateColumn: 's.sale_date',
+      );
 
       final rows = await QueryDiagnostics.trace(
         label: 'reports.sold_phones',
@@ -157,7 +202,14 @@ class SalesReportService with BaseRepositoryGuard {
         JOIN ${TableNames.productModels} pm ON pm.id = si.product_model_id
         LEFT JOIN ${TableNames.serializedStock} ss ON ss.id = si.serialized_stock_id
         LEFT JOIN ${TableNames.customers} c ON c.id = s.customer_id
-        WHERE $where AND pm.has_imei = 1
+        WHERE $where
+          AND pm.has_imei = 1
+          AND NOT EXISTS (
+            SELECT 1
+            FROM ${TableNames.saleReturns} sr
+            WHERE sr.sale_item_id = si.id
+              AND sr.return_qty >= si.quantity
+          )
         ORDER BY s.sale_date DESC
         LIMIT ? OFFSET ?
         ''',
@@ -184,13 +236,15 @@ class SalesReportService with BaseRepositoryGuard {
   String _buildSalesWhereClause(
     ReportFilterEntity filter, {
     required List<Object?> args,
+    required String dateColumn,
+    String? productModelMatchColumn,
   }) {
     final clauses = <String>['1 = 1'];
 
     final start = filter.startDate;
     if (start != null) {
       final startUtc = DateTime.utc(start.year, start.month, start.day);
-      clauses.add('s.sale_date >= ?');
+      clauses.add('$dateColumn >= ?');
       args.add(DateTimeHelpers.toSql(startUtc));
     }
 
@@ -199,7 +253,7 @@ class SalesReportService with BaseRepositoryGuard {
       final endUtc = DateTime.utc(end.year, end.month, end.day).add(
         const Duration(days: 1),
       );
-      clauses.add('s.sale_date < ?');
+      clauses.add('$dateColumn < ?');
       args.add(DateTimeHelpers.toSql(endUtc));
     }
 
@@ -217,9 +271,13 @@ class SalesReportService with BaseRepositoryGuard {
 
     final productModelId = filter.productModelId?.trim();
     if (productModelId != null && productModelId.isNotEmpty) {
-      clauses.add(
-        'EXISTS (SELECT 1 FROM ${TableNames.saleItems} x WHERE x.sale_id = s.id AND x.product_model_id = ?)',
-      );
+      if (productModelMatchColumn != null) {
+        clauses.add('$productModelMatchColumn = ?');
+      } else {
+        clauses.add(
+          'EXISTS (SELECT 1 FROM ${TableNames.saleItems} x WHERE x.sale_id = s.id AND x.product_model_id = ?)',
+        );
+      }
       args.add(productModelId);
     }
 
@@ -228,10 +286,6 @@ class SalesReportService with BaseRepositoryGuard {
       clauses.add('s.paid_amount >= s.total');
     } else if (status == 'pending') {
       clauses.add('s.paid_amount < s.total');
-      clauses.add("s.payment_method = 'credit'");
-      clauses.add(
-        "s.customer_id IS NOT NULL AND TRIM(s.customer_id) != '' AND LOWER(s.customer_id) != 'walk_in'",
-      );
     }
 
     return clauses.join(' AND ');
