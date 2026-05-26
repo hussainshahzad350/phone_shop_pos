@@ -88,6 +88,38 @@ void main() {
     expect(persisted.failedAttempts, 0);
     expect(persisted.lockedUntil, isNull);
   });
+
+  test('expired lockout while app is open resets attempts before next try', () async {
+    await authService.configurePin('1234');
+
+    final controller = LocalPinAuthController(
+      authService,
+      nowProvider: () => now,
+    );
+    await _settle();
+
+    for (var attempt = 0; attempt < 5; attempt++) {
+      final success = await controller.loginWithPin('9999');
+      expect(success, isFalse);
+    }
+    expect(controller.state.failedAttempts, 5);
+    final lockedUntil = controller.state.lockedUntil;
+    expect(lockedUntil, isNotNull);
+
+    now = lockedUntil!.add(const Duration(seconds: 1));
+    final afterExpiryWrongPin = await controller.loginWithPin('9999');
+    expect(afterExpiryWrongPin, isFalse);
+    expect(controller.state.failedAttempts, 1);
+    expect(controller.state.lockedUntil, isNull);
+    expect(
+      controller.state.errorMessage,
+      contains('4 attempts left'),
+    );
+
+    final persisted = await authService.getLockoutState();
+    expect(persisted.failedAttempts, 1);
+    expect(persisted.lockedUntil, isNull);
+  });
 }
 
 Future<void> _settle() async {
