@@ -105,6 +105,29 @@ class LedgerPostingService with BaseRepositoryGuard {
     if (amount <= 0) {
       return const Success<void>(null);
     }
+
+    Future<Result<void>> postRepairDueReduction({
+      required String repairId,
+      required String customerId,
+      required double amount,
+      required DateTime createdAt,
+      String? note,
+      DatabaseExecutor? executor,
+    }) {
+      if (amount <= 0) {
+        return const Success<void>(null);
+      }
+      return _appendCustomerEvent(
+        customerId: customerId,
+        transactionId: repairId,
+        ledgerType: CustomerLedgerType.repairDue,
+        amount: amount,
+        direction: LedgerDirection.credit,
+        createdAt: createdAt,
+        note: note,
+        executor: executor,
+      );
+    }
     return _appendCustomerEvent(
       customerId: customerId,
       transactionId: repairId,

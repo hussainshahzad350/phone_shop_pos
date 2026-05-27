@@ -277,8 +277,9 @@ class SqliteRepairingRepository
             throw StateError(dueResult.asFailure!.error.message);
           }
         } else if (dueDelta < 0) {
-          final reverseResult = await _ledgerPostingService!.postSaleReturn(
-            saleId: job.id,
+          final reverseResult =
+              await _ledgerPostingService!.postRepairDueReduction(
+            repairId: job.id,
             customerId: customerId,
             amount: dueDelta.abs(),
             createdAt: nowUtc,
