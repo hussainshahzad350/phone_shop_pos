@@ -2,6 +2,7 @@ import 'package:phone_shop_pos/core/database/app_database.dart';
 import 'package:phone_shop_pos/core/database/base_repository.dart';
 import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
+import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/core/utils/id_helpers.dart';
@@ -177,7 +178,7 @@ class SqliteRepairingRepository
             repairId: id,
             customerId: customerId,
             amount: job.advanceReceived,
-            paymentMethod: 'cash',
+            paymentMethod: PaymentMethod.cash,
             createdAt: nowUtc,
             note: job.notes,
             executor: transaction,
@@ -372,7 +373,7 @@ class SqliteRepairingRepository
           repairId: id,
           customerId: customerId,
           amount: amount,
-          paymentMethod: 'cash',
+          paymentMethod: PaymentMethod.cash,
           createdAt: now,
           note: trimmedNote,
           executor: transaction,

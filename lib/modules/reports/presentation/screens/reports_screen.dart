@@ -1059,6 +1059,9 @@ class _CustomerBalanceView extends ConsumerWidget {
                         builder: (context) {
                           final summaries = summaryAsync.valueOrNull ??
                               const <PartySummaryCardEntity>[];
+                          if (summaries.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
                           final selected = selectedCustomerId == null
                               ? summaries.first
                               : summaries.firstWhere(
@@ -1356,6 +1359,9 @@ class _SupplierLedgerView extends ConsumerWidget {
                         builder: (context) {
                           final summaries = summaryAsync.valueOrNull ??
                               const <PartySummaryCardEntity>[];
+                          if (summaries.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
                           final selected = selectedSupplierId == null
                               ? summaries.first
                               : summaries.firstWhere(

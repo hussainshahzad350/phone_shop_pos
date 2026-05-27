@@ -714,11 +714,23 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         if (summaryResult.isFailure) {
           throw StateError(summaryResult.asFailure!.error.message);
         }
+        final purchaseCountRows = await _appDatabase.database.rawQuery(
+          '''
+          SELECT party_id, COUNT(*) AS purchase_count
+          FROM ${TableNames.supplierLedger}
+          WHERE ledger_type = 'purchase'
+          GROUP BY party_id
+          ''',
+        );
+        final purchaseCountBySupplier = <String, int>{
+          for (final row in purchaseCountRows)
+            (row['party_id'] as String): (row['purchase_count'] as num?)?.toInt() ?? 0,
+        };
         return summaryResult.asSuccess!.value
             .map(
               (row) => SupplierLedgerRowEntity(
                 supplierName: row.partyName,
-                purchaseCount: 0,
+                purchaseCount: purchaseCountBySupplier[row.partyId] ?? 0,
                 totalPurchases: row.totalPayable,
                 totalPaid: row.totalReceivable,
               ),

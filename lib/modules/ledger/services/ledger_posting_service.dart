@@ -74,6 +74,28 @@ class LedgerPostingService with BaseRepositoryGuard {
     );
   }
 
+  Future<Result<void>> postCustomerSettlement({
+    required String transactionId,
+    required String customerId,
+    required double amount,
+    required String paymentMethod,
+    required DateTime createdAt,
+    String? note,
+    DatabaseExecutor? executor,
+  }) {
+    return _appendCustomerEvent(
+      customerId: customerId,
+      transactionId: transactionId,
+      ledgerType: CustomerLedgerType.manualSettlement,
+      amount: amount,
+      direction: LedgerDirection.credit,
+      paymentMethod: paymentMethod,
+      createdAt: createdAt,
+      note: note,
+      executor: executor,
+    );
+  }
+
   Future<Result<void>> postSaleReturn({
     required String saleId,
     required String customerId,
@@ -207,6 +229,28 @@ class LedgerPostingService with BaseRepositoryGuard {
     );
   }
 
+  Future<Result<void>> postSupplierSettlement({
+    required String transactionId,
+    required String supplierId,
+    required double amount,
+    required String paymentMethod,
+    required DateTime createdAt,
+    String? note,
+    DatabaseExecutor? executor,
+  }) {
+    return _appendSupplierEvent(
+      supplierId: supplierId,
+      transactionId: transactionId,
+      ledgerType: SupplierLedgerType.manualSettlement,
+      amount: amount,
+      direction: LedgerDirection.debit,
+      paymentMethod: paymentMethod,
+      createdAt: createdAt,
+      note: note,
+      executor: executor,
+    );
+  }
+
   Future<Result<void>> postPurchaseReturn({
     required String purchaseId,
     required String supplierId,
@@ -305,8 +349,8 @@ class LedgerPostingService with BaseRepositoryGuard {
           },
         );
 
-        final ledgerResult = await postSalePayment(
-          saleId: settlementId,
+        final ledgerResult = await postCustomerSettlement(
+          transactionId: settlementId,
           customerId: payload.customerId,
           amount: payload.amount,
           paymentMethod: normalizedPaymentMethod,
@@ -376,7 +420,7 @@ class LedgerPostingService with BaseRepositoryGuard {
           },
         );
 
-        final ledgerResult = await postSupplierPayment(
+        final ledgerResult = await postSupplierSettlement(
           transactionId: settlementId,
           supplierId: payload.supplierId,
           amount: payload.amount,
