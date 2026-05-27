@@ -16,6 +16,7 @@ import 'package:phone_shop_pos/modules/reports/domain/entities/customer_balance_
 import 'package:phone_shop_pos/modules/reports/domain/entities/daily_sales_report_row_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/low_stock_report_row_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/profit_report_entity.dart';
+import 'package:phone_shop_pos/modules/reports/domain/entities/profit_row_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/report_filter_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/sales_report_row_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/sold_phone_report_row_entity.dart';
@@ -28,19 +29,13 @@ import 'package:phone_shop_pos/modules/reports/services/sales_report_service.dar
 
 enum ReportsTab {
   dailySales,
-  dateRangeSales,
+  dailyPurchase,
   profit,
-  soldPhones,
-  currentStock,
-  customerBalance,
-  lowStock,
-  salesHistory,
-  creditCollection,
-  purchaseHistory,
-  supplierLedger,
-  cashLedger,
+  cashFlow,
   expenses,
   repairAnalytics,
+  customerLedger,
+  supplierLedger,
 }
 
 class ReportFilterNotifier extends StateNotifier<ReportFilterEntity> {
@@ -87,6 +82,14 @@ class ReportFilterNotifier extends StateNotifier<ReportFilterEntity> {
     state = state.copyWith(paymentMethod: normalized, page: 1);
   }
 
+  void setItemType(String? itemType) {
+    if (itemType == null || itemType.isEmpty) {
+      state = state.copyWith(clearItemType: true, page: 1);
+      return;
+    }
+    state = state.copyWith(itemType: itemType, page: 1);
+  }
+
   void nextPage() {
     state = state.copyWith(page: state.page + 1);
   }
@@ -121,21 +124,23 @@ final printableReportServiceProvider = Provider<PrintableReportService>(
 
 final reportFilterProvider =
     StateNotifierProvider<ReportFilterNotifier, ReportFilterEntity>(
-      (ref) => ReportFilterNotifier(),
-    );
+  (ref) => ReportFilterNotifier(),
+);
 
-final salesReportServiceProvider = FutureProvider<SalesReportService>((ref) async {
+final salesReportServiceProvider =
+    FutureProvider<SalesReportService>((ref) async {
   final appDatabase = await ref.watch(appDatabaseProvider.future);
   return SalesReportService(appDatabase: appDatabase);
 });
 
 final inventoryReportServiceProvider =
     FutureProvider<InventoryReportService>((ref) async {
-      final appDatabase = await ref.watch(appDatabaseProvider.future);
-      return InventoryReportService(appDatabase: appDatabase);
-    });
+  final appDatabase = await ref.watch(appDatabaseProvider.future);
+  return InventoryReportService(appDatabase: appDatabase);
+});
 
-final profitReportServiceProvider = FutureProvider<ProfitReportService>((ref) async {
+final profitReportServiceProvider =
+    FutureProvider<ProfitReportService>((ref) async {
   final appDatabase = await ref.watch(appDatabaseProvider.future);
   return ProfitReportService(appDatabase: appDatabase);
 });
@@ -146,43 +151,55 @@ final operationsWorkflowServiceProvider =
   return OperationsWorkflowService(appDatabase: appDatabase);
 });
 
-final expenseRepositoryProvider = FutureProvider<ExpenseRepository>((ref) async {
+final expenseRepositoryProvider =
+    FutureProvider<ExpenseRepository>((ref) async {
   final appDatabase = await ref.watch(appDatabaseProvider.future);
   return SqliteExpenseRepository(appDatabase: appDatabase);
 });
 
 final dailySalesReportProvider =
     FutureProvider<List<DailySalesReportRowEntity>>((ref) async {
-      final service = await ref.watch(salesReportServiceProvider.future);
-      final filter = ref.watch(reportFilterProvider);
-      final result = await service.getDailySalesReport(filter);
-      return result.fold(
-        onSuccess: (value) => value,
-        onFailure: (error) => throw error,
-      );
-    });
+  final service = await ref.watch(salesReportServiceProvider.future);
+  final filter = ref.watch(reportFilterProvider);
+  final result = await service.getDailySalesReport(filter);
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
 
 final dateRangeSalesReportProvider =
     FutureProvider<List<SalesReportRowEntity>>((ref) async {
-      final service = await ref.watch(salesReportServiceProvider.future);
-      final filter = ref.watch(reportFilterProvider);
-      final result = await service.getDateRangeSalesReport(filter);
-      return result.fold(
-        onSuccess: (value) => value,
-        onFailure: (error) => throw error,
-      );
-    });
+  final service = await ref.watch(salesReportServiceProvider.future);
+  final filter = ref.watch(reportFilterProvider);
+  final result = await service.getDateRangeSalesReport(filter);
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
 
 final soldPhonesReportProvider =
     FutureProvider<List<SoldPhoneReportRowEntity>>((ref) async {
-      final service = await ref.watch(salesReportServiceProvider.future);
-      final filter = ref.watch(reportFilterProvider);
-      final result = await service.getSoldPhonesReport(filter);
-      return result.fold(
-        onSuccess: (value) => value,
-        onFailure: (error) => throw error,
-      );
-    });
+  final service = await ref.watch(salesReportServiceProvider.future);
+  final filter = ref.watch(reportFilterProvider);
+  final result = await service.getSoldPhonesReport(filter);
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
+
+final profitReportRowsProvider =
+    FutureProvider<List<ProfitRowEntity>>((ref) async {
+  final service = await ref.watch(profitReportServiceProvider.future);
+  final filter = ref.watch(reportFilterProvider);
+  final result = await service.getProfitReportRows(filter);
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
 
 final profitReportProvider = FutureProvider<ProfitReportEntity>((ref) async {
   final service = await ref.watch(profitReportServiceProvider.future);
@@ -196,25 +213,25 @@ final profitReportProvider = FutureProvider<ProfitReportEntity>((ref) async {
 
 final currentStockReportProvider =
     FutureProvider<List<StockReportRowEntity>>((ref) async {
-      final service = await ref.watch(inventoryReportServiceProvider.future);
-      final filter = ref.watch(reportFilterProvider);
-      final result = await service.getCurrentStockReport(filter);
-      return result.fold(
-        onSuccess: (value) => value,
-        onFailure: (error) => throw error,
-      );
-    });
+  final service = await ref.watch(inventoryReportServiceProvider.future);
+  final filter = ref.watch(reportFilterProvider);
+  final result = await service.getCurrentStockReport(filter);
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
 
 final customerBalanceReportProvider =
     FutureProvider<List<CustomerBalanceReportRowEntity>>((ref) async {
-      final service = await ref.watch(inventoryReportServiceProvider.future);
-      final filter = ref.watch(reportFilterProvider);
-      final result = await service.getCustomerBalanceReport(filter);
-      return result.fold(
-        onSuccess: (value) => value,
-        onFailure: (error) => throw error,
-      );
-    });
+  final service = await ref.watch(inventoryReportServiceProvider.future);
+  final filter = ref.watch(reportFilterProvider);
+  final result = await service.getCustomerBalanceReport(filter);
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
 
 final lowStockReportProvider = FutureProvider<List<LowStockReportRowEntity>>((
   ref,
@@ -330,42 +347,6 @@ final salesHistoryInvoiceQueryProvider = StateProvider<String>((ref) => '');
 final salesHistoryCustomerQueryProvider = StateProvider<String>((ref) => '');
 final salesHistoryStartDateProvider = StateProvider<DateTime?>((ref) => null);
 final salesHistoryEndDateProvider = StateProvider<DateTime?>((ref) => null);
-final salesHistoryPendingOnlyProvider = StateProvider<bool>((ref) => false);
-
-final salesHistoryRowsProvider = FutureProvider<List<SalesHistoryRowEntity>>((
-  ref,
-) async {
-  final service = await ref.watch(operationsWorkflowServiceProvider.future);
-  final result = await service.searchSalesHistory(
-    invoiceQuery: ref.watch(salesHistoryInvoiceQueryProvider),
-    customerQuery: ref.watch(salesHistoryCustomerQueryProvider),
-    startDate: ref.watch(salesHistoryStartDateProvider),
-    endDate: ref.watch(salesHistoryEndDateProvider),
-    pendingOnly: ref.watch(salesHistoryPendingOnlyProvider),
-  );
-  return result.fold(
-    onSuccess: (value) => value,
-    onFailure: (error) => throw error,
-  );
-});
-
-final creditCollectionRowsProvider = FutureProvider<List<SalesHistoryRowEntity>>((
-  ref,
-) async {
-  final service = await ref.watch(operationsWorkflowServiceProvider.future);
-  final result = await service.searchSalesHistory(
-    invoiceQuery: ref.watch(salesHistoryInvoiceQueryProvider),
-    customerQuery: ref.watch(salesHistoryCustomerQueryProvider),
-    startDate: ref.watch(salesHistoryStartDateProvider),
-    endDate: ref.watch(salesHistoryEndDateProvider),
-    pendingOnly: true,
-    collectibleOnly: true,
-  );
-  return result.fold(
-    onSuccess: (value) => value,
-    onFailure: (error) => throw error,
-  );
-});
 
 final salesInvoiceDetailProvider =
     FutureProvider.autoDispose.family<SalesInvoiceDetailEntity?, String>((
@@ -381,7 +362,8 @@ final salesInvoiceDetailProvider =
 });
 
 final purchaseHistorySupplierQueryProvider = StateProvider<String>((ref) => '');
-final purchaseHistoryStartDateProvider = StateProvider<DateTime?>((ref) => null);
+final purchaseHistoryStartDateProvider =
+    StateProvider<DateTime?>((ref) => null);
 final purchaseHistoryEndDateProvider = StateProvider<DateTime?>((ref) => null);
 
 final purchaseHistoryRowsProvider =

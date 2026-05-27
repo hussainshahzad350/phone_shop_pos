@@ -105,7 +105,10 @@ class _TotalsPanelWidgetState extends State<TotalsPanelWidget> {
             ),
             const SizedBox(height: 8),
             _line(
-                label: 'Remaining', value: widget.totals.remaining, bold: true),
+              label: 'Remaining',
+              value: widget.totals.remaining,
+              bold: true,
+            ),
           ],
         ),
       ),

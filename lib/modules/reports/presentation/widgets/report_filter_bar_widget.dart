@@ -15,6 +15,7 @@ class ReportFilterBarWidget extends StatelessWidget {
     required this.onProduct,
     required this.onStatus,
     required this.onPaymentMethod,
+    required this.onItemType,
     required this.onClear,
     this.customerOptionsError,
     this.productOptionsError,
@@ -33,6 +34,7 @@ class ReportFilterBarWidget extends StatelessWidget {
   final ValueChanged<String?> onProduct;
   final ValueChanged<String?> onStatus;
   final ValueChanged<String?> onPaymentMethod;
+  final ValueChanged<String?> onItemType;
   final VoidCallback onClear;
   final String? customerOptionsError;
   final String? productOptionsError;
@@ -116,6 +118,14 @@ class ReportFilterBarWidget extends StatelessWidget {
                   items: PaymentMethod.values,
                   onChanged: onPaymentMethod,
                   labelBuilder: (item) => PaymentMethod.labels[item] ?? item,
+                ),
+                _SimpleDropdown(
+                  label: 'Item Type',
+                  value: filter.itemType,
+                  items: const <String>['phones', 'accessories'],
+                  onChanged: onItemType,
+                  labelBuilder: (item) =>
+                      item == 'phones' ? 'Phones' : 'Accessories',
                 ),
                 OutlinedButton.icon(
                   onPressed: onClear,

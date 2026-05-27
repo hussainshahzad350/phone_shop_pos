@@ -15,11 +15,13 @@ class ReportTableWidget extends StatelessWidget {
     required this.columns,
     required this.rows,
     this.emptyMessage = 'No data found.',
+    this.highlightedRowIndexes = const <int>{},
   });
 
   final List<ReportTableColumn> columns;
   final List<List<String>> rows;
   final String emptyMessage;
+  final Set<int> highlightedRowIndexes;
 
   @override
   Widget build(BuildContext context) {
@@ -40,15 +42,29 @@ class ReportTableWidget extends StatelessWidget {
       columns: columns
           .map((col) => DataColumn(label: Text(col.label)))
           .toList(growable: false),
-      rows: rows
-          .map(
-            (row) => DataRow(
-              cells: row
-                  .map((cell) => DataCell(Text(cell)))
-                  .toList(growable: false),
-            ),
-          )
-          .toList(growable: false),
+      rows: rows.asMap().entries.map(
+        (entry) {
+          final index = entry.key;
+          final row = entry.value;
+          final isHighlighted = highlightedRowIndexes.contains(index);
+          final textStyle = isHighlighted
+              ? const TextStyle(fontWeight: FontWeight.w700)
+              : null;
+          return DataRow(
+            color: isHighlighted
+                ? WidgetStatePropertyAll<Color?>(
+                    Theme.of(context)
+                        .colorScheme
+                        .primaryContainer
+                        .withValues(alpha: 0.3),
+                  )
+                : null,
+            cells: row
+                .map((cell) => DataCell(Text(cell, style: textStyle)))
+                .toList(growable: false),
+          );
+        },
+      ).toList(growable: false),
     );
   }
 }

@@ -548,13 +548,15 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final leftFlex = constraints.maxWidth >= 1480 ? 7 : 6;
-                        final rightFlex = constraints.maxWidth >= 1480 ? 4 : 5;
+                        final rightPanelWidth = constraints.maxWidth >= 1500
+                            ? 360.0
+                            : constraints.maxWidth >= 1200
+                                ? 320.0
+                                : 300.0;
                         return Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             Expanded(
-                              flex: leftFlex,
                               child: Card(
                                 child: Padding(
                                   padding: const EdgeInsets.all(8),
@@ -602,8 +604,8 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Expanded(
-                              flex: rightFlex,
+                            SizedBox(
+                              width: rightPanelWidth,
                               child: Scrollbar(
                                 controller: _rightPanelScrollController,
                                 thumbVisibility: true,

@@ -1,3 +1,4 @@
+/// [itemType] can be `'phones'`, `'accessories'`, or `null` (all items).
 class ReportFilterEntity {
   const ReportFilterEntity({
     this.startDate,
@@ -6,6 +7,7 @@ class ReportFilterEntity {
     this.productModelId,
     this.status,
     this.paymentMethod,
+    this.itemType,
     this.page = 1,
     this.pageSize = 50,
   });
@@ -16,6 +18,10 @@ class ReportFilterEntity {
   final String? productModelId;
   final String? status;
   final String? paymentMethod;
+
+  /// `'phones'`, `'accessories'`, or `null` (all)
+  final String? itemType;
+
   final int page;
   final int pageSize;
 
@@ -32,6 +38,8 @@ class ReportFilterEntity {
     bool clearStatus = false,
     String? paymentMethod,
     bool clearPaymentMethod = false,
+    String? itemType,
+    bool clearItemType = false,
     int? page,
     int? pageSize,
   }) {
@@ -39,13 +47,12 @@ class ReportFilterEntity {
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       customerId: clearCustomerId ? null : customerId ?? this.customerId,
-      productModelId: clearProductModelId
-          ? null
-          : productModelId ?? this.productModelId,
+      productModelId:
+          clearProductModelId ? null : productModelId ?? this.productModelId,
       status: clearStatus ? null : status ?? this.status,
-      paymentMethod: clearPaymentMethod
-          ? null
-          : paymentMethod ?? this.paymentMethod,
+      paymentMethod:
+          clearPaymentMethod ? null : paymentMethod ?? this.paymentMethod,
+      itemType: clearItemType ? null : itemType ?? this.itemType,
       page: page ?? this.page,
       pageSize: pageSize ?? this.pageSize,
     );

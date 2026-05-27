@@ -138,8 +138,6 @@ class InventoryReportService with BaseRepositoryGuard {
     return guard<List<CustomerBalanceReportRowEntity>>(() async {
       final args = <Object?>[];
       final where = StringBuffer('1 = 1');
-      where.write(' AND s.payment_method = ?');
-      args.add('credit');
       where.write(
         " AND s.customer_id IS NOT NULL AND TRIM(s.customer_id) != '' AND LOWER(s.customer_id) != 'walk_in'",
       );

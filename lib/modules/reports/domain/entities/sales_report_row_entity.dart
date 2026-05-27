@@ -1,5 +1,6 @@
 class SalesReportRowEntity {
   const SalesReportRowEntity({
+    required this.saleId,
     required this.invoiceNumber,
     required this.saleDate,
     required this.customerName,
@@ -7,8 +8,10 @@ class SalesReportRowEntity {
     required this.paidAmount,
     required this.paymentMethod,
     required this.status,
+    required this.printJobId,
   });
 
+  final String saleId;
   final String invoiceNumber;
   final DateTime saleDate;
   final String customerName;
@@ -16,6 +19,7 @@ class SalesReportRowEntity {
   final double paidAmount;
   final String? paymentMethod;
   final String status;
+  final String? printJobId;
 
   double get balance => (total - paidAmount).clamp(0, double.infinity);
 }

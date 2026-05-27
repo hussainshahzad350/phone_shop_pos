@@ -141,15 +141,18 @@ class SalesReportService with BaseRepositoryGuard {
         action: () => _appDatabase.database.rawQuery(
           '''
         SELECT
+          s.id AS sale_id,
           s.invoice_number,
           s.sale_date,
           COALESCE(c.name, 'Walk-in Customer') AS customer_name,
           s.total,
           s.paid_amount,
           s.payment_method,
-          CASE WHEN s.paid_amount >= s.total THEN 'paid' ELSE 'pending' END AS status
+          CASE WHEN s.paid_amount >= s.total THEN 'paid' ELSE 'pending' END AS status,
+          pj.id AS print_job_id
         FROM ${TableNames.sales} s
         LEFT JOIN ${TableNames.customers} c ON c.id = s.customer_id
+        LEFT JOIN ${TableNames.printJobs} pj ON pj.sale_id = s.id
         WHERE $where
         ORDER BY s.sale_date DESC
         LIMIT ? OFFSET ?
@@ -161,6 +164,7 @@ class SalesReportService with BaseRepositoryGuard {
       return rows
           .map(
             (row) => SalesReportRowEntity(
+              saleId: row['sale_id'] as String,
               invoiceNumber: row['invoice_number'] as String,
               saleDate: DateTimeHelpers.fromSql(row['sale_date'] as String),
               customerName: row['customer_name'] as String,
@@ -168,6 +172,7 @@ class SalesReportService with BaseRepositoryGuard {
               paidAmount: (row['paid_amount'] as num?)?.toDouble() ?? 0,
               paymentMethod: row['payment_method'] as String?,
               status: row['status'] as String,
+              printJobId: row['print_job_id'] as String?,
             ),
           )
           .toList(growable: false);
@@ -286,6 +291,21 @@ class SalesReportService with BaseRepositoryGuard {
       clauses.add('s.paid_amount >= s.total');
     } else if (status == 'pending') {
       clauses.add('s.paid_amount < s.total');
+    }
+
+    final itemType = filter.itemType;
+    if (itemType == 'phones') {
+      clauses.add(
+        'EXISTS (SELECT 1 FROM ${TableNames.saleItems} xi'
+        ' JOIN ${TableNames.productModels} xpm ON xpm.id = xi.product_model_id'
+        ' WHERE xi.sale_id = s.id AND xpm.has_imei = 1)',
+      );
+    } else if (itemType == 'accessories') {
+      clauses.add(
+        'EXISTS (SELECT 1 FROM ${TableNames.saleItems} xi'
+        ' JOIN ${TableNames.productModels} xpm ON xpm.id = xi.product_model_id'
+        ' WHERE xi.sale_id = s.id AND xpm.has_imei = 0)',
+      );
     }
 
     return clauses.join(' AND ');

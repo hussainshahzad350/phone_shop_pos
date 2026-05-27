@@ -16,7 +16,6 @@ import 'package:phone_shop_pos/modules/reports/presentation/providers/report_pro
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_export_action_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_filter_bar_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_card_widget.dart';
-import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_widget.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
 
 bool hasNextReportsPageCandidate({
@@ -28,6 +27,70 @@ bool hasNextReportsPageCandidate({
   }
   return resultsLength >= pageSize;
 }
+// ─── Report Table Styling Utilities ───
+
+Widget _styledTableHeaderCell(BuildContext context, String label,
+    {double? width}) {
+  final theme = Theme.of(context);
+  return SizedBox(
+    width: width,
+    child: Text(
+      label,
+      style: theme.textTheme.labelLarge?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.2,
+      ),
+      overflow: TextOverflow.ellipsis,
+      maxLines: 1,
+    ),
+  );
+}
+
+Widget _styledTableCell(String value,
+    {double? width, TextAlign textAlign = TextAlign.left}) {
+  return SizedBox(
+    width: width,
+    child: Text(
+      value,
+      textAlign: textAlign,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    ),
+  );
+}
+
+Widget _styledStatusCell(
+    BuildContext context, String label, Color bgColor, Color fgColor) {
+  final theme = Theme.of(context);
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(
+      color: bgColor,
+      borderRadius: BorderRadius.circular(999),
+    ),
+    child: Text(
+      label,
+      style: theme.textTheme.labelMedium?.copyWith(
+        color: fgColor,
+        fontWeight: FontWeight.w600,
+      ),
+      overflow: TextOverflow.ellipsis,
+    ),
+  );
+}
+
+Widget _indexCell(int index, {double width = 56}) {
+  return SizedBox(
+    width: width,
+    child: Text(
+      (index + 1).toString(),
+      textAlign: TextAlign.left,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    ),
+  );
+}
 
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
@@ -36,12 +99,7 @@ class ReportsScreen extends ConsumerWidget {
     ref.invalidate(dailySalesReportProvider);
     ref.invalidate(dateRangeSalesReportProvider);
     ref.invalidate(profitReportProvider);
-    ref.invalidate(soldPhonesReportProvider);
-    ref.invalidate(currentStockReportProvider);
     ref.invalidate(customerBalanceReportProvider);
-    ref.invalidate(lowStockReportProvider);
-    ref.invalidate(salesHistoryRowsProvider);
-    ref.invalidate(creditCollectionRowsProvider);
     ref.invalidate(purchaseHistoryRowsProvider);
     ref.invalidate(supplierLedgerRowsProvider);
     ref.invalidate(cashLedgerRowsProvider);
@@ -53,7 +111,8 @@ class ReportsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tab = ref.watch(selectedReportsTabProvider);
+    final rawTab = ref.watch(selectedReportsTabProvider);
+    final tab = _normalizeTab(rawTab);
     final filter = ref.watch(reportFilterProvider);
     final customerOptionsAsync = ref.watch(reportCustomerOptionsProvider);
     final productOptionsAsync = ref.watch(reportProductOptionsProvider);
@@ -163,6 +222,9 @@ class ReportsScreen extends ConsumerWidget {
                     onPaymentMethod: (value) => ref
                         .read(reportFilterProvider.notifier)
                         .setPaymentMethod(value),
+                    onItemType: (value) => ref
+                        .read(reportFilterProvider.notifier)
+                        .setItemType(value),
                     onClear: () =>
                         ref.read(reportFilterProvider.notifier).clearAll(),
                   ),
@@ -229,6 +291,15 @@ class ReportsScreen extends ConsumerWidget {
     );
   }
 
+  ReportsTab _normalizeTab(ReportsTab tab) {
+    for (final candidate in ReportsTab.values) {
+      if (candidate.name == tab.name) {
+        return candidate;
+      }
+    }
+    return ReportsTab.dailySales;
+  }
+
   bool _canGoNextPage({
     required WidgetRef ref,
     required ReportsTab tab,
@@ -236,53 +307,29 @@ class ReportsScreen extends ConsumerWidget {
   }) {
     switch (tab) {
       case ReportsTab.dailySales:
-        final rows = ref.watch(dailySalesReportProvider).valueOrNull;
-        return rows != null &&
-            hasNextReportsPageCandidate(
-              resultsLength: rows.length,
-              pageSize: pageSize,
-            );
-      case ReportsTab.dateRangeSales:
-        final rows = ref.watch(dateRangeSalesReportProvider).valueOrNull;
-        return rows != null &&
-            hasNextReportsPageCandidate(
-              resultsLength: rows.length,
-              pageSize: pageSize,
-            );
-      case ReportsTab.soldPhones:
-        final rows = ref.watch(soldPhonesReportProvider).valueOrNull;
-        return rows != null &&
-            hasNextReportsPageCandidate(
-              resultsLength: rows.length,
-              pageSize: pageSize,
-            );
-      case ReportsTab.currentStock:
-        final rows = ref.watch(currentStockReportProvider).valueOrNull;
-        return rows != null &&
-            hasNextReportsPageCandidate(
-              resultsLength: rows.length,
-              pageSize: pageSize,
-            );
-      case ReportsTab.customerBalance:
+        final dailyRows = ref.watch(dailySalesReportProvider).valueOrNull;
+        final detailRows = ref.watch(dateRangeSalesReportProvider).valueOrNull;
+        return (dailyRows != null &&
+                hasNextReportsPageCandidate(
+                  resultsLength: dailyRows.length,
+                  pageSize: pageSize,
+                )) ||
+            (detailRows != null &&
+                hasNextReportsPageCandidate(
+                  resultsLength: detailRows.length,
+                  pageSize: pageSize,
+                ));
+      case ReportsTab.customerLedger:
         final rows = ref.watch(customerBalanceReportProvider).valueOrNull;
         return rows != null &&
             hasNextReportsPageCandidate(
               resultsLength: rows.length,
               pageSize: pageSize,
             );
-      case ReportsTab.lowStock:
-        final rows = ref.watch(lowStockReportProvider).valueOrNull;
-        return rows != null &&
-            hasNextReportsPageCandidate(
-              resultsLength: rows.length,
-              pageSize: pageSize,
-            );
       case ReportsTab.profit:
-      case ReportsTab.salesHistory:
-      case ReportsTab.creditCollection:
-      case ReportsTab.purchaseHistory:
+      case ReportsTab.dailyPurchase:
       case ReportsTab.supplierLedger:
-      case ReportsTab.cashLedger:
+      case ReportsTab.cashFlow:
       case ReportsTab.expenses:
       case ReportsTab.repairAnalytics:
         return false;
@@ -291,12 +338,8 @@ class ReportsScreen extends ConsumerWidget {
 
   bool _usesLegacyFilters(ReportsTab tab) {
     return tab == ReportsTab.dailySales ||
-        tab == ReportsTab.dateRangeSales ||
         tab == ReportsTab.profit ||
-        tab == ReportsTab.soldPhones ||
-        tab == ReportsTab.currentStock ||
-        tab == ReportsTab.customerBalance ||
-        tab == ReportsTab.lowStock;
+        tab == ReportsTab.customerLedger;
   }
 
   String _errorMessage(Object error, String fallback) {
@@ -314,36 +357,39 @@ class _ReportContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    switch (tab) {
-      case ReportsTab.dailySales:
-        return const _DailySalesView();
-      case ReportsTab.dateRangeSales:
-        return const _DateRangeSalesView();
-      case ReportsTab.profit:
-        return const _ProfitView();
-      case ReportsTab.soldPhones:
-        return const _SoldPhonesView();
-      case ReportsTab.currentStock:
-        return const _CurrentStockView();
-      case ReportsTab.customerBalance:
-        return const _CustomerBalanceView();
-      case ReportsTab.lowStock:
-        return const _LowStockView();
-      case ReportsTab.salesHistory:
-        return const _SalesHistoryView();
-      case ReportsTab.creditCollection:
-        return const _CreditCollectionView();
-      case ReportsTab.purchaseHistory:
-        return const _PurchaseHistoryView();
-      case ReportsTab.supplierLedger:
-        return const _SupplierLedgerView();
-      case ReportsTab.cashLedger:
-        return const _CashLedgerView();
-      case ReportsTab.expenses:
-        return const _ExpensesView();
-      case ReportsTab.repairAnalytics:
-        return const _RepairAnalyticsView();
+    if (tab == ReportsTab.dailySales) {
+      return const _DailySalesView();
     }
+
+    if (tab == ReportsTab.profit) {
+      return const _ProfitView();
+    }
+
+    if (tab == ReportsTab.customerLedger) {
+      return const _CustomerBalanceView();
+    }
+
+    if (tab == ReportsTab.dailyPurchase) {
+      return const _PurchaseHistoryView();
+    }
+
+    if (tab == ReportsTab.supplierLedger) {
+      return const _SupplierLedgerView();
+    }
+
+    if (tab == ReportsTab.cashFlow) {
+      return const _CashLedgerView();
+    }
+
+    if (tab == ReportsTab.expenses) {
+      return const _ExpensesView();
+    }
+
+    if (tab == ReportsTab.repairAnalytics) {
+      return const _RepairAnalyticsView();
+    }
+
+    return const _DailySalesView();
   }
 }
 
@@ -383,624 +429,251 @@ class _ReportErrorView extends StatelessWidget {
 class _DailySalesView extends ConsumerWidget {
   const _DailySalesView();
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(dailySalesReportProvider);
-    final csvService = ref.watch(csvExportServiceProvider);
-    final printableService = ref.watch(printableReportServiceProvider);
-
-    return async.when(
-      data: (rows) {
-        final tableRows = rows
-            .map(
-              (row) => <String>[
-                row.day,
-                row.invoiceCount.toString(),
-                FormattingHelpers.currencyPkr(row.totalSales),
-                FormattingHelpers.currencyPkr(row.totalProfit),
-                row.phonesSold.toString(),
-                row.accessoriesSold.toString(),
-                FormattingHelpers.currencyPkr(row.pendingBalances),
-              ],
-            )
-            .toList(growable: false);
-
-        final totalSales =
-            rows.fold<double>(0, (sum, row) => sum + row.totalSales);
-
-        return Column(
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: ReportSummaryCardWidget(
-                    label: 'Total Sales (page)',
-                    value: FormattingHelpers.currencyPkr(totalSales),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ReportExportActionWidget(
-                  title: 'Daily Sales Report',
-                  fileBaseName: 'daily_sales_report',
-                  headers: const <String>[
-                    'Day',
-                    'Invoices',
-                    'Sales',
-                    'Profit',
-                    'Phones',
-                    'Accessories',
-                    'Pending',
-                  ],
-                  rows: tableRows,
-                  csvExportService: csvService,
-                  printableReportService: printableService,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: ReportTableWidget(
-                    columns: const <ReportTableColumn>[
-                      ReportTableColumn(label: 'Day'),
-                      ReportTableColumn(label: 'Invoices'),
-                      ReportTableColumn(label: 'Sales'),
-                      ReportTableColumn(label: 'Profit'),
-                      ReportTableColumn(label: 'Phones'),
-                      ReportTableColumn(label: 'Accessories'),
-                      ReportTableColumn(label: 'Pending'),
-                    ],
-                    rows: tableRows,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => _ReportErrorView(
-        message: 'Failed to load daily sales report.',
-        error: error,
-        onRetry: () => ref.invalidate(dailySalesReportProvider),
-      ),
-    );
-  }
-}
-
-class _DateRangeSalesView extends ConsumerWidget {
-  const _DateRangeSalesView();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(dateRangeSalesReportProvider);
-    final csvService = ref.watch(csvExportServiceProvider);
-    final printableService = ref.watch(printableReportServiceProvider);
-
-    return async.when(
-      data: (rows) {
-        final tableRows = rows
-            .map(
-              (row) => <String>[
-                row.invoiceNumber,
-                FormattingHelpers.dateYmd(row.saleDate),
-                row.customerName,
-                FormattingHelpers.currencyPkr(row.total),
-                FormattingHelpers.currencyPkr(row.paidAmount),
-                FormattingHelpers.currencyPkr(row.balance),
-                row.paymentMethod ?? '-',
-                row.status,
-              ],
-            )
-            .toList(growable: false);
-
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              children: <Widget>[
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: ReportExportActionWidget(
-                    title: 'Date Range Sales Report',
-                    fileBaseName: 'date_range_sales_report',
-                    headers: const <String>[
-                      'Invoice',
-                      'Date',
-                      'Customer',
-                      'Total',
-                      'Paid',
-                      'Balance',
-                      'Payment',
-                      'Status',
-                    ],
-                    rows: tableRows,
-                    csvExportService: csvService,
-                    printableReportService: printableService,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: ReportTableWidget(
-                    columns: const <ReportTableColumn>[
-                      ReportTableColumn(label: 'Invoice'),
-                      ReportTableColumn(label: 'Date'),
-                      ReportTableColumn(label: 'Customer'),
-                      ReportTableColumn(label: 'Total'),
-                      ReportTableColumn(label: 'Paid'),
-                      ReportTableColumn(label: 'Balance'),
-                      ReportTableColumn(label: 'Payment'),
-                      ReportTableColumn(label: 'Status'),
-                    ],
-                    rows: tableRows,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => _ReportErrorView(
-        message: 'Failed to load date range sales report.',
-        error: error,
-        onRetry: () => ref.invalidate(dateRangeSalesReportProvider),
-      ),
-    );
-  }
-}
-
-class _ProfitView extends ConsumerWidget {
-  const _ProfitView();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(profitReportProvider);
-
-    return async.when(
-      data: (report) => Row(
-        children: <Widget>[
-          Expanded(
-            child: ReportSummaryCardWidget(
-              label: 'Revenue',
-              value: FormattingHelpers.currencyPkr(report.totalRevenue),
-              color: Colors.blue,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: ReportSummaryCardWidget(
-              label: 'Cost',
-              value: FormattingHelpers.currencyPkr(report.totalCost),
-              color: Colors.orange,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: ReportSummaryCardWidget(
-              label: 'Profit',
-              value: FormattingHelpers.currencyPkr(report.totalProfit),
-              color: report.totalProfit >= 0 ? Colors.green : Colors.red,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: ReportSummaryCardWidget(
-              label: 'Margin',
-              value: '${FormattingHelpers.decimal(report.marginPercent)}%',
-              color: Colors.indigo,
-            ),
-          ),
-        ],
-      ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => _ReportErrorView(
-        message: 'Failed to load profit report.',
-        error: error,
-        onRetry: () => ref.invalidate(profitReportProvider),
-      ),
-    );
-  }
-}
-
-class _SoldPhonesView extends ConsumerWidget {
-  const _SoldPhonesView();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(soldPhonesReportProvider);
-    final csvService = ref.watch(csvExportServiceProvider);
-    final printableService = ref.watch(printableReportServiceProvider);
-
-    return async.when(
-      data: (rows) {
-        final tableRows = rows
-            .map(
-              (row) => <String>[
-                row.invoiceNumber,
-                FormattingHelpers.dateYmd(row.saleDate),
-                row.productName,
-                row.imei,
-                row.customerName,
-                FormattingHelpers.currencyPkr(row.salePrice),
-                FormattingHelpers.currencyPkr(row.costPrice),
-                FormattingHelpers.currencyPkr(row.profit),
-              ],
-            )
-            .toList(growable: false);
-
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              children: <Widget>[
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: ReportExportActionWidget(
-                    title: 'Sold Phones Report',
-                    fileBaseName: 'sold_phones_report',
-                    headers: const <String>[
-                      'Invoice',
-                      'Date',
-                      'Product',
-                      'IMEI',
-                      'Customer',
-                      'Sale Price',
-                      'Cost Price',
-                      'Profit',
-                    ],
-                    rows: tableRows,
-                    csvExportService: csvService,
-                    printableReportService: printableService,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: ReportTableWidget(
-                    columns: const <ReportTableColumn>[
-                      ReportTableColumn(label: 'Invoice'),
-                      ReportTableColumn(label: 'Date'),
-                      ReportTableColumn(label: 'Product'),
-                      ReportTableColumn(label: 'IMEI'),
-                      ReportTableColumn(label: 'Customer'),
-                      ReportTableColumn(label: 'Sale'),
-                      ReportTableColumn(label: 'Cost'),
-                      ReportTableColumn(label: 'Profit'),
-                    ],
-                    rows: tableRows,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => _ReportErrorView(
-        message: 'Failed to load sold phones report.',
-        error: error,
-        onRetry: () => ref.invalidate(soldPhonesReportProvider),
-      ),
-    );
-  }
-}
-
-class _CurrentStockView extends ConsumerWidget {
-  const _CurrentStockView();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(currentStockReportProvider);
-
-    return async.when(
-      data: (rows) {
-        final tableRows = rows
-            .map(
-              (row) => <String>[
-                row.productName,
-                row.category,
-                row.availableQuantity.toString(),
-                row.minQuantity.toString(),
-                FormattingHelpers.currencyPkr(row.unitCost),
-                FormattingHelpers.currencyPkr(row.unitPrice),
-                FormattingHelpers.currencyPkr(row.stockValue),
-                row.isLowStock ? 'Low' : 'OK',
-              ],
-            )
-            .toList(growable: false);
-
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: ReportTableWidget(
-              columns: const <ReportTableColumn>[
-                ReportTableColumn(label: 'Product'),
-                ReportTableColumn(label: 'Category'),
-                ReportTableColumn(label: 'Available'),
-                ReportTableColumn(label: 'Min'),
-                ReportTableColumn(label: 'Unit Cost'),
-                ReportTableColumn(label: 'Unit Price'),
-                ReportTableColumn(label: 'Stock Value'),
-                ReportTableColumn(label: 'Status'),
-              ],
-              rows: tableRows,
-            ),
-          ),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => _ReportErrorView(
-        message: 'Failed to load current stock report.',
-        error: error,
-        onRetry: () => ref.invalidate(currentStockReportProvider),
-      ),
-    );
-  }
-}
-
-class _CustomerBalanceView extends ConsumerWidget {
-  const _CustomerBalanceView();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(customerBalanceReportProvider);
-
-    return async.when(
-      data: (rows) {
-        final tableRows = rows
-            .map(
-              (row) => <String>[
-                row.customerName,
-                FormattingHelpers.currencyPkr(row.totalSales),
-                FormattingHelpers.currencyPkr(row.totalPaid),
-                FormattingHelpers.currencyPkr(row.pendingBalance),
-              ],
-            )
-            .toList(growable: false);
-
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: ReportTableWidget(
-              columns: const <ReportTableColumn>[
-                ReportTableColumn(label: 'Customer'),
-                ReportTableColumn(label: 'Total Sales'),
-                ReportTableColumn(label: 'Total Paid'),
-                ReportTableColumn(label: 'Pending Balance'),
-              ],
-              rows: tableRows,
-            ),
-          ),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => _ReportErrorView(
-        message: 'Failed to load customer balance report.',
-        error: error,
-        onRetry: () => ref.invalidate(customerBalanceReportProvider),
-      ),
-    );
-  }
-}
-
-class _LowStockView extends ConsumerWidget {
-  const _LowStockView();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(lowStockReportProvider);
-
-    return async.when(
-      data: (rows) {
-        final tableRows = rows
-            .map(
-              (row) => <String>[
-                row.productName,
-                row.quantity.toString(),
-                row.minQuantity.toString(),
-                row.location ?? '-',
-              ],
-            )
-            .toList(growable: false);
-
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: ReportTableWidget(
-              columns: const <ReportTableColumn>[
-                ReportTableColumn(label: 'Product'),
-                ReportTableColumn(label: 'Quantity'),
-                ReportTableColumn(label: 'Min Quantity'),
-                ReportTableColumn(label: 'Location'),
-              ],
-              rows: tableRows,
-            ),
-          ),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => _ReportErrorView(
-        message: 'Failed to load low stock report.',
-        error: error,
-        onRetry: () => ref.invalidate(lowStockReportProvider),
-      ),
-    );
-  }
-}
-
-class _SalesHistoryView extends ConsumerWidget {
-  const _SalesHistoryView();
   static const double _actionIconSize = 18;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final rowsAsync = ref.watch(salesHistoryRowsProvider);
-    final pendingOnly = ref.watch(salesHistoryPendingOnlyProvider);
+    final detailAsync = ref.watch(dateRangeSalesReportProvider);
+    final csvService = ref.watch(csvExportServiceProvider);
+    final printableService = ref.watch(printableReportServiceProvider);
+
+    if (detailAsync.hasError) {
+      return _ReportErrorView(
+        message: 'Failed to load sales details report.',
+        error: detailAsync.error!,
+        onRetry: () => ref.invalidate(dateRangeSalesReportProvider),
+      );
+    }
+    if (detailAsync.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final detailRows = detailAsync.value ?? const [];
+    final totalInvoices = detailRows.length;
+    final totalDays = detailRows
+        .map((row) =>
+            '${row.saleDate.year}-${row.saleDate.month}-${row.saleDate.day}')
+        .toSet()
+        .length;
+    final totalCustomers = detailRows
+        .map((row) => row.customerName.trim())
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .length;
+    final sumTotal = detailRows.fold<double>(0, (sum, row) => sum + row.total);
+    final sumPaid =
+        detailRows.fold<double>(0, (sum, row) => sum + row.paidAmount);
+    final sumBalance =
+        detailRows.fold<double>(0, (sum, row) => sum + row.balance);
+
+    final detailExportRows = detailRows
+        .map(
+          (row) => <String>[
+            row.invoiceNumber,
+            FormattingHelpers.dateYmd(row.saleDate),
+            row.customerName,
+            FormattingHelpers.decimal(row.total),
+            FormattingHelpers.decimal(row.paidAmount),
+            FormattingHelpers.decimal(row.balance),
+            row.paymentMethod ?? '-',
+            row.status,
+          ],
+        )
+        .toList();
+
+    final layout = _reportTableLayoutFor(context);
+
+    DataRow totalsRow() {
+      final style = const TextStyle(fontWeight: FontWeight.bold);
+      return DataRow(
+        color: WidgetStatePropertyAll(
+          Theme.of(context).colorScheme.primaryContainer.withAlpha(76),
+        ),
+        cells: <DataCell>[
+          DataCell(Text('TOTAL', style: style)),
+          DataCell(Text('Days: $totalDays', style: style)),
+          DataCell(Text('Cust: $totalCustomers', style: style)),
+          DataCell(Text(FormattingHelpers.decimal(sumTotal), style: style)),
+          DataCell(Text(FormattingHelpers.decimal(sumPaid), style: style)),
+          DataCell(Text(FormattingHelpers.decimal(sumBalance), style: style)),
+          DataCell(Text('Inv: $totalInvoices', style: style)),
+          DataCell(Text('-', style: style)),
+          DataCell(const SizedBox.shrink()),
+        ],
+      );
+    }
 
     return Column(
       children: <Widget>[
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: <Widget>[
-                SizedBox(
-                  width: 220,
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      labelText: 'Invoice #',
-                    ),
-                    onChanged: (value) => ref
-                        .read(salesHistoryInvoiceQueryProvider.notifier)
-                        .state = value,
-                  ),
-                ),
-                SizedBox(
-                  width: 260,
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      labelText: 'Customer Name / ID',
-                    ),
-                    onChanged: (value) => ref
-                        .read(salesHistoryCustomerQueryProvider.notifier)
-                        .state = value,
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                      initialDate: ref.read(salesHistoryStartDateProvider) ??
-                          DateTime.now(),
-                    );
-                    ref.read(salesHistoryStartDateProvider.notifier).state =
-                        picked;
-                  },
-                  icon: const Icon(Icons.calendar_today),
-                  label: Text(
-                    ref.watch(salesHistoryStartDateProvider) == null
-                        ? 'Start Date'
-                        : FormattingHelpers.dateYmd(
-                            ref.watch(salesHistoryStartDateProvider)!),
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                      initialDate: ref.read(salesHistoryEndDateProvider) ??
-                          DateTime.now(),
-                    );
-                    ref.read(salesHistoryEndDateProvider.notifier).state =
-                        picked;
-                  },
-                  icon: const Icon(Icons.event),
-                  label: Text(
-                    ref.watch(salesHistoryEndDateProvider) == null
-                        ? 'End Date'
-                        : FormattingHelpers.dateYmd(
-                            ref.watch(salesHistoryEndDateProvider)!),
-                  ),
-                ),
-                FilterChip(
-                  label: const Text('Pending only'),
-                  selected: pendingOnly,
-                  onSelected: (value) => ref
-                      .read(salesHistoryPendingOnlyProvider.notifier)
-                      .state = value,
-                ),
-              ],
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: ReportSummaryCardWidget(
+                label: 'Total Sales (page)',
+                value: FormattingHelpers.currencyPkr(sumTotal),
+              ),
             ),
-          ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ReportSummaryCardWidget(
+                label: 'Invoices (page)',
+                value: totalInvoices.toString(),
+                color: Colors.indigo,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ReportSummaryCardWidget(
+                label: 'Balance (page)',
+                value: FormattingHelpers.currencyPkr(sumBalance),
+                color: sumBalance > 0 ? Colors.orange : Colors.green,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: rowsAsync.when(
-            data: (rows) {
-              return Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: AppDataTable(
-                    columnSpacing: _reportTableLayoutFor(context).columnSpacing,
-                    dataRowMinHeight:
-                        _reportTableLayoutFor(context).dataRowMinHeight,
-                    dataRowMaxHeight:
-                        _reportTableLayoutFor(context).dataRowMaxHeight,
-                    showCheckboxColumn: false,
-                    columns: const <DataColumn>[
-                      DataColumn(label: Text('Invoice')),
-                      DataColumn(label: Text('Date')),
-                      DataColumn(label: Text('Customer')),
-                      DataColumn(label: Text('Total')),
-                      DataColumn(label: Text('Paid')),
-                      DataColumn(label: Text('Remaining')),
-                      DataColumn(label: Text('Status')),
-                      DataColumn(label: Text('Details')),
-                      DataColumn(label: Text('Print')),
-                    ],
-                    rows: rows.map((row) {
-                      return DataRow(
-                        cells: <DataCell>[
-                          DataCell(Text(row.invoiceNumber)),
-                          DataCell(
-                              Text(FormattingHelpers.dateYmd(row.saleDate))),
-                          DataCell(Text(row.customerName)),
-                          DataCell(
-                              Text(FormattingHelpers.currencyPkr(row.total))),
-                          DataCell(Text(
-                              FormattingHelpers.currencyPkr(row.paidAmount))),
-                          DataCell(Text(FormattingHelpers.currencyPkr(
-                              row.remainingBalance))),
-                          DataCell(Text(row.isPaid ? 'Paid' : 'Pending')),
-                          DataCell(
-                            OutlinedButton.icon(
-                              onPressed: () => _showInvoiceDialog(
-                                context: context,
-                                saleId: row.saleId,
-                              ),
-                              icon: const Icon(Icons.open_in_new,
-                                  size: _actionIconSize),
-                              label: const Text('Open'),
-                            ),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Column(
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      const Expanded(
+                        child: Text(
+                          'Sales Details',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
-                          DataCell(
-                            row.printJobId == null
-                                ? const Text('-')
-                                : FilledButton.tonalIcon(
-                                    onPressed: () => _reprint(
-                                      ref: ref,
-                                      jobId: row.printJobId!,
-                                    ),
-                                    icon: const Icon(Icons.print_outlined,
-                                        size: _actionIconSize),
-                                    label: const Text('Reprint'),
-                                  ),
-                          ),
+                        ),
+                      ),
+                      ReportExportActionWidget(
+                        title: 'Daily Sales Details Report',
+                        fileBaseName: 'daily_sales_details_report',
+                        headers: const <String>[
+                          'Invoice',
+                          'Date',
+                          'Customer',
+                          'Total (PKR)',
+                          'Paid (PKR)',
+                          'Balance (PKR)',
+                          'Payment',
+                          'Status',
                         ],
-                      );
-                    }).toList(growable: false),
+                        rows: detailExportRows,
+                        csvExportService: csvService,
+                        printableReportService: printableService,
+                      ),
+                    ],
                   ),
-                ),
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, __) => _ReportErrorView(
-              message: 'Failed to load sales history.',
-              error: error,
-              onRetry: () => ref.invalidate(salesHistoryRowsProvider),
+                  const SizedBox(height: 8),
+                  const Divider(height: 1),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: AppDataTable(
+                      columnSpacing: layout.columnSpacing,
+                      dataRowMinHeight: layout.dataRowMinHeight,
+                      dataRowMaxHeight: layout.dataRowMaxHeight,
+                      showCheckboxColumn: false,
+                      columns: <DataColumn>[
+                        DataColumn(
+                            label: _styledTableHeaderCell(context, 'Invoice',
+                                width: 130)),
+                        DataColumn(
+                            label: _styledTableHeaderCell(context, 'Date',
+                                width: 110)),
+                        DataColumn(
+                            label: _styledTableHeaderCell(context, 'Customer',
+                                width: 220)),
+                        DataColumn(
+                            label: _styledTableHeaderCell(
+                                context, 'Total (PKR)',
+                                width: 120)),
+                        DataColumn(
+                            label: _styledTableHeaderCell(context, 'Paid (PKR)',
+                                width: 120)),
+                        DataColumn(
+                            label: _styledTableHeaderCell(
+                                context, 'Balance (PKR)',
+                                width: 130)),
+                        DataColumn(
+                            label: _styledTableHeaderCell(context, 'Payment',
+                                width: 100)),
+                        DataColumn(
+                            label: _styledTableHeaderCell(context, 'Status',
+                                width: 100)),
+                        DataColumn(
+                            label: _styledTableHeaderCell(context, 'Actions',
+                                width: 132)),
+                      ],
+                      rows: <DataRow>[
+                        ...detailRows.map(
+                          (row) => DataRow(
+                            cells: <DataCell>[
+                              DataCell(_styledTableCell(row.invoiceNumber,
+                                  width: 130)),
+                              DataCell(_styledTableCell(
+                                  FormattingHelpers.dateYmd(row.saleDate),
+                                  width: 110)),
+                              DataCell(_styledTableCell(row.customerName,
+                                  width: 220)),
+                              DataCell(_styledTableCell(
+                                  FormattingHelpers.decimal(row.total),
+                                  width: 120)),
+                              DataCell(_styledTableCell(
+                                  FormattingHelpers.decimal(row.paidAmount),
+                                  width: 120)),
+                              DataCell(_styledTableCell(
+                                  FormattingHelpers.decimal(row.balance),
+                                  width: 130)),
+                              DataCell(_styledTableCell(
+                                  row.paymentMethod ?? '-',
+                                  width: 100)),
+                              DataCell(
+                                  _styledTableCell(row.status, width: 100)),
+                              DataCell(
+                                SizedBox(
+                                  width: 132,
+                                  child: Row(
+                                    children: <Widget>[
+                                      IconButton.filledTonal(
+                                        tooltip: 'Open',
+                                        onPressed: () => _showInvoiceDialog(
+                                          context: context,
+                                          saleId: row.saleId,
+                                        ),
+                                        icon: const Icon(Icons.open_in_new,
+                                            size: _actionIconSize),
+                                        visualDensity: VisualDensity.compact,
+                                      ),
+                                      if (row.printJobId != null) ...<Widget>[
+                                        const SizedBox(width: 6),
+                                        IconButton.filledTonal(
+                                          tooltip: 'Reprint',
+                                          onPressed: () => _reprint(
+                                            ref: ref,
+                                            jobId: row.printJobId!,
+                                          ),
+                                          icon: const Icon(Icons.print_outlined,
+                                              size: _actionIconSize),
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (detailRows.isNotEmpty) totalsRow(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1034,53 +707,298 @@ class _SalesHistoryView extends ConsumerWidget {
   }
 }
 
-class _CreditCollectionView extends ConsumerWidget {
-  const _CreditCollectionView();
+class _ProfitView extends ConsumerWidget {
+  const _ProfitView();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final rowsAsync = ref.watch(creditCollectionRowsProvider);
-    return rowsAsync.when(
+    final summaryAsync = ref.watch(profitReportProvider);
+    final rowsAsync = ref.watch(profitReportRowsProvider);
+    final csvService = ref.watch(csvExportServiceProvider);
+    final printableService = ref.watch(printableReportServiceProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        // ── Summary cards ──
+        summaryAsync.when(
+          data: (report) => Row(
+            children: <Widget>[
+              Expanded(
+                child: ReportSummaryCardWidget(
+                  label: 'Revenue',
+                  value: FormattingHelpers.currencyPkr(report.totalRevenue),
+                  color: Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ReportSummaryCardWidget(
+                  label: 'Cost',
+                  value: FormattingHelpers.currencyPkr(report.totalCost),
+                  color: Colors.orange,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ReportSummaryCardWidget(
+                  label: 'Profit',
+                  value: FormattingHelpers.currencyPkr(report.totalProfit),
+                  color: report.totalProfit >= 0 ? Colors.green : Colors.red,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ReportSummaryCardWidget(
+                  label: 'Margin',
+                  value: '${FormattingHelpers.decimal(report.marginPercent)}%',
+                  color: Colors.indigo,
+                ),
+              ),
+            ],
+          ),
+          loading: () => const SizedBox(
+            height: 72,
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (error, _) => _ReportErrorView(
+            message: 'Failed to load profit summary.',
+            error: error,
+            onRetry: () => ref.invalidate(profitReportProvider),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // ── Per-day table ──
+        Expanded(
+          child: rowsAsync.when(
+            data: (rows) {
+              const headers = <String>[
+                'Date',
+                'Phones Sold',
+                'Accessories Sold',
+                'Revenue (PKR)',
+                'Cost (PKR)',
+                'Profit (PKR)',
+                'Margin %',
+              ];
+              final exportRows = rows
+                  .map(
+                    (r) => <String>[
+                      r.day,
+                      r.phonesSold.toString(),
+                      r.accessoriesSold.toString(),
+                      r.totalRevenue.toStringAsFixed(2),
+                      r.totalCost.toStringAsFixed(2),
+                      r.totalProfit.toStringAsFixed(2),
+                      '${r.marginPercent.toStringAsFixed(1)}%',
+                    ],
+                  )
+                  .toList();
+              final layout = _reportTableLayoutFor(context);
+
+              return Card(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Column(
+                    children: <Widget>[
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: ReportExportActionWidget(
+                          title: 'Profit Report',
+                          fileBaseName: 'profit_report',
+                          headers: headers,
+                          rows: exportRows,
+                          csvExportService: csvService,
+                          printableReportService: printableService,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Expanded(
+                        child: AppDataTable(
+                          columnSpacing: layout.columnSpacing,
+                          dataRowMinHeight: layout.dataRowMinHeight,
+                          dataRowMaxHeight: layout.dataRowMaxHeight,
+                          showCheckboxColumn: false,
+                          emptyMessage: 'No profit rows found.',
+                          columns: <DataColumn>[
+                            DataColumn(
+                                label: _styledTableHeaderCell(context, 'Date',
+                                    width: 110)),
+                            DataColumn(
+                                label: _styledTableHeaderCell(
+                                    context, 'Phones Sold',
+                                    width: 120)),
+                            DataColumn(
+                                label: _styledTableHeaderCell(
+                                    context, 'Accessories Sold',
+                                    width: 140)),
+                            DataColumn(
+                                label: _styledTableHeaderCell(
+                                    context, 'Revenue (PKR)',
+                                    width: 130)),
+                            DataColumn(
+                                label: _styledTableHeaderCell(
+                                    context, 'Cost (PKR)',
+                                    width: 120)),
+                            DataColumn(
+                                label: _styledTableHeaderCell(
+                                    context, 'Profit (PKR)',
+                                    width: 120)),
+                            DataColumn(
+                                label: _styledTableHeaderCell(
+                                    context, 'Margin %',
+                                    width: 90)),
+                          ],
+                          rows: rows.map((r) {
+                            final isNegative = r.totalProfit < 0;
+                            final colorScheme = Theme.of(context).colorScheme;
+                            return DataRow(
+                              cells: <DataCell>[
+                                DataCell(_styledTableCell(r.day, width: 110)),
+                                DataCell(_styledTableCell(
+                                    r.phonesSold.toString(),
+                                    width: 120)),
+                                DataCell(_styledTableCell(
+                                    r.accessoriesSold.toString(),
+                                    width: 140)),
+                                DataCell(_styledTableCell(
+                                    FormattingHelpers.decimal(r.totalRevenue),
+                                    width: 130)),
+                                DataCell(_styledTableCell(
+                                    FormattingHelpers.decimal(r.totalCost),
+                                    width: 120)),
+                                DataCell(
+                                  SizedBox(
+                                    width: 120,
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: _styledStatusCell(
+                                        context,
+                                        FormattingHelpers.decimal(
+                                            r.totalProfit),
+                                        isNegative
+                                            ? colorScheme.errorContainer
+                                            : colorScheme.primaryContainer,
+                                        isNegative
+                                            ? colorScheme.onErrorContainer
+                                            : colorScheme.onPrimaryContainer,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                DataCell(_styledTableCell(
+                                    '${r.marginPercent.toStringAsFixed(1)}%',
+                                    width: 90)),
+                              ],
+                            );
+                          }).toList(growable: false),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => _ReportErrorView(
+              message: 'Failed to load profit breakdown.',
+              error: error,
+              onRetry: () => ref.invalidate(profitReportRowsProvider),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CustomerBalanceView extends ConsumerWidget {
+  const _CustomerBalanceView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(customerBalanceReportProvider);
+    final layout = _reportTableLayoutFor(context);
+
+    return async.when(
       data: (rows) {
-        final pendingRows =
-            rows.where((row) => !row.isPaid).toList(growable: false);
         return Card(
           child: Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: AppDataTable(
-              emptyMessage: 'No pending credit sales.',
-              columnSpacing: _reportTableLayoutFor(context).columnSpacing,
-              dataRowMinHeight: _reportTableLayoutFor(context).dataRowMinHeight,
-              dataRowMaxHeight: _reportTableLayoutFor(context).dataRowMaxHeight,
+              columnSpacing: layout.columnSpacing,
+              dataRowMinHeight: layout.dataRowMinHeight,
+              dataRowMaxHeight: layout.dataRowMaxHeight,
               showCheckboxColumn: false,
-              columns: const <DataColumn>[
-                DataColumn(label: Text('Invoice')),
-                DataColumn(label: Text('Customer')),
-                DataColumn(label: Text('Total')),
-                DataColumn(label: Text('Paid')),
-                DataColumn(label: Text('Outstanding')),
-                DataColumn(label: Text('Collect')),
+              emptyMessage: 'No customer balance data found.',
+              columns: <DataColumn>[
+                DataColumn(
+                  label: _styledTableHeaderCell(context, 'SR#', width: 52),
+                ),
+                DataColumn(
+                  label:
+                      _styledTableHeaderCell(context, 'Customer', width: 280),
+                ),
+                DataColumn(
+                  label: _styledTableHeaderCell(
+                    context,
+                    'Total Sales (PKR)',
+                    width: 160,
+                  ),
+                ),
+                DataColumn(
+                  label: _styledTableHeaderCell(
+                    context,
+                    'Total Paid (PKR)',
+                    width: 160,
+                  ),
+                ),
+                DataColumn(
+                  label: _styledTableHeaderCell(context, 'Pending (PKR)',
+                      width: 160),
+                ),
               ],
-              rows: pendingRows.map((row) {
+              rows: rows.asMap().entries.map((entry) {
+                final index = entry.key;
+                final row = entry.value;
+                final colorScheme = Theme.of(context).colorScheme;
+                final isOverdue = row.pendingBalance > 0;
+
                 return DataRow(
                   cells: <DataCell>[
-                    DataCell(Text(row.invoiceNumber)),
-                    DataCell(Text(row.customerName)),
-                    DataCell(Text(FormattingHelpers.currencyPkr(row.total))),
+                    DataCell(_indexCell(index, width: 52)),
+                    DataCell(_styledTableCell(row.customerName, width: 280)),
                     DataCell(
-                        Text(FormattingHelpers.currencyPkr(row.paidAmount))),
-                    DataCell(Text(
-                        FormattingHelpers.currencyPkr(row.remainingBalance))),
+                      _styledTableCell(
+                        FormattingHelpers.decimal(row.totalSales),
+                        width: 160,
+                      ),
+                    ),
                     DataCell(
-                      FilledButton(
-                        onPressed: () async {
-                          await showDialog<void>(
-                            context: context,
-                            builder: (context) =>
-                                _CollectPaymentDialog(sale: row),
-                          );
-                        },
-                        child: const Text('Collect'),
+                      _styledTableCell(
+                        FormattingHelpers.decimal(row.totalPaid),
+                        width: 160,
+                      ),
+                    ),
+                    DataCell(
+                      SizedBox(
+                        width: 160,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: _styledStatusCell(
+                            context,
+                            FormattingHelpers.decimal(row.pendingBalance),
+                            isOverdue
+                                ? colorScheme.errorContainer
+                                : colorScheme.primaryContainer,
+                            isOverdue
+                                ? colorScheme.onErrorContainer
+                                : colorScheme.onPrimaryContainer,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -1091,10 +1009,10 @@ class _CreditCollectionView extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, __) => _ReportErrorView(
-        message: 'Failed to load credit sales.',
+      error: (error, _) => _ReportErrorView(
+        message: 'Failed to load customer balance report.',
         error: error,
-        onRetry: () => ref.invalidate(creditCollectionRowsProvider),
+        onRetry: () => ref.invalidate(customerBalanceReportProvider),
       ),
     );
   }
@@ -1177,7 +1095,8 @@ class _PurchaseHistoryView extends ConsumerWidget {
           child: rowsAsync.when(
             data: (rows) => Card(
               child: Padding(
-                padding: const EdgeInsets.all(8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 child: AppDataTable(
                   columnSpacing: _reportTableLayoutFor(context).columnSpacing,
                   dataRowMinHeight:
@@ -1185,30 +1104,51 @@ class _PurchaseHistoryView extends ConsumerWidget {
                   dataRowMaxHeight:
                       _reportTableLayoutFor(context).dataRowMaxHeight,
                   showCheckboxColumn: false,
-                  columns: const <DataColumn>[
-                    DataColumn(label: Text('Date')),
-                    DataColumn(label: Text('Supplier')),
-                    DataColumn(label: Text('Invoice')),
-                    DataColumn(label: Text('Total')),
-                    DataColumn(label: Text('Paid')),
-                    DataColumn(label: Text('Balance')),
-                    DataColumn(label: Text('Details')),
+                  columns: <DataColumn>[
+                    DataColumn(
+                        label: _styledTableHeaderCell(context, 'Date',
+                            width: 110)),
+                    DataColumn(
+                        label: _styledTableHeaderCell(context, 'Supplier',
+                            width: 220)),
+                    DataColumn(
+                        label: _styledTableHeaderCell(context, 'Invoice',
+                            width: 130)),
+                    DataColumn(
+                        label: _styledTableHeaderCell(context, 'Total (PKR)',
+                            width: 120)),
+                    DataColumn(
+                        label: _styledTableHeaderCell(context, 'Paid (PKR)',
+                            width: 120)),
+                    DataColumn(
+                        label: _styledTableHeaderCell(context, 'Balance (PKR)',
+                            width: 130)),
+                    DataColumn(
+                        label: _styledTableHeaderCell(context, 'Actions',
+                            width: 90)),
                   ],
                   rows: rows.map((row) {
                     return DataRow(
                       cells: <DataCell>[
+                        DataCell(_styledTableCell(
+                            FormattingHelpers.dateYmd(row.purchaseDate),
+                            width: 110)),
                         DataCell(
-                            Text(FormattingHelpers.dateYmd(row.purchaseDate))),
-                        DataCell(Text(row.supplierName)),
-                        DataCell(Text(row.invoiceNumber ?? '-')),
+                            _styledTableCell(row.supplierName, width: 220)),
+                        DataCell(_styledTableCell(row.invoiceNumber ?? '-',
+                            width: 130)),
+                        DataCell(_styledTableCell(
+                            FormattingHelpers.decimal(row.total),
+                            width: 120)),
+                        DataCell(_styledTableCell(
+                            FormattingHelpers.decimal(row.paidAmount),
+                            width: 120)),
+                        DataCell(_styledTableCell(
+                            FormattingHelpers.decimal(row.remainingBalance),
+                            width: 130)),
                         DataCell(
-                            Text(FormattingHelpers.currencyPkr(row.total))),
-                        DataCell(Text(
-                            FormattingHelpers.currencyPkr(row.paidAmount))),
-                        DataCell(Text(FormattingHelpers.currencyPkr(
-                            row.remainingBalance))),
-                        DataCell(
-                          OutlinedButton(
+                          IconButton.filledTonal(
+                            tooltip: 'Open',
                             onPressed: () async {
                               await showDialog<void>(
                                 context: context,
@@ -1217,7 +1157,8 @@ class _PurchaseHistoryView extends ConsumerWidget {
                                 ),
                               );
                             },
-                            child: const Text('Open'),
+                            icon: const Icon(Icons.open_in_new, size: 18),
+                            visualDensity: VisualDensity.compact,
                           ),
                         ),
                       ],
@@ -1245,32 +1186,66 @@ class _SupplierLedgerView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final rowsAsync = ref.watch(supplierLedgerRowsProvider);
+    final layout = _reportTableLayoutFor(context);
     return rowsAsync.when(
       data: (rows) => Card(
         child: Padding(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: AppDataTable(
-            columnSpacing: _reportTableLayoutFor(context).columnSpacing,
-            dataRowMinHeight: _reportTableLayoutFor(context).dataRowMinHeight,
-            dataRowMaxHeight: _reportTableLayoutFor(context).dataRowMaxHeight,
+            columnSpacing: layout.columnSpacing,
+            dataRowMinHeight: layout.dataRowMinHeight,
+            dataRowMaxHeight: layout.dataRowMaxHeight,
             showCheckboxColumn: false,
-            columns: const <DataColumn>[
-              DataColumn(label: Text('Supplier')),
-              DataColumn(label: Text('Purchases')),
-              DataColumn(label: Text('Total Purchases')),
-              DataColumn(label: Text('Total Paid')),
-              DataColumn(label: Text('Pending')),
+            columns: <DataColumn>[
+              DataColumn(
+                  label:
+                      _styledTableHeaderCell(context, 'Supplier', width: 240)),
+              DataColumn(
+                  label:
+                      _styledTableHeaderCell(context, 'Purchases', width: 100)),
+              DataColumn(
+                  label: _styledTableHeaderCell(
+                      context, 'Total Purchases (PKR)',
+                      width: 180)),
+              DataColumn(
+                  label: _styledTableHeaderCell(context, 'Total Paid (PKR)',
+                      width: 160)),
+              DataColumn(
+                  label: _styledTableHeaderCell(context, 'Pending (PKR)',
+                      width: 140)),
             ],
             rows: rows.map((row) {
+              final colorScheme = Theme.of(context).colorScheme;
+              final hasPending = row.pendingAmount > 0;
               return DataRow(
                 cells: <DataCell>[
-                  DataCell(Text(row.supplierName)),
-                  DataCell(Text(row.purchaseCount.toString())),
+                  DataCell(_styledTableCell(row.supplierName, width: 240)),
+                  DataCell(_styledTableCell(row.purchaseCount.toString(),
+                      width: 100)),
+                  DataCell(_styledTableCell(
+                      FormattingHelpers.decimal(row.totalPurchases),
+                      width: 180)),
+                  DataCell(_styledTableCell(
+                      FormattingHelpers.decimal(row.totalPaid),
+                      width: 160)),
                   DataCell(
-                      Text(FormattingHelpers.currencyPkr(row.totalPurchases))),
-                  DataCell(Text(FormattingHelpers.currencyPkr(row.totalPaid))),
-                  DataCell(
-                      Text(FormattingHelpers.currencyPkr(row.pendingAmount))),
+                    SizedBox(
+                      width: 140,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: _styledStatusCell(
+                          context,
+                          FormattingHelpers.decimal(row.pendingAmount),
+                          hasPending
+                              ? colorScheme.errorContainer
+                              : colorScheme.primaryContainer,
+                          hasPending
+                              ? colorScheme.onErrorContainer
+                              : colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               );
             }).toList(growable: false),
@@ -1358,7 +1333,8 @@ class _CashLedgerView extends ConsumerWidget {
           child: rowsAsync.when(
             data: (rows) => Card(
               child: Padding(
-                padding: const EdgeInsets.all(8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -1383,39 +1359,92 @@ class _CashLedgerView extends ConsumerWidget {
                         dataRowMaxHeight:
                             _reportTableLayoutFor(context).dataRowMaxHeight,
                         showCheckboxColumn: false,
-                        columns: const <DataColumn>[
-                          DataColumn(label: Text('Day')),
-                          DataColumn(label: Text('Cash Sales In')),
-                          DataColumn(label: Text('Collections In')),
-                          DataColumn(label: Text('Total Cash In')),
-                          DataColumn(label: Text('Cash Refunds Out')),
-                          DataColumn(label: Text('Purchases Paid Out')),
-                          DataColumn(label: Text('Expenses Out')),
-                          DataColumn(label: Text('Total Cash Out')),
-                          DataColumn(label: Text('Net Cash')),
+                        columns: <DataColumn>[
+                          DataColumn(
+                              label: _styledTableHeaderCell(context, 'Day',
+                                  width: 105)),
+                          DataColumn(
+                              label: _styledTableHeaderCell(
+                                  context, 'Cash Sales In (PKR)',
+                                  width: 140)),
+                          DataColumn(
+                              label: _styledTableHeaderCell(
+                                  context, 'Collections In (PKR)',
+                                  width: 145)),
+                          DataColumn(
+                              label: _styledTableHeaderCell(
+                                  context, 'Total Cash In (PKR)',
+                                  width: 140)),
+                          DataColumn(
+                              label: _styledTableHeaderCell(
+                                  context, 'Cash Refunds Out (PKR)',
+                                  width: 160)),
+                          DataColumn(
+                              label: _styledTableHeaderCell(
+                                  context, 'Purchases Paid Out (PKR)',
+                                  width: 175)),
+                          DataColumn(
+                              label: _styledTableHeaderCell(
+                                  context, 'Expenses Out (PKR)',
+                                  width: 145)),
+                          DataColumn(
+                              label: _styledTableHeaderCell(
+                                  context, 'Total Cash Out (PKR)',
+                                  width: 145)),
+                          DataColumn(
+                              label: _styledTableHeaderCell(
+                                  context, 'Net Cash (PKR)',
+                                  width: 130)),
                         ],
                         rows: rows.map((row) {
+                          final colorScheme = Theme.of(context).colorScheme;
+                          final isNegative = row.netCash < 0;
                           return DataRow(
                             cells: <DataCell>[
-                              DataCell(Text(row.day)),
-                              DataCell(Text(FormattingHelpers.currencyPkr(
-                                  row.cashSalesIn))),
-                              DataCell(Text(FormattingHelpers.currencyPkr(
-                                  row.cashCollectionsIn))),
-                              DataCell(Text(FormattingHelpers.currencyPkr(
-                                  row.totalCashIn))),
-                              DataCell(Text(FormattingHelpers.currencyPkr(
-                                  row.cashRefundsOut))),
+                              DataCell(_styledTableCell(row.day, width: 105)),
+                              DataCell(_styledTableCell(
+                                  FormattingHelpers.decimal(row.cashSalesIn),
+                                  width: 140)),
+                              DataCell(_styledTableCell(
+                                  FormattingHelpers.decimal(
+                                      row.cashCollectionsIn),
+                                  width: 145)),
+                              DataCell(_styledTableCell(
+                                  FormattingHelpers.decimal(row.totalCashIn),
+                                  width: 140)),
+                              DataCell(_styledTableCell(
+                                  FormattingHelpers.decimal(row.cashRefundsOut),
+                                  width: 160)),
                               DataCell(
-                                Text(FormattingHelpers.currencyPkr(
-                                    row.purchasePaymentsOut)),
+                                _styledTableCell(
+                                    FormattingHelpers.decimal(
+                                        row.purchasePaymentsOut),
+                                    width: 175),
                               ),
-                              DataCell(Text(FormattingHelpers.currencyPkr(
-                                  row.expensesOut))),
-                              DataCell(Text(FormattingHelpers.currencyPkr(
-                                  row.totalCashOut))),
-                              DataCell(Text(
-                                  FormattingHelpers.currencyPkr(row.netCash))),
+                              DataCell(_styledTableCell(
+                                  FormattingHelpers.decimal(row.expensesOut),
+                                  width: 145)),
+                              DataCell(_styledTableCell(
+                                  FormattingHelpers.decimal(row.totalCashOut),
+                                  width: 145)),
+                              DataCell(
+                                SizedBox(
+                                  width: 130,
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: _styledStatusCell(
+                                      context,
+                                      FormattingHelpers.decimal(row.netCash),
+                                      isNegative
+                                          ? colorScheme.errorContainer
+                                          : colorScheme.primaryContainer,
+                                      isNegative
+                                          ? colorScheme.onErrorContainer
+                                          : colorScheme.onPrimaryContainer,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ],
                           );
                         }).toList(growable: false),
@@ -1576,7 +1605,8 @@ class _ExpensesView extends ConsumerWidget {
           child: rowsAsync.when(
             data: (rows) => Card(
               child: Padding(
-                padding: const EdgeInsets.all(8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 child: AppDataTable(
                   emptyMessage: 'No expenses found.',
                   columnSpacing: _reportTableLayoutFor(context).columnSpacing,
@@ -1585,87 +1615,109 @@ class _ExpensesView extends ConsumerWidget {
                   dataRowMaxHeight:
                       _reportTableLayoutFor(context).dataRowMaxHeight,
                   showCheckboxColumn: false,
-                  columns: const <DataColumn>[
-                    DataColumn(label: Text('Date')),
-                    DataColumn(label: Text('Category')),
-                    DataColumn(label: Text('Amount')),
-                    DataColumn(label: Text('Notes')),
-                    DataColumn(label: Text('Actions')),
+                  columns: <DataColumn>[
+                    DataColumn(
+                        label: _styledTableHeaderCell(context, 'Date',
+                            width: 110)),
+                    DataColumn(
+                        label: _styledTableHeaderCell(context, 'Category',
+                            width: 150)),
+                    DataColumn(
+                        label: _styledTableHeaderCell(context, 'Amount (PKR)',
+                            width: 130)),
+                    DataColumn(
+                        label: _styledTableHeaderCell(context, 'Notes',
+                            width: 260)),
+                    DataColumn(
+                        label: _styledTableHeaderCell(context, 'Actions',
+                            width: 150)),
                   ],
                   rows: rows.map((row) {
                     return DataRow(
                       cells: <DataCell>[
+                        DataCell(_styledTableCell(
+                            FormattingHelpers.dateYmd(row.expenseDate),
+                            width: 110)),
+                        DataCell(_styledTableCell(row.category, width: 150)),
+                        DataCell(_styledTableCell(
+                            FormattingHelpers.decimal(row.amount),
+                            width: 130)),
                         DataCell(
-                            Text(FormattingHelpers.dateYmd(row.expenseDate))),
-                        DataCell(Text(row.category)),
+                            _styledTableCell(row.notes ?? '-', width: 260)),
                         DataCell(
-                            Text(FormattingHelpers.currencyPkr(row.amount))),
-                        DataCell(Text(row.notes ?? '-')),
-                        DataCell(
-                          Wrap(
-                            spacing: 6,
-                            children: <Widget>[
-                              OutlinedButton(
-                                onPressed: () async {
-                                  final saved = await showDialog<bool>(
-                                    context: context,
-                                    builder: (_) =>
-                                        _ExpenseFormDialog(initialExpense: row),
-                                  );
-                                  if (saved == true) {
+                          SizedBox(
+                            width: 150,
+                            child: Row(
+                              children: <Widget>[
+                                IconButton.filledTonal(
+                                  tooltip: 'Edit',
+                                  onPressed: () async {
+                                    final saved = await showDialog<bool>(
+                                      context: context,
+                                      builder: (_) => _ExpenseFormDialog(
+                                          initialExpense: row),
+                                    );
+                                    if (saved == true) {
+                                      ref.invalidate(expensesRowsProvider);
+                                      ref.invalidate(expenseCategoriesProvider);
+                                      ref.invalidate(cashLedgerRowsProvider);
+                                    }
+                                  },
+                                  icon:
+                                      const Icon(Icons.edit_outlined, size: 18),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                                const SizedBox(width: 6),
+                                IconButton.filledTonal(
+                                  tooltip: 'Delete',
+                                  onPressed: () async {
+                                    final confirmed = await showDialog<bool>(
+                                      context: context,
+                                      builder: (dialogContext) => AlertDialog(
+                                        title: const Text('Delete Expense'),
+                                        content: const Text(
+                                          'This will hide the expense from reports. Continue?',
+                                        ),
+                                        actions: <Widget>[
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.of(dialogContext)
+                                                    .pop(false),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          FilledButton.tonal(
+                                            onPressed: () =>
+                                                Navigator.of(dialogContext)
+                                                    .pop(true),
+                                            child: const Text('Delete'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirmed != true) {
+                                      return;
+                                    }
+                                    final repository = await ref
+                                        .read(expenseRepositoryProvider.future);
+                                    final result =
+                                        await repository.deleteExpense(row.id);
+                                    if (result.isFailure) {
+                                      AppNotifier.error(
+                                        result.asFailure!.error.message,
+                                      );
+                                      return;
+                                    }
                                     ref.invalidate(expensesRowsProvider);
                                     ref.invalidate(expenseCategoriesProvider);
                                     ref.invalidate(cashLedgerRowsProvider);
-                                  }
-                                },
-                                child: const Text('Edit'),
-                              ),
-                              OutlinedButton(
-                                onPressed: () async {
-                                  final confirmed = await showDialog<bool>(
-                                    context: context,
-                                    builder: (dialogContext) => AlertDialog(
-                                      title: const Text('Delete Expense'),
-                                      content: const Text(
-                                        'This will hide the expense from reports. Continue?',
-                                      ),
-                                      actions: <Widget>[
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(dialogContext)
-                                                  .pop(false),
-                                          child: const Text('Cancel'),
-                                        ),
-                                        FilledButton.tonal(
-                                          onPressed: () =>
-                                              Navigator.of(dialogContext)
-                                                  .pop(true),
-                                          child: const Text('Delete'),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                  if (confirmed != true) {
-                                    return;
-                                  }
-                                  final repository = await ref
-                                      .read(expenseRepositoryProvider.future);
-                                  final result =
-                                      await repository.deleteExpense(row.id);
-                                  if (result.isFailure) {
-                                    AppNotifier.error(
-                                      result.asFailure!.error.message,
-                                    );
-                                    return;
-                                  }
-                                  ref.invalidate(expensesRowsProvider);
-                                  ref.invalidate(expenseCategoriesProvider);
-                                  ref.invalidate(cashLedgerRowsProvider);
-                                  AppNotifier.success('Expense deleted.');
-                                },
-                                child: const Text('Delete'),
-                              ),
-                            ],
+                                    AppNotifier.success('Expense deleted.');
+                                  },
+                                  icon: const Icon(Icons.delete_outline,
+                                      size: 18),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -1950,8 +2002,8 @@ class _SalesInvoiceDialog extends ConsumerWidget {
                                       );
                                       ref.invalidate(
                                           salesInvoiceDetailProvider(saleId));
-                                      ref.invalidate(salesHistoryRowsProvider);
-                                      ref.invalidate(creditCollectionRowsProvider);
+                                      ref.invalidate(
+                                          dateRangeSalesReportProvider);
                                     },
                                     child: const Text('Return'),
                                   ),
@@ -2098,8 +2150,7 @@ class _CollectPaymentDialogState extends ConsumerState<_CollectPaymentDialog> {
       AppNotifier.error(result.asFailure!.error.message);
       return;
     }
-    ref.invalidate(salesHistoryRowsProvider);
-    ref.invalidate(creditCollectionRowsProvider);
+    ref.invalidate(dateRangeSalesReportProvider);
     ref.invalidate(customerBalanceReportProvider);
     ref.invalidate(cashLedgerRowsProvider);
     AppNotifier.success('Payment collected successfully.');
@@ -2641,31 +2692,19 @@ String _tabLabel(ReportsTab tab) {
   switch (tab) {
     case ReportsTab.dailySales:
       return 'Daily Sales';
-    case ReportsTab.dateRangeSales:
-      return 'Date Range Sales';
+    case ReportsTab.dailyPurchase:
+      return 'Daily Purchase';
     case ReportsTab.profit:
       return 'Profit';
-    case ReportsTab.soldPhones:
-      return 'Sold Phones';
-    case ReportsTab.currentStock:
-      return 'Current Stock';
-    case ReportsTab.customerBalance:
-      return 'Customer Balance';
-    case ReportsTab.lowStock:
-      return 'Low Stock';
-    case ReportsTab.salesHistory:
-      return 'Sales History';
-    case ReportsTab.creditCollection:
-      return 'Credit Collection';
-    case ReportsTab.purchaseHistory:
-      return 'Purchase History';
-    case ReportsTab.supplierLedger:
-      return 'Supplier Ledger';
-    case ReportsTab.cashLedger:
+    case ReportsTab.cashFlow:
       return 'Cash Flow';
     case ReportsTab.expenses:
       return 'Expenses';
     case ReportsTab.repairAnalytics:
       return 'Repair Analytics';
+    case ReportsTab.customerLedger:
+      return 'Customer Ledger';
+    case ReportsTab.supplierLedger:
+      return 'Supplier Ledger';
   }
 }
