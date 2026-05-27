@@ -10,6 +10,9 @@ import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/utils/id_helpers.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
+import 'package:phone_shop_pos/modules/ledger/domain/entities/party_summary_card_entity.dart';
+import 'package:phone_shop_pos/modules/ledger/domain/entities/settlement_request_payload.dart';
+import 'package:phone_shop_pos/modules/ledger/presentation/widgets/ledger_widgets.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/expense_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
@@ -102,6 +105,10 @@ class ReportsScreen extends ConsumerWidget {
     ref.invalidate(customerBalanceReportProvider);
     ref.invalidate(purchaseHistoryRowsProvider);
     ref.invalidate(supplierLedgerRowsProvider);
+    ref.invalidate(customerLedgerSummaryProvider);
+    ref.invalidate(customerLedgerTimelineProvider);
+    ref.invalidate(supplierLedgerSummaryProvider);
+    ref.invalidate(supplierLedgerTimelineProvider);
     ref.invalidate(cashLedgerRowsProvider);
     ref.invalidate(expensesRowsProvider);
     ref.invalidate(expenseCategoriesProvider);
@@ -320,12 +327,6 @@ class ReportsScreen extends ConsumerWidget {
                   pageSize: pageSize,
                 ));
       case ReportsTab.customerLedger:
-        final rows = ref.watch(customerBalanceReportProvider).valueOrNull;
-        return rows != null &&
-            hasNextReportsPageCandidate(
-              resultsLength: rows.length,
-              pageSize: pageSize,
-            );
       case ReportsTab.profit:
       case ReportsTab.dailyPurchase:
       case ReportsTab.supplierLedger:
@@ -338,8 +339,7 @@ class ReportsScreen extends ConsumerWidget {
 
   bool _usesLegacyFilters(ReportsTab tab) {
     return tab == ReportsTab.dailySales ||
-        tab == ReportsTab.profit ||
-        tab == ReportsTab.customerLedger;
+        tab == ReportsTab.profit;
   }
 
   String _errorMessage(Object error, String fallback) {
@@ -920,100 +920,170 @@ class _CustomerBalanceView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(customerBalanceReportProvider);
-    final layout = _reportTableLayoutFor(context);
+    final summaryAsync = ref.watch(customerLedgerSummaryProvider);
+    final timelineAsync = ref.watch(customerLedgerTimelineProvider);
+    final selectedCustomerId = ref.watch(customerLedgerTimelineCustomerIdProvider);
+    final selectedType = ref.watch(customerLedgerTimelineTypeProvider);
+    final outstandingOnly = ref.watch(customerLedgerTimelineOutstandingOnlyProvider);
+    final paymentHistory = ref.watch(customerLedgerTimelinePaymentHistoryProvider);
 
-    return async.when(
-      data: (rows) {
-        return Card(
+    return Column(
+      children: <Widget>[
+        Card(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: AppDataTable(
-              columnSpacing: layout.columnSpacing,
-              dataRowMinHeight: layout.dataRowMinHeight,
-              dataRowMaxHeight: layout.dataRowMaxHeight,
-              showCheckboxColumn: false,
-              emptyMessage: 'No customer balance data found.',
-              columns: <DataColumn>[
-                DataColumn(
-                  label: _styledTableHeaderCell(context, 'SR#', width: 52),
-                ),
-                DataColumn(
-                  label:
-                      _styledTableHeaderCell(context, 'Customer', width: 280),
-                ),
-                DataColumn(
-                  label: _styledTableHeaderCell(
-                    context,
-                    'Total Sales (PKR)',
-                    width: 160,
+            padding: const EdgeInsets.all(8),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                SizedBox(
+                  width: 260,
+                  child: DropdownButtonFormField<String?>(
+                    value: selectedCustomerId,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                      labelText: 'Customer',
+                    ),
+                    items: <DropdownMenuItem<String?>>[
+                      const DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('All Customers'),
+                      ),
+                      ...summaryAsync.valueOrNull
+                              ?.map(
+                                (summary) => DropdownMenuItem<String?>(
+                                  value: summary.partyId,
+                                  child: Text(summary.partyName),
+                                ),
+                              )
+                              .toList(growable: false) ??
+                          const <DropdownMenuItem<String?>>[],
+                    ],
+                    onChanged: (value) => ref
+                        .read(customerLedgerTimelineCustomerIdProvider.notifier)
+                        .state = value,
                   ),
                 ),
-                DataColumn(
-                  label: _styledTableHeaderCell(
-                    context,
-                    'Total Paid (PKR)',
-                    width: 160,
+                SizedBox(
+                  width: 200,
+                  child: DropdownButtonFormField<String?>(
+                    value: selectedType,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                      labelText: 'Ledger Type',
+                    ),
+                    items: const <DropdownMenuItem<String?>>[
+                      DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('All Types'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'sale',
+                        child: Text('Sale'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'sale_payment',
+                        child: Text('Sale Payment'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'sale_return',
+                        child: Text('Sale Return'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'repair_due',
+                        child: Text('Repair Due'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'repair_payment',
+                        child: Text('Repair Payment'),
+                      ),
+                      DropdownMenuItem<String?>(
+                        value: 'manual_settlement',
+                        child: Text('Manual Settlement'),
+                      ),
+                    ],
+                    onChanged: (value) => ref
+                        .read(customerLedgerTimelineTypeProvider.notifier)
+                        .state = value,
                   ),
                 ),
-                DataColumn(
-                  label: _styledTableHeaderCell(context, 'Pending (PKR)',
-                      width: 160),
+                FilterChip(
+                  label: const Text('Outstanding only'),
+                  selected: outstandingOnly,
+                  onSelected: (value) => ref
+                      .read(customerLedgerTimelineOutstandingOnlyProvider.notifier)
+                      .state = value,
+                ),
+                FilterChip(
+                  label: const Text('Payment history'),
+                  selected: paymentHistory,
+                  onSelected: (value) => ref
+                      .read(customerLedgerTimelinePaymentHistoryProvider.notifier)
+                      .state = value,
+                ),
+                FilledButton.icon(
+                  onPressed: selectedCustomerId == null
+                      ? null
+                      : () async {
+                          await showDialog<void>(
+                            context: context,
+                            builder: (_) =>
+                                _ReceiveCustomerCreditDialog(customerId: selectedCustomerId),
+                          );
+                          ref.invalidate(customerLedgerSummaryProvider);
+                          ref.invalidate(customerLedgerTimelineProvider);
+                          ref.invalidate(cashLedgerRowsProvider);
+                        },
+                  icon: const Icon(Icons.south_west, size: 18),
+                  label: const Text('Receive Credit'),
                 ),
               ],
-              rows: rows.asMap().entries.map((entry) {
-                final index = entry.key;
-                final row = entry.value;
-                final colorScheme = Theme.of(context).colorScheme;
-                final isOverdue = row.pendingBalance > 0;
-
-                return DataRow(
-                  cells: <DataCell>[
-                    DataCell(_indexCell(index, width: 52)),
-                    DataCell(_styledTableCell(row.customerName, width: 280)),
-                    DataCell(
-                      _styledTableCell(
-                        FormattingHelpers.decimal(row.totalSales),
-                        width: 160,
-                      ),
-                    ),
-                    DataCell(
-                      _styledTableCell(
-                        FormattingHelpers.decimal(row.totalPaid),
-                        width: 160,
-                      ),
-                    ),
-                    DataCell(
-                      SizedBox(
-                        width: 160,
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: _styledStatusCell(
-                            context,
-                            FormattingHelpers.decimal(row.pendingBalance),
-                            isOverdue
-                                ? colorScheme.errorContainer
-                                : colorScheme.primaryContainer,
-                            isOverdue
-                                ? colorScheme.onErrorContainer
-                                : colorScheme.onPrimaryContainer,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              }).toList(growable: false),
             ),
           ),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => _ReportErrorView(
-        message: 'Failed to load customer balance report.',
-        error: error,
-        onRetry: () => ref.invalidate(customerBalanceReportProvider),
-      ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: timelineAsync.when(
+            data: (timelineRows) => Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Column(
+                  children: <Widget>[
+                    if ((summaryAsync.valueOrNull ??
+                            const <PartySummaryCardEntity>[])
+                        .isNotEmpty) ...<Widget>[
+                      LedgerSummaryCards(
+                        summary: (summaryAsync.valueOrNull ??
+                                const <PartySummaryCardEntity>[])
+                            .firstWhere(
+                          (summary) => selectedCustomerId == null || summary.partyId == selectedCustomerId,
+                          orElse: () => (summaryAsync.valueOrNull ??
+                              const <PartySummaryCardEntity>[]).first,
+                        ),
+                        balanceLabel: 'Net',
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    Expanded(child: LedgerTimelineTable(rows: timelineRows)),
+                  ],
+                ),
+              ),
+            ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, __) => _ReportErrorView(
+              message: 'Failed to load customer ledger timeline.',
+              error: error,
+              onRetry: () {
+                ref.invalidate(customerLedgerSummaryProvider);
+                ref.invalidate(customerLedgerTimelineProvider);
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1185,79 +1255,125 @@ class _SupplierLedgerView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final rowsAsync = ref.watch(supplierLedgerRowsProvider);
-    final layout = _reportTableLayoutFor(context);
-    return rowsAsync.when(
-      data: (rows) => Card(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: AppDataTable(
-            columnSpacing: layout.columnSpacing,
-            dataRowMinHeight: layout.dataRowMinHeight,
-            dataRowMaxHeight: layout.dataRowMaxHeight,
-            showCheckboxColumn: false,
-            columns: <DataColumn>[
-              DataColumn(
-                  label:
-                      _styledTableHeaderCell(context, 'Supplier', width: 240)),
-              DataColumn(
-                  label:
-                      _styledTableHeaderCell(context, 'Purchases', width: 100)),
-              DataColumn(
-                  label: _styledTableHeaderCell(
-                      context, 'Total Purchases (PKR)',
-                      width: 180)),
-              DataColumn(
-                  label: _styledTableHeaderCell(context, 'Total Paid (PKR)',
-                      width: 160)),
-              DataColumn(
-                  label: _styledTableHeaderCell(context, 'Pending (PKR)',
-                      width: 140)),
-            ],
-            rows: rows.map((row) {
-              final colorScheme = Theme.of(context).colorScheme;
-              final hasPending = row.pendingAmount > 0;
-              return DataRow(
-                cells: <DataCell>[
-                  DataCell(_styledTableCell(row.supplierName, width: 240)),
-                  DataCell(_styledTableCell(row.purchaseCount.toString(),
-                      width: 100)),
-                  DataCell(_styledTableCell(
-                      FormattingHelpers.decimal(row.totalPurchases),
-                      width: 180)),
-                  DataCell(_styledTableCell(
-                      FormattingHelpers.decimal(row.totalPaid),
-                      width: 160)),
-                  DataCell(
-                    SizedBox(
-                      width: 140,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: _styledStatusCell(
-                          context,
-                          FormattingHelpers.decimal(row.pendingAmount),
-                          hasPending
-                              ? colorScheme.errorContainer
-                              : colorScheme.primaryContainer,
-                          hasPending
-                              ? colorScheme.onErrorContainer
-                              : colorScheme.onPrimaryContainer,
-                        ),
-                      ),
+    final summaryAsync = ref.watch(supplierLedgerSummaryProvider);
+    final timelineAsync = ref.watch(supplierLedgerTimelineProvider);
+    final selectedSupplierId = ref.watch(supplierLedgerTimelineSupplierIdProvider);
+    final outstandingOnly = ref.watch(supplierLedgerTimelineOutstandingOnlyProvider);
+    final paymentHistory = ref.watch(supplierLedgerTimelinePaymentHistoryProvider);
+
+    return Column(
+      children: <Widget>[
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                SizedBox(
+                  width: 260,
+                  child: DropdownButtonFormField<String?>(
+                    value: selectedSupplierId,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                      labelText: 'Supplier',
                     ),
+                    items: <DropdownMenuItem<String?>>[
+                      const DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('All Suppliers'),
+                      ),
+                      ...summaryAsync.valueOrNull
+                              ?.map(
+                                (summary) => DropdownMenuItem<String?>(
+                                  value: summary.partyId,
+                                  child: Text(summary.partyName),
+                                ),
+                              )
+                              .toList(growable: false) ??
+                          const <DropdownMenuItem<String?>>[],
+                    ],
+                    onChanged: (value) => ref
+                        .read(supplierLedgerTimelineSupplierIdProvider.notifier)
+                        .state = value,
                   ),
-                ],
-              );
-            }).toList(growable: false),
+                ),
+                FilterChip(
+                  label: const Text('Outstanding only'),
+                  selected: outstandingOnly,
+                  onSelected: (value) => ref
+                      .read(supplierLedgerTimelineOutstandingOnlyProvider.notifier)
+                      .state = value,
+                ),
+                FilterChip(
+                  label: const Text('Payment history'),
+                  selected: paymentHistory,
+                  onSelected: (value) => ref
+                      .read(supplierLedgerTimelinePaymentHistoryProvider.notifier)
+                      .state = value,
+                ),
+                FilledButton.icon(
+                  onPressed: selectedSupplierId == null
+                      ? null
+                      : () async {
+                          await showDialog<void>(
+                            context: context,
+                            builder: (_) =>
+                                _PaySupplierCreditDialog(supplierId: selectedSupplierId),
+                          );
+                          ref.invalidate(supplierLedgerSummaryProvider);
+                          ref.invalidate(supplierLedgerTimelineProvider);
+                          ref.invalidate(cashLedgerRowsProvider);
+                        },
+                  icon: const Icon(Icons.north_east, size: 18),
+                  label: const Text('Pay Credit'),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, __) => _ReportErrorView(
-        message: 'Failed to load supplier ledger.',
-        error: error,
-        onRetry: () => ref.invalidate(supplierLedgerRowsProvider),
-      ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: timelineAsync.when(
+            data: (timelineRows) => Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Column(
+                  children: <Widget>[
+                    if ((summaryAsync.valueOrNull ??
+                            const <PartySummaryCardEntity>[])
+                        .isNotEmpty) ...<Widget>[
+                      LedgerSummaryCards(
+                        summary: (summaryAsync.valueOrNull ??
+                                const <PartySummaryCardEntity>[])
+                            .firstWhere(
+                          (summary) => selectedSupplierId == null || summary.partyId == selectedSupplierId,
+                          orElse: () => (summaryAsync.valueOrNull ??
+                              const <PartySummaryCardEntity>[]).first,
+                        ),
+                        balanceLabel: 'Net Payable',
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    Expanded(child: LedgerTimelineTable(rows: timelineRows)),
+                  ],
+                ),
+              ),
+            ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, __) => _ReportErrorView(
+              message: 'Failed to load supplier ledger timeline.',
+              error: error,
+              onRetry: () {
+                ref.invalidate(supplierLedgerSummaryProvider);
+                ref.invalidate(supplierLedgerTimelineProvider);
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -2152,6 +2268,8 @@ class _CollectPaymentDialogState extends ConsumerState<_CollectPaymentDialog> {
     }
     ref.invalidate(dateRangeSalesReportProvider);
     ref.invalidate(customerBalanceReportProvider);
+    ref.invalidate(customerLedgerSummaryProvider);
+    ref.invalidate(customerLedgerTimelineProvider);
     ref.invalidate(cashLedgerRowsProvider);
     AppNotifier.success('Payment collected successfully.');
     Navigator.of(context).pop();
@@ -2169,6 +2287,256 @@ class _ReturnItemDialog extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<_ReturnItemDialog> createState() => _ReturnItemDialogState();
+}
+
+class _ReceiveCustomerCreditDialog extends ConsumerStatefulWidget {
+  const _ReceiveCustomerCreditDialog({required this.customerId});
+
+  final String? customerId;
+
+  @override
+  ConsumerState<_ReceiveCustomerCreditDialog> createState() =>
+      _ReceiveCustomerCreditDialogState();
+}
+
+class _ReceiveCustomerCreditDialogState
+    extends ConsumerState<_ReceiveCustomerCreditDialog> {
+  final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _noteController = TextEditingController();
+  String _paymentMethod = PaymentMethod.cash;
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Receive Customer Credit'),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            TextField(
+              controller: _amountController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Amount',
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              initialValue: _paymentMethod,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                isDense: true,
+                labelText: 'Payment Method',
+              ),
+              items: PaymentMethod.values
+                  .map(
+                    (value) => DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(PaymentMethod.labels[value]!),
+                    ),
+                  )
+                  .toList(growable: false),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _paymentMethod = value);
+                }
+              },
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _noteController,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Note (optional)',
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _isSubmitting ? null : _submit,
+          child: Text(_isSubmitting ? 'Saving...' : 'Receive'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit() async {
+    final customerId = widget.customerId;
+    if (customerId == null || customerId.trim().isEmpty) {
+      AppNotifier.error('Select a customer first.');
+      return;
+    }
+    final amount = FormattingHelpers.parseLocaleDecimal(_amountController.text);
+    if (amount <= 0) {
+      AppNotifier.error('Amount must be greater than zero.');
+      return;
+    }
+    setState(() => _isSubmitting = true);
+    final service = await ref.read(operationsWorkflowServiceProvider.future);
+    final result = await service.receiveCustomerCredit(
+      CustomerSettlementRequestPayload(
+        customerId: customerId,
+        amount: amount,
+        paymentMethod: _paymentMethod,
+        note: _noteController.text,
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() => _isSubmitting = false);
+    if (result.isFailure) {
+      AppNotifier.error(result.asFailure!.error.message);
+      return;
+    }
+    AppNotifier.success('Customer credit received.');
+    Navigator.of(context).pop();
+  }
+}
+
+class _PaySupplierCreditDialog extends ConsumerStatefulWidget {
+  const _PaySupplierCreditDialog({required this.supplierId});
+
+  final String? supplierId;
+
+  @override
+  ConsumerState<_PaySupplierCreditDialog> createState() =>
+      _PaySupplierCreditDialogState();
+}
+
+class _PaySupplierCreditDialogState
+    extends ConsumerState<_PaySupplierCreditDialog> {
+  final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _noteController = TextEditingController();
+  String _paymentMethod = PaymentMethod.cash;
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Pay Supplier Credit'),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            TextField(
+              controller: _amountController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Amount',
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              initialValue: _paymentMethod,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                isDense: true,
+                labelText: 'Payment Method',
+              ),
+              items: PaymentMethod.values
+                  .map(
+                    (value) => DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(PaymentMethod.labels[value]!),
+                    ),
+                  )
+                  .toList(growable: false),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _paymentMethod = value);
+                }
+              },
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _noteController,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Note (optional)',
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _isSubmitting ? null : _submit,
+          child: Text(_isSubmitting ? 'Saving...' : 'Pay'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit() async {
+    final supplierId = widget.supplierId;
+    if (supplierId == null || supplierId.trim().isEmpty) {
+      AppNotifier.error('Select a supplier first.');
+      return;
+    }
+    final amount = FormattingHelpers.parseLocaleDecimal(_amountController.text);
+    if (amount <= 0) {
+      AppNotifier.error('Amount must be greater than zero.');
+      return;
+    }
+    setState(() => _isSubmitting = true);
+    final service = await ref.read(operationsWorkflowServiceProvider.future);
+    final result = await service.paySupplierCredit(
+      SupplierSettlementRequestPayload(
+        supplierId: supplierId,
+        amount: amount,
+        paymentMethod: _paymentMethod,
+        note: _noteController.text,
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() => _isSubmitting = false);
+    if (result.isFailure) {
+      AppNotifier.error(result.asFailure!.error.message);
+      return;
+    }
+    AppNotifier.success('Supplier credit paid.');
+    Navigator.of(context).pop();
+  }
 }
 
 class _ReturnItemDialogState extends ConsumerState<_ReturnItemDialog> {
@@ -2264,6 +2632,8 @@ class _ReturnItemDialogState extends ConsumerState<_ReturnItemDialog> {
       return;
     }
     AppNotifier.success('Return processed and stock restored.');
+    ref.invalidate(customerLedgerSummaryProvider);
+    ref.invalidate(customerLedgerTimelineProvider);
     Navigator.of(context).pop();
   }
 }

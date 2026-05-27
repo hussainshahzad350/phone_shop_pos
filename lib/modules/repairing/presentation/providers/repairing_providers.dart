@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/database/database_provider.dart';
+import 'package:phone_shop_pos/modules/ledger/presentation/providers/ledger_providers.dart';
 import 'package:phone_shop_pos/modules/repairing/data/repositories/sqlite_repairing_repository.dart';
 import 'package:phone_shop_pos/modules/repairing/domain/entities/repair_analytics_entity.dart';
 import 'package:phone_shop_pos/modules/repairing/domain/entities/repair_job_entity.dart';
@@ -8,7 +9,11 @@ import 'package:phone_shop_pos/modules/repairing/domain/repositories/repairing_r
 final repairingRepositoryProvider =
     FutureProvider<RepairingRepository>((ref) async {
   final appDatabase = await ref.watch(appDatabaseProvider.future);
-  return SqliteRepairingRepository(appDatabase: appDatabase);
+  final ledgerPostingService = await ref.watch(ledgerPostingServiceProvider.future);
+  return SqliteRepairingRepository.withLedger(
+    appDatabase: appDatabase,
+    ledgerPostingService: ledgerPostingService,
+  );
 });
 
 final repairJobsSearchQueryProvider = StateProvider<String>((ref) => '');

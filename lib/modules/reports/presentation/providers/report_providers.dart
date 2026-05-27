@@ -7,6 +7,9 @@ import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/database/database_provider.dart';
 import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
+import 'package:phone_shop_pos/modules/ledger/domain/entities/ledger_timeline_row_entity.dart';
+import 'package:phone_shop_pos/modules/ledger/domain/entities/party_summary_card_entity.dart';
+import 'package:phone_shop_pos/modules/ledger/presentation/providers/ledger_providers.dart';
 import 'package:phone_shop_pos/modules/repairing/data/repositories/sqlite_repairing_repository.dart';
 import 'package:phone_shop_pos/modules/repairing/domain/entities/repair_analytics_entity.dart';
 import 'package:phone_shop_pos/modules/reports/data/repositories/sqlite_expense_repository.dart';
@@ -148,7 +151,11 @@ final profitReportServiceProvider =
 final operationsWorkflowServiceProvider =
     FutureProvider<OperationsWorkflowService>((ref) async {
   final appDatabase = await ref.watch(appDatabaseProvider.future);
-  return OperationsWorkflowService(appDatabase: appDatabase);
+  final ledgerPostingService = await ref.watch(ledgerPostingServiceProvider.future);
+  return OperationsWorkflowService(
+    appDatabase: appDatabase,
+    ledgerPostingService: ledgerPostingService,
+  );
 });
 
 final expenseRepositoryProvider =
@@ -399,6 +406,80 @@ final supplierLedgerRowsProvider =
   final result = await service.getSupplierLedger(
     startDate: ref.watch(purchaseHistoryStartDateProvider),
     endDate: ref.watch(purchaseHistoryEndDateProvider),
+  );
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
+
+final customerLedgerTimelineCustomerIdProvider = StateProvider<String?>((ref) => null);
+final customerLedgerTimelineTypeProvider = StateProvider<String?>((ref) => null);
+final customerLedgerTimelineOutstandingOnlyProvider = StateProvider<bool>((ref) => false);
+final customerLedgerTimelinePaymentHistoryProvider = StateProvider<bool>((ref) => true);
+final customerLedgerTimelineStartDateProvider = StateProvider<DateTime?>((ref) => null);
+final customerLedgerTimelineEndDateProvider = StateProvider<DateTime?>((ref) => null);
+
+final supplierLedgerTimelineSupplierIdProvider = StateProvider<String?>((ref) => null);
+final supplierLedgerTimelineTypeProvider = StateProvider<String?>((ref) => null);
+final supplierLedgerTimelineOutstandingOnlyProvider = StateProvider<bool>((ref) => false);
+final supplierLedgerTimelinePaymentHistoryProvider = StateProvider<bool>((ref) => true);
+final supplierLedgerTimelineStartDateProvider = StateProvider<DateTime?>((ref) => null);
+final supplierLedgerTimelineEndDateProvider = StateProvider<DateTime?>((ref) => null);
+
+final customerLedgerSummaryProvider =
+    FutureProvider<List<PartySummaryCardEntity>>((ref) async {
+  final service = await ref.watch(operationsWorkflowServiceProvider.future);
+  final result = await service.fetchCustomerLedgerSummary(
+    customerId: ref.watch(customerLedgerTimelineCustomerIdProvider),
+    outstandingOnly: ref.watch(customerLedgerTimelineOutstandingOnlyProvider),
+  );
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
+
+final supplierLedgerSummaryProvider =
+    FutureProvider<List<PartySummaryCardEntity>>((ref) async {
+  final service = await ref.watch(operationsWorkflowServiceProvider.future);
+  final result = await service.fetchSupplierLedgerSummary(
+    supplierId: ref.watch(supplierLedgerTimelineSupplierIdProvider),
+    outstandingOnly: ref.watch(supplierLedgerTimelineOutstandingOnlyProvider),
+  );
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
+
+final customerLedgerTimelineProvider =
+    FutureProvider<List<LedgerTimelineRowEntity>>((ref) async {
+  final service = await ref.watch(operationsWorkflowServiceProvider.future);
+  final result = await service.fetchCustomerLedgerTimeline(
+    customerId: ref.watch(customerLedgerTimelineCustomerIdProvider),
+    ledgerType: ref.watch(customerLedgerTimelineTypeProvider),
+    startDate: ref.watch(customerLedgerTimelineStartDateProvider),
+    endDate: ref.watch(customerLedgerTimelineEndDateProvider),
+    outstandingOnly: ref.watch(customerLedgerTimelineOutstandingOnlyProvider),
+    includePaymentHistory: ref.watch(customerLedgerTimelinePaymentHistoryProvider),
+  );
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
+
+final supplierLedgerTimelineProvider =
+    FutureProvider<List<LedgerTimelineRowEntity>>((ref) async {
+  final service = await ref.watch(operationsWorkflowServiceProvider.future);
+  final result = await service.fetchSupplierLedgerTimeline(
+    supplierId: ref.watch(supplierLedgerTimelineSupplierIdProvider),
+    ledgerType: ref.watch(supplierLedgerTimelineTypeProvider),
+    startDate: ref.watch(supplierLedgerTimelineStartDateProvider),
+    endDate: ref.watch(supplierLedgerTimelineEndDateProvider),
+    outstandingOnly: ref.watch(supplierLedgerTimelineOutstandingOnlyProvider),
+    includePaymentHistory: ref.watch(supplierLedgerTimelinePaymentHistoryProvider),
   );
   return result.fold(
     onSuccess: (value) => value,

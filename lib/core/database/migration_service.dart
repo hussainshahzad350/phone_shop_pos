@@ -80,6 +80,10 @@ class MigrationService {
       await _applyMigrationV18(database);
       return;
     }
+    if (version == 21) {
+      await _applyMigrationV21(database);
+      return;
+    }
     final statements = _migrationStatements[version];
     if (statements == null) {
       return;
@@ -825,6 +829,352 @@ class MigrationService {
     );
   }
 
+  Future<void> _applyMigrationV21(Database database) async {
+    await _createLedgerTables(database);
+    await _createSettlementSupportTables(database);
+    await _backfillCustomerLedger(database);
+    await _backfillSupplierLedger(database);
+  }
+
+  Future<void> _createLedgerTables(Database database) async {
+    await database.execute(
+      '''
+      CREATE TABLE IF NOT EXISTS ${TableNames.customerLedger} (
+        id TEXT PRIMARY KEY NOT NULL,
+        party_id TEXT NOT NULL,
+        transaction_id TEXT NOT NULL,
+        ledger_type TEXT NOT NULL,
+        amount REAL NOT NULL CHECK (amount >= 0),
+        direction TEXT NOT NULL CHECK (direction IN ('debit', 'credit')),
+        note TEXT,
+        created_at TEXT NOT NULL,
+        created_by TEXT,
+        is_reversal INTEGER NOT NULL DEFAULT 0 CHECK (is_reversal IN (0, 1)),
+        reversal_of TEXT,
+        payment_method TEXT
+      );
+      ''',
+    );
+    await database.execute(
+      '''
+      CREATE TABLE IF NOT EXISTS ${TableNames.supplierLedger} (
+        id TEXT PRIMARY KEY NOT NULL,
+        party_id TEXT NOT NULL,
+        transaction_id TEXT NOT NULL,
+        ledger_type TEXT NOT NULL,
+        amount REAL NOT NULL CHECK (amount >= 0),
+        direction TEXT NOT NULL CHECK (direction IN ('debit', 'credit')),
+        note TEXT,
+        created_at TEXT NOT NULL,
+        created_by TEXT,
+        is_reversal INTEGER NOT NULL DEFAULT 0 CHECK (is_reversal IN (0, 1)),
+        reversal_of TEXT,
+        payment_method TEXT
+      );
+      ''',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_customer_ledger_party_id ON ${TableNames.customerLedger}(party_id);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_customer_ledger_transaction_id ON ${TableNames.customerLedger}(transaction_id);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_customer_ledger_created_at ON ${TableNames.customerLedger}(created_at);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_customer_ledger_type ON ${TableNames.customerLedger}(ledger_type);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_customer_ledger_reversal_of ON ${TableNames.customerLedger}(reversal_of);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_supplier_ledger_party_id ON ${TableNames.supplierLedger}(party_id);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_supplier_ledger_transaction_id ON ${TableNames.supplierLedger}(transaction_id);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_supplier_ledger_created_at ON ${TableNames.supplierLedger}(created_at);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_supplier_ledger_type ON ${TableNames.supplierLedger}(ledger_type);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_supplier_ledger_reversal_of ON ${TableNames.supplierLedger}(reversal_of);',
+    );
+  }
+
+  Future<void> _createSettlementSupportTables(Database database) async {
+    await database.execute(
+      '''
+      CREATE TABLE IF NOT EXISTS ${TableNames.customerPaymentTransactions} (
+        id TEXT PRIMARY KEY NOT NULL,
+        customer_id TEXT NOT NULL,
+        amount REAL NOT NULL CHECK (amount > 0),
+        payment_method TEXT NOT NULL CHECK (
+          payment_method IN (
+            '${PaymentMethod.cash}',
+            '${PaymentMethod.card}',
+            '${PaymentMethod.bank}'
+          )
+        ),
+        note TEXT,
+        created_at TEXT NOT NULL,
+        created_by TEXT,
+        idempotency_key TEXT UNIQUE
+      );
+      ''',
+    );
+    await database.execute(
+      '''
+      CREATE TABLE IF NOT EXISTS ${TableNames.supplierPaymentTransactions} (
+        id TEXT PRIMARY KEY NOT NULL,
+        supplier_id TEXT NOT NULL,
+        amount REAL NOT NULL CHECK (amount > 0),
+        payment_method TEXT NOT NULL CHECK (
+          payment_method IN (
+            '${PaymentMethod.cash}',
+            '${PaymentMethod.card}',
+            '${PaymentMethod.bank}'
+          )
+        ),
+        note TEXT,
+        created_at TEXT NOT NULL,
+        created_by TEXT,
+        idempotency_key TEXT UNIQUE
+      );
+      ''',
+    );
+    await database.execute(
+      '''
+      CREATE TABLE IF NOT EXISTS ${TableNames.auditLogs} (
+        id TEXT PRIMARY KEY NOT NULL,
+        action TEXT NOT NULL,
+        actor_id TEXT,
+        entity_id TEXT NOT NULL,
+        details TEXT,
+        created_at TEXT NOT NULL
+      );
+      ''',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_customer_payment_transactions_customer ON ${TableNames.customerPaymentTransactions}(customer_id);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_customer_payment_transactions_created ON ${TableNames.customerPaymentTransactions}(created_at);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_supplier_payment_transactions_supplier ON ${TableNames.supplierPaymentTransactions}(supplier_id);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_supplier_payment_transactions_created ON ${TableNames.supplierPaymentTransactions}(created_at);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON ${TableNames.auditLogs}(created_at);',
+    );
+  }
+
+  Future<void> _backfillCustomerLedger(Database database) async {
+    await database.execute(
+      '''
+      INSERT OR IGNORE INTO ${TableNames.customerLedger} (
+        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, created_by, is_reversal, reversal_of, payment_method
+      )
+      SELECT
+        'bcl_sale_' || s.id,
+        s.customer_id,
+        s.id,
+        'sale',
+        COALESCE(s.total, 0),
+        'debit',
+        s.notes,
+        s.sale_date,
+        s.user_id,
+        0,
+        NULL,
+        s.payment_method
+      FROM ${TableNames.sales} s
+      WHERE s.customer_id IS NOT NULL
+        AND TRIM(s.customer_id) != ''
+        AND LOWER(s.customer_id) != 'walk_in';
+      ''',
+    );
+    await database.execute(
+      '''
+      INSERT OR IGNORE INTO ${TableNames.customerLedger} (
+        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, created_by, is_reversal, reversal_of, payment_method
+      )
+      SELECT
+        'bcl_sp_' || sp.id,
+        s.customer_id,
+        s.id,
+        'sale_payment',
+        COALESCE(sp.amount, 0),
+        'credit',
+        sp.notes,
+        sp.created_at,
+        NULL,
+        0,
+        NULL,
+        sp.payment_method
+      FROM ${TableNames.salePayments} sp
+      JOIN ${TableNames.sales} s ON s.id = sp.sale_id
+      WHERE s.customer_id IS NOT NULL
+        AND TRIM(s.customer_id) != ''
+        AND LOWER(s.customer_id) != 'walk_in';
+      ''',
+    );
+    await database.execute(
+      '''
+      INSERT OR IGNORE INTO ${TableNames.customerLedger} (
+        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, created_by, is_reversal, reversal_of, payment_method
+      )
+      SELECT
+        'bcl_sr_' || sr.id,
+        s.customer_id,
+        s.id,
+        'sale_return',
+        COALESCE(sr.return_amount, 0),
+        'credit',
+        COALESCE(sr.reason, sr.notes),
+        sr.created_at,
+        NULL,
+        0,
+        NULL,
+        NULL
+      FROM ${TableNames.saleReturns} sr
+      JOIN ${TableNames.sales} s ON s.id = sr.sale_id
+      WHERE s.customer_id IS NOT NULL
+        AND TRIM(s.customer_id) != ''
+        AND LOWER(s.customer_id) != 'walk_in';
+      ''',
+    );
+    await database.execute(
+      '''
+      INSERT OR IGNORE INTO ${TableNames.customerLedger} (
+        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, created_by, is_reversal, reversal_of, payment_method
+      )
+      SELECT
+        'bcl_rep_due_' || rj.id,
+        c.id,
+        rj.id,
+        'repair_due',
+        COALESCE(rj.final_cost, 0),
+        'debit',
+        rj.notes,
+        COALESCE(rj.updated_at, rj.created_at),
+        NULL,
+        0,
+        NULL,
+        NULL
+      FROM ${TableNames.repairJobs} rj
+      JOIN ${TableNames.customers} c
+        ON LOWER(TRIM(c.phone)) = LOWER(TRIM(COALESCE(rj.customer_phone, '')))
+      WHERE COALESCE(rj.final_cost, 0) > 0;
+      ''',
+    );
+    await database.execute(
+      '''
+      INSERT OR IGNORE INTO ${TableNames.customerLedger} (
+        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, created_by, is_reversal, reversal_of, payment_method
+      )
+      SELECT
+        'bcl_rep_pay_' || rj.id,
+        c.id,
+        rj.id,
+        'repair_payment',
+        COALESCE(rj.advance_received, 0),
+        'credit',
+        rj.notes,
+        COALESCE(rj.updated_at, rj.created_at),
+        NULL,
+        0,
+        NULL,
+        '${PaymentMethod.cash}'
+      FROM ${TableNames.repairJobs} rj
+      JOIN ${TableNames.customers} c
+        ON LOWER(TRIM(c.phone)) = LOWER(TRIM(COALESCE(rj.customer_phone, '')))
+      WHERE COALESCE(rj.advance_received, 0) > 0;
+      ''',
+    );
+    await database.execute(
+      '''
+      INSERT OR IGNORE INTO ${TableNames.customerLedger} (
+        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, created_by, is_reversal, reversal_of, payment_method
+      )
+      SELECT
+        'bcl_used_' || pi.id,
+        c.id,
+        p.id,
+        'used_phone_buy',
+        COALESCE(pi.line_total, 0),
+        'credit',
+        ss.seller_name,
+        p.purchase_date,
+        NULL,
+        0,
+        NULL,
+        NULL
+      FROM ${TableNames.purchaseItems} pi
+      JOIN ${TableNames.purchases} p ON p.id = pi.purchase_id
+      JOIN ${TableNames.serializedStock} ss ON ss.id = pi.serialized_stock_id
+      JOIN ${TableNames.customers} c
+        ON LOWER(TRIM(c.name)) = LOWER(TRIM(COALESCE(ss.seller_name, '')))
+      WHERE ss.seller_name IS NOT NULL AND TRIM(ss.seller_name) != '';
+      ''',
+    );
+  }
+
+  Future<void> _backfillSupplierLedger(Database database) async {
+    await database.execute(
+      '''
+      INSERT OR IGNORE INTO ${TableNames.supplierLedger} (
+        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, created_by, is_reversal, reversal_of, payment_method
+      )
+      SELECT
+        'bsl_purchase_' || p.id,
+        p.supplier_id,
+        p.id,
+        'purchase',
+        COALESCE(p.total, 0),
+        'credit',
+        p.notes,
+        p.purchase_date,
+        NULL,
+        0,
+        NULL,
+        NULL
+      FROM ${TableNames.purchases} p
+      WHERE p.supplier_id IS NOT NULL AND TRIM(p.supplier_id) != '';
+      ''',
+    );
+    await database.execute(
+      '''
+      INSERT OR IGNORE INTO ${TableNames.supplierLedger} (
+        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, created_by, is_reversal, reversal_of, payment_method
+      )
+      SELECT
+        'bsl_payment_' || p.id,
+        p.supplier_id,
+        p.id,
+        'purchase_payment',
+        COALESCE(p.paid_amount, 0),
+        'debit',
+        p.notes,
+        p.purchase_date,
+        NULL,
+        0,
+        NULL,
+        '${PaymentMethod.cash}'
+      FROM ${TableNames.purchases} p
+      WHERE p.supplier_id IS NOT NULL
+        AND TRIM(p.supplier_id) != ''
+        AND COALESCE(p.paid_amount, 0) > 0;
+      ''',
+    );
+  }
+
   Future<void> _dropTableBestEffort(Database database, String tableName) async {
     try {
       await database.execute('DROP TABLE $tableName;');
@@ -1262,5 +1612,6 @@ class MigrationService {
       'ALTER TABLE ${TableNames.saleReturns} ADD COLUMN refunded_cash_amount REAL NOT NULL DEFAULT 0;',
       'CREATE INDEX IF NOT EXISTS idx_sale_returns_created_at ON ${TableNames.saleReturns}(created_at);',
     ],
+    21: <String>[],
   };
 }

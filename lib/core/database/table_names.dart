@@ -18,6 +18,11 @@ class TableNames {
   static const String salePayments = 'sale_payments';
   static const String saleReturns = 'sale_returns';
   static const String stockAdjustments = 'stock_adjustments';
+  static const String customerLedger = 'customer_ledger';
+  static const String supplierLedger = 'supplier_ledger';
+  static const String customerPaymentTransactions = 'customer_payment_transactions';
+  static const String supplierPaymentTransactions = 'supplier_payment_transactions';
+  static const String auditLogs = 'audit_logs';
 
   static const String repairJobs = 'repair_jobs';
 

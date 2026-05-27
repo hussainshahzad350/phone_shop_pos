@@ -17,16 +17,24 @@ import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_ent
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_completion_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/repositories/sales_repository.dart';
+import 'package:phone_shop_pos/modules/ledger/services/ledger_posting_service.dart';
 
 class SqliteSalesRepository
     with BaseRepositoryGuard
     implements SalesRepository {
   SqliteSalesRepository({required AppDatabase appDatabase})
-      : _appDatabase = appDatabase;
+      : this.withLedger(appDatabase: appDatabase, ledgerPostingService: null);
+
+  SqliteSalesRepository.withLedger({
+    required AppDatabase appDatabase,
+    required LedgerPostingService? ledgerPostingService,
+  })  : _appDatabase = appDatabase,
+        _ledgerPostingService = ledgerPostingService;
 
   static final RegExp _digitsOnlyPattern = RegExp(r'^\d+$');
 
   final AppDatabase _appDatabase;
+  final LedgerPostingService? _ledgerPostingService;
 
   @override
   Future<Result<List<ProductEntity>>> searchSellableProducts(
@@ -294,6 +302,22 @@ class SqliteSalesRepository
           updatedAt: now,
         );
         await transaction.insert(TableNames.sales, saleModel.toMap());
+        if (_ledgerPostingService != null &&
+            customerId != null &&
+            customerId.trim().isNotEmpty &&
+            customerId.toLowerCase() != 'walk_in') {
+          final ledgerResult = await _ledgerPostingService!.postSaleCreated(
+            saleId: saleId,
+            customerId: customerId.trim(),
+            amount: totals.total,
+            createdAt: saleDate,
+            note: notes,
+            executor: transaction,
+          );
+          if (ledgerResult.isFailure) {
+            throw StateError(ledgerResult.asFailure!.error.message);
+          }
+        }
 
         // ── Line items ────────────────────────────────────────────────────
         for (final item in items) {

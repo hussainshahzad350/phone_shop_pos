@@ -14,16 +14,24 @@ import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_comple
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/supplier_option_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/repositories/purchase_repository.dart';
+import 'package:phone_shop_pos/modules/ledger/services/ledger_posting_service.dart';
 
 class SqlitePurchaseRepository
     with BaseRepositoryGuard
     implements PurchaseRepository {
   SqlitePurchaseRepository({required AppDatabase appDatabase})
-      : _appDatabase = appDatabase;
+      : this.withLedger(appDatabase: appDatabase, ledgerPostingService: null);
+
+  SqlitePurchaseRepository.withLedger({
+    required AppDatabase appDatabase,
+    required LedgerPostingService? ledgerPostingService,
+  })  : _appDatabase = appDatabase,
+        _ledgerPostingService = ledgerPostingService;
 
   static final RegExp _imeiPattern = RegExp(r'^\d{14,15}$');
 
   final AppDatabase _appDatabase;
+  final LedgerPostingService? _ledgerPostingService;
 
   @override
   Future<Result<List<SupplierOptionEntity>>> searchSuppliers(
@@ -201,6 +209,35 @@ class SqlitePurchaseRepository
 
       await _appDatabase.runInTransaction<void>((transaction) async {
         await transaction.insert(TableNames.purchases, purchaseModel.toMap());
+        if (_ledgerPostingService != null &&
+            supplierId != null &&
+            supplierId.trim().isNotEmpty) {
+          final ledgerResult = await _ledgerPostingService!.postPurchaseCreated(
+            purchaseId: purchaseId,
+            supplierId: supplierId.trim(),
+            amount: total,
+            createdAt: now,
+            note: notes,
+            executor: transaction,
+          );
+          if (ledgerResult.isFailure) {
+            throw StateError(ledgerResult.asFailure!.error.message);
+          }
+          if (sanitizedPaid > 0) {
+            final paymentLedger = await _ledgerPostingService!.postSupplierPayment(
+              transactionId: purchaseId,
+              supplierId: supplierId.trim(),
+              amount: sanitizedPaid,
+              paymentMethod: 'cash',
+              createdAt: now,
+              note: 'Initial paid amount',
+              executor: transaction,
+            );
+            if (paymentLedger.isFailure) {
+              throw StateError(paymentLedger.asFailure!.error.message);
+            }
+          }
+        }
         final transactionBatchImeis = <String>{};
 
         for (final item in items) {

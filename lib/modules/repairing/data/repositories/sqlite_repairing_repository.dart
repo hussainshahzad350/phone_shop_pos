@@ -5,6 +5,7 @@ import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/core/utils/id_helpers.dart';
+import 'package:phone_shop_pos/modules/ledger/services/ledger_posting_service.dart';
 import 'package:phone_shop_pos/modules/repairing/domain/entities/repair_analytics_entity.dart';
 import 'package:phone_shop_pos/modules/repairing/domain/entities/repair_job_entity.dart';
 import 'package:phone_shop_pos/modules/repairing/domain/repositories/repairing_repository.dart';
@@ -13,9 +14,16 @@ class SqliteRepairingRepository
     with BaseRepositoryGuard
     implements RepairingRepository {
   SqliteRepairingRepository({required AppDatabase appDatabase})
-      : _appDatabase = appDatabase;
+      : this.withLedger(appDatabase: appDatabase, ledgerPostingService: null);
+
+  SqliteRepairingRepository.withLedger({
+    required AppDatabase appDatabase,
+    required LedgerPostingService? ledgerPostingService,
+  })  : _appDatabase = appDatabase,
+        _ledgerPostingService = ledgerPostingService;
 
   final AppDatabase _appDatabase;
+  final LedgerPostingService? _ledgerPostingService;
 
   static const String _table = TableNames.repairJobs;
 
@@ -102,43 +110,83 @@ class SqliteRepairingRepository
     return guard<void>(() async {
       final id = job.id.isEmpty ? IdHelpers.newId(prefix: 'rep') : job.id;
       final now = DateTimeHelpers.toSql(DateTimeHelpers.nowUtc());
-      await _appDatabase.database.rawInsert(
-        '''
-        INSERT INTO $_table (
-          id, created_at, updated_at, repair_date,
-          customer_name, customer_phone, phone_model, imei,
-          problem_description, issue_type, accessories, technician_name,
-          estimated_cost, advance_received, final_cost, repair_expense,
-          status, notes, is_deleted
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
-        ''',
-        <Object?>[
-          id,
-          now,
-          null,
-          DateTimeHelpers.toSql(
-            DateTime.utc(
-              job.repairDate.year,
-              job.repairDate.month,
-              job.repairDate.day,
+      await _appDatabase.runInTransaction<void>((transaction) async {
+        await transaction.rawInsert(
+          '''
+          INSERT INTO $_table (
+            id, created_at, updated_at, repair_date,
+            customer_name, customer_phone, phone_model, imei,
+            problem_description, issue_type, accessories, technician_name,
+            estimated_cost, advance_received, final_cost, repair_expense,
+            status, notes, is_deleted
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+          ''',
+          <Object?>[
+            id,
+            now,
+            null,
+            DateTimeHelpers.toSql(
+              DateTime.utc(
+                job.repairDate.year,
+                job.repairDate.month,
+                job.repairDate.day,
+              ),
             ),
-          ),
-          job.customerName,
-          job.customerPhone,
-          job.phoneModel,
-          job.imei,
-          job.problemDescription,
-          job.issueType,
-          job.accessories,
-          job.technicianName,
-          job.estimatedCost,
-          job.advanceReceived,
-          job.finalCost,
-          job.repairExpense,
-          job.status,
-          job.notes,
-        ],
-      );
+            job.customerName,
+            job.customerPhone,
+            job.phoneModel,
+            job.imei,
+            job.problemDescription,
+            job.issueType,
+            job.accessories,
+            job.technicianName,
+            job.estimatedCost,
+            job.advanceReceived,
+            job.finalCost,
+            job.repairExpense,
+            job.status,
+            job.notes,
+          ],
+        );
+
+        if (_ledgerPostingService == null) {
+          return;
+        }
+        final customerId =
+            await _findCustomerIdByPhone(transaction, job.customerPhone);
+        if (customerId == null) {
+          return;
+        }
+        final nowUtc = DateTimeHelpers.fromSql(now);
+        final dueAmount = (job.finalCost ?? 0).clamp(0, double.infinity);
+        if (dueAmount > 0) {
+          final dueResult = await _ledgerPostingService!.postRepairDue(
+            repairId: id,
+            customerId: customerId,
+            amount: dueAmount,
+            createdAt: nowUtc,
+            note: job.notes,
+            executor: transaction,
+          );
+          if (dueResult.isFailure) {
+            throw StateError(dueResult.asFailure!.error.message);
+          }
+        }
+        if (job.advanceReceived > 0) {
+          final paymentResult = await _ledgerPostingService!.postRepairPayment(
+            repairId: id,
+            customerId: customerId,
+            amount: job.advanceReceived,
+            paymentMethod: 'cash',
+            createdAt: nowUtc,
+            note: job.notes,
+            executor: transaction,
+          );
+          if (paymentResult.isFailure) {
+            throw StateError(paymentResult.asFailure!.error.message);
+          }
+        }
+      });
     }, operation: 'add_repair_job');
   }
 
@@ -146,53 +194,102 @@ class SqliteRepairingRepository
   Future<Result<void>> updateRepairJob(RepairJobEntity job) {
     return guard<void>(() async {
       final now = DateTimeHelpers.toSql(DateTimeHelpers.nowUtc());
-      await _appDatabase.database.rawUpdate(
-        '''
-        UPDATE $_table SET
-          updated_at = ?,
-          repair_date = ?,
-          customer_name = ?,
-          customer_phone = ?,
-          phone_model = ?,
-          imei = ?,
-          problem_description = ?,
-          issue_type = ?,
-          accessories = ?,
-          technician_name = ?,
-          estimated_cost = ?,
-          advance_received = ?,
-          final_cost = ?,
-          repair_expense = ?,
-          status = ?,
-          notes = ?
-        WHERE id = ? AND is_deleted = 0
-        ''',
-        <Object?>[
-          now,
-          DateTimeHelpers.toSql(
-            DateTime.utc(
-              job.repairDate.year,
-              job.repairDate.month,
-              job.repairDate.day,
+      await _appDatabase.runInTransaction<void>((transaction) async {
+        final existingRows = await transaction.query(
+          _table,
+          where: 'id = ? AND is_deleted = 0',
+          whereArgs: <Object?>[job.id],
+          limit: 1,
+        );
+        if (existingRows.isEmpty) {
+          throw StateError('Repair job not found.');
+        }
+        final previous = _rowToEntity(existingRows.first);
+        await transaction.rawUpdate(
+          '''
+          UPDATE $_table SET
+            updated_at = ?,
+            repair_date = ?,
+            customer_name = ?,
+            customer_phone = ?,
+            phone_model = ?,
+            imei = ?,
+            problem_description = ?,
+            issue_type = ?,
+            accessories = ?,
+            technician_name = ?,
+            estimated_cost = ?,
+            advance_received = ?,
+            final_cost = ?,
+            repair_expense = ?,
+            status = ?,
+            notes = ?
+          WHERE id = ? AND is_deleted = 0
+          ''',
+          <Object?>[
+            now,
+            DateTimeHelpers.toSql(
+              DateTime.utc(
+                job.repairDate.year,
+                job.repairDate.month,
+                job.repairDate.day,
+              ),
             ),
-          ),
-          job.customerName,
-          job.customerPhone,
-          job.phoneModel,
-          job.imei,
-          job.problemDescription,
-          job.issueType,
-          job.accessories,
-          job.technicianName,
-          job.estimatedCost,
-          job.advanceReceived,
-          job.finalCost,
-          job.repairExpense,
-          job.status,
-          job.notes,
-          job.id,
-        ],
-      );
+            job.customerName,
+            job.customerPhone,
+            job.phoneModel,
+            job.imei,
+            job.problemDescription,
+            job.issueType,
+            job.accessories,
+            job.technicianName,
+            job.estimatedCost,
+            job.advanceReceived,
+            job.finalCost,
+            job.repairExpense,
+            job.status,
+            job.notes,
+            job.id,
+          ],
+        );
+        if (_ledgerPostingService == null) {
+          return;
+        }
+        final customerId =
+            await _findCustomerIdByPhone(transaction, job.customerPhone);
+        if (customerId == null) {
+          return;
+        }
+        final nowUtc = DateTimeHelpers.fromSql(now);
+        final previousDue = (previous.finalCost ?? 0).clamp(0, double.infinity);
+        final nextDue = (job.finalCost ?? 0).clamp(0, double.infinity);
+        final dueDelta = nextDue - previousDue;
+        if (dueDelta > 0) {
+          final dueResult = await _ledgerPostingService!.postRepairDue(
+            repairId: job.id,
+            customerId: customerId,
+            amount: dueDelta,
+            createdAt: nowUtc,
+            note: 'Repair due adjustment',
+            executor: transaction,
+          );
+          if (dueResult.isFailure) {
+            throw StateError(dueResult.asFailure!.error.message);
+          }
+        } else if (dueDelta < 0) {
+          final reverseResult = await _ledgerPostingService!.postSaleReturn(
+            saleId: job.id,
+            customerId: customerId,
+            amount: dueDelta.abs(),
+            createdAt: nowUtc,
+            note: 'Repair due reduction',
+            executor: transaction,
+          );
+          if (reverseResult.isFailure) {
+            throw StateError(reverseResult.asFailure!.error.message);
+          }
+        }
+      });
     }, operation: 'update_repair_job');
   }
 
@@ -246,21 +343,43 @@ class SqliteRepairingRepository
         paymentLine,
       ].join('\n');
 
-      await _appDatabase.database.rawUpdate(
-        '''
-        UPDATE $_table SET
-          advance_received = ?,
-          notes = ?,
-          updated_at = ?
-        WHERE id = ? AND is_deleted = 0
-        ''',
-        <Object?>[
-          updatedReceived,
-          updatedNotes,
-          nowSql,
-          id,
-        ],
-      );
+      await _appDatabase.runInTransaction<void>((transaction) async {
+        await transaction.rawUpdate(
+          '''
+          UPDATE $_table SET
+            advance_received = ?,
+            notes = ?,
+            updated_at = ?
+          WHERE id = ? AND is_deleted = 0
+          ''',
+          <Object?>[
+            updatedReceived,
+            updatedNotes,
+            nowSql,
+            id,
+          ],
+        );
+        if (_ledgerPostingService == null) {
+          return;
+        }
+        final customerId =
+            await _findCustomerIdByPhone(transaction, job.customerPhone);
+        if (customerId == null) {
+          return;
+        }
+        final ledgerResult = await _ledgerPostingService!.postRepairPayment(
+          repairId: id,
+          customerId: customerId,
+          amount: amount,
+          paymentMethod: 'cash',
+          createdAt: now,
+          note: trimmedNote,
+          executor: transaction,
+        );
+        if (ledgerResult.isFailure) {
+          throw StateError(ledgerResult.asFailure!.error.message);
+        }
+      });
     }, operation: 'collect_repair_payment');
   }
 
@@ -568,5 +687,26 @@ class SqliteRepairingRepository
       isArchived: ((row['is_deleted'] as num?) ?? 0) == 1,
       notes: row['notes'] as String?,
     );
+  }
+
+  Future<String?> _findCustomerIdByPhone(
+    DatabaseExecutor executor,
+    String? customerPhone,
+  ) async {
+    final normalizedPhone = customerPhone?.trim();
+    if (normalizedPhone == null || normalizedPhone.isEmpty) {
+      return null;
+    }
+    final rows = await executor.query(
+      TableNames.customers,
+      columns: const <String>['id'],
+      where: 'phone = ?',
+      whereArgs: <Object?>[normalizedPhone],
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      return null;
+    }
+    return rows.first['id'] as String?;
   }
 }
