@@ -105,35 +105,35 @@ class LedgerPostingService with BaseRepositoryGuard {
     if (amount <= 0) {
       return const Success<void>(null);
     }
-
-    Future<Result<void>> postRepairDueReduction({
-      required String repairId,
-      required String customerId,
-      required double amount,
-      required DateTime createdAt,
-      String? note,
-      DatabaseExecutor? executor,
-    }) {
-      if (amount <= 0) {
-        return const Success<void>(null);
-      }
-      return _appendCustomerEvent(
-        customerId: customerId,
-        transactionId: repairId,
-        ledgerType: CustomerLedgerType.repairDue,
-        amount: amount,
-        direction: LedgerDirection.credit,
-        createdAt: createdAt,
-        note: note,
-        executor: executor,
-      );
-    }
     return _appendCustomerEvent(
       customerId: customerId,
       transactionId: repairId,
       ledgerType: CustomerLedgerType.repairDue,
       amount: amount,
       direction: LedgerDirection.debit,
+      createdAt: createdAt,
+      note: note,
+      executor: executor,
+    );
+  }
+
+  Future<Result<void>> postRepairDueReduction({
+    required String repairId,
+    required String customerId,
+    required double amount,
+    required DateTime createdAt,
+    String? note,
+    DatabaseExecutor? executor,
+  }) {
+    if (amount <= 0) {
+      return const Success<void>(null);
+    }
+    return _appendCustomerEvent(
+      customerId: customerId,
+      transactionId: repairId,
+      ledgerType: CustomerLedgerType.repairDue,
+      amount: amount,
+      direction: LedgerDirection.credit,
       createdAt: createdAt,
       note: note,
       executor: executor,
@@ -269,6 +269,9 @@ class LedgerPostingService with BaseRepositoryGuard {
       if (normalizedPaymentMethod == null) {
         throw StateError('Payment method must be cash, card, or bank.');
       }
+      if (normalizedPaymentMethod == PaymentMethod.credit) {
+        throw StateError('Credit payment method is not allowed for settlement.');
+      }
 
       final normalizedNote = NotesSafety.normalizeNullable(payload.note);
       final now = DateTimeHelpers.nowUtc();
@@ -337,6 +340,9 @@ class LedgerPostingService with BaseRepositoryGuard {
           PaymentMethod.normalizeNullable(payload.paymentMethod);
       if (normalizedPaymentMethod == null) {
         throw StateError('Payment method must be cash, card, or bank.');
+      }
+      if (normalizedPaymentMethod == PaymentMethod.credit) {
+        throw StateError('Credit payment method is not allowed for settlement.');
       }
       final normalizedNote = NotesSafety.normalizeNullable(payload.note);
       final now = DateTimeHelpers.nowUtc();

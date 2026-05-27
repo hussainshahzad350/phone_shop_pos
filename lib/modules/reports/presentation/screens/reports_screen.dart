@@ -1055,15 +1055,22 @@ class _CustomerBalanceView extends ConsumerWidget {
                     if ((summaryAsync.valueOrNull ??
                             const <PartySummaryCardEntity>[])
                         .isNotEmpty) ...<Widget>[
-                      LedgerSummaryCards(
-                        summary: (summaryAsync.valueOrNull ??
-                                const <PartySummaryCardEntity>[])
-                            .firstWhere(
-                          (summary) => selectedCustomerId == null || summary.partyId == selectedCustomerId,
-                          orElse: () => (summaryAsync.valueOrNull ??
-                              const <PartySummaryCardEntity>[]).first,
-                        ),
-                        balanceLabel: 'Net',
+                      Builder(
+                        builder: (context) {
+                          final summaries = summaryAsync.valueOrNull ??
+                              const <PartySummaryCardEntity>[];
+                          final selected = selectedCustomerId == null
+                              ? summaries.first
+                              : summaries.firstWhere(
+                                  (summary) =>
+                                      summary.partyId == selectedCustomerId,
+                                  orElse: () => summaries.first,
+                                );
+                          return LedgerSummaryCards(
+                            summary: selected,
+                            balanceLabel: 'Net',
+                          );
+                        },
                       ),
                       const SizedBox(height: 8),
                     ],
@@ -1345,15 +1352,22 @@ class _SupplierLedgerView extends ConsumerWidget {
                     if ((summaryAsync.valueOrNull ??
                             const <PartySummaryCardEntity>[])
                         .isNotEmpty) ...<Widget>[
-                      LedgerSummaryCards(
-                        summary: (summaryAsync.valueOrNull ??
-                                const <PartySummaryCardEntity>[])
-                            .firstWhere(
-                          (summary) => selectedSupplierId == null || summary.partyId == selectedSupplierId,
-                          orElse: () => (summaryAsync.valueOrNull ??
-                              const <PartySummaryCardEntity>[]).first,
-                        ),
-                        balanceLabel: 'Net Payable',
+                      Builder(
+                        builder: (context) {
+                          final summaries = summaryAsync.valueOrNull ??
+                              const <PartySummaryCardEntity>[];
+                          final selected = selectedSupplierId == null
+                              ? summaries.first
+                              : summaries.firstWhere(
+                                  (summary) =>
+                                      summary.partyId == selectedSupplierId,
+                                  orElse: () => summaries.first,
+                                );
+                          return LedgerSummaryCards(
+                            summary: selected,
+                            balanceLabel: 'Net Payable',
+                          );
+                        },
                       ),
                       const SizedBox(height: 8),
                     ],
@@ -2209,6 +2223,7 @@ class _CollectPaymentDialogState extends ConsumerState<_CollectPaymentDialog> {
                 isDense: true,
               ),
               items: PaymentMethod.values
+                  .where((value) => value != PaymentMethod.credit)
                   .map(
                     (value) => DropdownMenuItem<String>(
                       value: value,
@@ -2341,6 +2356,7 @@ class _ReceiveCustomerCreditDialogState
                 labelText: 'Payment Method',
               ),
               items: PaymentMethod.values
+                  .where((value) => value != PaymentMethod.credit)
                   .map(
                     (value) => DropdownMenuItem<String>(
                       value: value,
@@ -2466,6 +2482,7 @@ class _PaySupplierCreditDialogState
                 labelText: 'Payment Method',
               ),
               items: PaymentMethod.values
+                  .where((value) => value != PaymentMethod.credit)
                   .map(
                     (value) => DropdownMenuItem<String>(
                       value: value,

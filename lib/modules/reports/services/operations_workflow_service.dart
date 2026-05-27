@@ -224,6 +224,9 @@ class OperationsWorkflowService with BaseRepositoryGuard {
       if (normalizedMethod == null) {
         throw StateError('Payment method must be cash, card, or bank.');
       }
+      if (normalizedMethod == PaymentMethod.credit) {
+        throw StateError('Payment method must be cash, card, or bank.');
+      }
       if (amount <= 0) {
         throw StateError('Payment amount must be greater than zero.');
       }
