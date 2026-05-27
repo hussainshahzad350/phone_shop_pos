@@ -10,6 +10,7 @@ import 'package:phone_shop_pos/modules/ledger/services/ledger_posting_service.da
 import 'package:phone_shop_pos/modules/repairing/domain/entities/repair_analytics_entity.dart';
 import 'package:phone_shop_pos/modules/repairing/domain/entities/repair_job_entity.dart';
 import 'package:phone_shop_pos/modules/repairing/domain/repositories/repairing_repository.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class SqliteRepairingRepository
     with BaseRepositoryGuard
@@ -159,9 +160,10 @@ class SqliteRepairingRepository
           return;
         }
         final nowUtc = DateTimeHelpers.fromSql(now);
-        final dueAmount = (job.finalCost ?? 0).clamp(0, double.infinity);
+        final dueAmount =
+            (job.finalCost ?? 0).clamp(0, double.infinity).toDouble();
         if (dueAmount > 0) {
-          final dueResult = await _ledgerPostingService!.postRepairDue(
+          final dueResult = await _ledgerPostingService.postRepairDue(
             repairId: id,
             customerId: customerId,
             amount: dueAmount,
@@ -174,7 +176,7 @@ class SqliteRepairingRepository
           }
         }
         if (job.advanceReceived > 0) {
-          final paymentResult = await _ledgerPostingService!.postRepairPayment(
+          final paymentResult = await _ledgerPostingService.postRepairPayment(
             repairId: id,
             customerId: customerId,
             amount: job.advanceReceived,
@@ -262,11 +264,13 @@ class SqliteRepairingRepository
           return;
         }
         final nowUtc = DateTimeHelpers.fromSql(now);
-        final previousDue = (previous.finalCost ?? 0).clamp(0, double.infinity);
-        final nextDue = (job.finalCost ?? 0).clamp(0, double.infinity);
+        final previousDue =
+            (previous.finalCost ?? 0).clamp(0, double.infinity).toDouble();
+        final nextDue =
+            (job.finalCost ?? 0).clamp(0, double.infinity).toDouble();
         final dueDelta = nextDue - previousDue;
         if (dueDelta > 0) {
-          final dueResult = await _ledgerPostingService!.postRepairDue(
+          final dueResult = await _ledgerPostingService.postRepairDue(
             repairId: job.id,
             customerId: customerId,
             amount: dueDelta,
@@ -279,7 +283,7 @@ class SqliteRepairingRepository
           }
         } else if (dueDelta < 0) {
           final reverseResult =
-              await _ledgerPostingService!.postRepairDueReduction(
+              await _ledgerPostingService.postRepairDueReduction(
             repairId: job.id,
             customerId: customerId,
             amount: dueDelta.abs(),
@@ -369,7 +373,7 @@ class SqliteRepairingRepository
         if (customerId == null) {
           return;
         }
-        final ledgerResult = await _ledgerPostingService!.postRepairPayment(
+        final ledgerResult = await _ledgerPostingService.postRepairPayment(
           repairId: id,
           customerId: customerId,
           amount: amount,

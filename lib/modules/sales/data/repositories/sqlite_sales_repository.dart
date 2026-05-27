@@ -306,7 +306,7 @@ class SqliteSalesRepository
             customerId != null &&
             customerId.trim().isNotEmpty &&
             customerId.toLowerCase() != 'walk_in') {
-          final ledgerResult = await _ledgerPostingService!.postSaleCreated(
+          final ledgerResult = await _ledgerPostingService.postSaleCreated(
             saleId: saleId,
             customerId: customerId.trim(),
             amount: totals.total,

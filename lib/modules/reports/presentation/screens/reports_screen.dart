@@ -83,18 +83,6 @@ Widget _styledStatusCell(
   );
 }
 
-Widget _indexCell(int index, {double width = 56}) {
-  return SizedBox(
-    width: width,
-    child: Text(
-      (index + 1).toString(),
-      textAlign: TextAlign.left,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-    ),
-  );
-}
-
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
 
@@ -338,8 +326,7 @@ class ReportsScreen extends ConsumerWidget {
   }
 
   bool _usesLegacyFilters(ReportsTab tab) {
-    return tab == ReportsTab.dailySales ||
-        tab == ReportsTab.profit;
+    return tab == ReportsTab.dailySales || tab == ReportsTab.profit;
   }
 
   String _errorMessage(Object error, String fallback) {
@@ -922,10 +909,13 @@ class _CustomerBalanceView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryAsync = ref.watch(customerLedgerSummaryProvider);
     final timelineAsync = ref.watch(customerLedgerTimelineProvider);
-    final selectedCustomerId = ref.watch(customerLedgerTimelineCustomerIdProvider);
+    final selectedCustomerId =
+        ref.watch(customerLedgerTimelineCustomerIdProvider);
     final selectedType = ref.watch(customerLedgerTimelineTypeProvider);
-    final outstandingOnly = ref.watch(customerLedgerTimelineOutstandingOnlyProvider);
-    final paymentHistory = ref.watch(customerLedgerTimelinePaymentHistoryProvider);
+    final outstandingOnly =
+        ref.watch(customerLedgerTimelineOutstandingOnlyProvider);
+    final paymentHistory =
+        ref.watch(customerLedgerTimelinePaymentHistoryProvider);
 
     return Column(
       children: <Widget>[
@@ -940,7 +930,7 @@ class _CustomerBalanceView extends ConsumerWidget {
                 SizedBox(
                   width: 260,
                   child: DropdownButtonFormField<String?>(
-                    value: selectedCustomerId,
+                    initialValue: selectedCustomerId,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       isDense: true,
@@ -969,7 +959,7 @@ class _CustomerBalanceView extends ConsumerWidget {
                 SizedBox(
                   width: 200,
                   child: DropdownButtonFormField<String?>(
-                    value: selectedType,
+                    initialValue: selectedType,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       isDense: true,
@@ -1014,14 +1004,16 @@ class _CustomerBalanceView extends ConsumerWidget {
                   label: const Text('Outstanding only'),
                   selected: outstandingOnly,
                   onSelected: (value) => ref
-                      .read(customerLedgerTimelineOutstandingOnlyProvider.notifier)
+                      .read(customerLedgerTimelineOutstandingOnlyProvider
+                          .notifier)
                       .state = value,
                 ),
                 FilterChip(
                   label: const Text('Payment history'),
                   selected: paymentHistory,
                   onSelected: (value) => ref
-                      .read(customerLedgerTimelinePaymentHistoryProvider.notifier)
+                      .read(
+                          customerLedgerTimelinePaymentHistoryProvider.notifier)
                       .state = value,
                 ),
                 FilledButton.icon(
@@ -1030,8 +1022,8 @@ class _CustomerBalanceView extends ConsumerWidget {
                       : () async {
                           await showDialog<void>(
                             context: context,
-                            builder: (_) =>
-                                _ReceiveCustomerCreditDialog(customerId: selectedCustomerId),
+                            builder: (_) => _ReceiveCustomerCreditDialog(
+                                customerId: selectedCustomerId),
                           );
                           ref.invalidate(customerLedgerSummaryProvider);
                           ref.invalidate(customerLedgerTimelineProvider);
@@ -1049,7 +1041,8 @@ class _CustomerBalanceView extends ConsumerWidget {
           child: timelineAsync.when(
             data: (timelineRows) => Card(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 child: Column(
                   children: <Widget>[
                     if ((summaryAsync.valueOrNull ??
@@ -1267,9 +1260,12 @@ class _SupplierLedgerView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryAsync = ref.watch(supplierLedgerSummaryProvider);
     final timelineAsync = ref.watch(supplierLedgerTimelineProvider);
-    final selectedSupplierId = ref.watch(supplierLedgerTimelineSupplierIdProvider);
-    final outstandingOnly = ref.watch(supplierLedgerTimelineOutstandingOnlyProvider);
-    final paymentHistory = ref.watch(supplierLedgerTimelinePaymentHistoryProvider);
+    final selectedSupplierId =
+        ref.watch(supplierLedgerTimelineSupplierIdProvider);
+    final outstandingOnly =
+        ref.watch(supplierLedgerTimelineOutstandingOnlyProvider);
+    final paymentHistory =
+        ref.watch(supplierLedgerTimelinePaymentHistoryProvider);
 
     return Column(
       children: <Widget>[
@@ -1284,7 +1280,7 @@ class _SupplierLedgerView extends ConsumerWidget {
                 SizedBox(
                   width: 260,
                   child: DropdownButtonFormField<String?>(
-                    value: selectedSupplierId,
+                    initialValue: selectedSupplierId,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       isDense: true,
@@ -1314,14 +1310,16 @@ class _SupplierLedgerView extends ConsumerWidget {
                   label: const Text('Outstanding only'),
                   selected: outstandingOnly,
                   onSelected: (value) => ref
-                      .read(supplierLedgerTimelineOutstandingOnlyProvider.notifier)
+                      .read(supplierLedgerTimelineOutstandingOnlyProvider
+                          .notifier)
                       .state = value,
                 ),
                 FilterChip(
                   label: const Text('Payment history'),
                   selected: paymentHistory,
                   onSelected: (value) => ref
-                      .read(supplierLedgerTimelinePaymentHistoryProvider.notifier)
+                      .read(
+                          supplierLedgerTimelinePaymentHistoryProvider.notifier)
                       .state = value,
                 ),
                 FilledButton.icon(
@@ -1330,8 +1328,8 @@ class _SupplierLedgerView extends ConsumerWidget {
                       : () async {
                           await showDialog<void>(
                             context: context,
-                            builder: (_) =>
-                                _PaySupplierCreditDialog(supplierId: selectedSupplierId),
+                            builder: (_) => _PaySupplierCreditDialog(
+                                supplierId: selectedSupplierId),
                           );
                           ref.invalidate(supplierLedgerSummaryProvider);
                           ref.invalidate(supplierLedgerTimelineProvider);
@@ -1349,7 +1347,8 @@ class _SupplierLedgerView extends ConsumerWidget {
           child: timelineAsync.when(
             data: (timelineRows) => Card(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 child: Column(
                   children: <Widget>[
                     if ((summaryAsync.valueOrNull ??

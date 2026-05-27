@@ -213,7 +213,7 @@ class SqlitePurchaseRepository
         if (_ledgerPostingService != null &&
             supplierId != null &&
             supplierId.trim().isNotEmpty) {
-          final ledgerResult = await _ledgerPostingService!.postPurchaseCreated(
+          final ledgerResult = await _ledgerPostingService.postPurchaseCreated(
             purchaseId: purchaseId,
             supplierId: supplierId.trim(),
             amount: total,
@@ -225,7 +225,8 @@ class SqlitePurchaseRepository
             throw StateError(ledgerResult.asFailure!.error.message);
           }
           if (sanitizedPaid > 0) {
-            final paymentLedger = await _ledgerPostingService!.postSupplierPayment(
+            final paymentLedger =
+                await _ledgerPostingService.postSupplierPayment(
               transactionId: purchaseId,
               supplierId: supplierId.trim(),
               amount: sanitizedPaid,
@@ -308,9 +309,11 @@ class SqlitePurchaseRepository
                 'seller_id_card': _normalizeOptional(entry.sellerIdCard),
                 'seller_address': _normalizeOptional(entry.sellerAddress),
                 'seller_phone': _normalizeOptional(entry.sellerPhone),
-                'remaining_warranty': _normalizeOptional(entry.remainingWarranty),
+                'remaining_warranty':
+                    _normalizeOptional(entry.remainingWarranty),
                 'accessories': _normalizeOptional(entry.accessories),
-                'phone_condition_notes': _normalizeOptional(entry.phoneConditionNotes),
+                'phone_condition_notes':
+                    _normalizeOptional(entry.phoneConditionNotes),
                 'created_at': DateTimeHelpers.toSql(now),
                 'updated_at': DateTimeHelpers.toSql(now),
               });
@@ -368,7 +371,8 @@ class SqlitePurchaseRepository
                 ? oldCost
                 : oldQty <= 0
                     ? item.unitCost
-                    : ((oldQty * oldCost) + (newQty * item.unitCost)) / totalQty;
+                    : ((oldQty * oldCost) + (newQty * item.unitCost)) /
+                        totalQty;
 
             await transaction.update(
               TableNames.inventoryStock,
@@ -437,15 +441,15 @@ class SqlitePurchaseRepository
             throw StateError(
                 '${item.productName} contains a negative IMEI cost.');
           }
-          if (normalizedImei2 != null &&
-              normalizedImei2.isNotEmpty) {
+          if (normalizedImei2 != null && normalizedImei2.isNotEmpty) {
             if (!_imeiPattern.hasMatch(normalizedImei2)) {
               throw StateError(
                 '${item.productName} contains an invalid IMEI format.',
               );
             }
             if (normalizedImei1 == normalizedImei2) {
-              throw StateError('${item.productName} has duplicate IMEI values.');
+              throw StateError(
+                  '${item.productName} has duplicate IMEI values.');
             }
           }
         }

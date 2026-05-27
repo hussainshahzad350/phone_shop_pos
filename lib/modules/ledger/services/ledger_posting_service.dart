@@ -125,7 +125,7 @@ class LedgerPostingService with BaseRepositoryGuard {
     DatabaseExecutor? executor,
   }) {
     if (amount <= 0) {
-      return const Success<void>(null);
+      return Future<Result<void>>.value(const Success<void>(null));
     }
     return _appendCustomerEvent(
       customerId: customerId,
@@ -148,7 +148,7 @@ class LedgerPostingService with BaseRepositoryGuard {
     DatabaseExecutor? executor,
   }) {
     if (amount <= 0) {
-      return const Success<void>(null);
+      return Future<Result<void>>.value(const Success<void>(null));
     }
     return _appendCustomerEvent(
       customerId: customerId,
@@ -172,7 +172,7 @@ class LedgerPostingService with BaseRepositoryGuard {
     DatabaseExecutor? executor,
   }) {
     if (amount <= 0) {
-      return const Success<void>(null);
+      return Future<Result<void>>.value(const Success<void>(null));
     }
     return _appendCustomerEvent(
       customerId: customerId,
@@ -314,7 +314,8 @@ class LedgerPostingService with BaseRepositoryGuard {
         throw StateError('Payment method must be cash, card, or bank.');
       }
       if (normalizedPaymentMethod == PaymentMethod.credit) {
-        throw StateError('Credit payment method is not allowed for settlement.');
+        throw StateError(
+            'Credit payment method is not allowed for settlement.');
       }
 
       final normalizedNote = NotesSafety.normalizeNullable(payload.note);
@@ -386,7 +387,8 @@ class LedgerPostingService with BaseRepositoryGuard {
         throw StateError('Payment method must be cash, card, or bank.');
       }
       if (normalizedPaymentMethod == PaymentMethod.credit) {
-        throw StateError('Credit payment method is not allowed for settlement.');
+        throw StateError(
+            'Credit payment method is not allowed for settlement.');
       }
       final normalizedNote = NotesSafety.normalizeNullable(payload.note);
       final now = DateTimeHelpers.nowUtc();

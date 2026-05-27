@@ -131,13 +131,17 @@ class SqliteSupplierLedgerRepository
         args.add(DateTimeHelpers.toSql(endUtc));
       }
       if (query.outstandingOnly) {
-        where.add('EXISTS (
-          SELECT 1 FROM ${TableNames.supplierLedger} b
-          WHERE b.party_id = sl.party_id
-          GROUP BY b.party_id
-          HAVING ABS(COALESCE(SUM(CASE WHEN b.direction = \'credit\' THEN b.amount ELSE 0 END), 0)
-                - COALESCE(SUM(CASE WHEN b.direction = \'debit\' THEN b.amount ELSE 0 END), 0)) > 0.009
-        )');
+        where.add('''
+          EXISTS (
+            SELECT 1 FROM ${TableNames.supplierLedger} b
+            WHERE b.party_id = sl.party_id
+            GROUP BY b.party_id
+            HAVING ABS(
+              COALESCE(SUM(CASE WHEN b.direction = 'credit' THEN b.amount ELSE 0 END), 0)
+              - COALESCE(SUM(CASE WHEN b.direction = 'debit' THEN b.amount ELSE 0 END), 0)
+            ) > 0.009
+          )
+        ''');
       }
 
       final rows = await _appDatabase.database.rawQuery(

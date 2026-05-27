@@ -295,7 +295,7 @@ class OperationsWorkflowService with BaseRepositoryGuard {
             customerId != null &&
             customerId.trim().isNotEmpty &&
             customerId.toLowerCase() != 'walk_in') {
-          final ledgerResult = await _ledgerPostingService!.postSalePayment(
+          final ledgerResult = await _ledgerPostingService.postSalePayment(
             saleId: saleId,
             customerId: customerId.trim(),
             amount: amount,
@@ -439,7 +439,12 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         // ── Insert return audit record ────────────────────────────────────
         final saleRows = await transaction.query(
           TableNames.sales,
-          columns: <String>['total', 'paid_amount', 'payment_method', 'customer_id'],
+          columns: <String>[
+            'total',
+            'paid_amount',
+            'payment_method',
+            'customer_id'
+          ],
           where: 'id = ?',
           whereArgs: <Object?>[saleId],
           limit: 1,
@@ -486,10 +491,12 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         final cashCollected =
             (paymentRows.first['cash_collected'] as num?)?.toDouble() ?? 0;
         final refundedPaidSoFar =
-            (priorRefundRows.first['refunded_paid_total'] as num?)?.toDouble() ??
+            (priorRefundRows.first['refunded_paid_total'] as num?)
+                    ?.toDouble() ??
                 0;
         final refundedCashSoFar =
-            (priorRefundRows.first['refunded_cash_total'] as num?)?.toDouble() ??
+            (priorRefundRows.first['refunded_cash_total'] as num?)
+                    ?.toDouble() ??
                 0;
         // currentPaid = original paid at sale time + later collections
         //               - prior refunded paid amounts, so reversing the known
@@ -548,7 +555,7 @@ class OperationsWorkflowService with BaseRepositoryGuard {
             customerId != null &&
             customerId.trim().isNotEmpty &&
             customerId.toLowerCase() != 'walk_in') {
-          final ledgerResult = await _ledgerPostingService!.postSaleReturn(
+          final ledgerResult = await _ledgerPostingService.postSaleReturn(
             saleId: saleId,
             customerId: customerId.trim(),
             amount: returnAmount,
@@ -710,7 +717,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
   }) {
     return guard<List<SupplierLedgerRowEntity>>(() async {
       if (_ledgerPostingService != null) {
-        final summaryResult = await _ledgerPostingService!.fetchSupplierSummary();
+        final summaryResult =
+            await _ledgerPostingService.fetchSupplierSummary();
         if (summaryResult.isFailure) {
           throw StateError(summaryResult.asFailure!.error.message);
         }
@@ -724,7 +732,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         );
         final purchaseCountBySupplier = <String, int>{
           for (final row in purchaseCountRows)
-            (row['party_id'] as String): (row['purchase_count'] as num?)?.toInt() ?? 0,
+            (row['party_id'] as String):
+                (row['purchase_count'] as num?)?.toInt() ?? 0,
         };
         return summaryResult.asSuccess!.value
             .map(
@@ -791,9 +800,10 @@ class OperationsWorkflowService with BaseRepositoryGuard {
     bool includePaymentHistory = true,
   }) {
     if (_ledgerPostingService == null) {
-      return guard<List<LedgerTimelineRowEntity>>(() async => const <LedgerTimelineRowEntity>[]);
+      return guard<List<LedgerTimelineRowEntity>>(
+          () async => const <LedgerTimelineRowEntity>[]);
     }
-    return _ledgerPostingService!.fetchCustomerTimeline(
+    return _ledgerPostingService.fetchCustomerTimeline(
       LedgerTimelineQuery(
         partyId: customerId,
         ledgerType: ledgerType,
@@ -814,9 +824,10 @@ class OperationsWorkflowService with BaseRepositoryGuard {
     bool includePaymentHistory = true,
   }) {
     if (_ledgerPostingService == null) {
-      return guard<List<LedgerTimelineRowEntity>>(() async => const <LedgerTimelineRowEntity>[]);
+      return guard<List<LedgerTimelineRowEntity>>(
+          () async => const <LedgerTimelineRowEntity>[]);
     }
-    return _ledgerPostingService!.fetchSupplierTimeline(
+    return _ledgerPostingService.fetchSupplierTimeline(
       LedgerTimelineQuery(
         partyId: supplierId,
         ledgerType: ledgerType,
@@ -833,9 +844,10 @@ class OperationsWorkflowService with BaseRepositoryGuard {
     bool outstandingOnly = false,
   }) {
     if (_ledgerPostingService == null) {
-      return guard<List<PartySummaryCardEntity>>(() async => const <PartySummaryCardEntity>[]);
+      return guard<List<PartySummaryCardEntity>>(
+          () async => const <PartySummaryCardEntity>[]);
     }
-    return _ledgerPostingService!.fetchCustomerSummary(
+    return _ledgerPostingService.fetchCustomerSummary(
       customerId: customerId,
       outstandingOnly: outstandingOnly,
     );
@@ -846,9 +858,10 @@ class OperationsWorkflowService with BaseRepositoryGuard {
     bool outstandingOnly = false,
   }) {
     if (_ledgerPostingService == null) {
-      return guard<List<PartySummaryCardEntity>>(() async => const <PartySummaryCardEntity>[]);
+      return guard<List<PartySummaryCardEntity>>(
+          () async => const <PartySummaryCardEntity>[]);
     }
-    return _ledgerPostingService!.fetchSupplierSummary(
+    return _ledgerPostingService.fetchSupplierSummary(
       supplierId: supplierId,
       outstandingOnly: outstandingOnly,
     );
@@ -862,7 +875,7 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         throw StateError('Ledger posting service is unavailable.');
       });
     }
-    return _ledgerPostingService!.receiveCustomerCredit(payload);
+    return _ledgerPostingService.receiveCustomerCredit(payload);
   }
 
   Future<Result<void>> paySupplierCredit(
@@ -873,7 +886,7 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         throw StateError('Ledger posting service is unavailable.');
       });
     }
-    return _ledgerPostingService!.paySupplierCredit(payload);
+    return _ledgerPostingService.paySupplierCredit(payload);
   }
 
   Future<Result<List<CashLedgerRowEntity>>> getCashLedger({
@@ -1081,8 +1094,7 @@ class OperationsWorkflowService with BaseRepositoryGuard {
           cashSalesIn: (row['cash_sales_in'] as num?)?.toDouble() ?? 0,
           cashCollectionsIn:
               (row['cash_collections_in'] as num?)?.toDouble() ?? 0,
-          cashRefundsOut:
-              (row['cash_refunds_out'] as num?)?.toDouble() ?? 0,
+          cashRefundsOut: (row['cash_refunds_out'] as num?)?.toDouble() ?? 0,
           purchasePaymentsOut:
               (row['purchase_payments_out'] as num?)?.toDouble() ?? 0,
           expensesOut: (row['expenses_out'] as num?)?.toDouble() ?? 0,

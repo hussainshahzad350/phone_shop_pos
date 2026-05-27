@@ -131,13 +131,17 @@ class SqliteCustomerLedgerRepository
         args.add(DateTimeHelpers.toSql(endUtc));
       }
       if (query.outstandingOnly) {
-        where.add('EXISTS (
-          SELECT 1 FROM ${TableNames.customerLedger} b
-          WHERE b.party_id = cl.party_id
-          GROUP BY b.party_id
-          HAVING ABS(COALESCE(SUM(CASE WHEN b.direction = \'debit\' THEN b.amount ELSE 0 END), 0)
-                - COALESCE(SUM(CASE WHEN b.direction = \'credit\' THEN b.amount ELSE 0 END), 0)) > 0.009
-        )');
+        where.add('''
+          EXISTS (
+            SELECT 1 FROM ${TableNames.customerLedger} b
+            WHERE b.party_id = cl.party_id
+            GROUP BY b.party_id
+            HAVING ABS(
+              COALESCE(SUM(CASE WHEN b.direction = 'debit' THEN b.amount ELSE 0 END), 0)
+              - COALESCE(SUM(CASE WHEN b.direction = 'credit' THEN b.amount ELSE 0 END), 0)
+            ) > 0.009
+          )
+        ''');
       }
 
       final rows = await _appDatabase.database.rawQuery(
@@ -168,8 +172,7 @@ class SqliteCustomerLedgerRepository
       return rows.map((row) {
         final direction = LedgerDirection.fromValue(row['direction'] as String);
         final amount = (row['amount'] as num?)?.toDouble() ?? 0;
-        runningBalance +=
-            direction == LedgerDirection.debit ? amount : -amount;
+        runningBalance += direction == LedgerDirection.debit ? amount : -amount;
         return LedgerTimelineRowEntity(
           id: row['id'] as String,
           partyId: row['party_id'] as String,
