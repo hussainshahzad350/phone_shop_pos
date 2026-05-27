@@ -197,9 +197,11 @@ class SqliteSupplierLedgerRepository
   @override
   Future<Result<LedgerBalanceSummaryEntity>> computeBalances({
     required String supplierId,
+    DatabaseExecutor? executor,
   }) {
     return guard<LedgerBalanceSummaryEntity>(() async {
-      final rows = await _appDatabase.database.rawQuery(
+      final db = executor ?? _appDatabase.database;
+      final rows = await db.rawQuery(
         '''
         SELECT
           COALESCE(SUM(CASE WHEN direction = 'debit' THEN amount ELSE 0 END), 0) AS receivable,

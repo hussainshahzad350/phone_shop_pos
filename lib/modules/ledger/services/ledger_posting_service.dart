@@ -323,6 +323,7 @@ class LedgerPostingService with BaseRepositoryGuard {
       await _appDatabase.runInTransaction<void>((transaction) async {
         final summaryResult = await _customerLedgerRepository.computeBalances(
           customerId: payload.customerId,
+          executor: transaction,
         );
         if (summaryResult.isFailure) {
           throw summaryResult.asFailure!.error;
@@ -395,6 +396,7 @@ class LedgerPostingService with BaseRepositoryGuard {
       await _appDatabase.runInTransaction<void>((transaction) async {
         final summaryResult = await _supplierLedgerRepository.computeBalances(
           supplierId: payload.supplierId,
+          executor: transaction,
         );
         if (summaryResult.isFailure) {
           throw summaryResult.asFailure!.error;
