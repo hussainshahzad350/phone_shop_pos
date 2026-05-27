@@ -9,13 +9,22 @@ import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/core/utils/id_helpers.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
+import 'package:phone_shop_pos/modules/ledger/domain/entities/ledger_timeline_query.dart';
+import 'package:phone_shop_pos/modules/ledger/domain/entities/ledger_timeline_row_entity.dart';
+import 'package:phone_shop_pos/modules/ledger/domain/entities/party_summary_card_entity.dart';
+import 'package:phone_shop_pos/modules/ledger/domain/entities/settlement_request_payload.dart';
+import 'package:phone_shop_pos/modules/ledger/services/ledger_posting_service.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
 
 class OperationsWorkflowService with BaseRepositoryGuard {
-  OperationsWorkflowService({required AppDatabase appDatabase})
-      : _appDatabase = appDatabase;
+  OperationsWorkflowService({
+    required AppDatabase appDatabase,
+    LedgerPostingService? ledgerPostingService,
+  })  : _appDatabase = appDatabase,
+        _ledgerPostingService = ledgerPostingService;
 
   final AppDatabase _appDatabase;
+  final LedgerPostingService? _ledgerPostingService;
 
   Future<Result<List<SalesHistoryRowEntity>>> searchSalesHistory({
     required String invoiceQuery,
@@ -215,6 +224,9 @@ class OperationsWorkflowService with BaseRepositoryGuard {
       if (normalizedMethod == null) {
         throw StateError('Payment method must be cash, card, or bank.');
       }
+      if (normalizedMethod == PaymentMethod.credit) {
+        throw StateError('Payment method must be cash, card, or bank.');
+      }
       if (amount <= 0) {
         throw StateError('Payment amount must be greater than zero.');
       }
@@ -270,6 +282,32 @@ class OperationsWorkflowService with BaseRepositoryGuard {
           where: 'id = ?',
           whereArgs: <Object?>[saleId],
         );
+
+        final customerRows = await transaction.query(
+          TableNames.sales,
+          columns: <String>['customer_id'],
+          where: 'id = ?',
+          whereArgs: <Object?>[saleId],
+          limit: 1,
+        );
+        final customerId = customerRows.first['customer_id'] as String?;
+        if (_ledgerPostingService != null &&
+            customerId != null &&
+            customerId.trim().isNotEmpty &&
+            customerId.toLowerCase() != 'walk_in') {
+          final ledgerResult = await _ledgerPostingService!.postSalePayment(
+            saleId: saleId,
+            customerId: customerId.trim(),
+            amount: amount,
+            paymentMethod: normalizedMethod,
+            createdAt: now,
+            note: normalizedNotes,
+            executor: transaction,
+          );
+          if (ledgerResult.isFailure) {
+            throw StateError(ledgerResult.asFailure!.error.message);
+          }
+        }
 
         summary = PaymentCollectionEntity(
           newPaidAmount: newPaidAmount,
@@ -401,7 +439,7 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         // ── Insert return audit record ────────────────────────────────────
         final saleRows = await transaction.query(
           TableNames.sales,
-          columns: <String>['total', 'paid_amount', 'payment_method'],
+          columns: <String>['total', 'paid_amount', 'payment_method', 'customer_id'],
           where: 'id = ?',
           whereArgs: <Object?>[saleId],
           limit: 1,
@@ -504,6 +542,24 @@ class OperationsWorkflowService with BaseRepositoryGuard {
           where: 'id = ?',
           whereArgs: <Object?>[saleId],
         );
+
+        final customerId = saleRows.first['customer_id'] as String?;
+        if (_ledgerPostingService != null &&
+            customerId != null &&
+            customerId.trim().isNotEmpty &&
+            customerId.toLowerCase() != 'walk_in') {
+          final ledgerResult = await _ledgerPostingService!.postSaleReturn(
+            saleId: saleId,
+            customerId: customerId.trim(),
+            amount: returnAmount,
+            createdAt: now,
+            note: trimmedReason,
+            executor: transaction,
+          );
+          if (ledgerResult.isFailure) {
+            throw StateError(ledgerResult.asFailure!.error.message);
+          }
+        }
       });
     }, operation: 'process_sale_return');
   }
@@ -653,6 +709,34 @@ class OperationsWorkflowService with BaseRepositoryGuard {
     int offset = 0,
   }) {
     return guard<List<SupplierLedgerRowEntity>>(() async {
+      if (_ledgerPostingService != null) {
+        final summaryResult = await _ledgerPostingService!.fetchSupplierSummary();
+        if (summaryResult.isFailure) {
+          throw StateError(summaryResult.asFailure!.error.message);
+        }
+        final purchaseCountRows = await _appDatabase.database.rawQuery(
+          '''
+          SELECT party_id, COUNT(*) AS purchase_count
+          FROM ${TableNames.supplierLedger}
+          WHERE ledger_type = 'purchase'
+          GROUP BY party_id
+          ''',
+        );
+        final purchaseCountBySupplier = <String, int>{
+          for (final row in purchaseCountRows)
+            (row['party_id'] as String): (row['purchase_count'] as num?)?.toInt() ?? 0,
+        };
+        return summaryResult.asSuccess!.value
+            .map(
+              (row) => SupplierLedgerRowEntity(
+                supplierName: row.partyName,
+                purchaseCount: purchaseCountBySupplier[row.partyId] ?? 0,
+                totalPurchases: row.totalPayable,
+                totalPaid: row.totalReceivable,
+              ),
+            )
+            .toList(growable: false);
+      }
       final whereClauses = <String>['1 = 1'];
       final args = <Object?>[];
 
@@ -698,6 +782,100 @@ class OperationsWorkflowService with BaseRepositoryGuard {
     }, operation: 'supplier_ledger');
   }
 
+  Future<Result<List<LedgerTimelineRowEntity>>> fetchCustomerLedgerTimeline({
+    String? customerId,
+    String? ledgerType,
+    DateTime? startDate,
+    DateTime? endDate,
+    bool outstandingOnly = false,
+    bool includePaymentHistory = true,
+  }) {
+    if (_ledgerPostingService == null) {
+      return guard<List<LedgerTimelineRowEntity>>(() async => const <LedgerTimelineRowEntity>[]);
+    }
+    return _ledgerPostingService!.fetchCustomerTimeline(
+      LedgerTimelineQuery(
+        partyId: customerId,
+        ledgerType: ledgerType,
+        startDate: startDate,
+        endDate: endDate,
+        outstandingOnly: outstandingOnly,
+        includePaymentHistory: includePaymentHistory,
+      ),
+    );
+  }
+
+  Future<Result<List<LedgerTimelineRowEntity>>> fetchSupplierLedgerTimeline({
+    String? supplierId,
+    String? ledgerType,
+    DateTime? startDate,
+    DateTime? endDate,
+    bool outstandingOnly = false,
+    bool includePaymentHistory = true,
+  }) {
+    if (_ledgerPostingService == null) {
+      return guard<List<LedgerTimelineRowEntity>>(() async => const <LedgerTimelineRowEntity>[]);
+    }
+    return _ledgerPostingService!.fetchSupplierTimeline(
+      LedgerTimelineQuery(
+        partyId: supplierId,
+        ledgerType: ledgerType,
+        startDate: startDate,
+        endDate: endDate,
+        outstandingOnly: outstandingOnly,
+        includePaymentHistory: includePaymentHistory,
+      ),
+    );
+  }
+
+  Future<Result<List<PartySummaryCardEntity>>> fetchCustomerLedgerSummary({
+    String? customerId,
+    bool outstandingOnly = false,
+  }) {
+    if (_ledgerPostingService == null) {
+      return guard<List<PartySummaryCardEntity>>(() async => const <PartySummaryCardEntity>[]);
+    }
+    return _ledgerPostingService!.fetchCustomerSummary(
+      customerId: customerId,
+      outstandingOnly: outstandingOnly,
+    );
+  }
+
+  Future<Result<List<PartySummaryCardEntity>>> fetchSupplierLedgerSummary({
+    String? supplierId,
+    bool outstandingOnly = false,
+  }) {
+    if (_ledgerPostingService == null) {
+      return guard<List<PartySummaryCardEntity>>(() async => const <PartySummaryCardEntity>[]);
+    }
+    return _ledgerPostingService!.fetchSupplierSummary(
+      supplierId: supplierId,
+      outstandingOnly: outstandingOnly,
+    );
+  }
+
+  Future<Result<void>> receiveCustomerCredit(
+    CustomerSettlementRequestPayload payload,
+  ) {
+    if (_ledgerPostingService == null) {
+      return guard<void>(() async {
+        throw StateError('Ledger posting service is unavailable.');
+      });
+    }
+    return _ledgerPostingService!.receiveCustomerCredit(payload);
+  }
+
+  Future<Result<void>> paySupplierCredit(
+    SupplierSettlementRequestPayload payload,
+  ) {
+    if (_ledgerPostingService == null) {
+      return guard<void>(() async {
+        throw StateError('Ledger posting service is unavailable.');
+      });
+    }
+    return _ledgerPostingService!.paySupplierCredit(payload);
+  }
+
   Future<Result<List<CashLedgerRowEntity>>> getCashLedger({
     required DateTime? startDate,
     required DateTime? endDate,
@@ -710,11 +888,15 @@ class OperationsWorkflowService with BaseRepositoryGuard {
       final returnsArgs = <Object?>[];
       final purchasesArgs = <Object?>[];
       final expensesArgs = <Object?>[];
+      final customerSettlementArgs = <Object?>[PaymentMethod.cash];
+      final supplierSettlementArgs = <Object?>[PaymentMethod.cash];
       final salesWhere = StringBuffer('1 = 1');
       final collectionsWhere = StringBuffer('sp.payment_method = ?');
       final returnsWhere = StringBuffer('1 = 1');
       final purchasesWhere = StringBuffer('1 = 1');
       final expensesWhere = StringBuffer('e.is_deleted = 0');
+      final customerSettlementWhere = StringBuffer('cpt.payment_method = ?');
+      final supplierSettlementWhere = StringBuffer('spt.payment_method = ?');
 
       if (startDate != null) {
         final startUtc =
@@ -730,6 +912,10 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         purchasesArgs.add(startSql);
         expensesWhere.write(' AND e.expense_date >= ?');
         expensesArgs.add(startSql);
+        customerSettlementWhere.write(' AND cpt.created_at >= ?');
+        customerSettlementArgs.add(startSql);
+        supplierSettlementWhere.write(' AND spt.created_at >= ?');
+        supplierSettlementArgs.add(startSql);
       }
 
       if (endDate != null) {
@@ -746,6 +932,10 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         purchasesArgs.add(endSql);
         expensesWhere.write(' AND e.expense_date < ?');
         expensesArgs.add(endSql);
+        customerSettlementWhere.write(' AND cpt.created_at < ?');
+        customerSettlementArgs.add(endSql);
+        supplierSettlementWhere.write(' AND spt.created_at < ?');
+        supplierSettlementArgs.add(endSql);
       }
 
       final rows = await QueryDiagnostics.trace(
@@ -822,6 +1012,22 @@ class OperationsWorkflowService with BaseRepositoryGuard {
             WHERE ${expensesWhere.toString()}
             GROUP BY date(e.expense_date)
           ),
+          customer_settlement_in AS (
+            SELECT
+              date(cpt.created_at) AS day,
+              COALESCE(SUM(cpt.amount), 0) AS customer_settlement_in
+            FROM ${TableNames.customerPaymentTransactions} cpt
+            WHERE ${customerSettlementWhere.toString()}
+            GROUP BY date(cpt.created_at)
+          ),
+          supplier_settlement_out AS (
+            SELECT
+              date(spt.created_at) AS day,
+              COALESCE(SUM(spt.amount), 0) AS supplier_settlement_out
+            FROM ${TableNames.supplierPaymentTransactions} spt
+            WHERE ${supplierSettlementWhere.toString()}
+            GROUP BY date(spt.created_at)
+          ),
           all_days AS (
             SELECT day FROM sales_cash
             UNION
@@ -832,13 +1038,17 @@ class OperationsWorkflowService with BaseRepositoryGuard {
             SELECT day FROM purchase_out
             UNION
             SELECT day FROM expense_out
+            UNION
+            SELECT day FROM customer_settlement_in
+            UNION
+            SELECT day FROM supplier_settlement_out
           )
           SELECT
             d.day,
             COALESCE(sc.cash_sales_in, 0) AS cash_sales_in,
-            COALESCE(cc.cash_collections_in, 0) AS cash_collections_in,
+            COALESCE(cc.cash_collections_in, 0) + COALESCE(csi.customer_settlement_in, 0) AS cash_collections_in,
             COALESCE(rc.cash_refunds_out, 0) AS cash_refunds_out,
-            COALESCE(po.purchase_payments_out, 0) AS purchase_payments_out,
+            COALESCE(po.purchase_payments_out, 0) + COALESCE(sso.supplier_settlement_out, 0) AS purchase_payments_out,
             COALESCE(eo.expenses_out, 0) AS expenses_out
           FROM all_days d
           LEFT JOIN sales_cash sc ON sc.day = d.day
@@ -846,6 +1056,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
           LEFT JOIN refunds_cash rc ON rc.day = d.day
           LEFT JOIN purchase_out po ON po.day = d.day
           LEFT JOIN expense_out eo ON eo.day = d.day
+          LEFT JOIN customer_settlement_in csi ON csi.day = d.day
+          LEFT JOIN supplier_settlement_out sso ON sso.day = d.day
           ORDER BY d.day DESC
           LIMIT ? OFFSET ?
           ''',
@@ -855,6 +1067,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
             ...returnsArgs,
             ...purchasesArgs,
             ...expensesArgs,
+            ...customerSettlementArgs,
+            ...supplierSettlementArgs,
             limit,
             offset,
           ],

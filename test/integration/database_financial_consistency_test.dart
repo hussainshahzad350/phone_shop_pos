@@ -13,6 +13,13 @@ import 'package:phone_shop_pos/modules/inventory/data/repositories/sqlite_produc
 import 'package:phone_shop_pos/modules/inventory/data/repositories/sqlite_inventory_repository.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
+import 'package:phone_shop_pos/modules/ledger/data/repositories/sqlite_customer_ledger_repository.dart';
+import 'package:phone_shop_pos/modules/ledger/data/repositories/sqlite_supplier_ledger_repository.dart';
+import 'package:phone_shop_pos/modules/ledger/domain/entities/ledger_direction.dart';
+import 'package:phone_shop_pos/modules/ledger/domain/entities/ledger_event_entity.dart';
+import 'package:phone_shop_pos/modules/ledger/domain/entities/ledger_timeline_query.dart';
+import 'package:phone_shop_pos/modules/ledger/domain/entities/settlement_request_payload.dart';
+import 'package:phone_shop_pos/modules/ledger/services/ledger_posting_service.dart';
 import 'package:phone_shop_pos/modules/purchases/data/repositories/sqlite_purchase_repository.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/report_filter_entity.dart';
@@ -2004,6 +2011,371 @@ void main() {
         closeTo(1000.0, 0.0001),
       );
       await v12Database.close();
+    });
+
+    test('customer settlement idempotency prevents duplicate credit posting',
+        () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final now = DateTime.utc(2026, 5, 19);
+      final nowSql = DateTimeHelpers.toSql(now);
+      await context.appDatabase.insert(TableNames.customers, <String, Object?>{
+        'id': 'cus_idempotency',
+        'name': 'Idempotent Customer',
+        'phone': '03001234567',
+        'email': null,
+        'address': null,
+        'created_at': nowSql,
+        'updated_at': nowSql,
+      });
+
+      final customerLedgerRepository =
+          SqliteCustomerLedgerRepository(appDatabase: context.appDatabase);
+      final supplierLedgerRepository =
+          SqliteSupplierLedgerRepository(appDatabase: context.appDatabase);
+      final ledgerPostingService = LedgerPostingService(
+        appDatabase: context.appDatabase,
+        customerLedgerRepository: customerLedgerRepository,
+        supplierLedgerRepository: supplierLedgerRepository,
+      );
+
+      _expectSuccess(
+        await ledgerPostingService.postSaleCreated(
+          saleId: 'sale_idempotency',
+          customerId: 'cus_idempotency',
+          amount: 500,
+          createdAt: now,
+        ),
+      );
+
+      final payload = CustomerSettlementRequestPayload(
+        customerId: 'cus_idempotency',
+        amount: 200,
+        paymentMethod: PaymentMethod.cash,
+        idempotencyKey: 'idem_cus_001',
+        createdBy: 'test_user',
+      );
+
+      final firstResult = await ledgerPostingService.receiveCustomerCredit(
+        payload,
+      );
+      expect(firstResult.isSuccess, isTrue, reason: firstResult.asFailure?.error.message);
+
+      final duplicateResult = await ledgerPostingService.receiveCustomerCredit(
+        payload,
+      );
+      expect(duplicateResult.isFailure, isTrue);
+
+      final transactionRows = await context.appDatabase.queryTable(
+        TableNames.customerPaymentTransactions,
+        where: 'idempotency_key = ?',
+        whereArgs: const <Object?>['idem_cus_001'],
+      );
+      expect(transactionRows.length, 1);
+
+      final balance = _expectSuccess(
+        await customerLedgerRepository.computeBalances(
+          customerId: 'cus_idempotency',
+        ),
+      );
+      expect(balance.net, closeTo(300, 0.0001));
+    });
+
+    test('customer reversal blocks reversal-of-reversal and keeps ledger safe',
+        () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final now = DateTime.utc(2026, 5, 20);
+      final nowSql = DateTimeHelpers.toSql(now);
+      await context.appDatabase.insert(TableNames.customers, <String, Object?>{
+        'id': 'cus_reversal',
+        'name': 'Reversal Customer',
+        'phone': '03007654321',
+        'email': null,
+        'address': null,
+        'created_at': nowSql,
+        'updated_at': nowSql,
+      });
+
+      final customerLedgerRepository =
+          SqliteCustomerLedgerRepository(appDatabase: context.appDatabase);
+
+      _expectSuccess(
+        await customerLedgerRepository.appendEvent(
+          CustomerLedgerEventEntity(
+            id: 'clg_original',
+            partyId: 'cus_reversal',
+            transactionId: 'sale_reversal',
+            ledgerType: 'sale',
+            amount: 120,
+            direction: LedgerDirection.debit,
+            createdAt: now,
+            createdBy: 'test_user',
+            isReversal: false,
+            reversalOf: null,
+            note: null,
+            paymentMethod: null,
+          ),
+        ),
+      );
+
+      final firstReversal = await customerLedgerRepository.appendReversalEvent(
+        reversalEventId: 'clg_reversal_1',
+        originalEventId: 'clg_original',
+        partyId: 'cus_reversal',
+        transactionId: 'sale_reversal',
+        ledgerType: 'sale',
+        amount: 120,
+        direction: LedgerDirection.credit.value,
+        createdAt: now.add(const Duration(minutes: 1)),
+        createdBy: 'test_user',
+      );
+      expect(firstReversal.isSuccess, isTrue, reason: firstReversal.asFailure?.error.message);
+
+      final reversalOfReversal =
+          await customerLedgerRepository.appendReversalEvent(
+        reversalEventId: 'clg_reversal_2',
+        originalEventId: 'clg_reversal_1',
+        partyId: 'cus_reversal',
+        transactionId: 'sale_reversal',
+        ledgerType: 'sale',
+        amount: 120,
+        direction: LedgerDirection.debit.value,
+        createdAt: now.add(const Duration(minutes: 2)),
+        createdBy: 'test_user',
+      );
+      expect(reversalOfReversal.isFailure, isTrue);
+      expect(
+        reversalOfReversal.asFailure?.error.details.toString(),
+        contains('Reversal of reversal is not allowed.'),
+      );
+
+      final rows = await context.appDatabase.queryTable(
+        TableNames.customerLedger,
+        where: 'party_id = ?',
+        whereArgs: const <Object?>['cus_reversal'],
+      );
+      expect(rows.length, 2);
+    });
+
+    test('supplier settlement blocks overpayment beyond outstanding payable',
+        () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final now = DateTime.utc(2026, 5, 21);
+      final nowSql = DateTimeHelpers.toSql(now);
+      await context.appDatabase.insert(TableNames.suppliers, <String, Object?>{
+        'id': 'sup_overpay',
+        'name': 'Overpay Supplier',
+        'contact_person': null,
+        'phone': '03112223333',
+        'email': null,
+        'address': null,
+        'created_at': nowSql,
+        'updated_at': nowSql,
+      });
+
+      final customerLedgerRepository =
+          SqliteCustomerLedgerRepository(appDatabase: context.appDatabase);
+      final supplierLedgerRepository =
+          SqliteSupplierLedgerRepository(appDatabase: context.appDatabase);
+      final ledgerPostingService = LedgerPostingService(
+        appDatabase: context.appDatabase,
+        customerLedgerRepository: customerLedgerRepository,
+        supplierLedgerRepository: supplierLedgerRepository,
+      );
+
+      _expectSuccess(
+        await ledgerPostingService.postPurchaseCreated(
+          purchaseId: 'pur_overpay',
+          supplierId: 'sup_overpay',
+          amount: 1000,
+          createdAt: now,
+        ),
+      );
+
+      final overpayResult = await ledgerPostingService.paySupplierCredit(
+        const SupplierSettlementRequestPayload(
+          supplierId: 'sup_overpay',
+          amount: 1000.01,
+          paymentMethod: PaymentMethod.cash,
+          idempotencyKey: 'idem_sup_overpay_1',
+          createdBy: 'test_user',
+        ),
+      );
+      expect(overpayResult.isFailure, isTrue);
+
+      final transactionRows = await context.appDatabase.queryTable(
+        TableNames.supplierPaymentTransactions,
+        where: 'supplier_id = ?',
+        whereArgs: const <Object?>['sup_overpay'],
+      );
+      expect(transactionRows, isEmpty);
+
+      final balance = _expectSuccess(
+        await supplierLedgerRepository.computeBalances(supplierId: 'sup_overpay'),
+      );
+      expect(balance.net, closeTo(1000, 0.0001));
+    });
+
+    test('customer timeline running balance is deterministic and consistent',
+        () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final now = DateTime.utc(2026, 5, 22, 10, 0);
+      final nowSql = DateTimeHelpers.toSql(now);
+      await context.appDatabase.insert(TableNames.customers, <String, Object?>{
+        'id': 'cus_deterministic',
+        'name': 'Deterministic Customer',
+        'phone': '03001112222',
+        'email': null,
+        'address': null,
+        'created_at': nowSql,
+        'updated_at': nowSql,
+      });
+
+      final customerLedgerRepository =
+          SqliteCustomerLedgerRepository(appDatabase: context.appDatabase);
+      final supplierLedgerRepository =
+          SqliteSupplierLedgerRepository(appDatabase: context.appDatabase);
+      final ledgerPostingService = LedgerPostingService(
+        appDatabase: context.appDatabase,
+        customerLedgerRepository: customerLedgerRepository,
+        supplierLedgerRepository: supplierLedgerRepository,
+      );
+
+      _expectSuccess(
+        await ledgerPostingService.postSaleCreated(
+          saleId: 'sale_det_1',
+          customerId: 'cus_deterministic',
+          amount: 100,
+          createdAt: now,
+        ),
+      );
+      _expectSuccess(
+        await ledgerPostingService.postSalePayment(
+          saleId: 'sale_det_1',
+          customerId: 'cus_deterministic',
+          amount: 20,
+          paymentMethod: PaymentMethod.cash,
+          createdAt: now,
+        ),
+      );
+      _expectSuccess(
+        await ledgerPostingService.postSaleCreated(
+          saleId: 'sale_det_2',
+          customerId: 'cus_deterministic',
+          amount: 50,
+          createdAt: now,
+        ),
+      );
+
+      final firstRead = _expectSuccess(
+        await customerLedgerRepository.fetchTimeline(
+          const LedgerTimelineQuery(partyId: 'cus_deterministic'),
+        ),
+      );
+      final secondRead = _expectSuccess(
+        await customerLedgerRepository.fetchTimeline(
+          const LedgerTimelineQuery(partyId: 'cus_deterministic'),
+        ),
+      );
+
+      expect(firstRead.length, 3);
+      expect(
+        secondRead.map((row) => row.id).toList(),
+        orderedEquals(firstRead.map((row) => row.id).toList()),
+      );
+      expect(
+        secondRead.map((row) => row.runningBalance).toList(),
+        orderedEquals(firstRead.map((row) => row.runningBalance).toList()),
+      );
+
+      final balance = _expectSuccess(
+        await customerLedgerRepository.computeBalances(
+          customerId: 'cus_deterministic',
+        ),
+      );
+      expect(balance.net, closeTo(130, 0.0001));
+      expect(firstRead.last.runningBalance, closeTo(balance.net, 0.0001));
+    });
+
+    test('ledger handles high-volume micro entries with stable final balance',
+        () async {
+      final context = await _ConsistencyContext.createTemporary();
+      addTearDown(context.dispose);
+
+      final now = DateTime.utc(2026, 5, 23, 8, 0);
+      final nowSql = DateTimeHelpers.toSql(now);
+      await context.appDatabase.insert(TableNames.customers, <String, Object?>{
+        'id': 'cus_stress',
+        'name': 'Stress Customer',
+        'phone': '03009998888',
+        'email': null,
+        'address': null,
+        'created_at': nowSql,
+        'updated_at': nowSql,
+      });
+
+      final customerLedgerRepository =
+          SqliteCustomerLedgerRepository(appDatabase: context.appDatabase);
+
+      for (var index = 0; index < 200; index++) {
+        final isDebit = index.isEven;
+        final result = await customerLedgerRepository.appendEvent(
+          CustomerLedgerEventEntity(
+            id: 'clg_stress_$index',
+            partyId: 'cus_stress',
+            transactionId: 'tx_stress_$index',
+            ledgerType: isDebit ? 'sale' : 'sale_payment',
+            amount: 0.1,
+            direction: isDebit ? LedgerDirection.debit : LedgerDirection.credit,
+            createdAt: now.add(Duration(seconds: index)),
+            createdBy: 'test_user',
+            isReversal: false,
+            reversalOf: null,
+            note: null,
+            paymentMethod: isDebit ? null : PaymentMethod.cash,
+          ),
+        );
+        expect(result.isSuccess, isTrue, reason: result.asFailure?.error.message);
+      }
+
+      _expectSuccess(
+        await customerLedgerRepository.appendEvent(
+          CustomerLedgerEventEntity(
+            id: 'clg_stress_tail',
+            partyId: 'cus_stress',
+            transactionId: 'tx_stress_tail',
+            ledgerType: 'sale',
+            amount: 0.05,
+            direction: LedgerDirection.debit,
+            createdAt: now.add(const Duration(seconds: 300)),
+            createdBy: 'test_user',
+            isReversal: false,
+            reversalOf: null,
+            note: null,
+            paymentMethod: null,
+          ),
+        ),
+      );
+
+      final timeline = _expectSuccess(
+        await customerLedgerRepository.fetchTimeline(
+          const LedgerTimelineQuery(partyId: 'cus_stress', limit: 500),
+        ),
+      );
+      expect(timeline.length, 201);
+
+      final balance = _expectSuccess(
+        await customerLedgerRepository.computeBalances(customerId: 'cus_stress'),
+      );
+      expect(balance.net, closeTo(0.05, 0.0001));
+      expect(timeline.last.runningBalance, closeTo(balance.net, 0.0001));
     });
   });
 }
