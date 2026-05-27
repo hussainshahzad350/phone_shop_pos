@@ -35,6 +35,7 @@ abstract class SupplierLedgerRepository extends BaseRepository {
 
   Future<Result<LedgerBalanceSummaryEntity>> computeBalances({
     required String supplierId,
+    DatabaseExecutor? executor,
   });
 
   Future<Result<List<PartySummaryCardEntity>>> fetchProfileSummary({
