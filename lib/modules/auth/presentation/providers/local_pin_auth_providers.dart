@@ -158,6 +158,13 @@ class LocalPinAuthController extends StateNotifier<LocalPinAuthState> {
       );
       return false;
     }
+    if (state.lockedUntil != null) {
+      await _service.clearLockoutState();
+      state = state.copyWith(
+        failedAttempts: 0,
+        clearLockedUntil: true,
+      );
+    }
 
     state = state.copyWith(isBusy: true, clearErrorMessage: true);
     final valid = await _service.verifyPin(pin);
