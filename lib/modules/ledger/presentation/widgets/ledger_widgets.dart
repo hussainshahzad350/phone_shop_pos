@@ -57,10 +57,11 @@ class LedgerTimelineTable extends StatelessWidget {
       columns: const <DataColumn>[
         DataColumn(label: Text('Date')),
         DataColumn(label: Text('Type')),
-        DataColumn(label: Text('Source')),
         DataColumn(label: Text('Dr')),
         DataColumn(label: Text('Cr')),
         DataColumn(label: Text('Running')),
+        DataColumn(label: Text('Payment')),
+        DataColumn(label: Text('Reference')),
         DataColumn(label: Text('Note')),
       ],
       rows: rows.map((row) {
@@ -68,13 +69,61 @@ class LedgerTimelineTable extends StatelessWidget {
         return DataRow(cells: <DataCell>[
           DataCell(Text(FormattingHelpers.dateYmd(row.createdAt))),
           DataCell(Text(row.ledgerType)),
-          DataCell(Text(row.sourceLabel)),
           DataCell(Text(isDebit ? FormattingHelpers.decimal(row.amount) : '-')),
           DataCell(Text(!isDebit ? FormattingHelpers.decimal(row.amount) : '-')),
           DataCell(Text(FormattingHelpers.decimal(row.runningBalance))),
+          DataCell(Text(row.paymentMethod ?? '-')),
+          DataCell(Text(row.transactionId)),
           DataCell(Text(row.note ?? '-')),
         ]);
       }).toList(growable: false),
+    );
+  }
+}
+
+class LedgerDuesKpiCards extends StatelessWidget {
+  const LedgerDuesKpiCards({
+    super.key,
+    required this.outstandingLabel,
+    required this.outstandingAmount,
+    required this.paymentsLabel,
+    required this.paymentsAmount,
+    required this.remainingLabel,
+    required this.remainingAmount,
+  });
+
+  final String outstandingLabel;
+  final double outstandingAmount;
+  final String paymentsLabel;
+  final double paymentsAmount;
+  final String remainingLabel;
+  final double remainingAmount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: _SummaryCard(
+            title: outstandingLabel,
+            value: FormattingHelpers.currencyPkr(outstandingAmount),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _SummaryCard(
+            title: paymentsLabel,
+            value: FormattingHelpers.currencyPkr(paymentsAmount),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _SummaryCard(
+            title: remainingLabel,
+            value: FormattingHelpers.currencyPkr(remainingAmount),
+          ),
+        ),
+      ],
     );
   }
 }

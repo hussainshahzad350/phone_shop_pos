@@ -902,6 +902,132 @@ class _ProfitView extends ConsumerWidget {
   }
 }
 
+String _normalizeCustomerLedgerName(String rawName) {
+  final normalized = rawName.trim();
+  if (normalized.isEmpty ||
+      normalized.toLowerCase() == 'walk-in customer' ||
+      normalized.toLowerCase() == 'unknown customer') {
+    return 'Unidentified Customer';
+  }
+  return normalized;
+}
+
+String _normalizeSupplierLedgerName(String rawName) {
+  final normalized = rawName.trim();
+  if (normalized.isEmpty || normalized.toLowerCase() == 'unknown supplier') {
+    return 'Unidentified Supplier';
+  }
+  return normalized;
+}
+
+PartySummaryCardEntity? _selectedPartySummary(
+  List<PartySummaryCardEntity> summaries,
+  String? partyId,
+) {
+  if (partyId == null || partyId.trim().isEmpty) {
+    return null;
+  }
+  for (final summary in summaries) {
+    if (summary.partyId == partyId) {
+      return summary;
+    }
+  }
+  return null;
+}
+
+class _LedgerMainTableCard extends StatelessWidget {
+  const _LedgerMainTableCard({
+    required this.title,
+    required this.partyHeader,
+    required this.openLabel,
+    required this.selectedPartyId,
+    required this.summaries,
+    required this.displayName,
+    required this.onOpenLedger,
+  });
+
+  final String title;
+  final String partyHeader;
+  final String openLabel;
+  final String? selectedPartyId;
+  final List<PartySummaryCardEntity> summaries;
+  final String Function(String name) displayName;
+  final ValueChanged<String> onOpenLedger;
+
+  @override
+  Widget build(BuildContext context) {
+    final sorted = List<PartySummaryCardEntity>.of(summaries)
+      ..sort((a, b) => b.outstanding.compareTo(a.outstanding));
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 220,
+              child: AppDataTable(
+                showCheckboxColumn: false,
+                emptyMessage: 'No ledger records found.',
+                columns: <DataColumn>[
+                  DataColumn(
+                    label: _styledTableHeaderCell(context, partyHeader, width: 320),
+                  ),
+                  DataColumn(
+                    label: _styledTableHeaderCell(
+                      context,
+                      'Outstanding',
+                      width: 160,
+                    ),
+                  ),
+                  DataColumn(
+                    label: _styledTableHeaderCell(context, 'Ledger', width: 96),
+                  ),
+                ],
+                rows: sorted.map((summary) {
+                  return DataRow(
+                    selected: summary.partyId == selectedPartyId,
+                    cells: <DataCell>[
+                      DataCell(
+                        _styledTableCell(
+                          displayName(summary.partyName),
+                          width: 320,
+                        ),
+                      ),
+                      DataCell(
+                        _styledTableCell(
+                          FormattingHelpers.currencyPkr(summary.outstanding),
+                          width: 160,
+                        ),
+                      ),
+                      DataCell(
+                        SizedBox(
+                          width: 96,
+                          child: IconButton.filledTonal(
+                            tooltip: openLabel,
+                            onPressed: () => onOpenLedger(summary.partyId),
+                            icon: const Icon(Icons.open_in_new, size: 18),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(growable: false),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _CustomerBalanceView extends ConsumerWidget {
   const _CustomerBalanceView();
 
@@ -916,175 +1042,266 @@ class _CustomerBalanceView extends ConsumerWidget {
         ref.watch(customerLedgerTimelineOutstandingOnlyProvider);
     final paymentHistory =
         ref.watch(customerLedgerTimelinePaymentHistoryProvider);
+    final startDate = ref.watch(customerLedgerTimelineStartDateProvider);
+    final endDate = ref.watch(customerLedgerTimelineEndDateProvider);
+    final summaries = summaryAsync.valueOrNull ?? const <PartySummaryCardEntity>[];
+    final selectedSummary = _selectedPartySummary(summaries, selectedCustomerId);
+    final selectedCustomerName = selectedSummary == null
+        ? 'No ledger selected'
+        : _normalizeCustomerLedgerName(selectedSummary.partyName);
 
     return Column(
       children: <Widget>[
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: <Widget>[
-                SizedBox(
-                  width: 260,
-                  child: DropdownButtonFormField<String?>(
-                    initialValue: selectedCustomerId,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                      labelText: 'Customer',
-                    ),
-                    items: <DropdownMenuItem<String?>>[
-                      const DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text('All Customers'),
-                      ),
-                      ...summaryAsync.valueOrNull
-                              ?.map(
-                                (summary) => DropdownMenuItem<String?>(
-                                  value: summary.partyId,
-                                  child: Text(summary.partyName),
-                                ),
-                              )
-                              .toList(growable: false) ??
-                          const <DropdownMenuItem<String?>>[],
-                    ],
-                    onChanged: (value) => ref
-                        .read(customerLedgerTimelineCustomerIdProvider.notifier)
-                        .state = value,
-                  ),
-                ),
-                SizedBox(
-                  width: 200,
-                  child: DropdownButtonFormField<String?>(
-                    initialValue: selectedType,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                      labelText: 'Ledger Type',
-                    ),
-                    items: const <DropdownMenuItem<String?>>[
-                      DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text('All Types'),
-                      ),
-                      DropdownMenuItem<String?>(
-                        value: 'sale',
-                        child: Text('Sale'),
-                      ),
-                      DropdownMenuItem<String?>(
-                        value: 'sale_payment',
-                        child: Text('Sale Payment'),
-                      ),
-                      DropdownMenuItem<String?>(
-                        value: 'sale_return',
-                        child: Text('Sale Return'),
-                      ),
-                      DropdownMenuItem<String?>(
-                        value: 'repair_due',
-                        child: Text('Repair Due'),
-                      ),
-                      DropdownMenuItem<String?>(
-                        value: 'repair_payment',
-                        child: Text('Repair Payment'),
-                      ),
-                      DropdownMenuItem<String?>(
-                        value: 'manual_settlement',
-                        child: Text('Manual Settlement'),
-                      ),
-                    ],
-                    onChanged: (value) => ref
-                        .read(customerLedgerTimelineTypeProvider.notifier)
-                        .state = value,
-                  ),
-                ),
-                FilterChip(
-                  label: const Text('Outstanding only'),
-                  selected: outstandingOnly,
-                  onSelected: (value) => ref
-                      .read(customerLedgerTimelineOutstandingOnlyProvider
-                          .notifier)
-                      .state = value,
-                ),
-                FilterChip(
-                  label: const Text('Payment history'),
-                  selected: paymentHistory,
-                  onSelected: (value) => ref
-                      .read(
-                          customerLedgerTimelinePaymentHistoryProvider.notifier)
-                      .state = value,
-                ),
-                FilledButton.icon(
-                  onPressed: selectedCustomerId == null
-                      ? null
-                      : () async {
-                          await showDialog<void>(
-                            context: context,
-                            builder: (_) => _ReceiveCustomerCreditDialog(
-                                customerId: selectedCustomerId),
-                          );
-                          ref.invalidate(customerLedgerSummaryProvider);
-                          ref.invalidate(customerLedgerTimelineProvider);
-                          ref.invalidate(cashLedgerRowsProvider);
-                        },
-                  icon: const Icon(Icons.south_west, size: 18),
-                  label: const Text('Receive Credit'),
-                ),
-              ],
+        summaryAsync.when(
+          data: (rows) => _LedgerMainTableCard(
+            title: 'Customer Ledger Overview',
+            partyHeader: 'Customer',
+            openLabel: 'Open Customer Ledger',
+            selectedPartyId: selectedCustomerId,
+            summaries: rows,
+            displayName: _normalizeCustomerLedgerName,
+            onOpenLedger: (partyId) => ref
+                .read(customerLedgerTimelineCustomerIdProvider.notifier)
+                .state = partyId,
+          ),
+          loading: () => const Card(
+            child: SizedBox(
+              height: 120,
+              child: Center(child: CircularProgressIndicator()),
             ),
+          ),
+          error: (error, __) => _ReportErrorView(
+            message: 'Failed to load customer ledgers.',
+            error: error,
+            onRetry: () => ref.invalidate(customerLedgerSummaryProvider),
           ),
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: timelineAsync.when(
-            data: (timelineRows) => Card(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Column(
-                  children: <Widget>[
-                    if ((summaryAsync.valueOrNull ??
-                            const <PartySummaryCardEntity>[])
-                        .isNotEmpty) ...<Widget>[
-                      Builder(
-                        builder: (context) {
-                          final summaries = summaryAsync.valueOrNull ??
-                              const <PartySummaryCardEntity>[];
-                          if (summaries.isEmpty) {
-                            return const SizedBox.shrink();
-                          }
-                          final selected = selectedCustomerId == null
-                              ? summaries.first
-                              : summaries.firstWhere(
-                                  (summary) =>
-                                      summary.partyId == selectedCustomerId,
-                                  orElse: () => summaries.first,
-                                );
-                          return LedgerSummaryCards(
-                            summary: selected,
-                            balanceLabel: 'Net',
-                          );
-                        },
+          child: selectedCustomerId == null
+              ? const Card(
+                  child: Center(
+                    child: Text('Open a customer ledger from the table above.'),
+                  ),
+                )
+              : timelineAsync.when(
+                  data: (timelineRows) => Card(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
                       ),
-                      const SizedBox(height: 8),
-                    ],
-                    Expanded(child: LedgerTimelineTable(rows: timelineRows)),
-                  ],
+                      child: Column(
+                        children: <Widget>[
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Ledger: $selectedCustomerName',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          LedgerDuesKpiCards(
+                            outstandingLabel: 'Total Outstandings',
+                            outstandingAmount: selectedSummary?.totalReceivable ?? 0,
+                            paymentsLabel: 'Total Payments',
+                            paymentsAmount: selectedSummary?.totalPayable ?? 0,
+                            remainingLabel: 'Remaining Balance',
+                            remainingAmount: selectedSummary?.outstanding ?? 0,
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: <Widget>[
+                              SizedBox(
+                                width: 220,
+                                child: DropdownButtonFormField<String?>(
+                                  initialValue: selectedType,
+                                  decoration: const InputDecoration(
+                                    border: OutlineInputBorder(),
+                                    isDense: true,
+                                    labelText: 'Ledger Type',
+                                  ),
+                                  items: const <DropdownMenuItem<String?>>[
+                                    DropdownMenuItem<String?>(
+                                      value: null,
+                                      child: Text('All Types'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'sale',
+                                      child: Text('Sale'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'sale_payment',
+                                      child: Text('Sale Payment'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'sale_return',
+                                      child: Text('Sale Return'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'repair_due',
+                                      child: Text('Repair Due'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'repair_payment',
+                                      child: Text('Repair Payment'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'used_phone_buy',
+                                      child: Text('Used Phone Buy'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'used_phone_payment',
+                                      child: Text('Used Phone Payment'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'advance_receive',
+                                      child: Text('Advance Receive'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'advance_use',
+                                      child: Text('Advance Use'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'advance_adjust',
+                                      child: Text('Advance Adjust'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'manual_settlement',
+                                      child: Text('Manual Settlement'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'reversal',
+                                      child: Text('Reversal'),
+                                    ),
+                                  ],
+                                  onChanged: (value) => ref
+                                      .read(customerLedgerTimelineTypeProvider
+                                          .notifier)
+                                      .state = value,
+                                ),
+                              ),
+                              FilterChip(
+                                label: const Text('Outstanding only'),
+                                selected: outstandingOnly,
+                                onSelected: (value) => ref
+                                    .read(
+                                      customerLedgerTimelineOutstandingOnlyProvider
+                                          .notifier,
+                                    )
+                                    .state = value,
+                              ),
+                              FilterChip(
+                                label: const Text('Payment history'),
+                                selected: paymentHistory,
+                                onSelected: (value) => ref
+                                    .read(
+                                      customerLedgerTimelinePaymentHistoryProvider
+                                          .notifier,
+                                    )
+                                    .state = value,
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () async {
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    firstDate: DateTime(2020),
+                                    lastDate:
+                                        DateTime.now().add(const Duration(days: 365)),
+                                    initialDate: startDate ?? DateTime.now(),
+                                  );
+                                  ref
+                                      .read(
+                                        customerLedgerTimelineStartDateProvider
+                                            .notifier,
+                                      )
+                                      .state = picked;
+                                },
+                                icon: const Icon(Icons.calendar_today),
+                                label: Text(
+                                  startDate == null
+                                      ? 'Start Date'
+                                      : FormattingHelpers.dateYmd(startDate),
+                                ),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () async {
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    firstDate: DateTime(2020),
+                                    lastDate:
+                                        DateTime.now().add(const Duration(days: 365)),
+                                    initialDate: endDate ?? DateTime.now(),
+                                  );
+                                  ref
+                                      .read(
+                                        customerLedgerTimelineEndDateProvider
+                                            .notifier,
+                                      )
+                                      .state = picked;
+                                },
+                                icon: const Icon(Icons.event),
+                                label: Text(
+                                  endDate == null
+                                      ? 'End Date'
+                                      : FormattingHelpers.dateYmd(endDate),
+                                ),
+                              ),
+                              OutlinedButton(
+                                onPressed: startDate == null && endDate == null
+                                    ? null
+                                    : () {
+                                        ref
+                                            .read(
+                                              customerLedgerTimelineStartDateProvider
+                                                  .notifier,
+                                            )
+                                            .state = null;
+                                        ref
+                                            .read(
+                                              customerLedgerTimelineEndDateProvider
+                                                  .notifier,
+                                            )
+                                            .state = null;
+                                      },
+                                child: const Text('Clear Dates'),
+                              ),
+                              FilledButton.icon(
+                                onPressed: () async {
+                                  await showDialog<void>(
+                                    context: context,
+                                    builder: (_) => _ReceiveCustomerCreditDialog(
+                                      customerId: selectedCustomerId,
+                                    ),
+                                  );
+                                  ref.invalidate(customerLedgerSummaryProvider);
+                                  ref.invalidate(customerLedgerTimelineProvider);
+                                  ref.invalidate(cashLedgerRowsProvider);
+                                },
+                                icon: const Icon(Icons.south_west, size: 18),
+                                label: const Text('Receive Credit'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Expanded(child: LedgerTimelineTable(rows: timelineRows)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (error, __) => _ReportErrorView(
+                    message: 'Failed to load customer ledger timeline.',
+                    error: error,
+                    onRetry: () {
+                      ref.invalidate(customerLedgerSummaryProvider);
+                      ref.invalidate(customerLedgerTimelineProvider);
+                    },
+                  ),
                 ),
-              ),
-            ),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, __) => _ReportErrorView(
-              message: 'Failed to load customer ledger timeline.',
-              error: error,
-              onRetry: () {
-                ref.invalidate(customerLedgerSummaryProvider);
-                ref.invalidate(customerLedgerTimelineProvider);
-              },
-            ),
-          ),
         ),
       ],
     );
@@ -1262,135 +1479,251 @@ class _SupplierLedgerView extends ConsumerWidget {
     final timelineAsync = ref.watch(supplierLedgerTimelineProvider);
     final selectedSupplierId =
         ref.watch(supplierLedgerTimelineSupplierIdProvider);
+    final selectedType = ref.watch(supplierLedgerTimelineTypeProvider);
     final outstandingOnly =
         ref.watch(supplierLedgerTimelineOutstandingOnlyProvider);
     final paymentHistory =
         ref.watch(supplierLedgerTimelinePaymentHistoryProvider);
+    final startDate = ref.watch(supplierLedgerTimelineStartDateProvider);
+    final endDate = ref.watch(supplierLedgerTimelineEndDateProvider);
+    final summaries = summaryAsync.valueOrNull ?? const <PartySummaryCardEntity>[];
+    final selectedSummary = _selectedPartySummary(summaries, selectedSupplierId);
+    final selectedSupplierName = selectedSummary == null
+        ? 'No ledger selected'
+        : _normalizeSupplierLedgerName(selectedSummary.partyName);
 
     return Column(
       children: <Widget>[
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: <Widget>[
-                SizedBox(
-                  width: 260,
-                  child: DropdownButtonFormField<String?>(
-                    initialValue: selectedSupplierId,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                      labelText: 'Supplier',
-                    ),
-                    items: <DropdownMenuItem<String?>>[
-                      const DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text('All Suppliers'),
-                      ),
-                      ...summaryAsync.valueOrNull
-                              ?.map(
-                                (summary) => DropdownMenuItem<String?>(
-                                  value: summary.partyId,
-                                  child: Text(summary.partyName),
-                                ),
-                              )
-                              .toList(growable: false) ??
-                          const <DropdownMenuItem<String?>>[],
-                    ],
-                    onChanged: (value) => ref
-                        .read(supplierLedgerTimelineSupplierIdProvider.notifier)
-                        .state = value,
-                  ),
-                ),
-                FilterChip(
-                  label: const Text('Outstanding only'),
-                  selected: outstandingOnly,
-                  onSelected: (value) => ref
-                      .read(supplierLedgerTimelineOutstandingOnlyProvider
-                          .notifier)
-                      .state = value,
-                ),
-                FilterChip(
-                  label: const Text('Payment history'),
-                  selected: paymentHistory,
-                  onSelected: (value) => ref
-                      .read(
-                          supplierLedgerTimelinePaymentHistoryProvider.notifier)
-                      .state = value,
-                ),
-                FilledButton.icon(
-                  onPressed: selectedSupplierId == null
-                      ? null
-                      : () async {
-                          await showDialog<void>(
-                            context: context,
-                            builder: (_) => _PaySupplierCreditDialog(
-                                supplierId: selectedSupplierId),
-                          );
-                          ref.invalidate(supplierLedgerSummaryProvider);
-                          ref.invalidate(supplierLedgerTimelineProvider);
-                          ref.invalidate(cashLedgerRowsProvider);
-                        },
-                  icon: const Icon(Icons.north_east, size: 18),
-                  label: const Text('Pay Credit'),
-                ),
-              ],
+        summaryAsync.when(
+          data: (rows) => _LedgerMainTableCard(
+            title: 'Supplier Ledger Overview',
+            partyHeader: 'Supplier',
+            openLabel: 'Open Supplier Ledger',
+            selectedPartyId: selectedSupplierId,
+            summaries: rows,
+            displayName: _normalizeSupplierLedgerName,
+            onOpenLedger: (partyId) => ref
+                .read(supplierLedgerTimelineSupplierIdProvider.notifier)
+                .state = partyId,
+          ),
+          loading: () => const Card(
+            child: SizedBox(
+              height: 120,
+              child: Center(child: CircularProgressIndicator()),
             ),
+          ),
+          error: (error, __) => _ReportErrorView(
+            message: 'Failed to load supplier ledgers.',
+            error: error,
+            onRetry: () => ref.invalidate(supplierLedgerSummaryProvider),
           ),
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: timelineAsync.when(
-            data: (timelineRows) => Card(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Column(
-                  children: <Widget>[
-                    if ((summaryAsync.valueOrNull ??
-                            const <PartySummaryCardEntity>[])
-                        .isNotEmpty) ...<Widget>[
-                      Builder(
-                        builder: (context) {
-                          final summaries = summaryAsync.valueOrNull ??
-                              const <PartySummaryCardEntity>[];
-                          if (summaries.isEmpty) {
-                            return const SizedBox.shrink();
-                          }
-                          final selected = selectedSupplierId == null
-                              ? summaries.first
-                              : summaries.firstWhere(
-                                  (summary) =>
-                                      summary.partyId == selectedSupplierId,
-                                  orElse: () => summaries.first,
-                                );
-                          return LedgerSummaryCards(
-                            summary: selected,
-                            balanceLabel: 'Net Payable',
-                          );
-                        },
+          child: selectedSupplierId == null
+              ? const Card(
+                  child: Center(
+                    child: Text('Open a supplier ledger from the table above.'),
+                  ),
+                )
+              : timelineAsync.when(
+                  data: (timelineRows) => Card(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
                       ),
-                      const SizedBox(height: 8),
-                    ],
-                    Expanded(child: LedgerTimelineTable(rows: timelineRows)),
-                  ],
+                      child: Column(
+                        children: <Widget>[
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Ledger: $selectedSupplierName',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          LedgerDuesKpiCards(
+                            outstandingLabel: 'Total Outstandings',
+                            outstandingAmount: selectedSummary?.totalPayable ?? 0,
+                            paymentsLabel: 'Total Payments',
+                            paymentsAmount: selectedSummary?.totalReceivable ?? 0,
+                            remainingLabel: 'Remaining Balance',
+                            remainingAmount: selectedSummary?.outstanding ?? 0,
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: <Widget>[
+                              SizedBox(
+                                width: 220,
+                                child: DropdownButtonFormField<String?>(
+                                  initialValue: selectedType,
+                                  decoration: const InputDecoration(
+                                    border: OutlineInputBorder(),
+                                    isDense: true,
+                                    labelText: 'Ledger Type',
+                                  ),
+                                  items: const <DropdownMenuItem<String?>>[
+                                    DropdownMenuItem<String?>(
+                                      value: null,
+                                      child: Text('All Types'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'purchase',
+                                      child: Text('Purchase'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'purchase_payment',
+                                      child: Text('Purchase Payment'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'purchase_return',
+                                      child: Text('Purchase Return'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'advance_receive',
+                                      child: Text('Advance Receive'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'advance_adjust',
+                                      child: Text('Advance Adjust'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'manual_settlement',
+                                      child: Text('Manual Settlement'),
+                                    ),
+                                    DropdownMenuItem<String?>(
+                                      value: 'reversal',
+                                      child: Text('Reversal'),
+                                    ),
+                                  ],
+                                  onChanged: (value) => ref
+                                      .read(
+                                          supplierLedgerTimelineTypeProvider.notifier)
+                                      .state = value,
+                                ),
+                              ),
+                              FilterChip(
+                                label: const Text('Outstanding only'),
+                                selected: outstandingOnly,
+                                onSelected: (value) => ref
+                                    .read(
+                                      supplierLedgerTimelineOutstandingOnlyProvider
+                                          .notifier,
+                                    )
+                                    .state = value,
+                              ),
+                              FilterChip(
+                                label: const Text('Payment history'),
+                                selected: paymentHistory,
+                                onSelected: (value) => ref
+                                    .read(
+                                      supplierLedgerTimelinePaymentHistoryProvider
+                                          .notifier,
+                                    )
+                                    .state = value,
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () async {
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    firstDate: DateTime(2020),
+                                    lastDate:
+                                        DateTime.now().add(const Duration(days: 365)),
+                                    initialDate: startDate ?? DateTime.now(),
+                                  );
+                                  ref
+                                      .read(
+                                        supplierLedgerTimelineStartDateProvider
+                                            .notifier,
+                                      )
+                                      .state = picked;
+                                },
+                                icon: const Icon(Icons.calendar_today),
+                                label: Text(
+                                  startDate == null
+                                      ? 'Start Date'
+                                      : FormattingHelpers.dateYmd(startDate),
+                                ),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () async {
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    firstDate: DateTime(2020),
+                                    lastDate:
+                                        DateTime.now().add(const Duration(days: 365)),
+                                    initialDate: endDate ?? DateTime.now(),
+                                  );
+                                  ref
+                                      .read(
+                                        supplierLedgerTimelineEndDateProvider
+                                            .notifier,
+                                      )
+                                      .state = picked;
+                                },
+                                icon: const Icon(Icons.event),
+                                label: Text(
+                                  endDate == null
+                                      ? 'End Date'
+                                      : FormattingHelpers.dateYmd(endDate),
+                                ),
+                              ),
+                              OutlinedButton(
+                                onPressed: startDate == null && endDate == null
+                                    ? null
+                                    : () {
+                                        ref
+                                            .read(
+                                              supplierLedgerTimelineStartDateProvider
+                                                  .notifier,
+                                            )
+                                            .state = null;
+                                        ref
+                                            .read(
+                                              supplierLedgerTimelineEndDateProvider
+                                                  .notifier,
+                                            )
+                                            .state = null;
+                                      },
+                                child: const Text('Clear Dates'),
+                              ),
+                              FilledButton.icon(
+                                onPressed: () async {
+                                  await showDialog<void>(
+                                    context: context,
+                                    builder: (_) => _PaySupplierCreditDialog(
+                                      supplierId: selectedSupplierId,
+                                    ),
+                                  );
+                                  ref.invalidate(supplierLedgerSummaryProvider);
+                                  ref.invalidate(supplierLedgerTimelineProvider);
+                                  ref.invalidate(cashLedgerRowsProvider);
+                                },
+                                icon: const Icon(Icons.north_east, size: 18),
+                                label: const Text('Pay Credit'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Expanded(child: LedgerTimelineTable(rows: timelineRows)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (error, __) => _ReportErrorView(
+                    message: 'Failed to load supplier ledger timeline.',
+                    error: error,
+                    onRetry: () {
+                      ref.invalidate(supplierLedgerSummaryProvider);
+                      ref.invalidate(supplierLedgerTimelineProvider);
+                    },
+                  ),
                 ),
-              ),
-            ),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, __) => _ReportErrorView(
-              message: 'Failed to load supplier ledger timeline.',
-              error: error,
-              onRetry: () {
-                ref.invalidate(supplierLedgerSummaryProvider);
-                ref.invalidate(supplierLedgerTimelineProvider);
-              },
-            ),
-          ),
         ),
       ],
     );
