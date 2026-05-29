@@ -48,6 +48,55 @@ class MigrationService {
   }
 
   Future<void> _applyMigration(Database database, int version) async {
+    // Migration for customer ledger table schema upgrade (master data alignment)
+    if (version == 22) {
+      // 1. Rename old table
+      await database.execute(
+          'ALTER TABLE ${TableNames.customerLedger} RENAME TO ${TableNames.customerLedger}_old;');
+      // 2. Create new table with updated schema
+      await database.execute('''
+            CREATE TABLE ${TableNames.customerLedger} (
+              id TEXT PRIMARY KEY NOT NULL,
+              party_id TEXT NOT NULL,
+              transaction_id TEXT NOT NULL,
+              ledger_type TEXT NOT NULL,
+              amount REAL NOT NULL CHECK (amount >= 0),
+              direction TEXT NOT NULL CHECK (direction IN ('debit', 'credit')),
+              note TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              created_by TEXT,
+              is_reversal INTEGER NOT NULL DEFAULT 0 CHECK (is_reversal IN (0, 1)),
+              reversal_of TEXT,
+              payment_method TEXT,
+              FOREIGN KEY (party_id) REFERENCES ${TableNames.customers}(id)
+                ON UPDATE CASCADE
+                ON DELETE RESTRICT
+            );
+          ''');
+      // 3. Copy data from old table (set updated_at = created_at for existing rows)
+      await database.execute('''
+            INSERT INTO ${TableNames.customerLedger} (
+              id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, updated_at, created_by, is_reversal, reversal_of, payment_method
+            )
+            SELECT
+              id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, created_at as updated_at, created_by, is_reversal, reversal_of, payment_method
+            FROM ${TableNames.customerLedger}_old;
+          ''');
+      // 4. Restore indexes
+      await database.execute(
+          'CREATE INDEX IF NOT EXISTS idx_customer_ledger_party_id ON ${TableNames.customerLedger}(party_id);');
+      await database.execute(
+          'CREATE INDEX IF NOT EXISTS idx_customer_ledger_transaction_id ON ${TableNames.customerLedger}(transaction_id);');
+      await database.execute(
+          'CREATE INDEX IF NOT EXISTS idx_customer_ledger_created_at ON ${TableNames.customerLedger}(created_at);');
+      await database.execute(
+          'CREATE INDEX IF NOT EXISTS idx_customer_ledger_type ON ${TableNames.customerLedger}(ledger_type);');
+      await database.execute(
+          'CREATE INDEX IF NOT EXISTS idx_customer_ledger_reversal_of ON ${TableNames.customerLedger}(reversal_of);');
+      // 5. Drop old table
+      await database.execute('DROP TABLE ${TableNames.customerLedger}_old;');
+    }
     if (version == 7) {
       await _applyMigrationV7(database);
       return;
@@ -82,6 +131,10 @@ class MigrationService {
     }
     if (version == 21) {
       await _applyMigrationV21(database);
+      return;
+    }
+    if (version == 23) {
+      await _applyMigrationV23(database);
       return;
     }
     final statements = _migrationStatements[version];
@@ -837,8 +890,7 @@ class MigrationService {
   }
 
   Future<void> _createLedgerTables(Database database) async {
-    await database.execute(
-      '''
+    await database.execute('''
       CREATE TABLE IF NOT EXISTS ${TableNames.customerLedger} (
         id TEXT PRIMARY KEY NOT NULL,
         party_id TEXT NOT NULL,
@@ -848,13 +900,16 @@ class MigrationService {
         direction TEXT NOT NULL CHECK (direction IN ('debit', 'credit')),
         note TEXT,
         created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
         created_by TEXT,
         is_reversal INTEGER NOT NULL DEFAULT 0 CHECK (is_reversal IN (0, 1)),
         reversal_of TEXT,
-        payment_method TEXT
+        payment_method TEXT,
+        FOREIGN KEY (party_id) REFERENCES ${TableNames.customers}(id)
+          ON UPDATE CASCADE
+          ON DELETE RESTRICT
       );
-      ''',
-    );
+      ''');
     await database.execute(
       '''
       CREATE TABLE IF NOT EXISTS ${TableNames.supplierLedger} (
@@ -1613,5 +1668,84 @@ class MigrationService {
       'CREATE INDEX IF NOT EXISTS idx_sale_returns_created_at ON ${TableNames.saleReturns}(created_at);',
     ],
     21: <String>[],
+    // v22 is handled by inline code in _applyMigration above.
+    22: <String>[],
+    // v23 is handled by dedicated _applyMigrationV23 method.
+    23: <String>[],
   };
+
+  /// Migration v23: upgrade expenses table with structured category/remarks/payment fields.
+  ///
+  /// Old schema: id, expense_date, category, amount, notes, created_at, updated_at, is_deleted
+  /// New schema: + custom_category, remarks, payment_method; notes → remarks
+  Future<void> _applyMigrationV23(Database database) async {
+    await database.execute('PRAGMA foreign_keys = OFF;');
+    await database.execute('PRAGMA legacy_alter_table = ON;');
+    try {
+      await database.execute(
+        'ALTER TABLE ${TableNames.expenses} RENAME TO ${TableNames.expenses}_v22;',
+      );
+      await database.execute(
+        '''
+        CREATE TABLE ${TableNames.expenses} (
+          id TEXT PRIMARY KEY NOT NULL,
+          expense_date TEXT NOT NULL,
+          category TEXT NOT NULL,
+          custom_category TEXT,
+          amount REAL NOT NULL CHECK(amount >= 0),
+          remarks TEXT,
+          payment_method TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT,
+          is_deleted INTEGER NOT NULL DEFAULT 0
+        );
+        ''',
+      );
+      // Migrate data: map old `notes` → `remarks`, custom_category and payment_method default NULL.
+      await database.execute(
+        '''
+        INSERT INTO ${TableNames.expenses} (
+          id,
+          expense_date,
+          category,
+          custom_category,
+          amount,
+          remarks,
+          payment_method,
+          created_at,
+          updated_at,
+          is_deleted
+        )
+        SELECT
+          id,
+          expense_date,
+          category,
+          NULL,
+          MAX(0.0, amount),
+          CASE WHEN TRIM(COALESCE(notes, '')) = '' THEN NULL ELSE TRIM(notes) END,
+          NULL,
+          created_at,
+          updated_at,
+          is_deleted
+        FROM ${TableNames.expenses}_v22;
+        ''',
+      );
+      await _dropTableBestEffort(database, '${TableNames.expenses}_v22');
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_expenses_date ON ${TableNames.expenses}(expense_date);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_expenses_category ON ${TableNames.expenses}(category);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_expenses_payment ON ${TableNames.expenses}(payment_method);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_expenses_deleted ON ${TableNames.expenses}(is_deleted);',
+      );
+    } finally {
+      await database.execute('PRAGMA legacy_alter_table = OFF;');
+      await database.execute('PRAGMA foreign_keys = ON;');
+    }
+  }
 }

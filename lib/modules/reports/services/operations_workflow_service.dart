@@ -8,7 +8,9 @@ import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/core/utils/id_helpers.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
+import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
+import 'package:phone_shop_pos/core/errors/user_facing_errors.dart';
 import 'package:phone_shop_pos/modules/ledger/domain/entities/ledger_timeline_query.dart';
 import 'package:phone_shop_pos/modules/ledger/domain/entities/ledger_timeline_row_entity.dart';
 import 'package:phone_shop_pos/modules/ledger/domain/entities/party_summary_card_entity.dart';
@@ -252,12 +254,21 @@ class OperationsWorkflowService with BaseRepositoryGuard {
 
         final total = (saleRows.first['total'] as num?)?.toDouble() ?? 0;
         final paid = (saleRows.first['paid_amount'] as num?)?.toDouble() ?? 0;
-        final remaining = (total - paid).clamp(0, double.infinity);
+        final remaining =
+            ((total - paid).clamp(0.0, double.infinity)).toDouble();
         if (remaining <= 0) {
-          throw StateError('This sale is already fully paid.');
+          throw AppError(
+            code: 'sale_already_paid',
+            message: UserFacingErrors.saleOverpayment(remainingBalance: 0),
+          );
         }
-        if (amount > remaining) {
-          throw StateError('Payment cannot exceed remaining balance.');
+        if (amount > remaining + 0.009) {
+          throw AppError(
+            code: UserFacingErrors.saleOverpaymentCode,
+            message: UserFacingErrors.saleOverpayment(
+              remainingBalance: remaining,
+            ),
+          );
         }
 
         final now = DateTimeHelpers.nowUtc();

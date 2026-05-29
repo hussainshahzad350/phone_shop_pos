@@ -507,6 +507,8 @@ final cashLedgerRowsProvider = FutureProvider<List<CashLedgerRowEntity>>((
 final expensesStartDateProvider = StateProvider<DateTime?>((ref) => null);
 final expensesEndDateProvider = StateProvider<DateTime?>((ref) => null);
 final expensesCategoryProvider = StateProvider<String>((ref) => '');
+final expensesPaymentMethodProvider = StateProvider<String>((ref) => '');
+final expensesSearchRemarksProvider = StateProvider<String>((ref) => '');
 
 final expensesRowsProvider = FutureProvider<List<ExpenseEntity>>((ref) async {
   final repository = await ref.watch(expenseRepositoryProvider.future);
@@ -514,6 +516,8 @@ final expensesRowsProvider = FutureProvider<List<ExpenseEntity>>((ref) async {
     startDate: ref.watch(expensesStartDateProvider),
     endDate: ref.watch(expensesEndDateProvider),
     category: ref.watch(expensesCategoryProvider),
+    paymentMethod: ref.watch(expensesPaymentMethodProvider),
+    searchRemarks: ref.watch(expensesSearchRemarksProvider),
   );
   return result.fold(
     onSuccess: (value) => value,
@@ -524,6 +528,21 @@ final expensesRowsProvider = FutureProvider<List<ExpenseEntity>>((ref) async {
 final expenseCategoriesProvider = FutureProvider<List<String>>((ref) async {
   final repository = await ref.watch(expenseRepositoryProvider.future);
   final result = await repository.getExpenseCategories();
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => throw error,
+  );
+});
+
+final expenseAnalyticsSummaryProvider =
+    FutureProvider<ExpenseAnalyticsSummary>((ref) async {
+  final repository = await ref.watch(expenseRepositoryProvider.future);
+  final startDate = ref.watch(expensesStartDateProvider);
+  final endDate = ref.watch(expensesEndDateProvider);
+  final result = await repository.getAnalyticsSummary(
+    startDate: startDate,
+    endDate: endDate,
+  );
   return result.fold(
     onSuccess: (value) => value,
     onFailure: (error) => throw error,

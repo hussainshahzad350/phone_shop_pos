@@ -190,7 +190,14 @@ class SqliteSupplierLedgerRepository
           paymentMethod: row['payment_method'] as String?,
           sourceLabel: row['transaction_id'] as String,
         );
-      }).toList(growable: false);
+      }).toList(growable: false)
+        ..sort((a, b) {
+          final byDate = b.createdAt.compareTo(a.createdAt);
+          if (byDate != 0) {
+            return byDate;
+          }
+          return b.id.compareTo(a.id);
+        });
     }, operation: 'fetch_supplier_ledger_timeline');
   }
 

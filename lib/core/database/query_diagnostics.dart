@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 
@@ -31,10 +30,9 @@ class QueryDiagnostics {
   }
 
   static void _log(String message) {
-    if (kDebugMode) {
-      debugPrint(message);
+    if (!kDebugMode) {
       return;
     }
-    developer.log(message, name: 'QueryDiagnostics');
+    debugPrint(message);
   }
 }

@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/database/database_provider.dart';
@@ -26,8 +28,10 @@ void main() {
       runApp(const ProviderScope(child: PhoneShopPosApp()));
     },
     (error, stackTrace) {
-      debugPrint('Unhandled startup/runtime error: $error');
-      debugPrintStack(stackTrace: stackTrace);
+      if (kDebugMode) {
+        debugPrint('Unhandled startup/runtime error: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
     },
   );
 }

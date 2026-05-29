@@ -8,7 +8,9 @@ import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/expense_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/repositories/expense_repository.dart';
 
-class SqliteExpenseRepository with BaseRepositoryGuard implements ExpenseRepository {
+class SqliteExpenseRepository
+    with BaseRepositoryGuard
+    implements ExpenseRepository {
   SqliteExpenseRepository({required AppDatabase appDatabase})
       : _appDatabase = appDatabase;
 
@@ -26,8 +28,13 @@ class SqliteExpenseRepository with BaseRepositoryGuard implements ExpenseReposit
         'id': expense.id,
         'expense_date': DateTimeHelpers.toSql(expense.expenseDate),
         'category': normalizedCategory,
+        'custom_category':
+            NotesSafety.normalizeNullable(expense.customCategory),
         'amount': expense.amount,
-        'notes': NotesSafety.normalizeNullable(expense.notes),
+        'remarks': NotesSafety.normalizeNullable(expense.remarks),
+        'payment_method': expense.paymentMethod?.trim().isNotEmpty == true
+            ? expense.paymentMethod!.trim()
+            : null,
         'created_at': DateTimeHelpers.toSql(expense.createdAt),
         'updated_at': expense.updatedAt == null
             ? null
@@ -50,8 +57,13 @@ class SqliteExpenseRepository with BaseRepositoryGuard implements ExpenseReposit
         <String, Object?>{
           'expense_date': DateTimeHelpers.toSql(expense.expenseDate),
           'category': normalizedCategory,
+          'custom_category':
+              NotesSafety.normalizeNullable(expense.customCategory),
           'amount': expense.amount,
-          'notes': NotesSafety.normalizeNullable(expense.notes),
+          'remarks': NotesSafety.normalizeNullable(expense.remarks),
+          'payment_method': expense.paymentMethod?.trim().isNotEmpty == true
+              ? expense.paymentMethod!.trim()
+              : null,
           'updated_at': expense.updatedAt == null
               ? DateTimeHelpers.toSql(DateTimeHelpers.nowUtc())
               : DateTimeHelpers.toSql(expense.updatedAt!),
@@ -82,6 +94,8 @@ class SqliteExpenseRepository with BaseRepositoryGuard implements ExpenseReposit
     DateTime? startDate,
     DateTime? endDate,
     String? category,
+    String? paymentMethod,
+    String? searchRemarks,
     int limit = 500,
     int offset = 0,
   }) {
@@ -106,6 +120,20 @@ class SqliteExpenseRepository with BaseRepositoryGuard implements ExpenseReposit
       if (normalizedCategory.isNotEmpty) {
         where.add('category = ?');
         args.add(normalizedCategory);
+      }
+
+      final normalizedPaymentMethod = paymentMethod?.trim() ?? '';
+      if (normalizedPaymentMethod.isNotEmpty) {
+        where.add('payment_method = ?');
+        args.add(normalizedPaymentMethod);
+      }
+
+      final normalizedRemarks = searchRemarks?.trim() ?? '';
+      if (normalizedRemarks.isNotEmpty) {
+        where.add('(remarks LIKE ? OR custom_category LIKE ?)');
+        final like = '%$normalizedRemarks%';
+        args.add(like);
+        args.add(like);
       }
 
       final rows = await QueryDiagnostics.trace(
@@ -146,6 +174,121 @@ class SqliteExpenseRepository with BaseRepositoryGuard implements ExpenseReposit
     }, operation: 'get_expense_categories');
   }
 
+  @override
+  Future<Result<ExpenseAnalyticsSummary>> getAnalyticsSummary({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) {
+    return guard<ExpenseAnalyticsSummary>(() async {
+      final where = <String>['is_deleted = 0'];
+      final args = <Object?>[];
+
+      final nowUtc = DateTimeHelpers.nowUtc();
+      final todayStart = DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day);
+      final monthStart = DateTime.utc(nowUtc.year, nowUtc.month);
+
+      if (startDate != null) {
+        where.add('expense_date >= ?');
+        args.add(DateTimeHelpers.toSql(
+            DateTime.utc(startDate.year, startDate.month, startDate.day)));
+      }
+      if (endDate != null) {
+        final endUtc = DateTime.utc(endDate.year, endDate.month, endDate.day)
+            .add(const Duration(days: 1));
+        where.add('expense_date < ?');
+        args.add(DateTimeHelpers.toSql(endUtc));
+      }
+
+      final whereClause = where.join(' AND ');
+
+      // Today total
+      final todayRows = await _appDatabase.database.rawQuery(
+        '''
+        SELECT COALESCE(SUM(amount), 0) AS total
+        FROM ${TableNames.expenses}
+        WHERE is_deleted = 0
+          AND expense_date >= ?
+          AND expense_date < ?
+        ''',
+        [
+          DateTimeHelpers.toSql(todayStart),
+          DateTimeHelpers.toSql(todayStart.add(const Duration(days: 1))),
+        ],
+      );
+      final todayTotal =
+          (todayRows.first['total'] as num?)?.toDouble() ?? 0.0;
+
+      // This month total
+      final monthRows = await _appDatabase.database.rawQuery(
+        '''
+        SELECT COALESCE(SUM(amount), 0) AS total
+        FROM ${TableNames.expenses}
+        WHERE is_deleted = 0
+          AND expense_date >= ?
+        ''',
+        [DateTimeHelpers.toSql(monthStart)],
+      );
+      final monthTotal =
+          (monthRows.first['total'] as num?)?.toDouble() ?? 0.0;
+
+      // All-time total (within filter)
+      final totalRows = await _appDatabase.database.rawQuery(
+        '''
+        SELECT COALESCE(SUM(amount), 0) AS total
+        FROM ${TableNames.expenses}
+        WHERE $whereClause
+        ''',
+        args,
+      );
+      final allTimeTotal =
+          (totalRows.first['total'] as num?)?.toDouble() ?? 0.0;
+
+      // Highest-spend category
+      final highestCategoryRows = await _appDatabase.database.rawQuery(
+        '''
+        SELECT category, COALESCE(SUM(amount), 0) AS total
+        FROM ${TableNames.expenses}
+        WHERE $whereClause
+        GROUP BY category
+        ORDER BY total DESC
+        LIMIT 1
+        ''',
+        args,
+      );
+      final highestCategory = highestCategoryRows.isEmpty
+          ? null
+          : (highestCategoryRows.first['category'] as String?);
+      final highestCategoryTotal = highestCategoryRows.isEmpty
+          ? 0.0
+          : (highestCategoryRows.first['total'] as num?)?.toDouble() ?? 0.0;
+
+      // Most frequent category
+      final frequentCategoryRows = await _appDatabase.database.rawQuery(
+        '''
+        SELECT category, COUNT(*) AS cnt
+        FROM ${TableNames.expenses}
+        WHERE $whereClause
+        GROUP BY category
+        ORDER BY cnt DESC
+        LIMIT 1
+        ''',
+        args,
+      );
+      final mostFrequentCategory = frequentCategoryRows.isEmpty
+          ? null
+          : (frequentCategoryRows.first['category'] as String?);
+
+      return ExpenseAnalyticsSummary(
+        todayTotal: todayTotal,
+        thisMonthTotal: monthTotal,
+        allTimeTotal: allTimeTotal,
+        highestCategory: highestCategory,
+        highestCategoryTotal: highestCategoryTotal,
+        mostFrequentCategory: mostFrequentCategory,
+      );
+    }, operation: 'get_expense_analytics');
+  }
+
   String _normalizeCategory(String input) {
     final collapsed = input.trim().replaceAll(RegExp(r'\s+'), ' ');
     if (collapsed.isEmpty) {
@@ -175,16 +318,45 @@ class SqliteExpenseRepository with BaseRepositoryGuard implements ExpenseReposit
   }
 
   ExpenseEntity _toEntity(Map<String, Object?> row) {
+    // Backward-compat: old rows used `notes`; new rows use `remarks`.
+    // Both columns are present after v23 migration.
+    final remarksRaw = (row['remarks'] as String?) ??
+        (row['notes'] as String?); // notes column removed in v23, safety only
     return ExpenseEntity(
       id: row['id'] as String,
       expenseDate: DateTimeHelpers.fromSql(row['expense_date'] as String),
       category: row['category'] as String,
+      customCategory: (row['custom_category'] as String?)?.isNotEmpty == true
+          ? row['custom_category'] as String
+          : null,
       amount: (row['amount'] as num?)?.toDouble() ?? 0,
-      notes: row['notes'] as String?,
+      remarks: remarksRaw?.isNotEmpty == true ? remarksRaw : null,
+      paymentMethod: (row['payment_method'] as String?)?.isNotEmpty == true
+          ? row['payment_method'] as String
+          : null,
       createdAt: DateTimeHelpers.fromSql(row['created_at'] as String),
       updatedAt: (row['updated_at'] as String?) == null
           ? null
           : DateTimeHelpers.fromSql(row['updated_at'] as String),
     );
   }
+}
+
+/// Analytics summary for the expense dashboard.
+class ExpenseAnalyticsSummary {
+  const ExpenseAnalyticsSummary({
+    required this.todayTotal,
+    required this.thisMonthTotal,
+    required this.allTimeTotal,
+    required this.highestCategory,
+    required this.highestCategoryTotal,
+    required this.mostFrequentCategory,
+  });
+
+  final double todayTotal;
+  final double thisMonthTotal;
+  final double allTimeTotal;
+  final String? highestCategory;
+  final double highestCategoryTotal;
+  final String? mostFrequentCategory;
 }

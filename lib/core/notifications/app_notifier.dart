@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:phone_shop_pos/core/errors/app_error.dart';
+import 'package:phone_shop_pos/core/errors/user_facing_errors.dart';
+
 enum AppNotificationType { success, error, warning, info }
 
 class AppNotifier {
@@ -37,6 +40,35 @@ class AppNotifier {
     _show(
       message,
       AppNotificationType.error,
+      action: action,
+      showCloseIcon: showCloseIcon,
+      duration: duration,
+    );
+  }
+
+  static void errorFrom(
+    Object source, {
+    String? operation,
+    SnackBarAction? action,
+    bool showCloseIcon = true,
+    Duration duration = _errorDuration,
+  }) {
+    AppNotifier.error(
+      UserFacingErrors.messageFor(source, operation: operation),
+      action: action,
+      showCloseIcon: showCloseIcon,
+      duration: duration,
+    );
+  }
+
+  static void errorFromAppError(
+    AppError appError, {
+    SnackBarAction? action,
+    bool showCloseIcon = true,
+    Duration duration = _errorDuration,
+  }) {
+    AppNotifier.error(
+      UserFacingErrors.messageForAppError(appError),
       action: action,
       showCloseIcon: showCloseIcon,
       duration: duration,

@@ -2,6 +2,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
+import 'package:phone_shop_pos/core/errors/user_facing_errors.dart';
 
 abstract class BaseRepository {
   Future<Result<T>> guard<T>(
@@ -43,15 +44,17 @@ mixin BaseRepositoryGuard implements BaseRepository {
       return Failure<T>(
         AppError(
           code: 'format_error',
-          message: 'Data format error during $operation',
+          message: UserFacingErrors.messageFor(error, operation: operation),
           details: error,
         ),
       );
+    } on AppError catch (error) {
+      return Failure<T>(error);
     } catch (error) {
       return Failure<T>(
         AppError(
-          code: 'unknown_error',
-          message: 'Unexpected error during $operation',
+          code: 'operation_failed',
+          message: UserFacingErrors.messageFor(error, operation: operation),
           details: error,
         ),
       );

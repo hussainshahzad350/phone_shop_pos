@@ -4,7 +4,9 @@ import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/database/app_database.dart';
 import 'package:phone_shop_pos/core/database/base_repository.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
+import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
+import 'package:phone_shop_pos/core/errors/user_facing_errors.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/core/utils/id_helpers.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
@@ -330,10 +332,16 @@ class LedgerPostingService with BaseRepositoryGuard {
         }
         final net = summaryResult.asSuccess!.value.net;
         if (net <= 0.009) {
-          throw StateError('Customer has no receivable outstanding balance.');
+          throw AppError(
+            code: 'no_customer_receivable',
+            message: UserFacingErrors.customerOverpayment(maxReceivable: 0),
+          );
         }
         if (payload.amount > net + 0.009) {
-          throw StateError('Amount exceeds receivable outstanding balance.');
+          throw AppError(
+            code: UserFacingErrors.customerOverpaymentCode,
+            message: UserFacingErrors.customerOverpayment(maxReceivable: net),
+          );
         }
 
         final settlementId = IdHelpers.newId(prefix: 'cst');
@@ -403,10 +411,16 @@ class LedgerPostingService with BaseRepositoryGuard {
         }
         final net = summaryResult.asSuccess!.value.net;
         if (net <= 0.009) {
-          throw StateError('Supplier has no payable outstanding balance.');
+          throw AppError(
+            code: 'no_supplier_payable',
+            message: UserFacingErrors.supplierOverpayment(maxPayable: 0),
+          );
         }
         if (payload.amount > net + 0.009) {
-          throw StateError('Amount exceeds payable outstanding balance.');
+          throw AppError(
+            code: UserFacingErrors.supplierOverpaymentCode,
+            message: UserFacingErrors.supplierOverpayment(maxPayable: net),
+          );
         }
 
         final settlementId = IdHelpers.newId(prefix: 'spt');
@@ -534,11 +548,17 @@ class LedgerPostingService with BaseRepositoryGuard {
   }
 
   void _validateSettlementAmount(double amount) {
-    if (amount <= 0) {
-      throw StateError('Amount must be greater than zero.');
-    }
     if (amount.isNaN || amount.isInfinite) {
-      throw StateError('Invalid amount.');
+      throw AppError(
+        code: 'invalid_amount',
+        message: 'Enter a valid amount.',
+      );
+    }
+    if (amount <= 0) {
+      throw AppError(
+        code: 'invalid_amount',
+        message: 'Enter an amount greater than zero.',
+      );
     }
   }
 }
