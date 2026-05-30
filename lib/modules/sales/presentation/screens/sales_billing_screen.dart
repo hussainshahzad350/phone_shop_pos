@@ -12,6 +12,8 @@ import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
+import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_entity.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/helpers/sale_completion_flow.dart';
@@ -323,6 +325,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     final completion = flowOutcome.completionResult.asSuccess!.value;
     final enqueueResult = flowOutcome.enqueueResult;
     _productSearchController.clear();
+    _invalidateFinancialReportsAfterSale();
     if (enqueueResult != null && enqueueResult.isSuccess) {
       AppNotifier.success(
         'Sale completed. Invoice: ${completion.invoiceNumber}',
@@ -337,6 +340,20 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
       );
     }
     _focusSearchAfterAdd();
+  }
+
+  void _invalidateFinancialReportsAfterSale() {
+    ref.invalidate(dailySalesReportProvider);
+    ref.invalidate(dateRangeSalesReportProvider);
+    ref.invalidate(soldPhonesReportProvider);
+    ref.invalidate(profitReportProvider);
+    ref.invalidate(profitReportRowsProvider);
+    ref.invalidate(customerBalanceReportProvider);
+    ref.invalidate(customerLedgerSummaryProvider);
+    ref.invalidate(customerLedgerTimelineProvider);
+    ref.invalidate(cashLedgerRowsProvider);
+    ref.invalidate(dashboardKpisProvider);
+    ref.invalidate(dashboardRecentSalesProvider);
   }
 
   void _handleFailedSale(AppError error) {

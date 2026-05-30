@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:phone_shop_pos/core/utils/cnic_helpers.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
+import 'package:phone_shop_pos/core/utils/imei_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 
@@ -39,10 +40,16 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
     super.initState();
     _defaultCost = widget.defaultCostPrice;
     _previewNotifier = ValueNotifier<List<_ParsedImeiLine>>(const []);
+    _sellerNameController.addListener(_refreshConfirmState);
+    _sellerIdCardController.addListener(_refreshConfirmState);
+    _conditionNotesController.addListener(_refreshConfirmState);
   }
 
   @override
   void dispose() {
+    _sellerNameController.removeListener(_refreshConfirmState);
+    _sellerIdCardController.removeListener(_refreshConfirmState);
+    _conditionNotesController.removeListener(_refreshConfirmState);
     _bulkController.dispose();
     _sellerNameController.dispose();
     _sellerIdCardController.dispose();
@@ -65,11 +72,12 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
     final parsed = <_ParsedImeiLine>[];
     for (final line in lines) {
       final parts = line.split(RegExp(r'[,;\t]+'));
-      final imei1 = parts.isNotEmpty ? parts[0].trim() : '';
+      final imei1 = parts.isNotEmpty ? ImeiHelpers.normalize(parts[0]) : '';
       if (imei1.isEmpty) {
         continue;
       }
-      final imei2 = parts.length > 1 ? parts[1].trim() : null;
+      final imei2 =
+          parts.length > 1 ? ImeiHelpers.normalizeNullable(parts[1]) : null;
       final serial = parts.length > 2 ? parts[2].trim() : null;
       parsed.add(_ParsedImeiLine(
         imei1: imei1,
@@ -79,6 +87,13 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
     }
 
     _previewNotifier.value = parsed;
+    _refreshConfirmState();
+  }
+
+  void _refreshConfirmState() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   bool get _canConfirm {

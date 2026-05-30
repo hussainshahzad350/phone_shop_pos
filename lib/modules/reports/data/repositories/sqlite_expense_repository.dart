@@ -32,6 +32,7 @@ class SqliteExpenseRepository
             NotesSafety.normalizeNullable(expense.customCategory),
         'amount': expense.amount,
         'remarks': NotesSafety.normalizeNullable(expense.remarks),
+        'notes': NotesSafety.normalizeNullable(expense.remarks),
         'payment_method': expense.paymentMethod?.trim().isNotEmpty == true
             ? expense.paymentMethod!.trim()
             : null,
@@ -61,6 +62,7 @@ class SqliteExpenseRepository
               NotesSafety.normalizeNullable(expense.customCategory),
           'amount': expense.amount,
           'remarks': NotesSafety.normalizeNullable(expense.remarks),
+          'notes': NotesSafety.normalizeNullable(expense.remarks),
           'payment_method': expense.paymentMethod?.trim().isNotEmpty == true
               ? expense.paymentMethod!.trim()
               : null,
@@ -87,6 +89,55 @@ class SqliteExpenseRepository
         whereArgs: <Object?>[expenseId],
       );
     }, operation: 'delete_expense');
+  }
+
+  @override
+  Future<Result<List<ExpenseEntity>>> getExpensesByDateRange({
+    required DateTime startDate,
+    required DateTime endDate,
+    int limit = 500,
+    int offset = 0,
+  }) {
+    return getExpenses(
+      startDate: startDate,
+      endDate: endDate,
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  @override
+  Future<Result<List<ExpenseEntity>>> searchExpenses(
+    String query, {
+    int limit = 500,
+    int offset = 0,
+  }) {
+    return getExpenses(
+      searchRemarks: query,
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  @override
+  Future<Result<List<ExpenseEntity>>> filterExpenses({
+    DateTime? startDate,
+    DateTime? endDate,
+    String? category,
+    String? paymentMethod,
+    String? searchRemarks,
+    int limit = 500,
+    int offset = 0,
+  }) {
+    return getExpenses(
+      startDate: startDate,
+      endDate: endDate,
+      category: category,
+      paymentMethod: paymentMethod,
+      searchRemarks: searchRemarks,
+      limit: limit,
+      offset: offset,
+    );
   }
 
   @override
@@ -175,6 +226,14 @@ class SqliteExpenseRepository
   }
 
   @override
+  Future<Result<ExpenseAnalyticsSummary>> getExpenseSummary({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) {
+    return getAnalyticsSummary(startDate: startDate, endDate: endDate);
+  }
+
+  @override
   Future<Result<ExpenseAnalyticsSummary>> getAnalyticsSummary({
     DateTime? startDate,
     DateTime? endDate,
@@ -215,8 +274,7 @@ class SqliteExpenseRepository
           DateTimeHelpers.toSql(todayStart.add(const Duration(days: 1))),
         ],
       );
-      final todayTotal =
-          (todayRows.first['total'] as num?)?.toDouble() ?? 0.0;
+      final todayTotal = (todayRows.first['total'] as num?)?.toDouble() ?? 0.0;
 
       // This month total
       final monthRows = await _appDatabase.database.rawQuery(
@@ -228,8 +286,7 @@ class SqliteExpenseRepository
         ''',
         [DateTimeHelpers.toSql(monthStart)],
       );
-      final monthTotal =
-          (monthRows.first['total'] as num?)?.toDouble() ?? 0.0;
+      final monthTotal = (monthRows.first['total'] as num?)?.toDouble() ?? 0.0;
 
       // All-time total (within filter)
       final totalRows = await _appDatabase.database.rawQuery(
@@ -320,8 +377,7 @@ class SqliteExpenseRepository
   ExpenseEntity _toEntity(Map<String, Object?> row) {
     // Backward-compat: old rows used `notes`; new rows use `remarks`.
     // Both columns are present after v23 migration.
-    final remarksRaw = (row['remarks'] as String?) ??
-        (row['notes'] as String?); // notes column removed in v23, safety only
+    final remarksRaw = (row['remarks'] as String?) ?? (row['notes'] as String?);
     return ExpenseEntity(
       id: row['id'] as String,
       expenseDate: DateTimeHelpers.fromSql(row['expense_date'] as String),
@@ -340,23 +396,4 @@ class SqliteExpenseRepository
           : DateTimeHelpers.fromSql(row['updated_at'] as String),
     );
   }
-}
-
-/// Analytics summary for the expense dashboard.
-class ExpenseAnalyticsSummary {
-  const ExpenseAnalyticsSummary({
-    required this.todayTotal,
-    required this.thisMonthTotal,
-    required this.allTimeTotal,
-    required this.highestCategory,
-    required this.highestCategoryTotal,
-    required this.mostFrequentCategory,
-  });
-
-  final double todayTotal;
-  final double thisMonthTotal;
-  final double allTimeTotal;
-  final String? highestCategory;
-  final double highestCategoryTotal;
-  final String? mostFrequentCategory;
 }

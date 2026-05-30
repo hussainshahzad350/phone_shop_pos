@@ -1,5 +1,6 @@
 import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
+import 'package:phone_shop_pos/core/utils/imei_helpers.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_completion_entity.dart';
@@ -70,7 +71,8 @@ class PurchaseService {
 
     if (quantity <= 0) {
       return const Failure<List<PurchaseFormItem>>(
-        AppError(code: 'invalid_qty', message: 'Quantity must be greater than 0.'),
+        AppError(
+            code: 'invalid_qty', message: 'Quantity must be greater than 0.'),
       );
     }
 
@@ -102,7 +104,8 @@ class PurchaseService {
 
     if (cost < 0) {
       return const Failure<List<PurchaseFormItem>>(
-        AppError(code: 'invalid_cost', message: 'Unit cost cannot be negative.'),
+        AppError(
+            code: 'invalid_cost', message: 'Unit cost cannot be negative.'),
       );
     }
 
@@ -130,11 +133,19 @@ class PurchaseService {
     }
 
     final normalizedEntry = ImeiEntry(
-      imei1: entry.imei1.trim(),
-      imei2: _normalizeOptional(entry.imei2),
+      imei1: ImeiHelpers.normalize(entry.imei1),
+      imei2: ImeiHelpers.normalizeNullable(entry.imei2),
       serialNumber: _normalizeOptional(entry.serialNumber),
       costPrice: entry.costPrice,
       sellingPrice: entry.sellingPrice,
+      condition: entry.condition,
+      sellerName: _normalizeOptional(entry.sellerName),
+      sellerIdCard: _normalizeOptional(entry.sellerIdCard),
+      sellerAddress: _normalizeOptional(entry.sellerAddress),
+      remainingWarranty: _normalizeOptional(entry.remainingWarranty),
+      accessories: _normalizeOptional(entry.accessories),
+      phoneConditionNotes: _normalizeOptional(entry.phoneConditionNotes),
+      sellerPhone: _normalizeOptional(entry.sellerPhone),
     );
     final duplicate = item.imeiEntries.any(
       (existingEntry) => _hasImeiConflict(
@@ -144,7 +155,8 @@ class PurchaseService {
     );
     if (duplicate) {
       return const Failure<List<PurchaseFormItem>>(
-        AppError(code: 'duplicate_imei', message: 'This IMEI is already added.'),
+        AppError(
+            code: 'duplicate_imei', message: 'This IMEI is already added.'),
       );
     }
 
@@ -183,7 +195,7 @@ class PurchaseService {
     required String imei,
     required List<PurchaseFormItem> currentItems,
   }) async {
-    final trimmed = imei.trim();
+    final trimmed = ImeiHelpers.normalize(imei);
     if (trimmed.isEmpty) {
       return const Failure<void>(
         AppError(code: 'empty_imei', message: 'IMEI cannot be empty.'),
@@ -204,7 +216,9 @@ class PurchaseService {
     final duplicateInForm = currentItems
         .where((item) => item.hasImei)
         .expand((item) => item.imeiEntries)
-        .any((entry) => entry.imei1.trim() == trimmed || entry.imei2?.trim() == trimmed);
+        .any((entry) =>
+            ImeiHelpers.normalize(entry.imei1) == trimmed ||
+            ImeiHelpers.normalizeNullable(entry.imei2) == trimmed);
 
     if (duplicateInForm) {
       return const Failure<void>(
@@ -240,8 +254,8 @@ class PurchaseService {
     required ImeiEntry entry,
     required List<PurchaseFormItem> currentItems,
   }) async {
-    final normalizedImei1 = entry.imei1.trim();
-    final normalizedImei2 = entry.imei2?.trim();
+    final normalizedImei1 = ImeiHelpers.normalize(entry.imei1);
+    final normalizedImei2 = ImeiHelpers.normalizeNullable(entry.imei2);
 
     final imei1Result = await validateImei(
       imei: normalizedImei1,
@@ -338,7 +352,8 @@ class PurchaseService {
       }
     }
 
-    final notesError = NotesSafety.validate(notes, fieldLabel: 'Purchase notes');
+    final notesError =
+        NotesSafety.validate(notes, fieldLabel: 'Purchase notes');
     if (notesError != null) {
       return Failure<PurchaseCompletionEntity>(
         AppError(code: 'invalid_purchase_notes', message: notesError),
@@ -369,10 +384,10 @@ class PurchaseService {
     required ImeiEntry existingEntry,
     required ImeiEntry newEntry,
   }) {
-    final existingImei1 = existingEntry.imei1.trim();
-    final existingImei2 = existingEntry.imei2?.trim();
-    final newImei1 = newEntry.imei1;
-    final newImei2 = newEntry.imei2;
+    final existingImei1 = ImeiHelpers.normalize(existingEntry.imei1);
+    final existingImei2 = ImeiHelpers.normalizeNullable(existingEntry.imei2);
+    final newImei1 = ImeiHelpers.normalize(newEntry.imei1);
+    final newImei2 = ImeiHelpers.normalizeNullable(newEntry.imei2);
     return existingImei1 == newImei1 ||
         existingImei2 == newImei1 ||
         (newImei2 != null &&

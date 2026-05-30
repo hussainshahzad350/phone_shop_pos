@@ -5,6 +5,7 @@ import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
+import 'package:phone_shop_pos/core/utils/imei_helpers.dart';
 import 'package:phone_shop_pos/core/utils/id_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/data/models/product_model.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
@@ -121,7 +122,7 @@ class SqlitePurchaseRepository
   @override
   Future<Result<bool>> isImeiUnique(String imei) {
     return guard<bool>(() async {
-      final trimmedImei = imei.trim();
+      final trimmedImei = ImeiHelpers.normalize(imei);
       final rows = await _appDatabase.queryTable(
         TableNames.serializedStock,
         where: 'imei1 = ? OR imei2 = ?',
@@ -154,8 +155,8 @@ class SqlitePurchaseRepository
       for (final item in items) {
         if (!item.hasImei) continue;
         for (final entry in item.imeiEntries) {
-          final i1 = entry.imei1.trim();
-          final i2 = entry.imei2?.trim();
+          final i1 = ImeiHelpers.normalize(entry.imei1);
+          final i2 = ImeiHelpers.normalizeNullable(entry.imei2);
           if (i1.isNotEmpty) allImeiValues.add(i1);
           if (i2 != null && i2.isNotEmpty) allImeiValues.add(i2);
         }
@@ -245,10 +246,9 @@ class SqlitePurchaseRepository
         for (final item in items) {
           if (item.hasImei) {
             for (final entry in item.imeiEntries) {
-              final normalizedImei1 = entry.imei1.trim();
-              final rawImei2 = entry.imei2?.trim();
+              final normalizedImei1 = ImeiHelpers.normalize(entry.imei1);
               final normalizedImei2 =
-                  (rawImei2 == null || rawImei2.isEmpty) ? null : rawImei2;
+                  ImeiHelpers.normalizeNullable(entry.imei2);
               final rawSerial = entry.serialNumber?.trim();
               final normalizedSerial =
                   (rawSerial == null || rawSerial.isEmpty) ? null : rawSerial;
@@ -426,8 +426,8 @@ class SqlitePurchaseRepository
         }
 
         for (final entry in item.imeiEntries) {
-          final normalizedImei1 = entry.imei1.trim();
-          final normalizedImei2 = entry.imei2?.trim();
+          final normalizedImei1 = ImeiHelpers.normalize(entry.imei1);
+          final normalizedImei2 = ImeiHelpers.normalizeNullable(entry.imei2);
 
           if (normalizedImei1.isEmpty) {
             throw StateError('${item.productName} contains an empty IMEI.');

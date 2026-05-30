@@ -104,3 +104,22 @@ class ExpenseEntity {
         updatedAt,
       );
 }
+
+/// Analytics summary for the expense dashboard.
+class ExpenseAnalyticsSummary {
+  const ExpenseAnalyticsSummary({
+    required this.todayTotal,
+    required this.thisMonthTotal,
+    required this.allTimeTotal,
+    required this.highestCategory,
+    required this.highestCategoryTotal,
+    required this.mostFrequentCategory,
+  });
+
+  final double todayTotal;
+  final double thisMonthTotal;
+  final double allTimeTotal;
+  final String? highestCategory;
+  final double highestCategoryTotal;
+  final String? mostFrequentCategory;
+}

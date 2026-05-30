@@ -118,6 +118,46 @@ void main() {
       expect(result.isSuccess, isTrue);
     });
 
+    test('accepts shop-label slash suffix and validates normalized IMEI',
+        () async {
+      final result = await service.validateImei(
+        imei: '865551059502427 / 69',
+        currentItems: const <PurchaseFormItem>[],
+      );
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('stores normalized IMEI when adding slash-suffix label', () {
+      const item = PurchaseFormItem(
+        productModelId: 'prd-001',
+        productName: 'Test Phone',
+        hasImei: true,
+      );
+
+      final result = service.addImeiEntry(
+        items: const <PurchaseFormItem>[item],
+        index: 0,
+        entry: const ImeiEntry(
+          imei1: '865551059502427 / 69',
+          costPrice: 1000,
+        ),
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.asSuccess!.value.single.imeiEntries.single.imei1,
+          '865551059502427');
+    });
+
+    test('rejects slash-suffix label when normalized IMEI exists in database',
+        () async {
+      final result = await service.validateImei(
+        imei: '999888777666555 / 11',
+        currentItems: const <PurchaseFormItem>[],
+      );
+      expect(result.isFailure, isTrue);
+      expect((result.asFailure!.error).code, 'imei_exists');
+    });
+
     test('accepts valid 14-digit IMEI not in DB', () async {
       final result = await service.validateImei(
         imei: '35678910123456',
@@ -281,7 +321,8 @@ void main() {
       service = PurchaseService(repository: repository);
     });
 
-    test('rejects invalid serialized IMEI before repository transaction', () async {
+    test('rejects invalid serialized IMEI before repository transaction',
+        () async {
       final result = await service.completePurchase(
         items: const <PurchaseFormItem>[
           PurchaseFormItem(
@@ -303,7 +344,8 @@ void main() {
       expect(repository.createPurchaseCallCount, 0);
     });
 
-    test('rejects existing secondary IMEI before repository transaction', () async {
+    test('rejects existing secondary IMEI before repository transaction',
+        () async {
       final result = await service.completePurchase(
         items: const <PurchaseFormItem>[
           PurchaseFormItem(

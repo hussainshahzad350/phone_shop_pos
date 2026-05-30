@@ -137,6 +137,10 @@ class MigrationService {
       await _applyMigrationV23(database);
       return;
     }
+    if (version == 24) {
+      await _applyMigrationV24(database);
+      return;
+    }
     final statements = _migrationStatements[version];
     if (statements == null) {
       return;
@@ -1672,6 +1676,8 @@ class MigrationService {
     22: <String>[],
     // v23 is handled by dedicated _applyMigrationV23 method.
     23: <String>[],
+    // v24 is handled by dedicated _applyMigrationV24 method.
+    24: <String>[],
   };
 
   /// Migration v23: upgrade expenses table with structured category/remarks/payment fields.
@@ -1694,6 +1700,7 @@ class MigrationService {
           custom_category TEXT,
           amount REAL NOT NULL CHECK(amount >= 0),
           remarks TEXT,
+          notes TEXT,
           payment_method TEXT,
           created_at TEXT NOT NULL,
           updated_at TEXT,
@@ -1711,6 +1718,7 @@ class MigrationService {
           custom_category,
           amount,
           remarks,
+          notes,
           payment_method,
           created_at,
           updated_at,
@@ -1722,6 +1730,7 @@ class MigrationService {
           category,
           NULL,
           MAX(0.0, amount),
+          CASE WHEN TRIM(COALESCE(notes, '')) = '' THEN NULL ELSE TRIM(notes) END,
           CASE WHEN TRIM(COALESCE(notes, '')) = '' THEN NULL ELSE TRIM(notes) END,
           NULL,
           created_at,
@@ -1746,6 +1755,28 @@ class MigrationService {
     } finally {
       await database.execute('PRAGMA legacy_alter_table = OFF;');
       await database.execute('PRAGMA foreign_keys = ON;');
+    }
+  }
+
+  /// Migration v24: preserve nullable `notes` as a compatibility alias for
+  /// integrations and older fixtures while `remarks` remains canonical.
+  Future<void> _applyMigrationV24(Database database) async {
+    final columns = await database.rawQuery(
+      'PRAGMA table_info(${TableNames.expenses});',
+    );
+    final hasNotes = columns.any((row) => row['name'] == 'notes');
+    if (!hasNotes) {
+      await database.execute(
+        'ALTER TABLE ${TableNames.expenses} ADD COLUMN notes TEXT;',
+      );
+      await database.execute(
+        '''
+        UPDATE ${TableNames.expenses}
+        SET notes = remarks
+        WHERE notes IS NULL
+          AND remarks IS NOT NULL
+        ''',
+      );
     }
   }
 }

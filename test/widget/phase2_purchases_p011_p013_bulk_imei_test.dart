@@ -52,7 +52,7 @@ void main() {
       await tester.enterText(
         bulkInputFinder,
         '356789101234571\n'
-        '356789101234572,356789101234590\n'
+        '356789101234572 / 69,356789101234590\n'
         '356789101234573;356789101234591;SER-573',
       );
       await tester.pumpAndSettle();

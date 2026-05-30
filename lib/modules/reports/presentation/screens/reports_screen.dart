@@ -1523,51 +1523,442 @@ class _CashLedgerView extends ConsumerWidget {
 // ─────────────────────────────────────────────────────────────
 // Expenses View
 // ─────────────────────────────────────────────────────────────
-class _ExpensesView extends ConsumerWidget {
+const List<String> _pakistaniExpenseCategories = <String>[
+  'Shop Rent',
+  'Electricity Bill',
+  'Internet Bill',
+  'Mobile Load',
+  'Employee Salary',
+  'Tea / Refreshments',
+  'Cleaning Expense',
+  'Stationery',
+  'Transport / Fuel',
+  'Courier Charges',
+  'Repair Tools',
+  'Mobile Parts Purchase',
+  'Accessory Purchase',
+  'Shop Maintenance',
+  'Printer Paper',
+  'Thermal Roll',
+  'Software Maintenance',
+  'Marketing / Advertisement',
+  'Tax / PTA Fee',
+  'Security / CCTV',
+  'Packaging Material',
+  'Customer Compensation',
+  'Miscellaneous',
+  'Other',
+];
+
+class _ExpensesView extends ConsumerStatefulWidget {
   const _ExpensesView();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // ...existing code...
+  ConsumerState<_ExpensesView> createState() => _ExpensesViewState();
+}
 
-    // Only keep the UI and logic that is actually used and valid.
-    return Column(
+class _ExpensesViewState extends ConsumerState<_ExpensesView> {
+  late final TextEditingController _searchController;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController(
+      text: ref.read(expensesSearchRemarksProvider),
+    );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rowsAsync = ref.watch(expensesRowsProvider);
+    final summaryAsync = ref.watch(expenseAnalyticsSummaryProvider);
+    final categoriesAsync = ref.watch(expenseCategoriesProvider);
+    final startDate = ref.watch(expensesStartDateProvider);
+    final endDate = ref.watch(expensesEndDateProvider);
+    final selectedCategory = ref.watch(expensesCategoryProvider);
+    final selectedPaymentMethod = ref.watch(expensesPaymentMethodProvider);
+
+    if (rowsAsync.hasError) {
+      return _ReportErrorView(
+        message: 'Failed to load expenses.',
+        error: rowsAsync.error!,
+        onRetry: _invalidateExpenseProviders,
+      );
+    }
+
+    final existingCategories = categoriesAsync.valueOrNull ?? const <String>[];
+    final categoryOptions = _mergedExpenseCategories(existingCategories);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 820;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            summaryAsync.when(
+              data: (summary) => _ExpenseSummaryCards(
+                summary: summary,
+                isCompact: isCompact,
+              ),
+              loading: () => const SizedBox(
+                height: 90,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (error, _) => _ExpenseInlineError(
+                message: 'Failed to load expense summary.',
+                onRetry: _invalidateExpenseProviders,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: <Widget>[
+                    FilledButton.icon(
+                      onPressed: () => _openExpenseDialog(),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Expense'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          firstDate: DateTime(2020),
+                          lastDate:
+                              DateTime.now().add(const Duration(days: 365)),
+                          initialDate: startDate ?? DateTime.now(),
+                        );
+                        if (picked == null) {
+                          return;
+                        }
+                        ref.read(expensesStartDateProvider.notifier).state =
+                            picked;
+                      },
+                      icon: const Icon(Icons.calendar_today, size: 16),
+                      label: Text(
+                        startDate == null
+                            ? 'Start Date'
+                            : FormattingHelpers.dateYmd(startDate),
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          firstDate: DateTime(2020),
+                          lastDate:
+                              DateTime.now().add(const Duration(days: 365)),
+                          initialDate: endDate ?? DateTime.now(),
+                        );
+                        if (picked == null) {
+                          return;
+                        }
+                        ref.read(expensesEndDateProvider.notifier).state =
+                            picked;
+                      },
+                      icon: const Icon(Icons.event, size: 16),
+                      label: Text(
+                        endDate == null
+                            ? 'End Date'
+                            : FormattingHelpers.dateYmd(endDate),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 220,
+                      child: DropdownButtonFormField<String>(
+                        initialValue:
+                            selectedCategory.isEmpty ? null : selectedCategory,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Category',
+                          isDense: true,
+                        ),
+                        items: <DropdownMenuItem<String>>[
+                          const DropdownMenuItem<String>(
+                            value: '',
+                            child: Text('All Categories'),
+                          ),
+                          ...categoryOptions.map(
+                            (category) => DropdownMenuItem<String>(
+                              value: category,
+                              child: Text(category),
+                            ),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          ref.read(expensesCategoryProvider.notifier).state =
+                              value ?? '';
+                        },
+                      ),
+                    ),
+                    SizedBox(
+                      width: 190,
+                      child: DropdownButtonFormField<String>(
+                        initialValue: selectedPaymentMethod.isEmpty
+                            ? null
+                            : selectedPaymentMethod,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Payment',
+                          isDense: true,
+                        ),
+                        items: const <DropdownMenuItem<String>>[
+                          DropdownMenuItem<String>(
+                            value: '',
+                            child: Text('All Payments'),
+                          ),
+                          DropdownMenuItem<String>(
+                            value: PaymentMethod.cash,
+                            child: Text('Cash'),
+                          ),
+                          DropdownMenuItem<String>(
+                            value: PaymentMethod.card,
+                            child: Text('Card'),
+                          ),
+                          DropdownMenuItem<String>(
+                            value: PaymentMethod.bank,
+                            child: Text('Bank Transfer'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          ref
+                              .read(expensesPaymentMethodProvider.notifier)
+                              .state = value ?? '';
+                        },
+                      ),
+                    ),
+                    SizedBox(
+                      width: isCompact ? constraints.maxWidth : 260,
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (value) => ref
+                            .read(expensesSearchRemarksProvider.notifier)
+                            .state = value,
+                        decoration: InputDecoration(
+                          border: const OutlineInputBorder(),
+                          labelText: 'Search remarks',
+                          isDense: true,
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: _searchController.text.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: 'Clear search',
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    ref
+                                        .read(expensesSearchRemarksProvider
+                                            .notifier)
+                                        .state = '';
+                                    setState(() {});
+                                  },
+                                  icon: const Icon(Icons.clear),
+                                ),
+                        ),
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _clearFilters,
+                      icon: const Icon(Icons.filter_alt_off, size: 16),
+                      label: const Text('Clear'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: rowsAsync.when(
+                data: (rows) => _ExpensesTableSection(
+                  rows: rows,
+                  isCompact: isCompact,
+                  onAdd: () => _openExpenseDialog(),
+                  onEdit: (expense) => _openExpenseDialog(expense: expense),
+                  onDelete: _confirmDeleteExpense,
+                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => _ReportErrorView(
+                  message: 'Failed to load expenses.',
+                  error: error,
+                  onRetry: _invalidateExpenseProviders,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _clearFilters() {
+    ref.read(expensesStartDateProvider.notifier).state = null;
+    ref.read(expensesEndDateProvider.notifier).state = null;
+    ref.read(expensesCategoryProvider.notifier).state = '';
+    ref.read(expensesPaymentMethodProvider.notifier).state = '';
+    ref.read(expensesSearchRemarksProvider.notifier).state = '';
+    _searchController.clear();
+    setState(() {});
+  }
+
+  Future<void> _openExpenseDialog({ExpenseEntity? expense}) async {
+    final changed = await showDialog<bool>(
+      context: context,
+      builder: (context) => _ExpenseFormDialog(expense: expense),
+    );
+    if (changed == true && mounted) {
+      _invalidateExpenseProviders();
+    }
+  }
+
+  Future<void> _confirmDeleteExpense(ExpenseEntity expense) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AppConfirmationDialog(
+        title: 'Delete Expense',
+        message:
+            'Delete ${expense.displayCategory} expense of ${FormattingHelpers.currencyPkr(expense.amount)}? This will remove it from cash movement reports.',
+        confirmLabel: 'Delete',
+      ),
+    );
+    if (confirmed != true) {
+      return;
+    }
+    final repository = await ref.read(expenseRepositoryProvider.future);
+    final result = await repository.deleteExpense(expense.id);
+    if (!mounted) {
+      return;
+    }
+    if (result.isFailure) {
+      AppNotifier.errorFromAppError(result.asFailure!.error);
+      return;
+    }
+    AppNotifier.success('Expense deleted.');
+    _invalidateExpenseProviders();
+  }
+
+  void _invalidateExpenseProviders() {
+    ref.invalidate(expensesRowsProvider);
+    ref.invalidate(expenseCategoriesProvider);
+    ref.invalidate(expenseAnalyticsSummaryProvider);
+    ref.invalidate(cashLedgerRowsProvider);
+  }
+}
+
+class _ExpenseSummaryCards extends StatelessWidget {
+  const _ExpenseSummaryCards({
+    required this.summary,
+    required this.isCompact,
+  });
+
+  final ExpenseAnalyticsSummary summary;
+  final bool isCompact;
+
+  @override
+  Widget build(BuildContext context) {
+    final cards = <Widget>[
+      ReportSummaryCardWidget(
+        label: "Today's Expense",
+        value: FormattingHelpers.currencyPkr(summary.todayTotal),
+        color: Colors.red.shade700,
+      ),
+      ReportSummaryCardWidget(
+        label: 'Monthly Expense',
+        value: FormattingHelpers.currencyPkr(summary.thisMonthTotal),
+        color: Colors.orange.shade800,
+      ),
+      ReportSummaryCardWidget(
+        label: 'Total Expense',
+        value: FormattingHelpers.currencyPkr(summary.allTimeTotal),
+        color: Colors.indigo,
+      ),
+      ReportSummaryCardWidget(
+        label: 'Highest Expense Category',
+        value: summary.highestCategory ?? '-',
+        color: Colors.teal.shade700,
+      ),
+    ];
+
+    if (isCompact) {
+      return Column(
+        children: cards
+            .map(
+              (card) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: SizedBox(width: double.infinity, child: card),
+              ),
+            )
+            .toList(growable: false),
+      );
+    }
+
+    return Row(
       children: <Widget>[
-        // ...existing filter and action widgets...
-        // (Re-add your actual UI widgets here as needed)
+        for (var index = 0; index < cards.length; index++) ...<Widget>[
+          Expanded(child: cards[index]),
+          if (index != cards.length - 1) const SizedBox(width: 8),
+        ],
       ],
     );
   }
 }
 
 class _ExpenseFormDialog extends ConsumerStatefulWidget {
-  const _ExpenseFormDialog();
+  const _ExpenseFormDialog({this.expense});
+
+  final ExpenseEntity? expense;
 
   @override
   ConsumerState<_ExpenseFormDialog> createState() => _ExpenseFormDialogState();
 }
 
 class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
-  late final TextEditingController _categoryController;
+  late final TextEditingController _customCategoryController;
   late final TextEditingController _amountController;
   late final TextEditingController _remarksController;
   late DateTime _expenseDate;
+  late String _category;
+  late String _paymentMethod;
   bool _isSubmitting = false;
 
-  bool get _isEdit => false;
+  bool get _isEdit => widget.expense != null;
 
   @override
   void initState() {
     super.initState();
-    _expenseDate = DateTime.now();
-    _categoryController = TextEditingController(text: '');
-    _amountController = TextEditingController(text: '');
-    _remarksController = TextEditingController(text: '');
+    final expense = widget.expense;
+    _expenseDate = expense?.expenseDate.toLocal() ?? DateTime.now();
+    _category = _pakistaniExpenseCategories.contains(expense?.category)
+        ? expense!.category
+        : expense == null
+            ? _pakistaniExpenseCategories.first
+            : 'Other';
+    _paymentMethod = PaymentMethod.normalizeNullable(expense?.paymentMethod) ??
+        PaymentMethod.cash;
+    _customCategoryController = TextEditingController(
+      text: expense?.customCategory ??
+          (!_pakistaniExpenseCategories.contains(expense?.category)
+              ? expense?.category ?? ''
+              : ''),
+    );
+    _amountController = TextEditingController(
+      text: expense == null ? '' : FormattingHelpers.decimal(expense.amount),
+    );
+    _remarksController = TextEditingController(text: expense?.remarks ?? '');
   }
 
   @override
   void dispose() {
-    _categoryController.dispose();
+    _customCategoryController.dispose();
     _amountController.dispose();
     _remarksController.dispose();
     super.dispose();
@@ -1578,60 +1969,128 @@ class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
     return AlertDialog(
       title: Text(_isEdit ? 'Edit Expense' : 'Add Expense'),
       content: SizedBox(
-        width: 440,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            OutlinedButton.icon(
-              onPressed: _isSubmitting
-                  ? null
-                  : () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                        initialDate: _expenseDate,
-                      );
-                      if (picked == null) {
-                        return;
-                      }
-                      setState(() => _expenseDate = picked);
-                    },
-              icon: const Icon(Icons.calendar_today),
-              label: Text(FormattingHelpers.dateYmd(_expenseDate)),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _categoryController,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Category',
-                isDense: true,
+        width: 520,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              OutlinedButton.icon(
+                onPressed: _isSubmitting
+                    ? null
+                    : () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          firstDate: DateTime(2020),
+                          lastDate:
+                              DateTime.now().add(const Duration(days: 365)),
+                          initialDate: _expenseDate,
+                        );
+                        if (picked == null) {
+                          return;
+                        }
+                        setState(() => _expenseDate = picked);
+                      },
+                icon: const Icon(Icons.calendar_today),
+                label: Text(FormattingHelpers.dateYmd(_expenseDate)),
               ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _amountController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Amount',
-                isDense: true,
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                initialValue: _category,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Expense Category',
+                  isDense: true,
+                ),
+                items: _pakistaniExpenseCategories
+                    .map(
+                      (category) => DropdownMenuItem<String>(
+                        value: category,
+                        child: Text(category),
+                      ),
+                    )
+                    .toList(growable: false),
+                onChanged: _isSubmitting
+                    ? null
+                    : (value) => setState(
+                          () => _category =
+                              value ?? _pakistaniExpenseCategories.first,
+                        ),
               ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _remarksController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Remarks (optional)',
-                isDense: true,
+              if (_category == 'Other') ...<Widget>[
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _customCategoryController,
+                  enabled: !_isSubmitting,
+                  maxLength: 80,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: 'Custom Category',
+                    isDense: true,
+                    counterText: '',
+                  ),
+                ),
+              ],
+              const SizedBox(height: 10),
+              TextField(
+                controller: _amountController,
+                enabled: !_isSubmitting,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Amount',
+                  prefixText: 'Rs ',
+                  isDense: true,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                initialValue: _paymentMethod,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Payment Method',
+                  isDense: true,
+                ),
+                items: const <DropdownMenuItem<String>>[
+                  DropdownMenuItem<String>(
+                    value: PaymentMethod.cash,
+                    child: Text('Cash'),
+                  ),
+                  DropdownMenuItem<String>(
+                    value: PaymentMethod.card,
+                    child: Text('Card'),
+                  ),
+                  DropdownMenuItem<String>(
+                    value: PaymentMethod.bank,
+                    child: Text('Bank Transfer'),
+                  ),
+                ],
+                onChanged: _isSubmitting
+                    ? null
+                    : (value) => setState(
+                          () => _paymentMethod = value ?? PaymentMethod.cash,
+                        ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _remarksController,
+                enabled: !_isSubmitting,
+                maxLines: 4,
+                maxLength: 300,
+                inputFormatters: <TextInputFormatter>[
+                  LengthLimitingTextInputFormatter(300),
+                ],
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Remarks (optional)',
+                  isDense: true,
+                  alignLabelWithHint: true,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       actions: <Widget>[
@@ -1642,15 +2101,16 @@ class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
         ),
         FilledButton(
           onPressed: _isSubmitting ? null : _submit,
-          child: Text(_isSubmitting ? 'Saving...' : 'Save'),
+          child: Text(_isSubmitting ? 'Saving...' : 'Save Expense'),
         ),
       ],
     );
   }
 
   Future<void> _submit() async {
-    final category = _categoryController.text.trim();
-    if (category.isEmpty) {
+    final category = _category.trim();
+    final customCategory = _customCategoryController.text.trim();
+    if (category.isEmpty || (category == 'Other' && customCategory.isEmpty)) {
       AppNotifier.error('Category is required.');
       return;
     }
@@ -1664,26 +2124,41 @@ class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
       AppNotifier.error('Amount must be greater than zero.');
       return;
     }
-    // Optionally validate remarks if needed
+    if (!amount.isFinite) {
+      AppNotifier.error('Please enter a valid amount.');
+      return;
+    }
+    final paymentMethod = PaymentMethod.normalizeNullable(_paymentMethod);
+    if (paymentMethod == null || paymentMethod == PaymentMethod.credit) {
+      AppNotifier.error('Payment method must be cash, card, or bank.');
+      return;
+    }
 
     setState(() => _isSubmitting = true);
     final repository = await ref.read(expenseRepositoryProvider.future);
     final now = DateTimeHelpers.nowUtc();
+    final existing = widget.expense;
     final payload = ExpenseEntity(
-      id: IdHelpers.newId(prefix: 'exp'),
+      id: existing?.id ?? IdHelpers.newId(prefix: 'exp'),
       expenseDate: DateTime.utc(
         _expenseDate.year,
         _expenseDate.month,
         _expenseDate.day,
       ),
       category: category,
+      customCategory: category == 'Other' ? customCategory : null,
       amount: amount,
-      remarks: _remarksController.text,
-      createdAt: now,
-      updatedAt: null,
+      remarks: _remarksController.text.trim().isEmpty
+          ? null
+          : _remarksController.text.trim(),
+      paymentMethod: paymentMethod,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: existing == null ? null : now,
     );
 
-    final result = await repository.addExpense(payload);
+    final result = existing == null
+        ? await repository.addExpense(payload)
+        : await repository.updateExpense(payload);
     if (!mounted) {
       return;
     }
@@ -1693,9 +2168,331 @@ class _ExpenseFormDialogState extends ConsumerState<_ExpenseFormDialog> {
       AppNotifier.errorFromAppError(result.asFailure!.error);
       return;
     }
-    AppNotifier.success('Expense added.');
+    AppNotifier.success(_isEdit ? 'Expense updated.' : 'Expense added.');
     Navigator.of(context).pop(true);
   }
+}
+
+class _ExpenseInlineError extends StatelessWidget {
+  const _ExpenseInlineError({
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: <Widget>[
+            Expanded(child: Text(message)),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ExpensesTableSection extends StatelessWidget {
+  const _ExpensesTableSection({
+    required this.rows,
+    required this.isCompact,
+    required this.onAdd,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final List<ExpenseEntity> rows;
+  final bool isCompact;
+  final VoidCallback onAdd;
+  final ValueChanged<ExpenseEntity> onEdit;
+  final ValueChanged<ExpenseEntity> onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    if (rows.isEmpty) {
+      return Card(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Text('No expenses found'),
+              const SizedBox(height: 10),
+              FilledButton.icon(
+                onPressed: onAdd,
+                icon: const Icon(Icons.add),
+                label: const Text('Add Expense'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final total = rows.fold<double>(0, (sum, expense) => sum + expense.amount);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(child: reportSectionTitle('Expense Records')),
+                Text(
+                  '${rows.length} rows | ${FormattingHelpers.currencyPkr(total)}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Divider(height: 1),
+            const SizedBox(height: 8),
+            Expanded(
+              child: isCompact
+                  ? _ExpenseCardList(
+                      rows: rows,
+                      onEdit: onEdit,
+                      onDelete: onDelete,
+                    )
+                  : _ExpenseDesktopTable(
+                      rows: rows,
+                      onEdit: onEdit,
+                      onDelete: onDelete,
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ExpenseDesktopTable extends StatelessWidget {
+  const _ExpenseDesktopTable({
+    required this.rows,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final List<ExpenseEntity> rows;
+  final ValueChanged<ExpenseEntity> onEdit;
+  final ValueChanged<ExpenseEntity> onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final layout = reportTableLayoutFor(context);
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: SizedBox(
+        width: 1040,
+        child: AppDataTable(
+          columnSpacing: layout.columnSpacing,
+          dataRowMinHeight: 64,
+          dataRowMaxHeight: 88,
+          showCheckboxColumn: false,
+          emptyMessage: 'No expenses found',
+          columns: <DataColumn>[
+            DataColumn(
+              label: reportStyledTableHeaderCell(context, 'Date', width: 110),
+            ),
+            DataColumn(
+              label:
+                  reportStyledTableHeaderCell(context, 'Category', width: 170),
+            ),
+            DataColumn(
+              label:
+                  reportStyledTableHeaderCell(context, 'Remarks', width: 360),
+            ),
+            DataColumn(
+              label: reportStyledTableHeaderCell(
+                context,
+                'Payment Method',
+                width: 130,
+              ),
+            ),
+            DataColumn(
+              numeric: true,
+              label: reportStyledTableHeaderCell(context, 'Amount', width: 120),
+            ),
+            DataColumn(
+              label:
+                  reportStyledTableHeaderCell(context, 'Actions', width: 110),
+            ),
+          ],
+          rows: rows
+              .map(
+                (expense) => DataRow(
+                  cells: <DataCell>[
+                    DataCell(reportStyledTableCell(
+                      FormattingHelpers.dateYmd(expense.expenseDate),
+                      width: 110,
+                    )),
+                    DataCell(reportStyledTableCell(
+                      expense.displayCategory,
+                      width: 170,
+                    )),
+                    DataCell(
+                      SizedBox(
+                        width: 360,
+                        child: Text(
+                          expense.remarks?.trim().isNotEmpty == true
+                              ? expense.remarks!.trim()
+                              : '-',
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: true,
+                        ),
+                      ),
+                    ),
+                    DataCell(reportStyledTableCell(
+                      _paymentMethodLabel(expense.paymentMethod),
+                      width: 130,
+                    )),
+                    DataCell(reportStyledTableCell(
+                      FormattingHelpers.currencyPkr(expense.amount),
+                      width: 120,
+                      textAlign: TextAlign.right,
+                    )),
+                    DataCell(
+                      SizedBox(
+                        width: 110,
+                        child: Row(
+                          children: <Widget>[
+                            IconButton(
+                              tooltip: 'Edit',
+                              onPressed: () => onEdit(expense),
+                              icon: const Icon(Icons.edit, size: 18),
+                            ),
+                            IconButton(
+                              tooltip: 'Delete',
+                              onPressed: () => onDelete(expense),
+                              icon: const Icon(Icons.delete_outline, size: 18),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+              .toList(growable: false),
+        ),
+      ),
+    );
+  }
+}
+
+class _ExpenseCardList extends StatelessWidget {
+  const _ExpenseCardList({
+    required this.rows,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final List<ExpenseEntity> rows;
+  final ValueChanged<ExpenseEntity> onEdit;
+  final ValueChanged<ExpenseEntity> onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      itemCount: rows.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final expense = rows[index];
+        return Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        expense.displayCategory,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    Text(
+                      FormattingHelpers.currencyPkr(expense.amount),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${FormattingHelpers.dateYmd(expense.expenseDate)} | ${_paymentMethodLabel(expense.paymentMethod)}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (expense.remarks?.trim().isNotEmpty == true) ...<Widget>[
+                  const SizedBox(height: 8),
+                  Text(expense.remarks!.trim()),
+                ],
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: <Widget>[
+                    IconButton(
+                      tooltip: 'Edit',
+                      onPressed: () => onEdit(expense),
+                      icon: const Icon(Icons.edit, size: 18),
+                    ),
+                    IconButton(
+                      tooltip: 'Delete',
+                      onPressed: () => onDelete(expense),
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+List<String> _mergedExpenseCategories(List<String> existingCategories) {
+  final seen = <String>{};
+  final output = <String>[];
+  for (final category in <String>[
+    ..._pakistaniExpenseCategories,
+    ...existingCategories,
+  ]) {
+    final normalized = category.trim();
+    if (normalized.isEmpty || !seen.add(normalized.toLowerCase())) {
+      continue;
+    }
+    output.add(normalized);
+  }
+  return output;
+}
+
+String _paymentMethodLabel(String? paymentMethod) {
+  final normalized = PaymentMethod.normalizeNullable(paymentMethod);
+  return normalized == null
+      ? '-'
+      : PaymentMethod.labels[normalized] ?? normalized;
 }
 
 class _SalesInvoiceDialog extends ConsumerWidget {
@@ -1786,6 +2583,9 @@ class _SalesInvoiceDialog extends ConsumerWidget {
                                           salesInvoiceDetailProvider(saleId));
                                       ref.invalidate(
                                           dateRangeSalesReportProvider);
+                                      ref.invalidate(dailySalesReportProvider);
+                                      ref.invalidate(profitReportProvider);
+                                      ref.invalidate(profitReportRowsProvider);
                                     },
                                     child: const Text('Return'),
                                   ),
@@ -2049,8 +2849,13 @@ class _ReturnItemDialogState extends ConsumerState<_ReturnItemDialog> {
       return;
     }
     AppNotifier.success('Return processed and stock restored.');
+    ref.invalidate(dailySalesReportProvider);
+    ref.invalidate(dateRangeSalesReportProvider);
+    ref.invalidate(profitReportProvider);
+    ref.invalidate(profitReportRowsProvider);
     ref.invalidate(customerLedgerSummaryProvider);
     ref.invalidate(customerLedgerTimelineProvider);
+    ref.invalidate(cashLedgerRowsProvider);
     Navigator.of(context).pop();
   }
 }
