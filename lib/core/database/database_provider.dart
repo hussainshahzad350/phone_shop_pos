@@ -35,7 +35,7 @@ final appDatabaseProvider = FutureProvider<AppDatabase>((ref) async {
   );
 
   await appDatabase.initialize(
-    seedDemoData: AppRuntimeConfig.enableDemoSeedData,
+    seedDemoData: AppRuntimeConfig.kEnableSeedData,
   );
   await _runAutoBackupIfDue(appDatabase);
   ref.onDispose(appDatabase.close);

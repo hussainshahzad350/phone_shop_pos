@@ -87,24 +87,50 @@ class FormattingHelpers {
   }
 
   static String _normalizeLocalizedNumber(String input) {
-    final buffer = StringBuffer();
-    var decimalAdded = false;
-    final trimmed = _translateArabicDigits(input).trim();
-    for (var index = 0; index < trimmed.length; index++) {
-      final character = trimmed[index];
-      if (RegExp(r'[0-9-]').hasMatch(character)) {
-        buffer.write(character);
-        continue;
+    final compact = _translateArabicDigits(input).trim().replaceAll(' ', '');
+    if (compact.isEmpty) {
+      return '';
+    }
+
+    final sign = compact.startsWith('-') ? '-' : '';
+    final unsigned = sign.isEmpty ? compact : compact.substring(1);
+    final numeric = unsigned.replaceAll(RegExp(r'[^0-9.,٫]'), '');
+    if (numeric.isEmpty) {
+      return sign;
+    }
+
+    final normalizedArabicDecimal = numeric.replaceAll('٫', '.');
+    final lastDot = normalizedArabicDecimal.lastIndexOf('.');
+    final lastComma = normalizedArabicDecimal.lastIndexOf(',');
+
+    if (lastDot >= 0 && lastComma >= 0) {
+      final decimalSeparator = lastDot > lastComma ? '.' : ',';
+      final decimalIndex = decimalSeparator == '.' ? lastDot : lastComma;
+      final whole = normalizedArabicDecimal
+          .substring(0, decimalIndex)
+          .replaceAll(RegExp(r'[^0-9]'), '');
+      final fraction = normalizedArabicDecimal
+          .substring(decimalIndex + 1)
+          .replaceAll(RegExp(r'[^0-9]'), '');
+      return fraction.isEmpty ? '$sign$whole' : '$sign$whole.$fraction';
+    }
+
+    if (lastComma >= 0) {
+      final commaGrouped = RegExp(r'^\d{1,3}(,\d{3})+$');
+      if (commaGrouped.hasMatch(normalizedArabicDecimal)) {
+        return sign + normalizedArabicDecimal.replaceAll(',', '');
       }
-      if (character == '.' || character == ',' || character == '٫') {
-        if (!decimalAdded) {
-          buffer.write('.');
-          decimalAdded = true;
-        }
-        continue;
+      return '$sign${normalizedArabicDecimal.replaceAll(',', '.')}';
+    }
+
+    if (lastDot >= 0) {
+      final dotGrouped = RegExp(r'^\d{1,3}(\.\d{3})+$');
+      if (dotGrouped.hasMatch(normalizedArabicDecimal)) {
+        return sign + normalizedArabicDecimal.replaceAll('.', '');
       }
     }
-    return buffer.toString();
+
+    return '$sign$normalizedArabicDecimal';
   }
 
   static String _translateArabicDigits(String input) {

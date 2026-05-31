@@ -67,6 +67,25 @@ class CartStateNotifier extends StateNotifier<List<CartItemEntity>> {
     return Failure<void>(result.asFailure!.error);
   }
 
+  Future<Result<void>> updateUnitPrice({
+    required int index,
+    required double price,
+  }) async {
+    final service = await _ref.read(salesServiceProvider.future);
+    final result = service.updateUnitPrice(
+      items: state,
+      index: index,
+      price: price,
+    );
+
+    if (result.isSuccess) {
+      state = result.asSuccess!.value;
+      return const Success<void>(null);
+    }
+
+    return Failure<void>(result.asFailure!.error);
+  }
+
   Future<Result<void>> validateStock() async {
     final service = await _ref.read(salesServiceProvider.future);
     return service.validateStock(state);

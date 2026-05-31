@@ -485,6 +485,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
   @override
   Widget build(BuildContext context) {
     final includeInactive = ref.watch(productManagementIncludeInactiveProvider);
+    final typeFilter = ref.watch(productManagementTypeFilterProvider);
     final productsAsync = ref.watch(managedProductsProvider);
 
     return Column(
@@ -513,6 +514,30 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
               onPressed: _createProduct,
               icon: const Icon(Icons.add),
               label: const Text('Add Product'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: <Widget>[
+            FilterChip(
+              selected: typeFilter == true,
+              avatar: const Icon(Icons.smartphone, size: 18),
+              label: const Text('Phone'),
+              onSelected: (selected) {
+                ref.read(productManagementTypeFilterProvider.notifier).state =
+                    selected ? true : null;
+              },
+            ),
+            const SizedBox(width: 8),
+            FilterChip(
+              selected: typeFilter == false,
+              avatar: const Icon(Icons.cable, size: 18),
+              label: const Text('Accessories'),
+              onSelected: (selected) {
+                ref.read(productManagementTypeFilterProvider.notifier).state =
+                    selected ? false : null;
+              },
             ),
           ],
         ),

@@ -1169,7 +1169,7 @@ class _PurchaseHistoryView extends ConsumerWidget {
                                   width: 110)),
                           DataColumn(
                               label: reportStyledTableHeaderCell(
-                                  context, 'Supplier',
+                                  context, 'Supplier / Seller',
                                   width: 220)),
                           DataColumn(
                               label: reportStyledTableHeaderCell(
@@ -1199,7 +1199,7 @@ class _PurchaseHistoryView extends ConsumerWidget {
                                   FormattingHelpers.dateYmd(row.purchaseDate),
                                   width: 110)),
                               DataCell(reportStyledTableCell(row.supplierName,
-                                  width: 220)),
+                                  subtitle: row.sellerName, width: 220)),
                               DataCell(reportStyledTableCell(
                                   row.invoiceNumber ?? '-',
                                   width: 130)),
@@ -1429,6 +1429,10 @@ class _CashLedgerView extends ConsumerWidget {
                                   width: 140)),
                           DataColumn(
                               label: reportStyledTableHeaderCell(
+                                  context, 'Purchase Refunds In (PKR)',
+                                  width: 175)),
+                          DataColumn(
+                              label: reportStyledTableHeaderCell(
                                   context, 'Cash Refunds Out (PKR)',
                                   width: 160)),
                           DataColumn(
@@ -1465,6 +1469,12 @@ class _CashLedgerView extends ConsumerWidget {
                               DataCell(reportStyledTableCell(
                                   FormattingHelpers.decimal(row.totalCashIn),
                                   width: 140)),
+                              DataCell(
+                                reportStyledTableCell(
+                                    FormattingHelpers.decimal(
+                                        row.purchaseRefundsIn),
+                                    width: 175),
+                              ),
                               DataCell(reportStyledTableCell(
                                   FormattingHelpers.decimal(row.cashRefundsOut),
                                   width: 160)),
@@ -2887,6 +2897,8 @@ class _PurchaseDetailDialog extends ConsumerWidget {
                   runSpacing: 8,
                   children: <Widget>[
                     Text('Supplier: ${detail.purchase.supplierName}'),
+                    if (detail.purchase.sellerName?.trim().isNotEmpty == true)
+                      Text('Seller: ${detail.purchase.sellerName}'),
                     Text(
                         'Date: ${FormattingHelpers.dateYmd(detail.purchase.purchaseDate)}'),
                     Text('Invoice: ${detail.purchase.invoiceNumber ?? '-'}'),
@@ -2915,6 +2927,8 @@ class _PurchaseDetailDialog extends ConsumerWidget {
                       DataColumn(label: Text('Qty')),
                       DataColumn(label: Text('Unit Cost')),
                       DataColumn(label: Text('Line Total')),
+                      DataColumn(label: Text('Returns')),
+                      DataColumn(label: Text('Actions')),
                     ],
                     rows: detail.items.map((item) {
                       return DataRow(
@@ -2926,6 +2940,23 @@ class _PurchaseDetailDialog extends ConsumerWidget {
                               FormattingHelpers.currencyPkr(item.unitCost))),
                           DataCell(Text(
                               FormattingHelpers.currencyPkr(item.lineTotal))),
+                          DataCell(Text(item.returnedQty.toString())),
+                          DataCell(
+                            item.returnableQty > 0
+                                ? TextButton(
+                                    onPressed: () {
+                                      showDialog<void>(
+                                        context: context,
+                                        builder: (context) => _ReturnPurchaseItemDialog(
+                                          purchaseId: detail.purchase.purchaseId,
+                                          item: item,
+                                        ),
+                                      );
+                                    },
+                                    child: const Text('Return'),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
                         ],
                       );
                     }).toList(growable: false),
@@ -2945,6 +2976,127 @@ class _PurchaseDetailDialog extends ConsumerWidget {
         ),
       ],
     );
+  }
+}
+
+class _ReturnPurchaseItemDialog extends ConsumerStatefulWidget {
+  const _ReturnPurchaseItemDialog({
+    required this.purchaseId,
+    required this.item,
+  });
+
+  final String purchaseId;
+  final PurchaseHistoryItemEntity item;
+
+  @override
+  ConsumerState<_ReturnPurchaseItemDialog> createState() =>
+      _ReturnPurchaseItemDialogState();
+}
+
+class _ReturnPurchaseItemDialogState
+    extends ConsumerState<_ReturnPurchaseItemDialog> {
+  final _qtyController = TextEditingController();
+  final _reasonController = TextEditingController(text: 'damage');
+  final _notesController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _qtyController.text = widget.item.hasImei ? '1' : '';
+  }
+
+  @override
+  void dispose() {
+    _qtyController.dispose();
+    _reasonController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Return Purchase Item'),
+      content: SizedBox(
+        width: 350,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text('Returning: ${widget.item.productName}'),
+            if (widget.item.hasImei) Text('IMEI: ${widget.item.imei}'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _qtyController,
+              decoration: InputDecoration(
+                labelText: 'Quantity (max ${widget.item.returnableQty})',
+              ),
+              keyboardType: TextInputType.number,
+              readOnly: widget.item.hasImei,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _reasonController,
+              decoration: const InputDecoration(labelText: 'Reason'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _notesController,
+              decoration: const InputDecoration(labelText: 'Notes (optional)'),
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: const Text('Confirm Return'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit() async {
+    final qty = widget.item.hasImei ? 1 : int.tryParse(_qtyController.text) ?? 0;
+    if (qty <= 0 || qty > widget.item.returnableQty) {
+      AppNotifier.error('Invalid return quantity.');
+      return;
+    }
+    final reason = _reasonController.text.trim();
+    if (reason.isEmpty) {
+      AppNotifier.error('Reason is required.');
+      return;
+    }
+
+    final service = await ref.read(operationsWorkflowServiceProvider.future);
+    final result = await service.processPurchaseReturn(
+      purchaseId: widget.purchaseId,
+      item: widget.item,
+      quantity: qty,
+      reason: reason,
+      notes: _notesController.text,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (result.isFailure) {
+      AppNotifier.errorFromAppError(result.asFailure!.error);
+      return;
+    }
+
+    AppNotifier.success('Purchase return processed successfully.');
+    ref.invalidate(purchaseHistoryRowsProvider);
+    ref.invalidate(purchaseHistoryDetailProvider(widget.purchaseId));
+    ref.invalidate(supplierLedgerSummaryProvider);
+    ref.invalidate(supplierLedgerTimelineProvider);
+    ref.invalidate(cashLedgerRowsProvider);
+    Navigator.of(context).pop();
   }
 }
 

@@ -6,14 +6,17 @@ import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventor
 final productManagementSearchQueryProvider = StateProvider<String>((ref) => '');
 final productManagementIncludeInactiveProvider =
     StateProvider<bool>((ref) => false);
+final productManagementTypeFilterProvider = StateProvider<bool?>((ref) => null);
 
 final managedProductsProvider =
     FutureProvider<List<ProductEntity>>((ref) async {
   final query = ref.watch(productManagementSearchQueryProvider).trim();
   final includeInactive = ref.watch(productManagementIncludeInactiveProvider);
+  final hasImei = ref.watch(productManagementTypeFilterProvider);
   final repository = await ref.watch(productRepositoryProvider.future);
   final result = await repository.searchProducts(
     query,
+    hasImei: hasImei,
     isActive: includeInactive ? null : true,
     limit: 200,
   );

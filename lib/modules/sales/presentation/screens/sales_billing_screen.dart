@@ -609,6 +609,14 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                                             quantity: item.quantity - 1,
                                           );
                                     },
+                                    onUpdateUnitPrice: (index, price) {
+                                      ref
+                                          .read(cartStateProvider.notifier)
+                                          .updateUnitPrice(
+                                            index: index,
+                                            price: price,
+                                          );
+                                    },
                                     onRemove: (index) {
                                       ref
                                           .read(cartStateProvider.notifier)

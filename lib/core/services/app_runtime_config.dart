@@ -20,10 +20,8 @@ class AppRuntimeConfig {
     'POS_BUILD_NUMBER',
     defaultValue: '1',
   );
-  static const bool enableDemoSeedData = bool.fromEnvironment(
-    'POS_ENABLE_DEMO_SEED',
-    defaultValue: true,
-  );
+  // Feature flag for seed/demo data. Set to false for production.
+  static const bool kEnableSeedData = false;
   static const int autoBackupIntervalHours = int.fromEnvironment(
     'POS_AUTO_BACKUP_INTERVAL_HOURS',
     defaultValue: 24,

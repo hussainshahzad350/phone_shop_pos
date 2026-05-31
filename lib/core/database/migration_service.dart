@@ -141,6 +141,10 @@ class MigrationService {
       await _applyMigrationV24(database);
       return;
     }
+    if (version == 25) {
+      await _applyMigrationV25(database);
+      return;
+    }
     final statements = _migrationStatements[version];
     if (statements == null) {
       return;
@@ -1038,7 +1042,7 @@ class MigrationService {
     await database.execute(
       '''
       INSERT OR IGNORE INTO ${TableNames.customerLedger} (
-        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, created_by, is_reversal, reversal_of, payment_method
+        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, updated_at, created_by, is_reversal, reversal_of, payment_method
       )
       SELECT
         'bcl_sale_' || s.id,
@@ -1048,6 +1052,7 @@ class MigrationService {
         COALESCE(s.total, 0),
         'debit',
         s.notes,
+        s.sale_date,
         s.sale_date,
         s.user_id,
         0,
@@ -1062,7 +1067,7 @@ class MigrationService {
     await database.execute(
       '''
       INSERT OR IGNORE INTO ${TableNames.customerLedger} (
-        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, created_by, is_reversal, reversal_of, payment_method
+        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, updated_at, created_by, is_reversal, reversal_of, payment_method
       )
       SELECT
         'bcl_sp_' || sp.id,
@@ -1072,6 +1077,7 @@ class MigrationService {
         COALESCE(sp.amount, 0),
         'credit',
         sp.notes,
+        sp.created_at,
         sp.created_at,
         NULL,
         0,
@@ -1087,7 +1093,7 @@ class MigrationService {
     await database.execute(
       '''
       INSERT OR IGNORE INTO ${TableNames.customerLedger} (
-        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, created_by, is_reversal, reversal_of, payment_method
+        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, updated_at, created_by, is_reversal, reversal_of, payment_method
       )
       SELECT
         'bcl_sr_' || sr.id,
@@ -1097,6 +1103,7 @@ class MigrationService {
         COALESCE(sr.return_amount, 0),
         'credit',
         COALESCE(sr.reason, sr.notes),
+        sr.created_at,
         sr.created_at,
         NULL,
         0,
@@ -1112,7 +1119,7 @@ class MigrationService {
     await database.execute(
       '''
       INSERT OR IGNORE INTO ${TableNames.customerLedger} (
-        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, created_by, is_reversal, reversal_of, payment_method
+        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, updated_at, created_by, is_reversal, reversal_of, payment_method
       )
       SELECT
         'bcl_rep_due_' || rj.id,
@@ -1122,6 +1129,7 @@ class MigrationService {
         COALESCE(rj.final_cost, 0),
         'debit',
         rj.notes,
+        COALESCE(rj.updated_at, rj.created_at),
         COALESCE(rj.updated_at, rj.created_at),
         NULL,
         0,
@@ -1136,7 +1144,7 @@ class MigrationService {
     await database.execute(
       '''
       INSERT OR IGNORE INTO ${TableNames.customerLedger} (
-        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, created_by, is_reversal, reversal_of, payment_method
+        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, updated_at, created_by, is_reversal, reversal_of, payment_method
       )
       SELECT
         'bcl_rep_pay_' || rj.id,
@@ -1146,6 +1154,7 @@ class MigrationService {
         COALESCE(rj.advance_received, 0),
         'credit',
         rj.notes,
+        COALESCE(rj.updated_at, rj.created_at),
         COALESCE(rj.updated_at, rj.created_at),
         NULL,
         0,
@@ -1160,7 +1169,7 @@ class MigrationService {
     await database.execute(
       '''
       INSERT OR IGNORE INTO ${TableNames.customerLedger} (
-        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, created_by, is_reversal, reversal_of, payment_method
+        id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, updated_at, created_by, is_reversal, reversal_of, payment_method
       )
       SELECT
         'bcl_used_' || pi.id,
@@ -1170,6 +1179,7 @@ class MigrationService {
         COALESCE(pi.line_total, 0),
         'credit',
         ss.seller_name,
+        p.purchase_date,
         p.purchase_date,
         NULL,
         0,
@@ -1678,6 +1688,8 @@ class MigrationService {
     23: <String>[],
     // v24 is handled by dedicated _applyMigrationV24 method.
     24: <String>[],
+    // v25 is handled by dedicated _applyMigrationV25 method.
+    25: <String>[],
   };
 
   /// Migration v23: upgrade expenses table with structured category/remarks/payment fields.
@@ -1778,5 +1790,50 @@ class MigrationService {
         ''',
       );
     }
+  }
+
+  Future<void> _applyMigrationV25(Database database) async {
+    await database.execute(
+      '''
+      CREATE TABLE IF NOT EXISTS ${TableNames.purchaseReturns} (
+        id TEXT PRIMARY KEY NOT NULL,
+        purchase_id TEXT NOT NULL,
+        purchase_item_id TEXT NOT NULL,
+        product_model_id TEXT NOT NULL,
+        serialized_stock_id TEXT,
+        return_type TEXT NOT NULL CHECK (return_type IN ('imei', 'quantity')),
+        return_qty INTEGER NOT NULL CHECK (return_qty > 0),
+        return_amount REAL NOT NULL DEFAULT 0,
+        reason TEXT NOT NULL,
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        cost_price REAL NOT NULL DEFAULT 0,
+        refunded_paid_amount REAL NOT NULL DEFAULT 0,
+        refunded_cash_amount REAL NOT NULL DEFAULT 0,
+        FOREIGN KEY (purchase_id) REFERENCES ${TableNames.purchases}(id)
+          ON UPDATE CASCADE
+          ON DELETE CASCADE,
+        FOREIGN KEY (purchase_item_id) REFERENCES ${TableNames.purchaseItems}(id)
+          ON UPDATE CASCADE
+          ON DELETE CASCADE,
+        FOREIGN KEY (product_model_id) REFERENCES ${TableNames.productModels}(id)
+          ON UPDATE CASCADE
+          ON DELETE RESTRICT,
+        FOREIGN KEY (serialized_stock_id) REFERENCES ${TableNames.serializedStock}(id)
+          ON UPDATE CASCADE
+          ON DELETE SET NULL
+      );
+      ''',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_purchase_returns_purchase_item ON ${TableNames.purchaseReturns}(purchase_id, purchase_item_id);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_purchase_returns_serialized ON ${TableNames.purchaseReturns}(serialized_stock_id);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_purchase_returns_created_at ON ${TableNames.purchaseReturns}(created_at);',
+    );
   }
 }

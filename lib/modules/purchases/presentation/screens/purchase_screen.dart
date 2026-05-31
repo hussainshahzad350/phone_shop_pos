@@ -17,6 +17,9 @@ import 'package:phone_shop_pos/modules/purchases/presentation/providers/purchase
 import 'package:phone_shop_pos/modules/purchases/presentation/providers/purchase_totals_provider.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/widgets/imei_entry_widget.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/widgets/purchase_items_table.dart';
+import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_query_providers.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 
 class PurchaseScreen extends ConsumerStatefulWidget {
   const PurchaseScreen({super.key});
@@ -42,6 +45,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   final ScrollController _rightPanelScrollController = ScrollController();
   bool _isSubmitting = false;
   bool _isUsedPurchase = false;
+  bool _paidAmountTouched = false;
   int _handledShortcutToken = 0;
 
   @override
@@ -120,6 +124,9 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
 
     final formState = ref.read(purchaseFormStateProvider);
     final service = await ref.read(purchaseServiceProvider.future);
+    final totals = ref.read(purchaseTotalsProvider);
+    final effectivePaidAmount =
+        _paidAmountTouched ? formState.paidAmount : totals.total;
 
     final result = await ref.read(operationManagerProvider.notifier).track(
           code: 'save_purchase',
@@ -129,7 +136,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
             items: formState.items,
             discount: formState.discount,
             tax: formState.tax,
-            paidAmount: formState.paidAmount,
+            paidAmount: effectivePaidAmount,
             supplierId: formState.selectedSupplierId,
             invoiceNumber: formState.invoiceNumber,
             notes: formState.notes,
@@ -146,6 +153,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
 
     if (result.isSuccess) {
       final completion = result.asSuccess!.value;
+      _invalidateReportsAfterPurchase();
       ref.read(purchaseFormStateProvider.notifier).resetForm();
       _productSearchController.clear();
       _supplierSearchController.clear();
@@ -154,6 +162,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
       _taxController.text = '0';
       _paidController.text = '0';
       _notesController.clear();
+      _paidAmountTouched = false;
       _showSnack(
         'Purchase saved. '
         '${completion.serializedItemCount} IMEI(s), '
@@ -163,6 +172,19 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     } else {
       _showSnack(result.asFailure!.error.message);
     }
+  }
+
+  void _invalidateReportsAfterPurchase() {
+    ref.invalidate(purchaseHistoryRowsProvider);
+    ref.invalidate(supplierLedgerRowsProvider);
+    ref.invalidate(supplierLedgerSummaryProvider);
+    ref.invalidate(supplierLedgerTimelineProvider);
+    ref.invalidate(cashLedgerRowsProvider);
+    ref.invalidate(inventorySummaryProvider);
+    ref.invalidate(stockRowsProvider);
+    ref.invalidate(lowStockProvider);
+    ref.invalidate(dashboardKpisProvider);
+    ref.invalidate(dashboardLowStockProvider);
   }
 
   void _showSnack(String message) {
@@ -208,6 +230,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     final productsAsync = ref.watch(purchaseProductSearchResultsProvider);
     final suppliersAsync = ref.watch(supplierSearchResultsProvider);
     final totals = ref.watch(purchaseTotalsProvider);
+    _syncDefaultPaidAmount(formState, totals.total);
 
     return Shortcuts(
       shortcuts: const <ShortcutActivator, Intent>{
@@ -278,6 +301,23 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                                             cost: cost,
                                           );
                                     },
+                                    onUpdateImeiEntry:
+                                        (itemIdx, imeiIdx, entry) async {
+                                      final result = await ref
+                                          .read(
+                                            purchaseFormStateProvider.notifier,
+                                          )
+                                          .updateImeiEntry(
+                                            itemIndex: itemIdx,
+                                            imeiIndex: imeiIdx,
+                                            entry: entry,
+                                          );
+                                      if (result.isFailure) {
+                                        _showSnack(
+                                          result.asFailure!.error.message,
+                                        );
+                                      }
+                                    },
                                     onAddImeiEntries: _handleAddImeiEntries,
                                     onRemoveImeiEntry: (itemIdx, imeiIdx) {
                                       ref
@@ -319,6 +359,23 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
         ),
       ),
     );
+  }
+
+  void _syncDefaultPaidAmount(PurchaseFormState formState, double total) {
+    if (_paidAmountTouched || formState.items.isEmpty) {
+      return;
+    }
+    final text = FormattingHelpers.decimal(total);
+    if (_paidController.text == text && formState.paidAmount == total) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _paidAmountTouched) {
+        return;
+      }
+      _paidController.text = text;
+      ref.read(purchaseFormStateProvider.notifier).setPaidAmount(total);
+    });
   }
 
   Widget _buildTopBar(
@@ -533,6 +590,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     onChanged: (v) {
+                      _paidAmountTouched = true;
                       final val = FormattingHelpers.parseLocaleDecimal(v);
                       ref
                           .read(purchaseFormStateProvider.notifier)

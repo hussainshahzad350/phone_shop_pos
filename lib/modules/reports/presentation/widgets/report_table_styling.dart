@@ -74,7 +74,35 @@ Widget reportStyledTableCell(
   String value, {
   double? width,
   TextAlign textAlign = TextAlign.left,
+  String? subtitle,
 }) {
+  final normalizedSubtitle = subtitle?.trim();
+  if (normalizedSubtitle != null && normalizedSubtitle.isNotEmpty) {
+    return SizedBox(
+      width: width,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: textAlign == TextAlign.right
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            value,
+            textAlign: textAlign,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            'Seller: $normalizedSubtitle',
+            textAlign: textAlign,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
   return SizedBox(
     width: width,
     child: Text(

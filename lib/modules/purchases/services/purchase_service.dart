@@ -191,6 +191,53 @@ class PurchaseService {
     return Success<List<PurchaseFormItem>>(nextItems);
   }
 
+  Result<List<PurchaseFormItem>> updateImeiEntry({
+    required List<PurchaseFormItem> items,
+    required int itemIndex,
+    required int imeiIndex,
+    required ImeiEntry entry,
+  }) {
+    if (itemIndex < 0 || itemIndex >= items.length) {
+      return const Failure<List<PurchaseFormItem>>(
+        AppError(code: 'invalid_index', message: 'Item not found.'),
+      );
+    }
+
+    final item = items[itemIndex];
+    if (!item.hasImei) {
+      return const Failure<List<PurchaseFormItem>>(
+        AppError(code: 'not_serialized', message: 'Item does not use IMEI.'),
+      );
+    }
+    if (imeiIndex < 0 || imeiIndex >= item.imeiEntries.length) {
+      return const Failure<List<PurchaseFormItem>>(
+        AppError(code: 'invalid_imei_index', message: 'IMEI entry not found.'),
+      );
+    }
+
+    final normalizedEntry = ImeiEntry(
+      imei1: ImeiHelpers.normalize(entry.imei1),
+      imei2: ImeiHelpers.normalizeNullable(entry.imei2),
+      serialNumber: _normalizeOptional(entry.serialNumber),
+      costPrice: entry.costPrice,
+      sellingPrice: entry.sellingPrice,
+      condition: entry.condition,
+      sellerName: _normalizeOptional(entry.sellerName),
+      sellerIdCard: _normalizeOptional(entry.sellerIdCard),
+      sellerAddress: _normalizeOptional(entry.sellerAddress),
+      remainingWarranty: _normalizeOptional(entry.remainingWarranty),
+      accessories: _normalizeOptional(entry.accessories),
+      phoneConditionNotes: _normalizeOptional(entry.phoneConditionNotes),
+      sellerPhone: _normalizeOptional(entry.sellerPhone),
+    );
+
+    final nextEntries = <ImeiEntry>[...item.imeiEntries];
+    nextEntries[imeiIndex] = normalizedEntry;
+    final nextItems = <PurchaseFormItem>[...items];
+    nextItems[itemIndex] = item.copyWith(imeiEntries: nextEntries);
+    return Success<List<PurchaseFormItem>>(nextItems);
+  }
+
   Future<Result<void>> validateImei({
     required String imei,
     required List<PurchaseFormItem> currentItems,

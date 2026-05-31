@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
@@ -9,6 +10,7 @@ class CartTableWidget extends StatefulWidget {
     required this.items,
     required this.onIncreaseQty,
     required this.onDecreaseQty,
+    required this.onUpdateUnitPrice,
     required this.onRemove,
     this.selectedIndex,
     this.onSelectRow,
@@ -17,6 +19,7 @@ class CartTableWidget extends StatefulWidget {
   final List<CartItemEntity> items;
   final ValueChanged<int> onIncreaseQty;
   final ValueChanged<int> onDecreaseQty;
+  final void Function(int index, double price) onUpdateUnitPrice;
   final ValueChanged<int> onRemove;
   final int? selectedIndex;
   final ValueChanged<int>? onSelectRow;
@@ -56,6 +59,8 @@ class _CartTableWidgetState extends State<CartTableWidget> {
                 : () => widget.onSelectRow?.call(index),
             onIncreaseQty: () => widget.onIncreaseQty(index),
             onDecreaseQty: () => widget.onDecreaseQty(index),
+            onUpdateUnitPrice: (price) =>
+                widget.onUpdateUnitPrice(index, price),
             onRemove: () => widget.onRemove(index),
           );
         },
@@ -64,13 +69,14 @@ class _CartTableWidgetState extends State<CartTableWidget> {
   }
 }
 
-class _CartItemCard extends StatelessWidget {
+class _CartItemCard extends StatefulWidget {
   const _CartItemCard({
     required this.item,
     required this.selected,
     required this.onTap,
     required this.onIncreaseQty,
     required this.onDecreaseQty,
+    required this.onUpdateUnitPrice,
     required this.onRemove,
   });
 
@@ -79,26 +85,62 @@ class _CartItemCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback onIncreaseQty;
   final VoidCallback onDecreaseQty;
+  final ValueChanged<double> onUpdateUnitPrice;
   final VoidCallback onRemove;
+
+  @override
+  State<_CartItemCard> createState() => _CartItemCardState();
+}
+
+class _CartItemCardState extends State<_CartItemCard> {
+  late final TextEditingController _priceController;
+  final FocusNode _priceFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _priceController = TextEditingController(
+      text: FormattingHelpers.decimal(widget.item.unitPrice),
+    );
+  }
+
+  @override
+  void didUpdateWidget(_CartItemCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_priceFocus.hasFocus &&
+        oldWidget.item.unitPrice != widget.item.unitPrice) {
+      _priceController.text = FormattingHelpers.decimal(widget.item.unitPrice);
+    }
+  }
+
+  @override
+  void dispose() {
+    _priceController.dispose();
+    _priceFocus.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final item = widget.item;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      elevation: selected ? 1 : 0,
+      elevation: widget.selected ? 1 : 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(
-          color: selected ? colorScheme.primary : colorScheme.outlineVariant,
-          width: selected ? 1.4 : 1,
+          color: widget.selected
+              ? colorScheme.primary
+              : colorScheme.outlineVariant,
+          width: widget.selected ? 1.4 : 1,
         ),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
+        onTap: widget.onTap,
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
@@ -132,15 +174,17 @@ class _CartItemCard extends StatelessWidget {
                   if (!item.hasImei) ...<Widget>[
                     _QtyStepper(
                       value: item.quantity,
-                      onDecrease: onDecreaseQty,
-                      onIncrease: onIncreaseQty,
+                      onDecrease: widget.onDecreaseQty,
+                      onIncrease: widget.onIncreaseQty,
                     ),
                   ] else ...<Widget>[
-                    _CompactValueBox(
+                    const _CompactValueBox(
                       label: 'Qty',
                       value: '1',
                     ),
                   ],
+                  const SizedBox(width: 8),
+                  _buildPriceField(),
                   const SizedBox(width: 12),
                   Text(
                     FormattingHelpers.currencyPkr(item.lineTotal),
@@ -153,7 +197,7 @@ class _CartItemCard extends StatelessWidget {
                     icon: const Icon(Icons.delete_outline),
                     color: colorScheme.error,
                     tooltip: 'Remove item',
-                    onPressed: onRemove,
+                    onPressed: widget.onRemove,
                   ),
                 ],
               ),
@@ -166,15 +210,42 @@ class _CartItemCard extends StatelessWidget {
                     label: 'IMEI',
                     value: _serializedLabel(item),
                   ),
-                  _InfoChip(
-                    label: 'Price',
-                    value: FormattingHelpers.currencyPkr(item.unitPrice),
-                  ),
                 ],
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildPriceField() {
+    return SizedBox(
+      width: 150,
+      child: TextField(
+        controller: _priceController,
+        focusNode: _priceFocus,
+        style: const TextStyle(fontWeight: FontWeight.w700),
+        decoration: const InputDecoration(
+          isDense: true,
+          border: OutlineInputBorder(),
+          labelText: 'Price',
+        ),
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: <TextInputFormatter>[
+          FilteringTextInputFormatter.allow(
+            RegExp(r'[0-9., -]'),
+          ),
+        ],
+        onChanged: (value) {
+          final price = FormattingHelpers.parseLocaleDecimal(
+            value,
+            fallback: -1,
+          );
+          if (price >= 0) {
+            widget.onUpdateUnitPrice(price);
+          }
+        },
       ),
     );
   }

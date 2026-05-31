@@ -17,6 +17,7 @@ class TableNames {
   static const String appSettings = 'app_settings';
   static const String salePayments = 'sale_payments';
   static const String saleReturns = 'sale_returns';
+  static const String purchaseReturns = 'purchase_returns';
   static const String stockAdjustments = 'stock_adjustments';
   static const String customerLedger = 'customer_ledger';
   static const String supplierLedger = 'supplier_ledger';

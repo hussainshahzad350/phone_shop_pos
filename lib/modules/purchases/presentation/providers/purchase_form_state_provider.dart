@@ -1,6 +1,7 @@
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/providers/purchase_repository_provider.dart';
@@ -59,10 +60,12 @@ class PurchaseFormState {
       discount: discount ?? this.discount,
       tax: tax ?? this.tax,
       paidAmount: paidAmount ?? this.paidAmount,
-      invoiceNumber: clearInvoiceNumber ? null : invoiceNumber ?? this.invoiceNumber,
+      invoiceNumber:
+          clearInvoiceNumber ? null : invoiceNumber ?? this.invoiceNumber,
       notes: clearNotes ? null : notes ?? this.notes,
       isSubmitting: isSubmitting ?? this.isSubmitting,
-      errorMessage: clearErrorMessage ? null : errorMessage ?? this.errorMessage,
+      errorMessage:
+          clearErrorMessage ? null : errorMessage ?? this.errorMessage,
     );
   }
 }
@@ -96,7 +99,8 @@ class PurchaseFormStateNotifier extends StateNotifier<PurchaseFormState> {
     );
 
     if (result.isSuccess) {
-      state = state.copyWith(items: result.asSuccess!.value, clearErrorMessage: true);
+      state = state.copyWith(
+          items: result.asSuccess!.value, clearErrorMessage: true);
     } else {
       state = state.copyWith(errorMessage: result.asFailure!.error.message);
     }
@@ -107,13 +111,15 @@ class PurchaseFormStateNotifier extends StateNotifier<PurchaseFormState> {
     final result = service.removeItem(items: state.items, index: index);
 
     if (result.isSuccess) {
-      state = state.copyWith(items: result.asSuccess!.value, clearErrorMessage: true);
+      state = state.copyWith(
+          items: result.asSuccess!.value, clearErrorMessage: true);
     } else {
       state = state.copyWith(errorMessage: result.asFailure!.error.message);
     }
   }
 
-  Future<void> updateQuantity({required int index, required int quantity}) async {
+  Future<void> updateQuantity(
+      {required int index, required int quantity}) async {
     final service = await _ref.read(purchaseServiceProvider.future);
     final result = service.updateQuantity(
       items: state.items,
@@ -122,13 +128,15 @@ class PurchaseFormStateNotifier extends StateNotifier<PurchaseFormState> {
     );
 
     if (result.isSuccess) {
-      state = state.copyWith(items: result.asSuccess!.value, clearErrorMessage: true);
+      state = state.copyWith(
+          items: result.asSuccess!.value, clearErrorMessage: true);
     } else {
       state = state.copyWith(errorMessage: result.asFailure!.error.message);
     }
   }
 
-  Future<void> updateUnitCost({required int index, required double cost}) async {
+  Future<void> updateUnitCost(
+      {required int index, required double cost}) async {
     final service = await _ref.read(purchaseServiceProvider.future);
     final result = service.updateUnitCost(
       items: state.items,
@@ -137,7 +145,8 @@ class PurchaseFormStateNotifier extends StateNotifier<PurchaseFormState> {
     );
 
     if (result.isSuccess) {
-      state = state.copyWith(items: result.asSuccess!.value, clearErrorMessage: true);
+      state = state.copyWith(
+          items: result.asSuccess!.value, clearErrorMessage: true);
     } else {
       state = state.copyWith(errorMessage: result.asFailure!.error.message);
     }
@@ -163,7 +172,8 @@ class PurchaseFormStateNotifier extends StateNotifier<PurchaseFormState> {
     );
 
     if (result.isSuccess) {
-      state = state.copyWith(items: result.asSuccess!.value, clearErrorMessage: true);
+      state = state.copyWith(
+          items: result.asSuccess!.value, clearErrorMessage: true);
       return const Success<void>(null);
     } else {
       state = state.copyWith(errorMessage: result.asFailure!.error.message);
@@ -183,10 +193,69 @@ class PurchaseFormStateNotifier extends StateNotifier<PurchaseFormState> {
     );
 
     if (result.isSuccess) {
-      state = state.copyWith(items: result.asSuccess!.value, clearErrorMessage: true);
+      state = state.copyWith(
+          items: result.asSuccess!.value, clearErrorMessage: true);
     } else {
       state = state.copyWith(errorMessage: result.asFailure!.error.message);
     }
+  }
+
+  Future<Result<void>> updateImeiEntry({
+    required int itemIndex,
+    required int imeiIndex,
+    required ImeiEntry entry,
+  }) async {
+    if (itemIndex < 0 || itemIndex >= state.items.length) {
+      return const Failure<void>(
+        AppError(code: 'invalid_index', message: 'Item not found.'),
+      );
+    }
+    final item = state.items[itemIndex];
+    if (imeiIndex < 0 || imeiIndex >= item.imeiEntries.length) {
+      return const Failure<void>(
+        AppError(code: 'invalid_imei_index', message: 'IMEI entry not found.'),
+      );
+    }
+
+    final service = await _ref.read(purchaseServiceProvider.future);
+    final validationItems = <PurchaseFormItem>[
+      for (var i = 0; i < state.items.length; i++)
+        if (i == itemIndex)
+          state.items[i].copyWith(
+            imeiEntries: <ImeiEntry>[
+              for (var j = 0; j < item.imeiEntries.length; j++)
+                if (j != imeiIndex) item.imeiEntries[j],
+            ],
+          )
+        else
+          state.items[i],
+    ];
+    final validation = await service.validateImeiEntry(
+      entry: entry,
+      currentItems: validationItems,
+    );
+    if (validation.isFailure) {
+      state = state.copyWith(errorMessage: validation.asFailure!.error.message);
+      return Failure<void>(validation.asFailure!.error);
+    }
+
+    final result = service.updateImeiEntry(
+      items: state.items,
+      itemIndex: itemIndex,
+      imeiIndex: imeiIndex,
+      entry: entry,
+    );
+
+    if (result.isSuccess) {
+      state = state.copyWith(
+        items: result.asSuccess!.value,
+        clearErrorMessage: true,
+      );
+      return const Success<void>(null);
+    }
+
+    state = state.copyWith(errorMessage: result.asFailure!.error.message);
+    return Failure<void>(result.asFailure!.error);
   }
 
   void setDiscount(double value) {
@@ -222,5 +291,5 @@ class PurchaseFormStateNotifier extends StateNotifier<PurchaseFormState> {
 
 final purchaseFormStateProvider =
     StateNotifierProvider<PurchaseFormStateNotifier, PurchaseFormState>(
-      (ref) => PurchaseFormStateNotifier(ref),
-    );
+  (ref) => PurchaseFormStateNotifier(ref),
+);

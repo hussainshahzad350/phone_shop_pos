@@ -100,6 +100,40 @@ void main() {
       expect(result.asFailure?.error.code, 'empty_items');
       expect(repository.createCalls, 0);
     });
+
+    test('serialized IMEI entry can be corrected before save', () {
+      final service = PurchaseService(repository: _FakePurchaseRepository());
+      final items = <PurchaseFormItem>[
+        const PurchaseFormItem(
+          productModelId: 'prd_phone',
+          productName: 'Phone',
+          hasImei: true,
+          unitCost: 100000,
+          imeiEntries: <ImeiEntry>[
+            ImeiEntry(
+              imei1: '356789101234561',
+              costPrice: 100000,
+            ),
+          ],
+        ),
+      ];
+
+      final result = service.updateImeiEntry(
+        items: items,
+        itemIndex: 0,
+        imeiIndex: 0,
+        entry: items.single.imeiEntries.single.copyWith(
+          imei1: '356789101234579',
+          costPrice: 105000,
+        ),
+      );
+
+      expect(result.isSuccess, isTrue);
+      final updated = result.asSuccess!.value.single.imeiEntries.single;
+      expect(updated.imei1, '356789101234579');
+      expect(updated.costPrice, 105000);
+      expect(result.asSuccess!.value.single.lineTotal, 105000);
+    });
   });
 }
 

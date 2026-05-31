@@ -143,6 +143,31 @@ class SalesService {
     return Success<List<CartItemEntity>>(nextItems);
   }
 
+  Result<List<CartItemEntity>> updateUnitPrice({
+    required List<CartItemEntity> items,
+    required int index,
+    required double price,
+  }) {
+    if (index < 0 || index >= items.length) {
+      return const Failure<List<CartItemEntity>>(
+        AppError(code: 'invalid_index', message: 'Cart item not found.'),
+      );
+    }
+
+    if (price < 0) {
+      return const Failure<List<CartItemEntity>>(
+        AppError(
+          code: 'invalid_price',
+          message: 'Unit price cannot be negative.',
+        ),
+      );
+    }
+
+    final nextItems = <CartItemEntity>[...items];
+    nextItems[index] = items[index].copyWith(unitPrice: price);
+    return Success<List<CartItemEntity>>(nextItems);
+  }
+
   Future<Result<void>> validateStock(List<CartItemEntity> items) async {
     for (final item in items) {
       if (item.hasImei) {

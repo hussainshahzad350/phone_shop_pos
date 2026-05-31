@@ -151,6 +151,49 @@ void main() {
       expect(result.asSuccess?.value.totals.total, 82000);
     });
 
+    test('updates cart unit price independently from product reference price',
+        () {
+      final service = SalesService(
+        repository: _InMemorySalesRepository(
+          quantityByProductId: <String, int>{'pm-edit-price': 5},
+          availableSerializedStockIds: <String>{},
+          costByProductId: <String, double>{'pm-edit-price': 1000},
+        ),
+      );
+      final now = DateTime.utc(2026, 1, 1);
+      final product = ProductEntity(
+        id: 'pm-edit-price',
+        name: 'Editable Price Item',
+        brand: null,
+        category: 'Accessory',
+        sku: null,
+        barcode: null,
+        purchasePrice: 1000,
+        salePrice: 1500,
+        minStockAlert: 0,
+        hasImei: false,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      final added = service.addToCart(
+        items: const <CartItemEntity>[],
+        product: product,
+      );
+      expect(added.isSuccess, isTrue);
+
+      final updated = service.updateUnitPrice(
+        items: added.asSuccess!.value,
+        index: 0,
+        price: 185000,
+      );
+
+      expect(updated.isSuccess, isTrue);
+      expect(updated.asSuccess!.value.single.unitPrice, 185000);
+      expect(product.salePrice, 1500);
+    });
+
     test('S-004 Multi-item accessory sale', () async {
       final repository = _InMemorySalesRepository(
         quantityByProductId: <String, int>{

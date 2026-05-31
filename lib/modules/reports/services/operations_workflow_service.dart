@@ -582,6 +582,185 @@ class OperationsWorkflowService with BaseRepositoryGuard {
     }, operation: 'process_sale_return');
   }
 
+  Future<Result<void>> processPurchaseReturn({
+    required String purchaseId,
+    required PurchaseHistoryItemEntity item,
+    required int quantity,
+    required String reason,
+    String? notes,
+  }) {
+    return guard<void>(() async {
+      final trimmedReason = reason.trim();
+      if (trimmedReason.isEmpty) {
+        throw StateError('Return reason is required.');
+      }
+      if (quantity <= 0) {
+        throw StateError('Return quantity must be greater than zero.');
+      }
+      if (quantity > item.returnableQty) {
+        throw StateError(
+            'Return quantity exceeds available returnable quantity.');
+      }
+      final normalizedNotes = NotesSafety.normalizeNullable(notes);
+      final now = DateTimeHelpers.nowUtc();
+
+      await _appDatabase.runInTransaction<void>((transaction) async {
+        final purchaseItemRows = await transaction.query(
+          TableNames.purchaseItems,
+          columns: <String>['unit_cost'],
+          where: 'id = ?',
+          whereArgs: <Object?>[item.purchaseItemId],
+          limit: 1,
+        );
+        if (purchaseItemRows.isEmpty) {
+          throw StateError('Purchase item not found for return.');
+        }
+        final unitCostPrice =
+            (purchaseItemRows.first['unit_cost'] as num?)?.toDouble() ?? 0;
+
+        late double returnAmount;
+        String? returnedSerializedId;
+        String returnType;
+
+        if (item.hasImei) {
+          if (quantity != 1) {
+            throw StateError(
+                'Serialized item return must be exactly one unit.');
+          }
+          final serializedId = item.serializedStockId;
+          if (serializedId == null || serializedId.isEmpty) {
+            throw StateError('Serialized item is missing stock reference.');
+          }
+
+          final duplicate = await transaction.query(
+            TableNames.purchaseReturns,
+            where: 'purchase_item_id = ? AND serialized_stock_id = ?',
+            whereArgs: <Object?>[item.purchaseItemId, serializedId],
+            limit: 1,
+          );
+          if (duplicate.isNotEmpty) {
+            throw StateError('This IMEI is already returned.');
+          }
+
+          await transaction.update(
+            TableNames.serializedStock,
+            <String, Object?>{
+              'stock_status': 'returned',
+              'updated_at': DateTimeHelpers.toSql(now),
+            },
+            where: 'id = ?',
+            whereArgs: <Object?>[serializedId],
+          );
+
+          returnAmount = item.lineTotal;
+          returnedSerializedId = serializedId;
+          returnType = 'imei';
+        } else {
+          final stockRows = await transaction.query(
+            TableNames.inventoryStock,
+            columns: <String>['quantity'],
+            where: 'product_model_id = ?',
+            whereArgs: <Object?>[item.productModelId],
+            limit: 1,
+          );
+          if (stockRows.isEmpty) {
+            throw StateError('Inventory row missing for return item.');
+          }
+          final oldQty = (stockRows.first['quantity'] as num?)?.toInt() ?? 0;
+          final newQty = oldQty - quantity;
+          if (newQty < 0) {
+            throw StateError('Cannot return more non-serialized stock than is currently in inventory.');
+          }
+
+          await transaction.update(
+            TableNames.inventoryStock,
+            <String, Object?>{
+              'quantity': newQty,
+              'updated_at': DateTimeHelpers.toSql(now),
+            },
+            where: 'product_model_id = ?',
+            whereArgs: <Object?>[item.productModelId],
+          );
+
+          returnAmount = item.unitCost * quantity;
+          returnedSerializedId = null;
+          returnType = 'quantity';
+        }
+
+        final purchaseRows = await transaction.query(
+          TableNames.purchases,
+          columns: <String>[
+            'total',
+            'paid_amount',
+            'supplier_id'
+          ],
+          where: 'id = ?',
+          whereArgs: <Object?>[purchaseId],
+          limit: 1,
+        );
+        if (purchaseRows.isEmpty) {
+          throw StateError('Purchase not found for financial adjustment.');
+        }
+        final currentTotal = (purchaseRows.first['total'] as num?)?.toDouble() ?? 0;
+        final currentPaid =
+            (purchaseRows.first['paid_amount'] as num?)?.toDouble() ?? 0;
+        
+        final newTotal = (currentTotal - returnAmount).clamp(0.0, currentTotal);
+        final newPaid = currentPaid.clamp(0.0, newTotal).toDouble();
+        final refundedPaidAmount =
+            (currentPaid - newPaid).clamp(0, currentPaid).toDouble();
+
+        final refundedCashAmount = refundedPaidAmount;
+
+        await transaction.insert(TableNames.purchaseReturns, <String, Object?>{
+          'id': IdHelpers.newId(prefix: 'pret'),
+          'purchase_id': purchaseId,
+          'purchase_item_id': item.purchaseItemId,
+          'product_model_id': item.productModelId,
+          'serialized_stock_id': returnedSerializedId,
+          'return_type': returnType,
+          'return_qty': quantity,
+          'return_amount': returnAmount,
+          'cost_price': unitCostPrice,
+          'refunded_paid_amount': refundedPaidAmount,
+          'refunded_cash_amount': refundedCashAmount,
+          'reason': trimmedReason,
+          'notes': normalizedNotes,
+          'created_at': DateTimeHelpers.toSql(now),
+          'updated_at': DateTimeHelpers.toSql(now),
+        });
+
+        await transaction.update(
+          TableNames.purchases,
+          <String, Object?>{
+            'total': newTotal,
+            'paid_amount': newPaid,
+            'updated_at': DateTimeHelpers.toSql(now),
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[purchaseId],
+        );
+
+        final supplierId = purchaseRows.first['supplier_id'] as String?;
+        if (_ledgerPostingService != null &&
+            supplierId != null &&
+            supplierId.trim().isNotEmpty) {
+          final ledgerResult = await _ledgerPostingService.postPurchaseReturn(
+            purchaseId: purchaseId,
+            supplierId: supplierId.trim(),
+            amount: returnAmount,
+            createdAt: now,
+            note: trimmedReason,
+            executor: transaction,
+          );
+          if (ledgerResult.isFailure) {
+            throw StateError(ledgerResult.asFailure!.error.message);
+          }
+        }
+      });
+    }, operation: 'process_purchase_return');
+  }
+
   Future<Result<List<PurchaseHistoryRowEntity>>> searchPurchaseHistory({
     required String supplierQuery,
     required DateTime? startDate,
@@ -597,9 +776,17 @@ class OperationsWorkflowService with BaseRepositoryGuard {
       if (trimmedSupplier.isNotEmpty) {
         whereClauses.add(
           '(COALESCE(sp.name, \'Unknown Supplier\') LIKE ? OR '
-          'COALESCE(sp.phone, \'\') LIKE ? OR COALESCE(sp.id, \'\') LIKE ?)',
+          'COALESCE(sp.phone, \'\') LIKE ? OR COALESCE(sp.id, \'\') LIKE ? OR '
+          'EXISTS ('
+          'SELECT 1 FROM ${TableNames.purchaseItems} qpi '
+          'JOIN ${TableNames.serializedStock} qss '
+          'ON qss.id = qpi.serialized_stock_id '
+          'WHERE qpi.purchase_id = p.id '
+          'AND COALESCE(qss.seller_name, \'\') LIKE ?'
+          '))',
         );
         args
+          ..add('%$trimmedSupplier%')
           ..add('%$trimmedSupplier%')
           ..add('%$trimmedSupplier%')
           ..add('%$trimmedSupplier%');
@@ -627,6 +814,17 @@ class OperationsWorkflowService with BaseRepositoryGuard {
             p.id AS purchase_id,
             p.purchase_date,
             COALESCE(sp.name, 'Unknown Supplier') AS supplier_name,
+            (
+              SELECT ss.seller_name
+              FROM ${TableNames.purchaseItems} pi
+              JOIN ${TableNames.serializedStock} ss
+                ON ss.id = pi.serialized_stock_id
+              WHERE pi.purchase_id = p.id
+                AND ss.seller_name IS NOT NULL
+                AND TRIM(ss.seller_name) != ''
+              ORDER BY pi.created_at ASC
+              LIMIT 1
+            ) AS seller_name,
             p.invoice_number,
             p.total,
             p.paid_amount
@@ -645,6 +843,7 @@ class OperationsWorkflowService with BaseRepositoryGuard {
           purchaseId: row['purchase_id'] as String,
           purchaseDate: DateTimeHelpers.fromSql(row['purchase_date'] as String),
           supplierName: row['supplier_name'] as String,
+          sellerName: row['seller_name'] as String?,
           invoiceNumber: row['invoice_number'] as String?,
           total: (row['total'] as num?)?.toDouble() ?? 0,
           paidAmount: (row['paid_amount'] as num?)?.toDouble() ?? 0,
@@ -663,6 +862,17 @@ class OperationsWorkflowService with BaseRepositoryGuard {
           p.id AS purchase_id,
           p.purchase_date,
           COALESCE(sp.name, 'Unknown Supplier') AS supplier_name,
+          (
+            SELECT ss.seller_name
+            FROM ${TableNames.purchaseItems} pi
+            JOIN ${TableNames.serializedStock} ss
+              ON ss.id = pi.serialized_stock_id
+            WHERE pi.purchase_id = p.id
+              AND ss.seller_name IS NOT NULL
+              AND TRIM(ss.seller_name) != ''
+            ORDER BY pi.created_at ASC
+            LIMIT 1
+          ) AS seller_name,
           p.invoice_number,
           p.total,
           p.paid_amount,
@@ -682,11 +892,20 @@ class OperationsWorkflowService with BaseRepositoryGuard {
       final itemRows = await _appDatabase.database.rawQuery(
         '''
         SELECT
+          pi.id AS purchase_item_id,
+          pi.product_model_id,
           pm.name AS product_name,
+          pm.has_imei,
           pi.quantity,
           pi.unit_cost,
           pi.line_total,
-          ss.imei1
+          pi.serialized_stock_id,
+          ss.imei1,
+          COALESCE((
+            SELECT SUM(pr.return_qty)
+            FROM ${TableNames.purchaseReturns} pr
+            WHERE pr.purchase_item_id = pi.id
+          ), 0) AS returned_qty
         FROM ${TableNames.purchaseItems} pi
         JOIN ${TableNames.productModels} pm ON pm.id = pi.product_model_id
         LEFT JOIN ${TableNames.serializedStock} ss ON ss.id = pi.serialized_stock_id
@@ -702,17 +921,23 @@ class OperationsWorkflowService with BaseRepositoryGuard {
           purchaseDate:
               DateTimeHelpers.fromSql(header['purchase_date'] as String),
           supplierName: header['supplier_name'] as String,
+          sellerName: header['seller_name'] as String?,
           invoiceNumber: header['invoice_number'] as String?,
           total: (header['total'] as num?)?.toDouble() ?? 0,
           paidAmount: (header['paid_amount'] as num?)?.toDouble() ?? 0,
         ),
         items: itemRows.map((row) {
           return PurchaseHistoryItemEntity(
+            purchaseItemId: row['purchase_item_id'] as String,
+            productModelId: row['product_model_id'] as String,
             productName: row['product_name'] as String,
+            hasImei: ((row['has_imei'] as num?)?.toInt() ?? 0) == 1,
             quantity: (row['quantity'] as num?)?.toInt() ?? 0,
             unitCost: (row['unit_cost'] as num?)?.toDouble() ?? 0,
             lineTotal: (row['line_total'] as num?)?.toDouble() ?? 0,
+            serializedStockId: row['serialized_stock_id'] as String?,
             imei: row['imei1'] as String?,
+            returnedQty: (row['returned_qty'] as num?)?.toInt() ?? 0,
           );
         }).toList(growable: false),
         notes: header['notes'] as String?,
@@ -917,6 +1142,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
       final salesWhere = StringBuffer('1 = 1');
       final collectionsWhere = StringBuffer('sp.payment_method = ?');
       final returnsWhere = StringBuffer('1 = 1');
+      final purchaseReturnsArgs = <Object?>[];
+      final purchaseReturnsWhere = StringBuffer('1 = 1');
       final purchasesWhere = StringBuffer('1 = 1');
       final expensesWhere = StringBuffer('e.is_deleted = 0');
       final customerSettlementWhere = StringBuffer('cpt.payment_method = ?');
@@ -932,6 +1159,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         collectionsArgs.add(startSql);
         returnsWhere.write(' AND sr.created_at >= ?');
         returnsArgs.add(startSql);
+        purchaseReturnsWhere.write(' AND pr.created_at >= ?');
+        purchaseReturnsArgs.add(startSql);
         purchasesWhere.write(' AND p.purchase_date >= ?');
         purchasesArgs.add(startSql);
         expensesWhere.write(' AND e.expense_date >= ?');
@@ -952,6 +1181,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
         collectionsArgs.add(endSql);
         returnsWhere.write(' AND sr.created_at < ?');
         returnsArgs.add(endSql);
+        purchaseReturnsWhere.write(' AND pr.created_at < ?');
+        purchaseReturnsArgs.add(endSql);
         purchasesWhere.write(' AND p.purchase_date < ?');
         purchasesArgs.add(endSql);
         expensesWhere.write(' AND e.expense_date < ?');
@@ -1020,6 +1251,14 @@ class OperationsWorkflowService with BaseRepositoryGuard {
             WHERE ${returnsWhere.toString()}
             GROUP BY date(sr.created_at)
           ),
+          purchase_refunds_in AS (
+            SELECT
+              date(pr.created_at) AS day,
+              COALESCE(SUM(pr.refunded_cash_amount), 0) AS cash_refunds_in
+            FROM ${TableNames.purchaseReturns} pr
+            WHERE ${purchaseReturnsWhere.toString()}
+            GROUP BY date(pr.created_at)
+          ),
           purchase_out AS (
             SELECT
               date(p.purchase_date) AS day,
@@ -1059,6 +1298,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
             UNION
             SELECT day FROM refunds_cash
             UNION
+            SELECT day FROM purchase_refunds_in
+            UNION
             SELECT day FROM purchase_out
             UNION
             SELECT day FROM expense_out
@@ -1073,12 +1314,14 @@ class OperationsWorkflowService with BaseRepositoryGuard {
             COALESCE(cc.cash_collections_in, 0) + COALESCE(csi.customer_settlement_in, 0) AS cash_collections_in,
             COALESCE(rc.cash_refunds_out, 0) AS cash_refunds_out,
             COALESCE(po.purchase_payments_out, 0) + COALESCE(sso.supplier_settlement_out, 0) AS purchase_payments_out,
+            COALESCE(pri.cash_refunds_in, 0) AS purchase_refunds_in,
             COALESCE(eo.expenses_out, 0) AS expenses_out
           FROM all_days d
           LEFT JOIN sales_cash sc ON sc.day = d.day
           LEFT JOIN collections_cash cc ON cc.day = d.day
           LEFT JOIN refunds_cash rc ON rc.day = d.day
           LEFT JOIN purchase_out po ON po.day = d.day
+          LEFT JOIN purchase_refunds_in pri ON pri.day = d.day
           LEFT JOIN expense_out eo ON eo.day = d.day
           LEFT JOIN customer_settlement_in csi ON csi.day = d.day
           LEFT JOIN supplier_settlement_out sso ON sso.day = d.day
@@ -1089,6 +1332,7 @@ class OperationsWorkflowService with BaseRepositoryGuard {
             ...salesArgs,
             ...collectionsArgs,
             ...returnsArgs,
+            ...purchaseReturnsArgs,
             ...purchasesArgs,
             ...expensesArgs,
             ...customerSettlementArgs,
@@ -1108,6 +1352,8 @@ class OperationsWorkflowService with BaseRepositoryGuard {
           cashRefundsOut: (row['cash_refunds_out'] as num?)?.toDouble() ?? 0,
           purchasePaymentsOut:
               (row['purchase_payments_out'] as num?)?.toDouble() ?? 0,
+          purchaseRefundsIn:
+              (row['purchase_refunds_in'] as num?)?.toDouble() ?? 0,
           expensesOut: (row['expenses_out'] as num?)?.toDouble() ?? 0,
         );
       }).toList(growable: false);

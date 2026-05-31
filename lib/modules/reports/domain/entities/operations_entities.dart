@@ -70,6 +70,7 @@ class PurchaseHistoryRowEntity {
     required this.purchaseId,
     required this.purchaseDate,
     required this.supplierName,
+    required this.sellerName,
     required this.invoiceNumber,
     required this.total,
     required this.paidAmount,
@@ -78,6 +79,7 @@ class PurchaseHistoryRowEntity {
   final String purchaseId;
   final DateTime purchaseDate;
   final String supplierName;
+  final String? sellerName;
   final String? invoiceNumber;
   final double total;
   final double paidAmount;
@@ -87,18 +89,30 @@ class PurchaseHistoryRowEntity {
 
 class PurchaseHistoryItemEntity {
   const PurchaseHistoryItemEntity({
+    required this.purchaseItemId,
+    required this.productModelId,
     required this.productName,
+    required this.hasImei,
     required this.quantity,
     required this.unitCost,
     required this.lineTotal,
+    required this.serializedStockId,
     required this.imei,
+    required this.returnedQty,
   });
 
+  final String purchaseItemId;
+  final String productModelId;
   final String productName;
+  final bool hasImei;
   final int quantity;
   final double unitCost;
   final double lineTotal;
+  final String? serializedStockId;
   final String? imei;
+  final int returnedQty;
+
+  int get returnableQty => (quantity - returnedQty).clamp(0, quantity);
 }
 
 class PurchaseHistoryDetailEntity {
@@ -126,7 +140,8 @@ class SupplierLedgerRowEntity {
   final double totalPurchases;
   final double totalPaid;
 
-  double get pendingAmount => (totalPurchases - totalPaid).clamp(0, double.infinity);
+  double get pendingAmount =>
+      (totalPurchases - totalPaid).clamp(0, double.infinity);
 }
 
 class StockAdjustmentHistoryRowEntity {
@@ -158,6 +173,7 @@ class CashLedgerRowEntity {
     required this.cashCollectionsIn,
     required this.cashRefundsOut,
     required this.purchasePaymentsOut,
+    required this.purchaseRefundsIn,
     required this.expensesOut,
   });
 
@@ -166,9 +182,10 @@ class CashLedgerRowEntity {
   final double cashCollectionsIn;
   final double cashRefundsOut;
   final double purchasePaymentsOut;
+  final double purchaseRefundsIn;
   final double expensesOut;
 
-  double get totalCashIn => cashSalesIn + cashCollectionsIn;
+  double get totalCashIn => cashSalesIn + cashCollectionsIn + purchaseRefundsIn;
   double get totalCashOut => cashRefundsOut + purchasePaymentsOut + expensesOut;
   double get netCash => totalCashIn - totalCashOut;
 }
