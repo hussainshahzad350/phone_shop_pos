@@ -10,17 +10,27 @@ import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/utils/id_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/ledger/domain/entities/party_summary_card_entity.dart';
-import 'package:phone_shop_pos/modules/ledger/presentation/ledger_timeline_labels.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/screens/customer_ledger_detail_screen.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/screens/supplier_ledger_detail_screen.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/expense_entity.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_export_action_widget.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_date_filter_button.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_filter_bar_widget.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_header.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_pagination_bar.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_card_widget.dart';
-import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_section_widget.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_row.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_tab_chips.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/tabs/daily_sales_tab.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/tabs/cash_flow_tab.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/tabs/profit_tab.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/tabs/repair_analytics_tab.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/tabs/customer_ledger_tab.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/tabs/purchase_history_tab.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/tabs/supplier_ledger_tab.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
 
 bool hasNextReportsPageCandidate({
@@ -53,6 +63,81 @@ class ReportsScreen extends ConsumerWidget {
     ref.invalidate(expenseAnalyticsSummaryProvider);
     ref.invalidate(stockAdjustmentHistoryProvider);
     ref.invalidate(reportRepairAnalyticsProvider);
+  }
+
+  Future<void> _showInvoiceDialog(
+    BuildContext context,
+    String saleId,
+  ) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => _SalesInvoiceDialog(saleId: saleId),
+    );
+  }
+
+  Future<void> _reprint(
+    WidgetRef ref,
+    String jobId,
+  ) async {
+    final result = await ref.read(invoicePrintQueueProvider.notifier).printJob(
+          jobId: jobId,
+          paperSize: InvoicePaperSize.thermal80,
+        );
+    if (result.isSuccess) {
+      AppNotifier.success('Receipt sent to spool again.');
+      return;
+    }
+    AppNotifier.errorFromAppError(result.asFailure!.error);
+  }
+
+  Future<void> _showPurchaseDetailDialog(
+    BuildContext context,
+    String purchaseId,
+  ) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => _PurchaseDetailDialog(purchaseId: purchaseId),
+    );
+  }
+
+  Future<void> _openCustomerLedger(
+    BuildContext context,
+    WidgetRef ref,
+    PartySummaryCardEntity summary,
+  ) async {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!context.mounted) {
+        return;
+      }
+      final changed = await CustomerLedgerDetailScreen.open(
+        context,
+        customerId: summary.partyId,
+        summary: summary,
+      );
+      if (changed == true && context.mounted) {
+        ref.invalidate(customerLedgerSummaryProvider);
+      }
+    });
+  }
+
+  Future<void> _openSupplierLedger(
+    BuildContext context,
+    WidgetRef ref,
+    PartySummaryCardEntity summary,
+  ) async {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!context.mounted) {
+        return;
+      }
+      final changed = await SupplierLedgerDetailScreen.open(
+        context,
+        supplierId: summary.partyId,
+        summary: summary,
+      );
+      if (changed == true && context.mounted) {
+        ref.invalidate(supplierLedgerSummaryProvider);
+      }
+    });
   }
 
   @override
@@ -105,36 +190,16 @@ class ReportsScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: <Widget>[
-                    OutlinedButton.icon(
-                      onPressed: () => _refreshAll(ref),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Refresh'),
-                    ),
-                  ],
+                ReportHeader(
+                  onRefresh: () => _refreshAll(ref),
                 ),
                 const SizedBox(height: 8),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: ReportsTab.values
-                          .map(
-                            (item) => ChoiceChip(
-                              label: Text(_tabLabel(item)),
-                              selected: item == tab,
-                              onSelected: (_) => ref
-                                  .read(selectedReportsTabProvider.notifier)
-                                  .state = item,
-                            ),
-                          )
-                          .toList(growable: false),
-                    ),
-                  ),
+                ReportTabChips(
+                  selectedTab: tab,
+                  labelFor: _tabLabel,
+                  onSelectTab: (item) => ref
+                      .read(selectedReportsTabProvider.notifier)
+                      .state = item,
                 ),
                 const SizedBox(height: 8),
                 if (_usesLegacyFilters(tab)) ...<Widget>[
@@ -177,56 +242,31 @@ class ReportsScreen extends ConsumerWidget {
                   const SizedBox(height: 8),
                 ],
                 Expanded(
-                  child: _ReportContent(tab: tab),
+                  child: _ReportContent(
+                    tab: tab,
+                    onOpenInvoice: (saleId) =>
+                        _showInvoiceDialog(context, saleId),
+                    onOpenPurchaseDetail: (purchaseId) =>
+                        _showPurchaseDetailDialog(context, purchaseId),
+                    onReprint: (jobId) => _reprint(ref, jobId),
+                    onOpenCustomerLedger: (summary) =>
+                        _openCustomerLedger(context, ref, summary),
+                    onOpenSupplierLedger: (summary) =>
+                        _openSupplierLedger(context, ref, summary),
+                  ),
                 ),
                 if (_usesLegacyFilters(tab)) ...<Widget>[
                   const SizedBox(height: 8),
-                  Row(
-                    children: <Widget>[
-                      OutlinedButton.icon(
-                        onPressed: filter.page <= 1
-                            ? null
-                            : () => ref
-                                .read(reportFilterProvider.notifier)
-                                .previousPage(),
-                        icon: const Icon(Icons.chevron_left),
-                        label: const Text('Previous'),
-                      ),
-                      const SizedBox(width: 8),
-                      OutlinedButton.icon(
-                        onPressed: canGoNextPage
-                            ? () => ref
-                                .read(reportFilterProvider.notifier)
-                                .nextPage()
-                            : null,
-                        icon: const Icon(Icons.chevron_right),
-                        label: const Text('Next'),
-                      ),
-                      const SizedBox(width: 12),
-                      DropdownButton<int>(
-                        value: filter.pageSize,
-                        onChanged: (value) {
-                          if (value == null) {
-                            return;
-                          }
-                          ref
-                              .read(reportFilterProvider.notifier)
-                              .setPageSize(value);
-                        },
-                        items: const <DropdownMenuItem<int>>[
-                          DropdownMenuItem<int>(
-                              value: 25, child: Text('25 / page')),
-                          DropdownMenuItem<int>(
-                              value: 50, child: Text('50 / page')),
-                          DropdownMenuItem<int>(
-                              value: 100, child: Text('100 / page')),
-                          DropdownMenuItem<int>(
-                              value: 200, child: Text('200 / page')),
-                        ],
-                      ),
-                      const SizedBox(width: 12),
-                      Text('Page ${filter.page}'),
-                    ],
+                  ReportPaginationBar(
+                    filter: filter,
+                    canGoNextPage: canGoNextPage,
+                    onPreviousPage: () =>
+                        ref.read(reportFilterProvider.notifier).previousPage(),
+                    onNextPage: () =>
+                        ref.read(reportFilterProvider.notifier).nextPage(),
+                    onPageSizeChanged: (value) => ref
+                        .read(reportFilterProvider.notifier)
+                        .setPageSize(value),
                   ),
                 ],
               ],
@@ -289,34 +329,50 @@ class ReportsScreen extends ConsumerWidget {
 }
 
 class _ReportContent extends ConsumerWidget {
-  const _ReportContent({required this.tab});
+  const _ReportContent({
+    required this.tab,
+    required this.onOpenInvoice,
+    required this.onOpenPurchaseDetail,
+    required this.onReprint,
+    required this.onOpenCustomerLedger,
+    required this.onOpenSupplierLedger,
+  });
 
   final ReportsTab tab;
+  final Future<void> Function(String saleId) onOpenInvoice;
+  final Future<void> Function(String purchaseId) onOpenPurchaseDetail;
+  final Future<void> Function(String jobId) onReprint;
+  final Future<void> Function(PartySummaryCardEntity summary)
+      onOpenCustomerLedger;
+  final Future<void> Function(PartySummaryCardEntity summary)
+      onOpenSupplierLedger;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (tab == ReportsTab.dailySales) {
-      return const _DailySalesView();
+      return DailySalesTab(onOpenInvoice: onOpenInvoice, onReprint: onReprint);
     }
 
     if (tab == ReportsTab.profit) {
-      return const _ProfitView();
+      return const ProfitTab();
     }
 
     if (tab == ReportsTab.customerLedger) {
-      return const _CustomerBalanceView();
+      return CustomerLedgerTab(onOpenLedger: onOpenCustomerLedger);
     }
 
     if (tab == ReportsTab.dailyPurchase) {
-      return const _PurchaseHistoryView();
+      return PurchaseHistoryTab(
+        onOpenPurchaseDetail: onOpenPurchaseDetail,
+      );
     }
 
     if (tab == ReportsTab.supplierLedger) {
-      return const _SupplierLedgerView();
+      return SupplierLedgerTab(onOpenLedger: onOpenSupplierLedger);
     }
 
     if (tab == ReportsTab.cashFlow) {
-      return const _CashLedgerView();
+      return const CashFlowTab();
     }
 
     if (tab == ReportsTab.expenses) {
@@ -324,7 +380,7 @@ class _ReportContent extends ConsumerWidget {
     }
 
     if (tab == ReportsTab.repairAnalytics) {
-      return const _RepairAnalyticsView();
+      return const RepairAnalyticsTab();
     }
 
     return const _DailySalesView();
@@ -443,7 +499,7 @@ class _DailySalesView extends ConsumerWidget {
 
     return Column(
       children: <Widget>[
-        Row(
+        ReportSummaryRow(
           children: <Widget>[
             Expanded(
               child: ReportSummaryCardWidget(
@@ -451,7 +507,6 @@ class _DailySalesView extends ConsumerWidget {
                 value: FormattingHelpers.currencyPkr(sumTotal),
               ),
             ),
-            const SizedBox(width: 8),
             Expanded(
               child: ReportSummaryCardWidget(
                 label: 'Invoices (page)',
@@ -459,7 +514,6 @@ class _DailySalesView extends ConsumerWidget {
                 color: Colors.indigo,
               ),
             ),
-            const SizedBox(width: 8),
             Expanded(
               child: ReportSummaryCardWidget(
                 label: 'Balance (page)',
@@ -643,893 +697,6 @@ class _DailySalesView extends ConsumerWidget {
   }
 }
 
-class _ProfitView extends ConsumerWidget {
-  const _ProfitView();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final summaryAsync = ref.watch(profitReportProvider);
-    final rowsAsync = ref.watch(profitReportRowsProvider);
-    final csvService = ref.watch(csvExportServiceProvider);
-    final printableService = ref.watch(printableReportServiceProvider);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        // ── Summary cards ──
-        summaryAsync.when(
-          data: (report) => Row(
-            children: <Widget>[
-              Expanded(
-                child: ReportSummaryCardWidget(
-                  label: 'Revenue',
-                  value: FormattingHelpers.currencyPkr(report.totalRevenue),
-                  color: Colors.blue,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ReportSummaryCardWidget(
-                  label: 'Cost',
-                  value: FormattingHelpers.currencyPkr(report.totalCost),
-                  color: Colors.orange,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ReportSummaryCardWidget(
-                  label: 'Profit',
-                  value: FormattingHelpers.currencyPkr(report.totalProfit),
-                  color: report.totalProfit >= 0 ? Colors.green : Colors.red,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ReportSummaryCardWidget(
-                  label: 'Margin',
-                  value: '${FormattingHelpers.decimal(report.marginPercent)}%',
-                  color: Colors.indigo,
-                ),
-              ),
-            ],
-          ),
-          loading: () => const SizedBox(
-            height: 72,
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (error, _) => _ReportErrorView(
-            message: 'Failed to load profit summary.',
-            error: error,
-            onRetry: () => ref.invalidate(profitReportProvider),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // ── Per-day table ──
-        Expanded(
-          child: rowsAsync.when(
-            data: (rows) {
-              const headers = <String>[
-                'Date',
-                'Phones Sold',
-                'Accessories Sold',
-                'Revenue (PKR)',
-                'Cost (PKR)',
-                'Profit (PKR)',
-                'Margin %',
-              ];
-              final exportRows = rows
-                  .map(
-                    (r) => <String>[
-                      r.day,
-                      r.phonesSold.toString(),
-                      r.accessoriesSold.toString(),
-                      r.totalRevenue.toStringAsFixed(2),
-                      r.totalCost.toStringAsFixed(2),
-                      r.totalProfit.toStringAsFixed(2),
-                      '${r.marginPercent.toStringAsFixed(1)}%',
-                    ],
-                  )
-                  .toList();
-              final layout = reportTableLayoutFor(context);
-
-              return Card(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  child: Column(
-                    children: <Widget>[
-                      Row(
-                        children: <Widget>[
-                          Expanded(child: reportSectionTitle('Profit by Day')),
-                          ReportExportActionWidget(
-                            title: 'Profit Report',
-                            fileBaseName: 'profit_report',
-                            headers: headers,
-                            rows: exportRows,
-                            csvExportService: csvService,
-                            printableReportService: printableService,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      const Divider(height: 1),
-                      const SizedBox(height: 8),
-                      Expanded(
-                        child: AppDataTable(
-                          columnSpacing: layout.columnSpacing,
-                          dataRowMinHeight: layout.dataRowMinHeight,
-                          dataRowMaxHeight: layout.dataRowMaxHeight,
-                          showCheckboxColumn: false,
-                          emptyMessage: 'No profit rows found.',
-                          columns: <DataColumn>[
-                            DataColumn(
-                                label: reportStyledTableHeaderCell(
-                                    context, 'Date',
-                                    width: 110)),
-                            DataColumn(
-                                label: reportStyledTableHeaderCell(
-                                    context, 'Phones Sold',
-                                    width: 120)),
-                            DataColumn(
-                                label: reportStyledTableHeaderCell(
-                                    context, 'Accessories Sold',
-                                    width: 140)),
-                            DataColumn(
-                                label: reportStyledTableHeaderCell(
-                                    context, 'Revenue (PKR)',
-                                    width: 130)),
-                            DataColumn(
-                                label: reportStyledTableHeaderCell(
-                                    context, 'Cost (PKR)',
-                                    width: 120)),
-                            DataColumn(
-                                label: reportStyledTableHeaderCell(
-                                    context, 'Profit (PKR)',
-                                    width: 120)),
-                            DataColumn(
-                                label: reportStyledTableHeaderCell(
-                                    context, 'Margin %',
-                                    width: 90)),
-                          ],
-                          rows: rows.map((r) {
-                            final isNegative = r.totalProfit < 0;
-                            final colorScheme = Theme.of(context).colorScheme;
-                            return DataRow(
-                              cells: <DataCell>[
-                                DataCell(
-                                    reportStyledTableCell(r.day, width: 110)),
-                                DataCell(reportStyledTableCell(
-                                    r.phonesSold.toString(),
-                                    width: 120)),
-                                DataCell(reportStyledTableCell(
-                                    r.accessoriesSold.toString(),
-                                    width: 140)),
-                                DataCell(reportStyledTableCell(
-                                    FormattingHelpers.decimal(r.totalRevenue),
-                                    width: 130)),
-                                DataCell(reportStyledTableCell(
-                                    FormattingHelpers.decimal(r.totalCost),
-                                    width: 120)),
-                                DataCell(
-                                  SizedBox(
-                                    width: 120,
-                                    child: Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: reportStyledStatusCell(
-                                        context,
-                                        FormattingHelpers.decimal(
-                                            r.totalProfit),
-                                        isNegative
-                                            ? colorScheme.errorContainer
-                                            : colorScheme.primaryContainer,
-                                        isNegative
-                                            ? colorScheme.onErrorContainer
-                                            : colorScheme.onPrimaryContainer,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                DataCell(reportStyledTableCell(
-                                    '${r.marginPercent.toStringAsFixed(1)}%',
-                                    width: 90)),
-                              ],
-                            );
-                          }).toList(growable: false),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => _ReportErrorView(
-              message: 'Failed to load profit breakdown.',
-              error: error,
-              onRetry: () => ref.invalidate(profitReportRowsProvider),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _LedgerOverviewView extends StatelessWidget {
-  const _LedgerOverviewView({
-    required this.title,
-    required this.tableTitle,
-    required this.partyHeader,
-    required this.openLabel,
-    required this.summaries,
-    required this.displayName,
-    required this.onOpenLedger,
-  });
-
-  final String title;
-  final String tableTitle;
-  final String partyHeader;
-  final String openLabel;
-  final List<PartySummaryCardEntity> summaries;
-  final String Function(String name) displayName;
-  final ValueChanged<PartySummaryCardEntity> onOpenLedger;
-
-  @override
-  Widget build(BuildContext context) {
-    final sorted = List<PartySummaryCardEntity>.of(summaries)
-      ..sort((a, b) => b.outstanding.compareTo(a.outstanding));
-    final totalOutstanding =
-        sorted.fold<double>(0, (sum, row) => sum + row.outstanding);
-    final withBalance = sorted.where((row) => row.outstanding > 0.009).length;
-    final layout = reportTableLayoutFor(context);
-
-    return Column(
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: ReportSummaryCardWidget(
-                label: 'Accounts',
-                value: sorted.length.toString(),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ReportSummaryCardWidget(
-                label: 'With balance',
-                value: withBalance.toString(),
-                color: Colors.orange,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ReportSummaryCardWidget(
-                label: 'Total outstanding',
-                value: FormattingHelpers.currencyPkr(totalOutstanding),
-                color: totalOutstanding > 0 ? Colors.orange : Colors.green,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: ReportTableSection(
-            title: tableTitle,
-            subtitle: title,
-            child: AppDataTable(
-              showCheckboxColumn: false,
-              emptyMessage: 'No ledger records found.',
-              columnSpacing: layout.columnSpacing,
-              dataRowMinHeight: layout.dataRowMinHeight,
-              dataRowMaxHeight: layout.dataRowMaxHeight,
-              columns: <DataColumn>[
-                DataColumn(
-                  label: reportStyledTableHeaderCell(
-                    context,
-                    partyHeader,
-                    width: 320,
-                  ),
-                ),
-                DataColumn(
-                  label: reportStyledTableHeaderCell(
-                    context,
-                    'Outstanding (PKR)',
-                    width: 160,
-                  ),
-                ),
-                DataColumn(
-                  label: reportStyledTableHeaderCell(
-                    context,
-                    'Open',
-                    width: 96,
-                  ),
-                ),
-              ],
-              rows: sorted.map((summary) {
-                void openAccount() => onOpenLedger(summary);
-                return DataRow(
-                  onSelectChanged: (selected) {
-                    if (selected != true) {
-                      return;
-                    }
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      openAccount();
-                    });
-                  },
-                  cells: <DataCell>[
-                    DataCell(
-                      reportStyledTableCell(
-                        displayName(summary.partyName),
-                        width: 320,
-                      ),
-                    ),
-                    DataCell(
-                      reportStyledTableCell(
-                        FormattingHelpers.decimal(summary.outstanding),
-                        width: 160,
-                      ),
-                    ),
-                    DataCell(
-                      SizedBox(
-                        width: 96,
-                        child: IconButton.filledTonal(
-                          tooltip: openLabel,
-                          onPressed: openAccount,
-                          icon: const Icon(Icons.chevron_right, size: 18),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              }).toList(growable: false),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CustomerBalanceView extends ConsumerWidget {
-  const _CustomerBalanceView();
-
-  void _openLedger(
-    BuildContext context,
-    WidgetRef ref,
-    PartySummaryCardEntity summary,
-  ) {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!context.mounted) {
-        return;
-      }
-      final changed = await CustomerLedgerDetailScreen.open(
-        context,
-        customerId: summary.partyId,
-        summary: summary,
-      );
-      if (changed == true && context.mounted) {
-        ref.invalidate(customerLedgerSummaryProvider);
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final summaryAsync = ref.watch(customerLedgerSummaryProvider);
-
-    return summaryAsync.when(
-      data: (rows) => _LedgerOverviewView(
-        title: 'Outstanding customer balances',
-        tableTitle: 'Customer Ledger',
-        partyHeader: 'Customer',
-        openLabel: 'Open customer account',
-        summaries: rows,
-        displayName: normalizeCustomerLedgerName,
-        onOpenLedger: (summary) => _openLedger(context, ref, summary),
-      ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, __) => _ReportErrorView(
-        message: 'Failed to load customer ledgers.',
-        error: error,
-        onRetry: () => ref.invalidate(customerLedgerSummaryProvider),
-      ),
-    );
-  }
-}
-
-class _PurchaseHistoryView extends ConsumerWidget {
-  const _PurchaseHistoryView();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final rowsAsync = ref.watch(purchaseHistoryRowsProvider);
-    return Column(
-      children: <Widget>[
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: <Widget>[
-                SizedBox(
-                  width: 280,
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      labelText: 'Supplier',
-                    ),
-                    onChanged: (value) => ref
-                        .read(purchaseHistorySupplierQueryProvider.notifier)
-                        .state = value,
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                      initialDate: ref.read(purchaseHistoryStartDateProvider) ??
-                          DateTime.now(),
-                    );
-                    ref.read(purchaseHistoryStartDateProvider.notifier).state =
-                        picked;
-                  },
-                  icon: const Icon(Icons.calendar_today),
-                  label: Text(
-                    ref.watch(purchaseHistoryStartDateProvider) == null
-                        ? 'Start Date'
-                        : FormattingHelpers.dateYmd(
-                            ref.watch(purchaseHistoryStartDateProvider)!),
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                      initialDate: ref.read(purchaseHistoryEndDateProvider) ??
-                          DateTime.now(),
-                    );
-                    ref.read(purchaseHistoryEndDateProvider.notifier).state =
-                        picked;
-                  },
-                  icon: const Icon(Icons.event),
-                  label: Text(
-                    ref.watch(purchaseHistoryEndDateProvider) == null
-                        ? 'End Date'
-                        : FormattingHelpers.dateYmd(
-                            ref.watch(purchaseHistoryEndDateProvider)!),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: rowsAsync.when(
-            data: (rows) {
-              final sumTotal =
-                  rows.fold<double>(0, (sum, row) => sum + row.total);
-              final sumBalance = rows.fold<double>(
-                0,
-                (sum, row) => sum + row.remainingBalance,
-              );
-              return Column(
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: ReportSummaryCardWidget(
-                          label: 'Purchases (page)',
-                          value: rows.length.toString(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ReportSummaryCardWidget(
-                          label: 'Total (page)',
-                          value: FormattingHelpers.currencyPkr(sumTotal),
-                          color: Colors.blue,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ReportSummaryCardWidget(
-                          label: 'Balance (page)',
-                          value: FormattingHelpers.currencyPkr(sumBalance),
-                          color: sumBalance > 0 ? Colors.orange : Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: ReportTableSection(
-                      title: 'Purchase History',
-                      child: AppDataTable(
-                        columnSpacing:
-                            reportTableLayoutFor(context).columnSpacing,
-                        dataRowMinHeight:
-                            reportTableLayoutFor(context).dataRowMinHeight,
-                        dataRowMaxHeight:
-                            reportTableLayoutFor(context).dataRowMaxHeight,
-                        showCheckboxColumn: false,
-                        columns: <DataColumn>[
-                          DataColumn(
-                              label: reportStyledTableHeaderCell(
-                                  context, 'Date',
-                                  width: 110)),
-                          DataColumn(
-                              label: reportStyledTableHeaderCell(
-                                  context, 'Supplier / Seller',
-                                  width: 220)),
-                          DataColumn(
-                              label: reportStyledTableHeaderCell(
-                                  context, 'Invoice',
-                                  width: 130)),
-                          DataColumn(
-                              label: reportStyledTableHeaderCell(
-                                  context, 'Total (PKR)',
-                                  width: 120)),
-                          DataColumn(
-                              label: reportStyledTableHeaderCell(
-                                  context, 'Paid (PKR)',
-                                  width: 120)),
-                          DataColumn(
-                              label: reportStyledTableHeaderCell(
-                                  context, 'Balance (PKR)',
-                                  width: 130)),
-                          DataColumn(
-                              label: reportStyledTableHeaderCell(
-                                  context, 'Actions',
-                                  width: 90)),
-                        ],
-                        rows: rows.map((row) {
-                          return DataRow(
-                            cells: <DataCell>[
-                              DataCell(reportStyledTableCell(
-                                  FormattingHelpers.dateYmd(row.purchaseDate),
-                                  width: 110)),
-                              DataCell(reportStyledTableCell(row.supplierName,
-                                  subtitle: row.sellerName, width: 220)),
-                              DataCell(reportStyledTableCell(
-                                  row.invoiceNumber ?? '-',
-                                  width: 130)),
-                              DataCell(reportStyledTableCell(
-                                  FormattingHelpers.decimal(row.total),
-                                  width: 120)),
-                              DataCell(reportStyledTableCell(
-                                  FormattingHelpers.decimal(row.paidAmount),
-                                  width: 120)),
-                              DataCell(reportStyledTableCell(
-                                  FormattingHelpers.decimal(
-                                      row.remainingBalance),
-                                  width: 130)),
-                              DataCell(
-                                IconButton.filledTonal(
-                                  tooltip: 'Open',
-                                  onPressed: () async {
-                                    await showDialog<void>(
-                                      context: context,
-                                      builder: (context) =>
-                                          _PurchaseDetailDialog(
-                                        purchaseId: row.purchaseId,
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.open_in_new, size: 18),
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                              ),
-                            ],
-                          );
-                        }).toList(growable: false),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, __) => _ReportErrorView(
-              message: 'Failed to load purchase history.',
-              error: error,
-              onRetry: () => ref.invalidate(purchaseHistoryRowsProvider),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SupplierLedgerView extends ConsumerWidget {
-  const _SupplierLedgerView();
-
-  void _openLedger(
-    BuildContext context,
-    WidgetRef ref,
-    PartySummaryCardEntity summary,
-  ) {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!context.mounted) {
-        return;
-      }
-      final changed = await SupplierLedgerDetailScreen.open(
-        context,
-        supplierId: summary.partyId,
-        summary: summary,
-      );
-      if (changed == true && context.mounted) {
-        ref.invalidate(supplierLedgerSummaryProvider);
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final summaryAsync = ref.watch(supplierLedgerSummaryProvider);
-
-    return summaryAsync.when(
-      data: (rows) => _LedgerOverviewView(
-        title: 'Outstanding supplier balances',
-        tableTitle: 'Supplier Ledger',
-        partyHeader: 'Supplier',
-        openLabel: 'Open supplier account',
-        summaries: rows,
-        displayName: normalizeSupplierLedgerName,
-        onOpenLedger: (summary) => _openLedger(context, ref, summary),
-      ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, __) => _ReportErrorView(
-        message: 'Failed to load supplier ledgers.',
-        error: error,
-        onRetry: () => ref.invalidate(supplierLedgerSummaryProvider),
-      ),
-    );
-  }
-}
-
-class _CashLedgerView extends ConsumerWidget {
-  const _CashLedgerView();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final rowsAsync = ref.watch(cashLedgerRowsProvider);
-    final startDate = ref.watch(cashLedgerStartDateProvider);
-    final endDate = ref.watch(cashLedgerEndDateProvider);
-    return Column(
-      children: <Widget>[
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: <Widget>[
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                      initialDate: ref.read(cashLedgerStartDateProvider) ??
-                          DateTime.now(),
-                    );
-                    ref.read(cashLedgerStartDateProvider.notifier).state =
-                        picked;
-                  },
-                  icon: const Icon(Icons.calendar_today),
-                  label: Text(
-                    startDate == null
-                        ? 'Start Date'
-                        : FormattingHelpers.dateYmd(startDate),
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                      initialDate:
-                          ref.read(cashLedgerEndDateProvider) ?? DateTime.now(),
-                    );
-                    ref.read(cashLedgerEndDateProvider.notifier).state = picked;
-                  },
-                  icon: const Icon(Icons.event),
-                  label: Text(
-                    endDate == null
-                        ? 'End Date'
-                        : FormattingHelpers.dateYmd(endDate),
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    ref.read(cashLedgerStartDateProvider.notifier).state = null;
-                    ref.read(cashLedgerEndDateProvider.notifier).state = null;
-                  },
-                  icon: const Icon(Icons.clear),
-                  label: const Text('Clear Dates'),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: rowsAsync.when(
-            data: (rows) {
-              final netTotal =
-                  rows.fold<double>(0, (sum, row) => sum + row.netCash);
-              final cashIn = rows.fold<double>(
-                0,
-                (sum, row) => sum + row.totalCashIn,
-              );
-              return Column(
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: ReportSummaryCardWidget(
-                          label: 'Cash in (page)',
-                          value: FormattingHelpers.currencyPkr(cashIn),
-                          color: Colors.green,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ReportSummaryCardWidget(
-                          label: 'Net cash (page)',
-                          value: FormattingHelpers.currencyPkr(netTotal),
-                          color: netTotal >= 0 ? Colors.green : Colors.red,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: ReportTableSection(
-                      title: 'Cash Flow',
-                      subtitle:
-                          'Cash movement only (sales, collections, refunds, purchases paid, expenses). Not physical drawer cash.',
-                      child: AppDataTable(
-                        emptyMessage:
-                            'No cash flow rows in selected date range.',
-                        columnSpacing:
-                            reportTableLayoutFor(context).columnSpacing,
-                        dataRowMinHeight:
-                            reportTableLayoutFor(context).dataRowMinHeight,
-                        dataRowMaxHeight:
-                            reportTableLayoutFor(context).dataRowMaxHeight,
-                        showCheckboxColumn: false,
-                        columns: <DataColumn>[
-                          DataColumn(
-                              label: reportStyledTableHeaderCell(context, 'Day',
-                                  width: 105)),
-                          DataColumn(
-                              label: reportStyledTableHeaderCell(
-                                  context, 'Cash Sales In (PKR)',
-                                  width: 140)),
-                          DataColumn(
-                              label: reportStyledTableHeaderCell(
-                                  context, 'Collections In (PKR)',
-                                  width: 145)),
-                          DataColumn(
-                              label: reportStyledTableHeaderCell(
-                                  context, 'Total Cash In (PKR)',
-                                  width: 140)),
-                          DataColumn(
-                              label: reportStyledTableHeaderCell(
-                                  context, 'Purchase Refunds In (PKR)',
-                                  width: 175)),
-                          DataColumn(
-                              label: reportStyledTableHeaderCell(
-                                  context, 'Cash Refunds Out (PKR)',
-                                  width: 160)),
-                          DataColumn(
-                              label: reportStyledTableHeaderCell(
-                                  context, 'Purchases Paid Out (PKR)',
-                                  width: 175)),
-                          DataColumn(
-                              label: reportStyledTableHeaderCell(
-                                  context, 'Expenses Out (PKR)',
-                                  width: 145)),
-                          DataColumn(
-                              label: reportStyledTableHeaderCell(
-                                  context, 'Total Cash Out (PKR)',
-                                  width: 145)),
-                          DataColumn(
-                              label: reportStyledTableHeaderCell(
-                                  context, 'Net Cash (PKR)',
-                                  width: 130)),
-                        ],
-                        rows: rows.map((row) {
-                          final colorScheme = Theme.of(context).colorScheme;
-                          final isNegative = row.netCash < 0;
-                          return DataRow(
-                            cells: <DataCell>[
-                              DataCell(
-                                  reportStyledTableCell(row.day, width: 105)),
-                              DataCell(reportStyledTableCell(
-                                  FormattingHelpers.decimal(row.cashSalesIn),
-                                  width: 140)),
-                              DataCell(reportStyledTableCell(
-                                  FormattingHelpers.decimal(
-                                      row.cashCollectionsIn),
-                                  width: 145)),
-                              DataCell(reportStyledTableCell(
-                                  FormattingHelpers.decimal(row.totalCashIn),
-                                  width: 140)),
-                              DataCell(
-                                reportStyledTableCell(
-                                    FormattingHelpers.decimal(
-                                        row.purchaseRefundsIn),
-                                    width: 175),
-                              ),
-                              DataCell(reportStyledTableCell(
-                                  FormattingHelpers.decimal(row.cashRefundsOut),
-                                  width: 160)),
-                              DataCell(
-                                reportStyledTableCell(
-                                    FormattingHelpers.decimal(
-                                        row.purchasePaymentsOut),
-                                    width: 175),
-                              ),
-                              DataCell(reportStyledTableCell(
-                                  FormattingHelpers.decimal(row.expensesOut),
-                                  width: 145)),
-                              DataCell(reportStyledTableCell(
-                                  FormattingHelpers.decimal(row.totalCashOut),
-                                  width: 145)),
-                              DataCell(
-                                SizedBox(
-                                  width: 130,
-                                  child: Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: reportStyledStatusCell(
-                                      context,
-                                      FormattingHelpers.decimal(row.netCash),
-                                      isNegative
-                                          ? colorScheme.errorContainer
-                                          : colorScheme.primaryContainer,
-                                      isNegative
-                                          ? colorScheme.onErrorContainer
-                                          : colorScheme.onPrimaryContainer,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        }).toList(growable: false),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, __) => _ReportErrorView(
-              message: 'Failed to load cash flow.',
-              error: error,
-              onRetry: () => ref.invalidate(cashLedgerRowsProvider),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 // ─────────────────────────────────────────────────────────────
 // Expenses View
 // ─────────────────────────────────────────────────────────────
@@ -1639,49 +806,33 @@ class _ExpensesViewState extends ConsumerState<_ExpensesView> {
                       icon: const Icon(Icons.add),
                       label: const Text('Add Expense'),
                     ),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          firstDate: DateTime(2020),
-                          lastDate:
-                              DateTime.now().add(const Duration(days: 365)),
-                          initialDate: startDate ?? DateTime.now(),
-                        );
+                    ReportDateFilterButton(
+                      icon: Icons.calendar_today,
+                      iconSize: 16,
+                      emptyLabel: 'Start Date',
+                      selectedDate: startDate,
+                      initialDate: startDate ?? DateTime.now(),
+                      onPicked: (picked) {
                         if (picked == null) {
                           return;
                         }
                         ref.read(expensesStartDateProvider.notifier).state =
                             picked;
                       },
-                      icon: const Icon(Icons.calendar_today, size: 16),
-                      label: Text(
-                        startDate == null
-                            ? 'Start Date'
-                            : FormattingHelpers.dateYmd(startDate),
-                      ),
                     ),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          firstDate: DateTime(2020),
-                          lastDate:
-                              DateTime.now().add(const Duration(days: 365)),
-                          initialDate: endDate ?? DateTime.now(),
-                        );
+                    ReportDateFilterButton(
+                      icon: Icons.event,
+                      iconSize: 16,
+                      emptyLabel: 'End Date',
+                      selectedDate: endDate,
+                      initialDate: endDate ?? DateTime.now(),
+                      onPicked: (picked) {
                         if (picked == null) {
                           return;
                         }
                         ref.read(expensesEndDateProvider.notifier).state =
                             picked;
                       },
-                      icon: const Icon(Icons.event, size: 16),
-                      label: Text(
-                        endDate == null
-                            ? 'End Date'
-                            : FormattingHelpers.dateYmd(endDate),
-                      ),
                     ),
                     SizedBox(
                       width: 220,
@@ -2947,8 +2098,10 @@ class _PurchaseDetailDialog extends ConsumerWidget {
                                     onPressed: () {
                                       showDialog<void>(
                                         context: context,
-                                        builder: (context) => _ReturnPurchaseItemDialog(
-                                          purchaseId: detail.purchase.purchaseId,
+                                        builder: (context) =>
+                                            _ReturnPurchaseItemDialog(
+                                          purchaseId:
+                                              detail.purchase.purchaseId,
                                           item: item,
                                         ),
                                       );
@@ -3061,7 +2214,8 @@ class _ReturnPurchaseItemDialogState
   }
 
   Future<void> _submit() async {
-    final qty = widget.item.hasImei ? 1 : int.tryParse(_qtyController.text) ?? 0;
+    final qty =
+        widget.item.hasImei ? 1 : int.tryParse(_qtyController.text) ?? 0;
     if (qty <= 0 || qty > widget.item.returnableQty) {
       AppNotifier.error('Invalid return quantity.');
       return;
@@ -3102,376 +2256,6 @@ class _ReturnPurchaseItemDialogState
 
 class _RefreshReportsIntent extends Intent {
   const _RefreshReportsIntent();
-}
-
-class _RepairAnalyticsView extends ConsumerWidget {
-  const _RepairAnalyticsView();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final startDate = ref.watch(reportRepairAnalyticsStartDateProvider);
-    final endDate = ref.watch(reportRepairAnalyticsEndDateProvider);
-    final analyticsAsync = ref.watch(reportRepairAnalyticsProvider);
-
-    return Column(
-      children: <Widget>[
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: <Widget>[
-                FilledButton.icon(
-                  onPressed: () {
-                    final now = DateTime.now();
-                    ref
-                        .read(reportRepairAnalyticsStartDateProvider.notifier)
-                        .state = DateTime(now.year, now.month, 1);
-                    ref
-                        .read(reportRepairAnalyticsEndDateProvider.notifier)
-                        .state = DateTime(now.year, now.month + 1, 0);
-                  },
-                  icon: const Icon(Icons.calendar_view_month, size: 16),
-                  label: const Text('This Month'),
-                ),
-                FilledButton.tonal(
-                  onPressed: () {
-                    final now = DateTime.now();
-                    ref
-                        .read(reportRepairAnalyticsStartDateProvider.notifier)
-                        .state = DateTime(now.year, 1, 1);
-                    ref
-                        .read(reportRepairAnalyticsEndDateProvider.notifier)
-                        .state = DateTime(now.year, 12, 31);
-                  },
-                  child: const Text('This Year'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                      initialDate: startDate ?? DateTime.now(),
-                    );
-                    ref
-                        .read(reportRepairAnalyticsStartDateProvider.notifier)
-                        .state = picked;
-                  },
-                  icon: const Icon(Icons.calendar_today, size: 16),
-                  label: Text(
-                    startDate == null
-                        ? 'Start Date'
-                        : FormattingHelpers.dateYmd(startDate),
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                      initialDate: endDate ?? DateTime.now(),
-                    );
-                    ref
-                        .read(reportRepairAnalyticsEndDateProvider.notifier)
-                        .state = picked;
-                  },
-                  icon: const Icon(Icons.event, size: 16),
-                  label: Text(
-                    endDate == null
-                        ? 'End Date'
-                        : FormattingHelpers.dateYmd(endDate),
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    ref
-                        .read(reportRepairAnalyticsStartDateProvider.notifier)
-                        .state = null;
-                    ref
-                        .read(reportRepairAnalyticsEndDateProvider.notifier)
-                        .state = null;
-                  },
-                  icon: const Icon(Icons.clear, size: 16),
-                  label: const Text('All Time'),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: analyticsAsync.when(
-            data: (analytics) => SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: ReportSummaryCardWidget(
-                          label: 'Total Repairs',
-                          value: analytics.totalRepairs.toString(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ReportSummaryCardWidget(
-                          label: 'Delivered',
-                          value: analytics.deliveredRepairs.toString(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ReportSummaryCardWidget(
-                          label: 'Pending',
-                          value: analytics.pendingRepairs.toString(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ReportSummaryCardWidget(
-                          label: 'Total Earnings',
-                          value: FormattingHelpers.currencyPkr(
-                            analytics.totalEarnings,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ReportSummaryCardWidget(
-                          label: 'Total Expenses',
-                          value: FormattingHelpers.currencyPkr(
-                            analytics.totalExpenses,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 300,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        Expanded(
-                          child: _AnalyticsTable(
-                            title: 'Issue Analysis',
-                            minHeight: 220,
-                            columns: <DataColumn>[
-                              DataColumn(
-                                label: reportStyledTableHeaderCell(
-                                  context,
-                                  'Issue',
-                                  width: 200,
-                                ),
-                              ),
-                              DataColumn(
-                                label: reportStyledTableHeaderCell(
-                                  context,
-                                  'Count',
-                                  width: 80,
-                                ),
-                              ),
-                            ],
-                            rows: analytics.issueGroups
-                                .map(
-                                  (g) => DataRow(
-                                    cells: <DataCell>[
-                                      DataCell(
-                                        reportStyledTableCell(
-                                          g.issue,
-                                          width: 200,
-                                        ),
-                                      ),
-                                      DataCell(
-                                        reportStyledTableCell(
-                                          g.count.toString(),
-                                          width: 80,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                                .toList(growable: false),
-                            emptyMessage: 'No issues recorded.',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _AnalyticsTable(
-                            title: 'Top Phone Models',
-                            minHeight: 220,
-                            columns: <DataColumn>[
-                              DataColumn(
-                                label: reportStyledTableHeaderCell(
-                                  context,
-                                  'Model',
-                                  width: 200,
-                                ),
-                              ),
-                              DataColumn(
-                                label: reportStyledTableHeaderCell(
-                                  context,
-                                  'Repairs',
-                                  width: 80,
-                                ),
-                              ),
-                            ],
-                            rows: analytics.topModels
-                                .map(
-                                  (m) => DataRow(
-                                    cells: <DataCell>[
-                                      DataCell(
-                                        reportStyledTableCell(
-                                          m.model,
-                                          width: 200,
-                                        ),
-                                      ),
-                                      DataCell(
-                                        reportStyledTableCell(
-                                          m.count.toString(),
-                                          width: 80,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                                .toList(growable: false),
-                            emptyMessage: 'No data.',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _AnalyticsTable(
-                    title: 'Monthly Trend',
-                    minHeight: 180,
-                    columns: <DataColumn>[
-                      DataColumn(
-                        label: reportStyledTableHeaderCell(
-                          context,
-                          'Month',
-                          width: 120,
-                        ),
-                      ),
-                      DataColumn(
-                        label: reportStyledTableHeaderCell(
-                          context,
-                          'Repairs',
-                          width: 90,
-                        ),
-                      ),
-                      DataColumn(
-                        label: reportStyledTableHeaderCell(
-                          context,
-                          'Earnings (PKR)',
-                          width: 140,
-                        ),
-                      ),
-                    ],
-                    rows: analytics.monthlyTrend
-                        .map(
-                          (row) => DataRow(
-                            cells: <DataCell>[
-                              DataCell(
-                                reportStyledTableCell(row.month, width: 120),
-                              ),
-                              DataCell(
-                                reportStyledTableCell(
-                                  row.repairs.toString(),
-                                  width: 90,
-                                ),
-                              ),
-                              DataCell(
-                                reportStyledTableCell(
-                                  FormattingHelpers.currencyPkr(row.earnings),
-                                  width: 140,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                        .toList(growable: false),
-                    emptyMessage: 'No monthly data.',
-                  ),
-                ],
-              ),
-            ),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  const Text('Failed to load repair analytics.'),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: () =>
-                        ref.invalidate(reportRepairAnalyticsProvider),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _AnalyticsTable extends StatelessWidget {
-  const _AnalyticsTable({
-    required this.title,
-    required this.columns,
-    required this.rows,
-    required this.emptyMessage,
-    this.minHeight = 200,
-  });
-
-  final String title;
-  final List<DataColumn> columns;
-  final List<DataRow> rows;
-  final String emptyMessage;
-  final double minHeight;
-
-  @override
-  Widget build(BuildContext context) {
-    final layout = reportTableLayoutFor(context);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            reportSectionTitle(title),
-            const SizedBox(height: 8),
-            const Divider(height: 1),
-            const SizedBox(height: 8),
-            ConstrainedBox(
-              constraints: BoxConstraints(minHeight: minHeight),
-              child: AppDataTable(
-                columnSpacing: layout.columnSpacing,
-                dataRowMinHeight: layout.dataRowMinHeight,
-                dataRowMaxHeight: layout.dataRowMaxHeight,
-                showCheckboxColumn: false,
-                columns: columns,
-                rows: rows,
-                emptyMessage: emptyMessage,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 String _tabLabel(ReportsTab tab) {

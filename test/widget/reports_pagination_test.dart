@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/daily_sales_report_row_entity.dart';
+import 'package:phone_shop_pos/modules/reports/domain/entities/sales_report_row_entity.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/screens/reports_screen.dart';
 
@@ -68,7 +69,7 @@ void main() {
           reportProductOptionsProvider.overrideWith(
             (ref) async => const <MapEntry<String, String>>[],
           ),
-          dailySalesReportProvider.overrideWith((ref) async {
+          dateRangeSalesReportProvider.overrideWith((ref) async {
             throw const AppError(
               code: 'db_failure',
               message: 'Database unavailable',
@@ -80,7 +81,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Failed to load daily sales report.'), findsOneWidget);
+    expect(find.text('Failed to load sales details report.'), findsOneWidget);
     expect(find.text('Database unavailable'), findsOneWidget);
     expect(find.widgetWithText(OutlinedButton, 'Retry'), findsOneWidget);
   });
@@ -101,6 +102,9 @@ Widget _buildReportsApp({
       ),
       dailySalesReportProvider.overrideWith(
         (ref) async => rows,
+      ),
+      dateRangeSalesReportProvider.overrideWith(
+        (ref) async => const <SalesReportRowEntity>[],
       ),
     ],
     child: const MaterialApp(
