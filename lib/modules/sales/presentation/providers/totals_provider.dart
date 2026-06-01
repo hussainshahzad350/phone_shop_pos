@@ -7,13 +7,21 @@ import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_reposi
 
 final totalsProvider = Provider<SaleTotalsEntity>((ref) {
   final cartItems = ref.watch(cartStateProvider);
-  final billingState = ref.watch(billingStateProvider);
+  final discount = ref.watch(
+    billingStateProvider.select((state) => state.discount),
+  );
+  final tax = ref.watch(
+    billingStateProvider.select((state) => state.tax),
+  );
+  final paidAmount = ref.watch(
+    billingStateProvider.select((state) => state.paidAmount),
+  );
   final calculator = ref.watch(salesCalculatorProvider);
 
   return calculator.calculate(
     items: cartItems,
-    discount: billingState.discount,
-    tax: billingState.tax,
-    paidAmount: billingState.paidAmount,
+    discount: discount,
+    tax: tax,
+    paidAmount: paidAmount,
   );
 });

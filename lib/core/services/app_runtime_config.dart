@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'package:phone_shop_pos/core/constants/app_constants.dart';
 
 class AppRuntimeConfig {
@@ -20,8 +22,11 @@ class AppRuntimeConfig {
     'POS_BUILD_NUMBER',
     defaultValue: '1',
   );
-  // Feature flag for seed/demo data. Set to false for production.
-  static const bool kEnableSeedData = false;
+  // Feature flag for seed/demo data. Enabled in debug/local runs only.
+  static const bool kEnableSeedData = kDebugMode || bool.fromEnvironment(
+    'POS_ENABLE_SEED_DATA',
+    defaultValue: false,
+  );
   static const int autoBackupIntervalHours = int.fromEnvironment(
     'POS_AUTO_BACKUP_INTERVAL_HOURS',
     defaultValue: 24,

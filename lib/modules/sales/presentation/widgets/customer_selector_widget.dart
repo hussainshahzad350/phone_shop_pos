@@ -1,25 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_entity.dart';
+import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_query_providers.dart';
 
-class CustomerSelectorWidget extends StatefulWidget {
+class CustomerSelectorWidget extends ConsumerStatefulWidget {
   const CustomerSelectorWidget({
     super.key,
-    required this.customers,
+    this.customers,
     required this.selectedCustomerId,
     required this.onChanged,
   });
 
-  final List<CustomerOptionEntity> customers;
+  final List<CustomerOptionEntity>? customers;
   final String? selectedCustomerId;
   final ValueChanged<String?> onChanged;
 
   @override
-  State<CustomerSelectorWidget> createState() => _CustomerSelectorWidgetState();
+  ConsumerState<CustomerSelectorWidget> createState() =>
+      _CustomerSelectorWidgetState();
 }
 
-class _CustomerSelectorWidgetState extends State<CustomerSelectorWidget> {
+class _CustomerSelectorWidgetState
+    extends ConsumerState<CustomerSelectorWidget> {
   static const int _defaultVisibleCustomerCount = 5;
   static final List<String> _recentCustomerIds = <String>[];
   late final TextEditingController _displayController;
@@ -30,22 +35,8 @@ class _CustomerSelectorWidgetState extends State<CustomerSelectorWidget> {
   @override
   void initState() {
     super.initState();
-    _displayController = TextEditingController(text: _selectedLabel());
+    _displayController = TextEditingController();
     _searchController = TextEditingController();
-  }
-
-  @override
-  void didUpdateWidget(covariant CustomerSelectorWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final next = _selectedLabel();
-    if (_displayController.text == next) {
-      return;
-    }
-    _displayController.value = _displayController.value.copyWith(
-      text: next,
-      selection: TextSelection.collapsed(offset: next.length),
-      composing: TextRange.empty,
-    );
   }
 
   @override
@@ -57,15 +48,13 @@ class _CustomerSelectorWidgetState extends State<CustomerSelectorWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedCustomer = widget.customers
-        .where((customer) => customer.id == widget.selectedCustomerId)
-        .cast<CustomerOptionEntity?>()
-        .firstOrNull;
-    final selectedLabel = selectedCustomer == null
-        ? 'Walk-in Customer'
-        : selectedCustomer.phone == null
-            ? selectedCustomer.name
-            : '${selectedCustomer.name} (${selectedCustomer.phone})';
+    final customersAsync = widget.customers == null
+        ? ref.watch(customerSearchResultsProvider)
+        : null;
+    final customers = widget.customers ??
+        customersAsync?.value ??
+        const <CustomerOptionEntity>[];
+    final selectedLabel = _selectedLabel(customers);
 
     if (_displayController.text != selectedLabel) {
       _displayController.value = _displayController.value.copyWith(
@@ -92,6 +81,30 @@ class _CustomerSelectorWidgetState extends State<CustomerSelectorWidget> {
                 suffixIcon: const Icon(Icons.arrow_drop_down),
               ),
             ),
+            if (customersAsync?.isLoading == true) ...<Widget>[
+              const SizedBox(height: 6),
+              const LinearProgressIndicator(minHeight: 2),
+            ],
+            if (customersAsync?.hasError == true) ...<Widget>[
+              const SizedBox(height: 8),
+              Text(
+                customersAsync!.error is AppError
+                    ? (customersAsync.error as AppError).message
+                    : 'Failed to load customers.',
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _retryLoadCustomers,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+            if (customersAsync?.isLoading != true &&
+                customersAsync?.hasError != true &&
+                customers.isEmpty) ...<Widget>[
+              const SizedBox(height: 8),
+              const Text('No customers found.'),
+            ],
             if (_isDropdownOpen) ...<Widget>[
               const SizedBox(height: 8),
               TextField(
@@ -113,8 +126,8 @@ class _CustomerSelectorWidgetState extends State<CustomerSelectorWidget> {
                     shrinkWrap: true,
                     children: <Widget>[
                       _walkInTile(),
-                      ..._filteredCustomers().map(_customerTile),
-                      if (_canShowMoreRow()) _moreTile(),
+                      ..._filteredCustomers(customers).map(_customerTile),
+                      if (_canShowMoreRow(customers)) _moreTile(),
                     ],
                   ),
                 ),
@@ -138,6 +151,10 @@ class _CustomerSelectorWidgetState extends State<CustomerSelectorWidget> {
     });
   }
 
+  void _retryLoadCustomers() {
+    ref.invalidate(customerSearchResultsProvider);
+  }
+
   void _selectCustomer(String? selected) {
     if (selected == widget.selectedCustomerId) {
       setState(() => _isDropdownOpen = false);
@@ -150,26 +167,28 @@ class _CustomerSelectorWidgetState extends State<CustomerSelectorWidget> {
     widget.onChanged(selected);
   }
 
-  List<CustomerOptionEntity> _filteredCustomers() {
+  List<CustomerOptionEntity> _filteredCustomers(
+      List<CustomerOptionEntity> customers) {
     final search = _searchController.text.trim().toLowerCase();
     return search.isEmpty
-        ? (_showAllCustomers ? widget.customers : _defaultCustomers())
-        : widget.customers.where((customer) {
+        ? (_showAllCustomers ? customers : _defaultCustomers(customers))
+        : customers.where((customer) {
             final name = customer.name.toLowerCase();
             final phone = customer.phone?.toLowerCase() ?? '';
             return name.contains(search) || phone.contains(search);
           }).toList(growable: false);
   }
 
-  bool _canShowMoreRow() {
+  bool _canShowMoreRow(List<CustomerOptionEntity> customers) {
     return _searchController.text.trim().isEmpty &&
         !_showAllCustomers &&
-        widget.customers.length > _defaultVisibleCustomerCount;
+        customers.length > _defaultVisibleCustomerCount;
   }
 
-  List<CustomerOptionEntity> _defaultCustomers() {
+  List<CustomerOptionEntity> _defaultCustomers(
+      List<CustomerOptionEntity> customers) {
     final byId = <String, CustomerOptionEntity>{
-      for (final customer in widget.customers) customer.id: customer,
+      for (final customer in customers) customer.id: customer,
     };
 
     final recent = <CustomerOptionEntity>[];
@@ -183,7 +202,7 @@ class _CustomerSelectorWidgetState extends State<CustomerSelectorWidget> {
       }
     }
 
-    for (final customer in widget.customers) {
+    for (final customer in customers) {
       if (recent.any((item) => item.id == customer.id)) {
         continue;
       }
@@ -201,8 +220,8 @@ class _CustomerSelectorWidgetState extends State<CustomerSelectorWidget> {
     });
   }
 
-  String _selectedLabel() {
-    final selectedCustomer = widget.customers
+  String _selectedLabel(List<CustomerOptionEntity> customers) {
+    final selectedCustomer = customers
         .where((customer) => customer.id == widget.selectedCustomerId)
         .cast<CustomerOptionEntity?>()
         .firstOrNull;
