@@ -117,11 +117,9 @@ class _ReturnPurchaseDialogState extends ConsumerState<ReturnPurchaseDialog> {
     }
 
     AppNotifier.success('Purchase return processed successfully.');
-    ref.invalidate(purchaseHistoryRowsProvider);
-    ref.invalidate(purchaseHistoryDetailProvider(widget.purchaseId));
-    ref.invalidate(supplierLedgerSummaryProvider);
-    ref.invalidate(supplierLedgerTimelineProvider);
-    ref.invalidate(cashLedgerRowsProvider);
+    ref
+        .read(reportWorkflowCoordinatorProvider)
+        .refreshPurchaseAfterReturn(widget.purchaseId);
     Navigator.of(context).pop();
   }
 }

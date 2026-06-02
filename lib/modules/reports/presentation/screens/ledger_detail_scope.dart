@@ -33,13 +33,9 @@ void clearSupplierLedgerDetailScope(WidgetRef ref) {
 }
 
 void refreshCustomerLedgerReports(WidgetRef ref) {
-  ref.invalidate(customerLedgerSummaryProvider);
-  ref.invalidate(customerLedgerTimelineProvider);
-  ref.invalidate(cashLedgerRowsProvider);
+  ref.read(reportWorkflowCoordinatorProvider).refreshCustomerLedgerReports();
 }
 
 void refreshSupplierLedgerReports(WidgetRef ref) {
-  ref.invalidate(supplierLedgerSummaryProvider);
-  ref.invalidate(supplierLedgerTimelineProvider);
-  ref.invalidate(cashLedgerRowsProvider);
+  ref.read(reportWorkflowCoordinatorProvider).refreshSupplierLedgerReports();
 }

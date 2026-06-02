@@ -74,11 +74,7 @@ class PurchaseHistoryTab extends ConsumerWidget {
         Expanded(
           child: rowsAsync.when(
             data: (rows) {
-              final sumTotal = rows.fold<double>(0, (sum, row) => sum + row.total);
-              final sumBalance = rows.fold<double>(
-                0,
-                (sum, row) => sum + row.remainingBalance,
-              );
+              final summary = ref.watch(purchaseHistoryPageSummaryProvider);
               final layout = reportTableLayoutFor(context);
 
               return Column(
@@ -88,21 +84,25 @@ class PurchaseHistoryTab extends ConsumerWidget {
                       Expanded(
                         child: ReportSummaryCardWidget(
                           label: 'Purchases (page)',
-                          value: rows.length.toString(),
+                          value: summary.totalPurchases.toString(),
                         ),
                       ),
                       Expanded(
                         child: ReportSummaryCardWidget(
                           label: 'Total (page)',
-                          value: FormattingHelpers.currencyPkr(sumTotal),
+                          value: FormattingHelpers.currencyPkr(summary.sumTotal),
                           color: Colors.blue,
                         ),
                       ),
                       Expanded(
                         child: ReportSummaryCardWidget(
                           label: 'Balance (page)',
-                          value: FormattingHelpers.currencyPkr(sumBalance),
-                          color: sumBalance > 0 ? Colors.orange : Colors.green,
+                          value: FormattingHelpers.currencyPkr(
+                            summary.sumBalance,
+                          ),
+                          color: summary.sumBalance > 0
+                              ? Colors.orange
+                              : Colors.green,
                         ),
                       ),
                     ],

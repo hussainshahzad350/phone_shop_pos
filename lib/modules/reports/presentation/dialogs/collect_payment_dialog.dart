@@ -128,11 +128,7 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
       AppNotifier.errorFromAppError(result.asFailure!.error);
       return;
     }
-    ref.invalidate(dateRangeSalesReportProvider);
-    ref.invalidate(customerBalanceReportProvider);
-    ref.invalidate(customerLedgerSummaryProvider);
-    ref.invalidate(customerLedgerTimelineProvider);
-    ref.invalidate(cashLedgerRowsProvider);
+    ref.read(reportWorkflowCoordinatorProvider).refreshAfterPaymentCollection();
     AppNotifier.success('Payment collected successfully.');
     Navigator.of(context).pop();
   }

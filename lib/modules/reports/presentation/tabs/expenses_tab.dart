@@ -292,10 +292,7 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
   }
 
   void _invalidateExpenseProviders() {
-    ref.invalidate(expensesRowsProvider);
-    ref.invalidate(expenseCategoriesProvider);
-    ref.invalidate(expenseAnalyticsSummaryProvider);
-    ref.invalidate(cashLedgerRowsProvider);
+    ref.read(reportWorkflowCoordinatorProvider).refreshExpenseReports();
   }
 }
 

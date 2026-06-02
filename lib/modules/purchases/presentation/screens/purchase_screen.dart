@@ -175,11 +175,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   }
 
   void _invalidateReportsAfterPurchase() {
-    ref.invalidate(purchaseHistoryRowsProvider);
-    ref.invalidate(supplierLedgerRowsProvider);
-    ref.invalidate(supplierLedgerSummaryProvider);
-    ref.invalidate(supplierLedgerTimelineProvider);
-    ref.invalidate(cashLedgerRowsProvider);
+    ref.read(reportWorkflowCoordinatorProvider).refreshPurchaseAfterCompletion();
     ref.invalidate(inventorySummaryProvider);
     ref.invalidate(stockRowsProvider);
     ref.invalidate(lowStockProvider);

@@ -112,13 +112,9 @@ class _ReturnSaleDialogState extends ConsumerState<ReturnSaleDialog> {
       return;
     }
     AppNotifier.success('Return processed and stock restored.');
-    ref.invalidate(dailySalesReportProvider);
-    ref.invalidate(dateRangeSalesReportProvider);
-    ref.invalidate(profitReportProvider);
-    ref.invalidate(profitReportRowsProvider);
-    ref.invalidate(customerLedgerSummaryProvider);
-    ref.invalidate(customerLedgerTimelineProvider);
-    ref.invalidate(cashLedgerRowsProvider);
+    ref
+        .read(reportWorkflowCoordinatorProvider)
+        .refreshSalesAfterReturn(saleId: widget.saleId);
     Navigator.of(context).pop();
   }
 }

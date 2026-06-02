@@ -94,13 +94,9 @@ class SalesInvoiceDialog extends ConsumerWidget {
                                           item: item,
                                         ),
                                       );
-                                      ref.invalidate(
-                                        salesInvoiceDetailProvider(saleId),
-                                      );
-                                      ref.invalidate(dateRangeSalesReportProvider);
-                                      ref.invalidate(dailySalesReportProvider);
-                                      ref.invalidate(profitReportProvider);
-                                      ref.invalidate(profitReportRowsProvider);
+                                      ref
+                                          .read(reportWorkflowCoordinatorProvider)
+                                          .refreshSalesInvoiceDetail(saleId);
                                     },
                                     child: const Text('Return'),
                                   ),

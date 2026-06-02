@@ -38,22 +38,7 @@ class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
 
   void _refreshAll(WidgetRef ref) {
-    ref.invalidate(dailySalesReportProvider);
-    ref.invalidate(dateRangeSalesReportProvider);
-    ref.invalidate(profitReportProvider);
-    ref.invalidate(customerBalanceReportProvider);
-    ref.invalidate(purchaseHistoryRowsProvider);
-    ref.invalidate(supplierLedgerRowsProvider);
-    ref.invalidate(customerLedgerSummaryProvider);
-    ref.invalidate(customerLedgerTimelineProvider);
-    ref.invalidate(supplierLedgerSummaryProvider);
-    ref.invalidate(supplierLedgerTimelineProvider);
-    ref.invalidate(cashLedgerRowsProvider);
-    ref.invalidate(expensesRowsProvider);
-    ref.invalidate(expenseCategoriesProvider);
-    ref.invalidate(expenseAnalyticsSummaryProvider);
-    ref.invalidate(stockAdjustmentHistoryProvider);
-    ref.invalidate(reportRepairAnalyticsProvider);
+    ref.read(reportWorkflowCoordinatorProvider).refreshAll();
   }
 
   Future<void> _showInvoiceDialog(BuildContext context, String saleId) async {
@@ -100,7 +85,7 @@ class ReportsScreen extends ConsumerWidget {
         summary: summary,
       );
       if (changed == true && context.mounted) {
-        ref.invalidate(customerLedgerSummaryProvider);
+        ref.read(reportWorkflowCoordinatorProvider).refreshCustomerLedgerReports();
       }
     });
   }
@@ -120,7 +105,7 @@ class ReportsScreen extends ConsumerWidget {
         summary: summary,
       );
       if (changed == true && context.mounted) {
-        ref.invalidate(supplierLedgerSummaryProvider);
+        ref.read(reportWorkflowCoordinatorProvider).refreshSupplierLedgerReports();
       }
     });
   }
