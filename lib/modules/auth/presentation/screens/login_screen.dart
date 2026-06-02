@@ -182,7 +182,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     ref.read(localPinAuthControllerProvider.notifier).clearError();
 
-    final didReset = await showDialog<bool>(
+    final resetSucceeded = await showDialog<bool>(
       context: context,
       builder: (context) => ResetPinDialog(
         recoveryCodeController: _recoveryCodeController,
@@ -191,7 +191,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
 
-    if (!mounted || didReset != true) {
+    if (!mounted || resetSucceeded != true) {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
