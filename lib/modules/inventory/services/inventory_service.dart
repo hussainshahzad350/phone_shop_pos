@@ -35,4 +35,14 @@ class InventoryService {
   Future<Result<List<SerializedStockEntity>>> searchByImei(String imei) {
     return _repository.searchSerializedByImei(imei);
   }
+
+  Future<Result<void>> updateSerializedStatus({
+    required String stockId,
+    required SerializedStockStatus status,
+  }) {
+    return _repository.updateSerializedStockStatus(
+      stockId: stockId,
+      status: status,
+    );
+  }
 }

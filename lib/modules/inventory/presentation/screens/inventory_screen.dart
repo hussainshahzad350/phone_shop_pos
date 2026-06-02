@@ -11,14 +11,18 @@ import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/inventory_summary_entity.dart';
+import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/stock_row_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_query_providers.dart';
+import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_repository_provider.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_state_provider.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/widgets/inventory_filter_chips.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/widgets/inventory_search_bar.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/widgets/stock_table_widget.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
+
+const int _kReservePhoneFetchLimit = 5000;
 
 class InventoryScreen extends ConsumerStatefulWidget {
   const InventoryScreen({super.key});
@@ -112,6 +116,51 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: <Widget>[
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final inventoryService =
+                            await ref.read(inventoryServiceProvider.future);
+                        final result = await inventoryService.getStockRows(
+                          hasImeiFilter: true,
+                          limit: _kReservePhoneFetchLimit,
+                        );
+                        if (!mounted) {
+                          return;
+                        }
+                        if (result.isFailure) {
+                          AppNotifier.error(result.asFailure!.error.message);
+                          return;
+                        }
+                        final serialRows = result.asSuccess!.value
+                            .where(
+                              (row) =>
+                                  row.type == StockRowType.serialized &&
+                                  row.serializedStockId != null &&
+                                  (row.serializedStatus ==
+                                          SerializedStockStatus.inStock ||
+                                      row.serializedStatus ==
+                                          SerializedStockStatus.reserved),
+                            )
+                            .toList(growable: false);
+                        if (serialRows.isEmpty) {
+                          AppNotifier.info(
+                            'No in-stock or reserved phones found.',
+                          );
+                          return;
+                        }
+                        final didUpdate = await showDialog<bool>(
+                          context: context,
+                          builder: (context) =>
+                              _ReservePhoneDialog(stockRows: serialRows),
+                        );
+                        if (didUpdate == true) {
+                          _refresh();
+                        }
+                      },
+                      icon: const Icon(Icons.bookmark_outline),
+                      label: const Text('Reserve Phone'),
+                    ),
+                    const SizedBox(width: 8),
                     OutlinedButton.icon(
                       onPressed: () async {
                         final rows = stockAsync.valueOrNull ?? const <StockRowEntity>[];
@@ -305,6 +354,134 @@ class _SummaryCard extends StatelessWidget {
 
 class _RefreshIntent extends Intent {
   const _RefreshIntent();
+}
+
+class _ReservePhoneDialog extends ConsumerStatefulWidget {
+  const _ReservePhoneDialog({required this.stockRows});
+
+  final List<StockRowEntity> stockRows;
+
+  @override
+  ConsumerState<_ReservePhoneDialog> createState() => _ReservePhoneDialogState();
+}
+
+class _ReservePhoneDialogState extends ConsumerState<_ReservePhoneDialog> {
+  String? _selectedSerializedStockId;
+  bool _isSubmitting = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final stockRows = widget.stockRows;
+    if (stockRows.isEmpty) {
+      return AlertDialog(
+        title: const Text('Reserve / Release Phone'),
+        content: const Text('No eligible phones found.'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Close'),
+          ),
+        ],
+      );
+    }
+    _selectedSerializedStockId ??= stockRows.first.serializedStockId;
+    var selectedRow = stockRows.first;
+    for (final row in stockRows) {
+      if (row.serializedStockId == _selectedSerializedStockId) {
+        selectedRow = row;
+        break;
+      }
+    }
+    final selectedStatus = selectedRow.serializedStatus;
+    final targetStatus = selectedStatus == SerializedStockStatus.reserved
+        ? SerializedStockStatus.inStock
+        : SerializedStockStatus.reserved;
+
+    return AlertDialog(
+      title: const Text('Reserve / Release Phone'),
+      content: SizedBox(
+        width: 520,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            DropdownButtonFormField<String>(
+              initialValue: _selectedSerializedStockId,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                isDense: true,
+                labelText: 'Select Phone (IMEI)',
+              ),
+              items: stockRows.map((row) {
+                final isReserved =
+                    row.serializedStatus == SerializedStockStatus.reserved;
+                final statusLabel = isReserved ? 'Reserved' : 'In Stock';
+                return DropdownMenuItem<String>(
+                  value: row.serializedStockId,
+                  child: Text(
+                    '${row.productName} • ${row.imei1 ?? '-'} • $statusLabel',
+                  ),
+                );
+              }).toList(growable: false),
+              onChanged: _isSubmitting
+                  ? null
+                  : (value) => setState(() => _selectedSerializedStockId = value),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              selectedStatus == SerializedStockStatus.reserved
+                  ? 'This phone is currently reserved and can be released back to in-stock.'
+                  : 'This phone is currently in stock and can be marked as reserved.',
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _isSubmitting ? null : () => _submit(targetStatus),
+          child: Text(
+            _isSubmitting
+                ? 'Saving...'
+                : targetStatus == SerializedStockStatus.reserved
+                    ? 'Mark Reserved'
+                    : 'Mark In Stock',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit(SerializedStockStatus targetStatus) async {
+    final selectedId = _selectedSerializedStockId;
+    if (selectedId == null || selectedId.isEmpty) {
+      AppNotifier.error('Select a phone first.');
+      return;
+    }
+    setState(() => _isSubmitting = true);
+    final service = await ref.read(inventoryServiceProvider.future);
+    final result = await service.updateSerializedStatus(
+      stockId: selectedId,
+      status: targetStatus,
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() => _isSubmitting = false);
+    if (result.isFailure) {
+      AppNotifier.error(result.asFailure!.error.message);
+      return;
+    }
+    AppNotifier.success(
+      targetStatus == SerializedStockStatus.reserved
+          ? 'Phone marked as reserved.'
+          : 'Phone moved back to in-stock.',
+    );
+    Navigator.of(context).pop(true);
+  }
 }
 
 class _StockAdjustmentDialog extends ConsumerStatefulWidget {
