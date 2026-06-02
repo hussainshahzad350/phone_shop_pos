@@ -64,10 +64,7 @@ class CashFlowTab extends ConsumerWidget {
         Expanded(
           child: rowsAsync.when(
             data: (rows) {
-              final netTotal =
-                  rows.fold<double>(0, (sum, row) => sum + row.netCash);
-              final cashIn =
-                  rows.fold<double>(0, (sum, row) => sum + row.totalCashIn);
+              final summary = ref.watch(cashFlowPageSummaryProvider);
 
               return Column(
                 children: <Widget>[
@@ -76,15 +73,18 @@ class CashFlowTab extends ConsumerWidget {
                       Expanded(
                         child: ReportSummaryCardWidget(
                           label: 'Cash in (page)',
-                          value: FormattingHelpers.currencyPkr(cashIn),
+                          value: FormattingHelpers.currencyPkr(
+                            summary.totalCashIn,
+                          ),
                           color: Colors.green,
                         ),
                       ),
                       Expanded(
                         child: ReportSummaryCardWidget(
                           label: 'Net cash (page)',
-                          value: FormattingHelpers.currencyPkr(netTotal),
-                          color: netTotal >= 0 ? Colors.green : Colors.red,
+                          value: FormattingHelpers.currencyPkr(summary.netCash),
+                          color:
+                              summary.netCash >= 0 ? Colors.green : Colors.red,
                         ),
                       ),
                     ],

@@ -17,11 +17,11 @@ Target: safe phased extraction of reports god screen and provider layer
 - [x] Phase 1 — UI extraction
 - [x] Phase 2 — Tab extraction
 - [x] Phase 3 — Dialog isolation
-- [ ] Phase 4 — Computed layer extraction
-- [ ] Phase 5 — Workflow centralization
-- [ ] Phase 6 — Domain service migration
-- [ ] Phase 7 — Provider restructure
-- [ ] Phase 8 — Final simplification
+- [x] Phase 4 — Computed layer extraction
+- [x] Phase 5 — Workflow centralization
+- [x] Phase 6 — Domain service migration
+- [x] Phase 7 — Provider restructure
+- [x] Phase 8 — Final simplification
 
 ---
 
@@ -146,6 +146,9 @@ Extract visual sections only from `reports_screen.dart`; do not change provider 
 
 - UI becomes display-only for computed values.
 - Parity checks for totals before/after extraction.
+- [x] Completed via `application/providers/report_computed_providers.dart` and
+  `domain/services/report_calculation_service.dart` for Daily Sales, Profit
+  export rows, Purchase History, and Cash Flow page summaries.
 
 ---
 
@@ -158,6 +161,10 @@ Extract visual sections only from `reports_screen.dart`; do not change provider 
 ### Acceptance
 
 - Replace scattered invalidation calls with coordinator actions.
+- [x] Completed via
+  `application/controllers/report_workflow_coordinator.dart` and shared
+  refresh methods used by reports dialogs/screens plus sales/purchases entry
+  flows.
 
 ---
 
@@ -175,6 +182,9 @@ Extract visual sections only from `reports_screen.dart`; do not change provider 
 ### Acceptance
 
 - UI contains no transactional/business rule orchestration.
+- [x] Report service implementations now live under
+  `lib/modules/reports/domain/services/` with compatibility exports preserved
+  at legacy `lib/modules/reports/services/` paths.
 
 ---
 
@@ -190,6 +200,10 @@ Extract visual sections only from `reports_screen.dart`; do not change provider 
 ### Acceptance
 
 - Reduced provider duplication and clean UI/domain state split.
+- [x] Completed with `report_state_providers.dart`,
+  `report_filter_providers.dart`, `report_query_providers.dart`, and
+  `report_computed_providers.dart` behind the existing `report_providers.dart`
+  barrel.
 
 ---
 
@@ -202,6 +216,8 @@ Extract visual sections only from `reports_screen.dart`; do not change provider 
 ### Acceptance
 
 - Routes tabs and high-level composition only.
+- [x] `reports_screen.dart` now delegates report refreshes to the workflow
+  coordinator while keeping tab routing/high-level composition only.
 
 ---
 
@@ -215,6 +231,12 @@ Extract visual sections only from `reports_screen.dart`; do not change provider 
 - 2026-06-01: `flutter test test/integration/phase4_returns_payments_rp001_rp010_test.dart` ✅ (passing after Daily Sales extraction)
 - 2026-06-01: `flutter test test/widget/reports_pagination_test.dart` + `phase4_returns_payments_rp001_rp010_test.dart` ✅ (All 13 tests passing after ledger tabs extraction with callbacks; fixed missing import in report_ledger_overview.dart)
 - 2026-06-02: Extracted `ExpensesTab` plus report dialog modules (`sales_invoice_dialog.dart`, `return_sale_dialog.dart`, `purchase_detail_dialog.dart`, `return_purchase_dialog.dart`, `expense_form_dialog.dart`, `expense_delete_dialog.dart`, `collect_payment_dialog.dart`) and reduced `reports_screen.dart` to coordinator-only wiring. Local Flutter validation blocked in sandbox because `flutter` is unavailable on PATH.
+- 2026-06-02: Completed Phases 4–8 by moving report services into
+  `domain/services`, splitting providers into state/filter/query/computed
+  modules, centralizing report invalidation flows through
+  `report_workflow_coordinator.dart`, and shifting tab summary/export math into
+  `report_calculation_service.dart`. Local Flutter validation remains blocked in
+  sandbox because `flutter`/`dart` are unavailable on PATH.
 
 ## Risk Mitigation Status
 

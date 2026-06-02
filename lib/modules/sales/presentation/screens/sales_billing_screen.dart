@@ -334,15 +334,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
   }
 
   void _invalidateFinancialReportsAfterSale() {
-    ref.invalidate(dailySalesReportProvider);
-    ref.invalidate(dateRangeSalesReportProvider);
-    ref.invalidate(soldPhonesReportProvider);
-    ref.invalidate(profitReportProvider);
-    ref.invalidate(profitReportRowsProvider);
-    ref.invalidate(customerBalanceReportProvider);
-    ref.invalidate(customerLedgerSummaryProvider);
-    ref.invalidate(customerLedgerTimelineProvider);
-    ref.invalidate(cashLedgerRowsProvider);
+    ref.read(reportWorkflowCoordinatorProvider).refreshSalesAfterCompletion();
     ref.invalidate(dashboardKpisProvider);
     ref.invalidate(dashboardRecentSalesProvider);
   }

@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
-import 'package:phone_shop_pos/modules/reports/presentation/dialogs/return_sale_dialog.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
-import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
 
-class SalesInvoiceDialog extends ConsumerWidget {
-  const SalesInvoiceDialog({super.key, required this.saleId});
+class DashboardSalesInvoiceDialog extends ConsumerWidget {
+  const DashboardSalesInvoiceDialog({
+    super.key,
+    required this.saleId,
+  });
 
   final String saleId;
 
@@ -17,16 +18,14 @@ class SalesInvoiceDialog extends ConsumerWidget {
     return AlertDialog(
       title: const Text('Invoice Details'),
       content: SizedBox(
-        width: 980,
-        height: 520,
+        width: 960,
+        height: 500,
         child: detailAsync.when(
           data: (detail) {
             if (detail == null) {
               return const Text('Invoice not found.');
             }
-            final layout = reportTableLayoutFor(context);
             return Column(
-              mainAxisSize: MainAxisSize.max,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Wrap(
@@ -56,9 +55,6 @@ class SalesInvoiceDialog extends ConsumerWidget {
                 ],
                 Expanded(
                   child: AppDataTable(
-                    columnSpacing: layout.columnSpacing,
-                    dataRowMinHeight: layout.dataRowMinHeight,
-                    dataRowMaxHeight: layout.dataRowMaxHeight,
                     showCheckboxColumn: false,
                     columns: const <DataColumn>[
                       DataColumn(label: Text('Product')),
@@ -67,43 +63,29 @@ class SalesInvoiceDialog extends ConsumerWidget {
                       DataColumn(label: Text('Price')),
                       DataColumn(label: Text('Line Total')),
                       DataColumn(label: Text('Returned')),
-                      DataColumn(label: Text('Return Action')),
                     ],
-                    rows: detail.items.map((item) {
-                      return DataRow(
-                        cells: <DataCell>[
-                          DataCell(Text(item.productName)),
-                          DataCell(Text(item.imei ?? '-')),
-                          DataCell(Text(item.quantity.toString())),
-                          DataCell(
-                            Text(FormattingHelpers.currencyPkr(item.unitPrice)),
+                    rows: detail.items
+                        .map(
+                          (item) => DataRow(
+                            cells: <DataCell>[
+                              DataCell(Text(item.productName)),
+                              DataCell(Text(item.imei ?? '-')),
+                              DataCell(Text(item.quantity.toString())),
+                              DataCell(
+                                Text(
+                                  FormattingHelpers.currencyPkr(item.unitPrice),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  FormattingHelpers.currencyPkr(item.lineTotal),
+                                ),
+                              ),
+                              DataCell(Text(item.returnedQty.toString())),
+                            ],
                           ),
-                          DataCell(
-                            Text(FormattingHelpers.currencyPkr(item.lineTotal)),
-                          ),
-                          DataCell(Text(item.returnedQty.toString())),
-                          DataCell(
-                            item.returnableQty <= 0
-                                ? const Text('Done')
-                                : FilledButton.tonal(
-                                    onPressed: () async {
-                                      await showDialog<void>(
-                                        context: context,
-                                        builder: (context) => ReturnSaleDialog(
-                                          saleId: saleId,
-                                          item: item,
-                                        ),
-                                      );
-                                      ref
-                                          .read(reportWorkflowCoordinatorProvider)
-                                          .refreshSalesInvoiceDetail(saleId);
-                                    },
-                                    child: const Text('Return'),
-                                  ),
-                          ),
-                        ],
-                      );
-                    }).toList(growable: false),
+                        )
+                        .toList(growable: false),
                   ),
                 ),
               ],

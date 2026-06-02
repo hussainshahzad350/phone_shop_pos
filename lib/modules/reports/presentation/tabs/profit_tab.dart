@@ -78,19 +78,7 @@ class ProfitTab extends ConsumerWidget {
                 'Profit (PKR)',
                 'Margin %',
               ];
-              final exportRows = rows
-                  .map(
-                    (r) => <String>[
-                      r.day,
-                      r.phonesSold.toString(),
-                      r.accessoriesSold.toString(),
-                      r.totalRevenue.toStringAsFixed(2),
-                      r.totalCost.toStringAsFixed(2),
-                      r.totalProfit.toStringAsFixed(2),
-                      '${r.marginPercent.toStringAsFixed(1)}%',
-                    ],
-                  )
-                  .toList();
+              final exportRows = ref.watch(profitExportRowsProvider);
               final layout = reportTableLayoutFor(context);
 
               return Card(
