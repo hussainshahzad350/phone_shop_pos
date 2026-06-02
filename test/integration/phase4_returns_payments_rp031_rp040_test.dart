@@ -93,6 +93,39 @@ void main() {
       expect(profit.totalProfit, closeTo(200.0, 0.0001));
     });
 
+    test('RP-032A profit rows subtract returned accessory sold quantity',
+        () async {
+      final ctx = await _Ctx.fresh('rp032a');
+      addTearDown(ctx.dispose);
+
+      await ctx.setupAccessory(
+        id: 'prd_rp032a',
+        qty: 10,
+        cost: 200.0,
+        price: 500.0,
+      );
+      final saleId = await ctx.sellAccessory(
+        productId: 'prd_rp032a',
+        qty: 2,
+        price: 500.0,
+        paid: 1000.0,
+      );
+
+      final detail = _ok(await ctx.ops.getSalesInvoiceDetail(saleId));
+      _ok(
+        await ctx.ops.processReturn(
+          saleId: saleId,
+          item: detail!.items.first,
+          quantity: 1,
+          reason: 'rp032a-return',
+        ),
+      );
+
+      final rows = _ok(await ctx.profitService.getProfitReportRows(_allTimeFilter()));
+      expect(rows, isNotEmpty);
+      expect(rows.first.accessoriesSold, 1);
+    });
+
     test('RP-033 unpaid credit return reduces remaining balance exactly',
         () async {
       final ctx = await _Ctx.fresh('rp033');

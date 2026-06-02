@@ -119,11 +119,12 @@ class ProfitReportService with BaseRepositoryGuard {
             date(sr.created_at) AS event_day,
             -sr.return_amount   AS revenue_delta,
             -(sr.cost_price * sr.return_qty) AS cost_delta,
-            0 AS phones_delta,
-            0 AS accessories_delta
+            CASE WHEN pm.has_imei = 1 THEN -sr.return_qty ELSE 0 END AS phones_delta,
+            CASE WHEN pm.has_imei = 0 THEN -sr.return_qty ELSE 0 END AS accessories_delta
           FROM ${TableNames.saleReturns} sr
           JOIN ${TableNames.sales} s  ON s.id  = sr.sale_id
           JOIN ${TableNames.saleItems} si ON si.id = sr.sale_item_id
+          JOIN ${TableNames.productModels} pm ON pm.id = si.product_model_id
           WHERE $returnWhere
         ) profit_events
         GROUP BY event_day

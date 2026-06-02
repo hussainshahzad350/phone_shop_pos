@@ -302,14 +302,17 @@ class SqliteSalesRepository
           updatedAt: now,
         );
         await transaction.insert(TableNames.sales, saleModel.toMap());
+        final ledgerDebitAmount =
+            (totals.total - totals.paidAmount).clamp(0.0, double.infinity).toDouble();
         if (_ledgerPostingService != null &&
             customerId != null &&
             customerId.trim().isNotEmpty &&
-            customerId.toLowerCase() != 'walk_in') {
+            customerId.toLowerCase() != 'walk_in' &&
+            ledgerDebitAmount > 0) {
           final ledgerResult = await _ledgerPostingService.postSaleCreated(
             saleId: saleId,
             customerId: customerId.trim(),
-            amount: totals.total,
+            amount: ledgerDebitAmount,
             createdAt: saleDate,
             note: notes,
             executor: transaction,

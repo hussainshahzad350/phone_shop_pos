@@ -225,7 +225,10 @@ class SqliteInventoryRepository
     return guard<List<StockRowEntity>>(() async {
       final boundedLimit = limit <= 0 ? 200 : limit;
       final showSerialized = hasImeiFilter == null || hasImeiFilter == true;
-      final showQuantity = hasImeiFilter == null || hasImeiFilter == false;
+      final allowQuantityRows = serializedStatusFilter == null ||
+          serializedStatusFilter == SerializedStockStatus.inStock;
+      final showQuantity =
+          (hasImeiFilter == null || hasImeiFilter == false) && allowQuantityRows;
       final trimmedQuery = searchQuery?.trim() ?? '';
       final usePrefixSearch =
           trimmedQuery.isNotEmpty && _digitsOnlyPattern.hasMatch(trimmedQuery);

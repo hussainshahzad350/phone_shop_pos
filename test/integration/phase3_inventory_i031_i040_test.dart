@@ -184,6 +184,31 @@ void main() {
       );
     });
 
+    test('I-038 Sold status filter excludes accessory quantity rows', () async {
+      final context = await _BatchDContext.createTemporary();
+      addTearDown(context.dispose);
+
+      await context.seedMixedInventory(
+        serializedCount: 80,
+        quantityCount: 80,
+        soldEvery: 2,
+      );
+
+      final soldRows = _expectSuccess(
+        await context.inventoryService.getStockRows(
+          serializedStatusFilter: SerializedStockStatus.sold,
+          limit: 300,
+        ),
+      );
+
+      expect(soldRows, isNotEmpty);
+      expect(soldRows.every((row) => row.type == StockRowType.serialized), isTrue);
+      expect(
+        soldRows.every((row) => row.serializedStatus == SerializedStockStatus.sold),
+        isTrue,
+      );
+    });
+
     test('I-039 Invalid adjustment does not create audit row', () async {
       final context = await _BatchDContext.createTemporary();
       addTearDown(context.dispose);
