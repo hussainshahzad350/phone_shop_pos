@@ -6,7 +6,6 @@ import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/expense_entity.dart';
-import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/dialogs/expense_delete_dialog.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/dialogs/expense_form_dialog.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
@@ -182,8 +181,9 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                           ),
                         ],
                         onChanged: (value) {
-                          ref.read(expensesPaymentMethodProvider.notifier).state =
-                              value ?? '';
+                          ref
+                              .read(expensesPaymentMethodProvider.notifier)
+                              .state = value ?? '';
                         },
                       ),
                     ),
@@ -207,7 +207,8 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                                     _searchController.clear();
                                     ref
                                         .read(
-                                          expensesSearchRemarksProvider.notifier,
+                                          expensesSearchRemarksProvider
+                                              .notifier,
                                         )
                                         .state = '';
                                     setState(() {});
@@ -572,8 +573,7 @@ class _ExpenseDesktopTable extends StatelessWidget {
                             IconButton(
                               tooltip: 'Delete',
                               onPressed: () => onDelete(expense),
-                              icon:
-                                  const Icon(Icons.delete_outline, size: 18),
+                              icon: const Icon(Icons.delete_outline, size: 18),
                             ),
                           ],
                         ),

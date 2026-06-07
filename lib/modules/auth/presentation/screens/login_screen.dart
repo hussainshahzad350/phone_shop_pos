@@ -191,7 +191,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
 
-    if (!mounted || resetSucceeded != true) {
+    if (!context.mounted || resetSucceeded != true) {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(

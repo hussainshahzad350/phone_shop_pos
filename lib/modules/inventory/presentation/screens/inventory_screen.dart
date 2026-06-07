@@ -148,6 +148,9 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                           );
                           return;
                         }
+                        if (!context.mounted) {
+                          return;
+                        }
                         final didUpdate = await showDialog<bool>(
                           context: context,
                           builder: (context) =>
