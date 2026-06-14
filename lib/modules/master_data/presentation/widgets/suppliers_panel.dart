@@ -6,7 +6,9 @@ import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/master_data/presentation/widgets/supplier_form_dialog.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/supplier_entity.dart';
+import 'package:phone_shop_pos/modules/purchases/presentation/providers/purchase_query_providers.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/providers/supplier_providers.dart';
+import 'package:phone_shop_pos/modules/reports/application/providers/report_query_providers.dart';
 
 class SuppliersPanel extends ConsumerStatefulWidget {
   const SuppliersPanel({super.key});
@@ -64,6 +66,8 @@ class _SuppliersPanelState extends ConsumerState<SuppliersPanel> {
 
     if (result.isSuccess) {
       ref.invalidate(supplierListProvider);
+      ref.invalidate(supplierSearchResultsProvider);
+      ref.invalidate(supplierLedgerSummaryProvider);
       AppNotifier.success('Supplier created.');
     } else {
       AppNotifier.error(result.asFailure!.error.message);
@@ -94,6 +98,8 @@ class _SuppliersPanelState extends ConsumerState<SuppliersPanel> {
 
     if (result.isSuccess) {
       ref.invalidate(supplierListProvider);
+      ref.invalidate(supplierSearchResultsProvider);
+      ref.invalidate(supplierLedgerSummaryProvider);
       AppNotifier.success('Supplier updated.');
     } else {
       AppNotifier.error(result.asFailure!.error.message);
@@ -124,6 +130,8 @@ class _SuppliersPanelState extends ConsumerState<SuppliersPanel> {
 
     if (result.isSuccess) {
       ref.invalidate(supplierListProvider);
+      ref.invalidate(supplierSearchResultsProvider);
+      ref.invalidate(supplierLedgerSummaryProvider);
       AppNotifier.info(
         supplier.isActive ? 'Supplier archived.' : 'Supplier re-activated.',
       );

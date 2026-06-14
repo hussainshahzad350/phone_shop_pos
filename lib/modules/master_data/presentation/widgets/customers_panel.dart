@@ -7,6 +7,8 @@ import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/customers/domain/entities/customer_entity.dart';
 import 'package:phone_shop_pos/modules/customers/presentation/providers/customer_providers.dart';
 import 'package:phone_shop_pos/modules/master_data/presentation/widgets/customer_form_dialog.dart';
+import 'package:phone_shop_pos/modules/reports/application/providers/report_query_providers.dart';
+import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_query_providers.dart';
 
 class CustomersPanel extends ConsumerStatefulWidget {
   const CustomersPanel({super.key});
@@ -63,6 +65,9 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
 
     if (result.isSuccess) {
       ref.invalidate(customerListProvider);
+      ref.invalidate(customerSearchResultsProvider);
+      ref.invalidate(reportCustomerOptionsProvider);
+      ref.invalidate(customerLedgerSummaryProvider);
       AppNotifier.success('Customer created.');
     } else {
       AppNotifier.error(result.asFailure!.error.message);
@@ -92,6 +97,9 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
 
     if (result.isSuccess) {
       ref.invalidate(customerListProvider);
+      ref.invalidate(customerSearchResultsProvider);
+      ref.invalidate(reportCustomerOptionsProvider);
+      ref.invalidate(customerLedgerSummaryProvider);
       AppNotifier.success('Customer updated.');
     } else {
       AppNotifier.error(result.asFailure!.error.message);
@@ -122,6 +130,9 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
 
     if (result.isSuccess) {
       ref.invalidate(customerListProvider);
+      ref.invalidate(customerSearchResultsProvider);
+      ref.invalidate(reportCustomerOptionsProvider);
+      ref.invalidate(customerLedgerSummaryProvider);
       AppNotifier.info(
         customer.isActive ? 'Customer archived.' : 'Customer re-activated.',
       );
