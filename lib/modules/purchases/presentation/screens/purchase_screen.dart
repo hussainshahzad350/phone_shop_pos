@@ -620,35 +620,25 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                   ),
                   const SizedBox(height: 6),
-                  SegmentedButton<String>(
-                    segments: const <ButtonSegment<String>>[
-                      ButtonSegment<String>(
-                        value: PaymentMethod.cash,
-                        label: Text('Cash'),
-                        icon: Icon(Icons.payments_outlined),
-                      ),
-                      ButtonSegment<String>(
-                        value: PaymentMethod.card,
-                        label: Text('Card'),
-                        icon: Icon(Icons.credit_card),
-                      ),
-                      ButtonSegment<String>(
-                        value: PaymentMethod.bank,
-                        label: Text('Bank'),
-                        icon: Icon(Icons.account_balance_outlined),
-                      ),
-                      ButtonSegment<String>(
-                        value: PaymentMethod.credit,
-                        label: Text('Udhar'),
-                        icon: Icon(Icons.handshake_outlined),
-                      ),
-                    ],
-                    selected: <String>{formState.paymentMethod},
-                    onSelectionChanged: (Set<String> selection) {
-                      ref
-                          .read(purchaseFormStateProvider.notifier)
-                          .setPaymentMethod(selection.first);
+                  DropdownButtonFormField<String>(
+                    value: formState.paymentMethod,
+                    items: PaymentMethod.values
+                        .map(
+                          (value) => DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(
+                                PaymentMethod.labels[value] ?? value),
+                          ),
+                        )
+                        .toList(growable: false),
+                    onChanged: (value) {
+                      if (value != null) {
+                        ref
+                            .read(purchaseFormStateProvider.notifier)
+                            .setPaymentMethod(value);
+                      }
                     },
+                    decoration: appDesktopInputDecoration(),
                   ),
                   const SizedBox(height: 8),
                   TextField(
