@@ -51,6 +51,7 @@ class _StubPurchaseRepository implements PurchaseRepository {
     required double discount,
     required double tax,
     required double paidAmount,
+    String? paymentMethod,
     String? supplierId,
     String? invoiceNumber,
     String? notes,
