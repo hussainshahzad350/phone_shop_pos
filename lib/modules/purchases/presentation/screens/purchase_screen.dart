@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
@@ -46,6 +47,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   bool _isSubmitting = false;
   bool _isUsedPurchase = false;
   bool _paidAmountTouched = false;
+  bool _paidAmountFieldTapped = false;
   int _handledShortcutToken = 0;
 
   @override
@@ -137,6 +139,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
             discount: formState.discount,
             tax: formState.tax,
             paidAmount: effectivePaidAmount,
+            paymentMethod: formState.paymentMethod,
             supplierId: formState.selectedSupplierId,
             invoiceNumber: formState.invoiceNumber,
             notes: formState.notes,
@@ -163,6 +166,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
       _paidController.text = '0';
       _notesController.clear();
       _paidAmountTouched = false;
+      _paidAmountFieldTapped = false;
       _showSnack(
         'Purchase saved. '
         '${completion.serializedItemCount} IMEI(s), '
@@ -358,7 +362,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   }
 
   void _syncDefaultPaidAmount(PurchaseFormState formState, double total) {
-    if (_paidAmountTouched || formState.items.isEmpty) {
+    if (_paidAmountTouched || _paidAmountFieldTapped || formState.items.isEmpty) {
       return;
     }
     final text = FormattingHelpers.decimal(total);
@@ -366,7 +370,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
       return;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _paidAmountTouched) {
+      if (!mounted || _paidAmountTouched || _paidAmountFieldTapped) {
         return;
       }
       _paidController.text = text;
@@ -611,13 +615,54 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                     bold: true,
                   ),
                   const Divider(),
+                  const Text(
+                    'Payment Method',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                  const SizedBox(height: 6),
+                  SegmentedButton<String>(
+                    segments: const <ButtonSegment<String>>[
+                      ButtonSegment<String>(
+                        value: PaymentMethod.cash,
+                        label: Text('Cash'),
+                        icon: Icon(Icons.payments_outlined),
+                      ),
+                      ButtonSegment<String>(
+                        value: PaymentMethod.card,
+                        label: Text('Card'),
+                        icon: Icon(Icons.credit_card),
+                      ),
+                      ButtonSegment<String>(
+                        value: PaymentMethod.bank,
+                        label: Text('Bank'),
+                        icon: Icon(Icons.account_balance_outlined),
+                      ),
+                      ButtonSegment<String>(
+                        value: PaymentMethod.credit,
+                        label: Text('Udhar'),
+                        icon: Icon(Icons.handshake_outlined),
+                      ),
+                    ],
+                    selected: <String>{formState.paymentMethod},
+                    onSelectionChanged: (Set<String> selection) {
+                      ref
+                          .read(purchaseFormStateProvider.notifier)
+                          .setPaymentMethod(selection.first);
+                    },
+                  ),
+                  const SizedBox(height: 8),
                   TextField(
                     controller: _paidController,
                     decoration:
                         appDesktopInputDecoration(labelText: 'Paid Amount'),
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
+                    onTap: () {
+                      _paidAmountFieldTapped = true;
+                      _paidAmountTouched = true;
+                    },
                     onChanged: (v) {
+                      _paidAmountTouched = true;
                       final val = FormattingHelpers.parseLocaleDecimal(v);
                       ref
                           .read(purchaseFormStateProvider.notifier)

@@ -15,6 +15,7 @@ class PurchaseFormState {
     this.discount = 0,
     this.tax = 0,
     this.paidAmount = 0,
+    this.paymentMethod = 'cash',
     this.invoiceNumber,
     this.notes,
     this.isSubmitting = false,
@@ -28,6 +29,7 @@ class PurchaseFormState {
   final double discount;
   final double tax;
   final double paidAmount;
+  final String paymentMethod;
   final String? invoiceNumber;
   final String? notes;
   final bool isSubmitting;
@@ -42,6 +44,7 @@ class PurchaseFormState {
     double? discount,
     double? tax,
     double? paidAmount,
+    String? paymentMethod,
     String? invoiceNumber,
     bool clearInvoiceNumber = false,
     String? notes,
@@ -60,6 +63,7 @@ class PurchaseFormState {
       discount: discount ?? this.discount,
       tax: tax ?? this.tax,
       paidAmount: paidAmount ?? this.paidAmount,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
       invoiceNumber:
           clearInvoiceNumber ? null : invoiceNumber ?? this.invoiceNumber,
       notes: clearNotes ? null : notes ?? this.notes,
@@ -268,6 +272,10 @@ class PurchaseFormStateNotifier extends StateNotifier<PurchaseFormState> {
 
   void setPaidAmount(double value) {
     state = state.copyWith(paidAmount: value);
+  }
+
+  void setPaymentMethod(String value) {
+    state = state.copyWith(paymentMethod: value);
   }
 
   void setInvoiceNumber(String? value) {
