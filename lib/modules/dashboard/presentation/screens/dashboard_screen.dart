@@ -1,27 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:phone_shop_pos/modules/dashboard/presentation/dialogs/dashboard_sales_invoice_dialog.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/alerts_section.dart';
+import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/brand_stock_popup.dart';
+import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/brand_stock_section.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/dashboard_header.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/dashboard_kpi_grid.dart';
-import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/dashboard_low_stock_panel.dart';
-import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/dashboard_recent_sales_panel.dart';
-
-const double _dashboardNarrowWidthBreakpoint = 1220;
-
-double _dashboardPanelHeightFor(double viewportHeight) {
-  if (viewportHeight < 760) {
-    return 280;
-  }
-  if (viewportHeight < 900) {
-    return 340;
-  }
-  if (viewportHeight < 1080) {
-    return 400;
-  }
-  return 480;
-}
+import 'package:phone_shop_pos/modules/dashboard/domain/entities/brand_stock_entity.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -29,22 +15,34 @@ class DashboardScreen extends ConsumerWidget {
   void _refresh(WidgetRef ref) {
     ref.invalidate(dashboardServiceProvider);
     ref.invalidate(dashboardKpisProvider);
-    ref.invalidate(dashboardRecentSalesProvider);
-    ref.invalidate(dashboardLowStockProvider);
+    ref.invalidate(dashboardBrandStockProvider);
+    ref.invalidate(dashboardPendingReturnsProvider);
   }
 
-  Future<void> _openInvoiceDialog(BuildContext context, String saleId) async {
+  Future<void> _showBrandStockPopup(
+    BuildContext context,
+    BrandStockEntity brand,
+  ) async {
     await showDialog<void>(
       context: context,
-      builder: (context) => DashboardSalesInvoiceDialog(saleId: saleId),
+      builder: (context) => BrandStockPopup(brand: brand),
     );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final kpisAsync = ref.watch(dashboardKpisProvider);
-    final recentSalesAsync = ref.watch(dashboardRecentSalesProvider);
-    final lowStockAsync = ref.watch(dashboardLowStockProvider);
+    final brandStockAsync = ref.watch(dashboardBrandStockProvider);
+    final pendingReturnsAsync = ref.watch(dashboardPendingReturnsProvider);
+
+    final alertsSection = pendingReturnsAsync.when(
+      data: (returns) => AlertsSection(
+        lowStockCount: 0,
+        pendingReturns: returns,
+      ),
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
 
     return Shortcuts(
       shortcuts: const <ShortcutActivator, Intent>{
@@ -62,10 +60,6 @@ class DashboardScreen extends ConsumerWidget {
         child: Scaffold(
           body: LayoutBuilder(
             builder: (context, constraints) {
-              final isNarrow =
-                  constraints.maxWidth < _dashboardNarrowWidthBreakpoint;
-              final panelHeight =
-                  _dashboardPanelHeightFor(constraints.maxHeight);
               return ListView(
                 padding: const EdgeInsets.all(10),
                 children: <Widget>[
@@ -84,96 +78,22 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  if (isNarrow) ...<Widget>[
-                    SizedBox(
-                      height: panelHeight,
-                      child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: recentSalesAsync.when(
-                            data: (rows) => DashboardRecentSalesPanel(
-                              rows: rows,
-                              onOpenInvoice: (saleId) =>
-                                  _openInvoiceDialog(context, saleId),
-                            ),
-                            loading: () => const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                            error: (_, __) => const Center(
-                              child: Text('Failed to load recent sales.'),
-                            ),
-                          ),
-                        ),
-                      ),
+                  brandStockAsync.when(
+                    data: (brands) => BrandStockSection(
+                      brands: brands,
+                      onBrandTap: () {}, // Placeholder for future use
                     ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: panelHeight,
-                      child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: lowStockAsync.when(
-                            data: (rows) => DashboardLowStockPanel(rows: rows),
-                            loading: () => const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                            error: (_, __) => const Center(
-                              child: Text('Failed to load low stock data.'),
-                            ),
-                          ),
-                        ),
-                      ),
+                    loading: () => const SizedBox(
+                      height: 200,
+                      child: Center(child: CircularProgressIndicator()),
                     ),
-                  ] else
-                    SizedBox(
-                      height: panelHeight,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Expanded(
-                            flex: 5,
-                            child: Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(10),
-                                child: recentSalesAsync.when(
-                                  data: (rows) => DashboardRecentSalesPanel(
-                                    rows: rows,
-                                    onOpenInvoice: (saleId) =>
-                                        _openInvoiceDialog(context, saleId),
-                                  ),
-                                  loading: () => const Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                  error: (_, __) => const Center(
-                                    child: Text('Failed to load recent sales.'),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            flex: 3,
-                            child: Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(10),
-                                child: lowStockAsync.when(
-                                  data: (rows) =>
-                                      DashboardLowStockPanel(rows: rows),
-                                  loading: () => const Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                  error: (_, __) => const Center(
-                                    child:
-                                        Text('Failed to load low stock data.'),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    error: (_, __) => const SizedBox(
+                      height: 200,
+                      child: Center(child: Text('Failed to load brand stock.')),
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  alertsSection,
                 ],
               );
             },

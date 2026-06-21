@@ -7,6 +7,9 @@ import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_kpis_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_low_stock_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_recent_sale_entity.dart';
+import 'package:phone_shop_pos/modules/dashboard/domain/entities/brand_stock_entity.dart';
+import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_return_entity.dart';
+import 'package:phone_shop_pos/modules/dashboard/domain/entities/model_imei_stock_entity.dart';
 
 class DashboardService with BaseRepositoryGuard {
   DashboardService({
@@ -289,6 +292,132 @@ class DashboardService with BaseRepositoryGuard {
           )
           .toList(growable: false);
     }, operation: 'get_low_stock_warnings');
+  }
+
+  Future<List<BrandStockEntity>> getBrandStock() {
+    return _appDatabase.database.rawQuery(
+      '''
+      SELECT
+        pm.brand,
+        COUNT(DISTINCT pm.id) AS model_count,
+        COUNT(*) AS stock_count
+      FROM ${TableNames.serializedStock} ss
+      JOIN ${TableNames.productModels} pm ON pm.id =ss.product_model_id
+      WHERE pm.is_active = 1 AND ss.stock_status = 'in_stock'
+        AND pm.brand IS NOT NULL AND pm.brand != ''
+      GROUP BY pm.brand
+      ORDER BY stock_count DESC
+      ''',
+    ).then((rows) {
+      if (rows.isEmpty) {
+        return <BrandStockEntity>[];
+      }
+      return rows
+          .map(
+            (row) => BrandStockEntity(
+              brandName: row['brand'] as String,
+              brandLogo: '',
+              modelCount: (row['model_count'] as num?)?.toInt() ?? 0,
+              stockCount: (row['stock_count'] as num?)?.toInt() ?? 0,
+            ),
+          )
+          .toList(growable: false);
+    }).catchError((error) {
+      return <BrandStockEntity>[];
+    });
+  }
+
+  Future<List<PendingReturnEntity>> getPendingReturns() {
+    return _appDatabase.database.rawQuery(
+      '''
+      SELECT
+        sr.sale_id,
+        s.invoice_number,
+        sr.created_at AS return_date,
+        sr.return_amount
+      FROM ${TableNames.saleReturns} sr
+      JOIN ${TableNames.sales} s ON s.id = sr.sale_id
+      WHERE sr.return_status = 'pending'
+      ORDER BY sr.created_at DESC
+      LIMIT 5
+      ''',
+    ).then((rows) => rows
+        .map(
+          (row) => PendingReturnEntity(
+            saleId: (row['sale_id'] as String?) ?? '',
+            invoiceNumber: row['invoice_number'] as String,
+            returnDate: DateTimeHelpers.fromSql(
+              row['return_date'] as String,
+            ),
+            returnAmount: (row['return_amount'] as num?)?.toDouble() ?? 0,
+          ),
+        )
+        .toList(growable: false));
+  }
+
+  Future<List<ModelImeiStockEntity>> getModelImeiStock(String brandName) {
+    return _appDatabase.database.rawQuery(
+      '''
+      SELECT
+        pm.id AS model_id,
+        pm.name AS model_name,
+        pm.brand,
+        COUNT(*) AS quantity,
+        ss.serialized_stock_id,
+        ss.imei,
+        ss.imei2,
+        ss.serial_number,
+        ss.cost_price,
+        ss.sale_price,
+        ss.stock_status
+      FROM ${TableNames.serializedStock} ss
+      JOIN ${TableNames.productModels} pm ON pm.id = ss.product_model_id
+      WHERE pm.is_active = 1
+        AND ss.stock_status = 'in_stock'
+        AND pm.brand = ?
+      GROUP BY pm.id, ss.serialized_stock_id
+      ORDER BY pm.name ASC, ss.imei ASC
+      ''',
+      <Object?>[brandName],
+    ).then((rows) {
+      if (rows.isEmpty) {
+        return <ModelImeiStockEntity>[];
+      }
+
+      final Map<String, ModelImeiStockEntity> modelMap = {};
+
+      for (final row in rows) {
+        final modelId = row['model_id'] as String;
+        final modelName = row['model_name'] as String;
+        final brand = row['brand'] as String;
+
+        if (!modelMap.containsKey(modelId)) {
+          modelMap[modelId] = ModelImeiStockEntity(
+            modelId: modelId,
+            modelName: modelName,
+            brandName: brand,
+            quantity: 0,
+            imeis: <ImeiStockItemEntity>[],
+          );
+        }
+
+        modelMap[modelId]!.imeis.add(ImeiStockItemEntity(
+          serializedStockId: (row['serialized_stock_id'] as String?) ?? '',
+          imei: (row['imei'] as String?) ?? '',
+          imei2: row['imei2'] as String?,
+          serialNumber: row['serial_number'] as String?,
+          costPrice: (row['cost_price'] as num?)?.toDouble() ?? 0,
+          salePrice: (row['sale_price'] as num?)?.toDouble() ?? 0,
+          stockStatus: (row['stock_status'] as String?) ?? 'in_stock',
+        ));
+
+        modelMap[modelId]!.quantity = modelMap[modelId]!.imeis.length;
+      }
+
+      return modelMap.values.toList(growable: false);
+    }).catchError((error) {
+      return <ModelImeiStockEntity>[];
+    });
   }
 
   double _asDouble(Object? value) {

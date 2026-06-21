@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phone_shop_pos/core/config/business_configuration_providers.dart';
+import 'package:phone_shop_pos/core/config/feature_access.dart';
+import 'package:phone_shop_pos/core/config/feature_flags.dart';
 import 'package:phone_shop_pos/core/routing/navigation_leave_guard.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
@@ -15,44 +18,49 @@ bool desktopRouteMatches({
   required String currentPath,
   required String routePrefix,
 }) {
-  final normalizedPath = _normalizeRoutePath(currentPath);
-  final normalizedPrefix = _normalizeRoutePath(routePrefix);
+  final normalizedPath = normalizeRoutePath(currentPath);
+  final normalizedPrefix = normalizeRoutePath(routePrefix);
   return normalizedPath == normalizedPrefix ||
       normalizedPath.startsWith('$normalizedPrefix/');
 }
 
-int desktopNavigationSelectedIndexForPath(String currentPath) {
-  final selectedIndex = _desktopNavItems.indexWhere(
+int desktopNavigationSelectedIndexForPath(
+  String currentPath, {
+  FeatureFlags featureFlags = const FeatureFlags.currentBehaviorDefaults(),
+}) {
+  final navItems = desktopNavigationItemsForFlags(featureFlags);
+  final selectedIndex = navItems.indexWhere(
     (item) =>
         desktopRouteMatches(currentPath: currentPath, routePrefix: item.route),
   );
   return selectedIndex < 0 ? 0 : selectedIndex;
 }
 
-String desktopNavigationLabelForPath(String currentPath) {
-  return _desktopNavItems
+String desktopNavigationLabelForPath(
+  String currentPath, {
+  FeatureFlags featureFlags = const FeatureFlags.currentBehaviorDefaults(),
+}) {
+  final navItems = desktopNavigationItemsForFlags(featureFlags);
+  return navItems
       .firstWhere(
         (item) => desktopRouteMatches(
             currentPath: currentPath, routePrefix: item.route),
-        orElse: () => _desktopNavItems.first,
+        orElse: () => navItems.first,
       )
       .label;
 }
 
-String _normalizeRoutePath(String value) {
-  final trimmed = value.trim();
-  if (trimmed.isEmpty) {
-    return '/';
-  }
-  final parsed = Uri.tryParse(trimmed);
-  var path = parsed?.path ?? trimmed.split('?').first.split('#').first;
-  if (path.isEmpty) {
-    path = '/';
-  }
-  if (path.length > 1 && path.endsWith('/')) {
-    path = path.substring(0, path.length - 1);
-  }
-  return path;
+List<DesktopNavigationItem> desktopNavigationItemsForFlags(
+  FeatureFlags featureFlags,
+) {
+  return _desktopNavItems
+      .where(
+        (item) => routeEnabledForFeatureFlags(
+          path: item.route,
+          featureFlags: featureFlags,
+        ),
+      )
+      .toList(growable: false);
 }
 
 class DesktopNavigationShell extends ConsumerWidget {
@@ -69,8 +77,17 @@ class DesktopNavigationShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final activeOperations = ref.watch(activeCriticalOperationsProvider);
     final pendingPrintJobs = ref.watch(pendingPrintJobCountProvider);
-    final selectedIndex = desktopNavigationSelectedIndexForPath(currentPath);
-    final currentLabel = desktopNavigationLabelForPath(currentPath);
+    final featureFlags = ref.watch(featureFlagsProvider).valueOrNull ??
+        const FeatureFlags.currentBehaviorDefaults();
+    final navItems = desktopNavigationItemsForFlags(featureFlags);
+    final selectedIndex = desktopNavigationSelectedIndexForPath(
+      currentPath,
+      featureFlags: featureFlags,
+    );
+    final currentLabel = desktopNavigationLabelForPath(
+      currentPath,
+      featureFlags: featureFlags,
+    );
     final scannerMode = ScannerModePath.fromPath(currentPath);
     final scannerController = ref.read(scannerControllerProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -78,7 +95,7 @@ class DesktopNavigationShell extends ConsumerWidget {
     });
 
     Future<void> handleDestinationSelection(int index) async {
-      final targetPath = _desktopNavItems[index].route;
+      final targetPath = navItems[index].route;
       final shouldProceed = await confirmAndHandleCartLeave(
         context: context,
         ref: ref,
@@ -96,7 +113,7 @@ class DesktopNavigationShell extends ConsumerWidget {
         sidebar: AppSidebar(
           selectedIndex: selectedIndex,
           onDestinationSelected: handleDestinationSelection,
-          destinations: _desktopNavItems
+          destinations: navItems
               .map(
                 (item) => NavigationRailDestination(
                   icon: Icon(item.icon),
@@ -162,8 +179,8 @@ class DesktopNavigationShell extends ConsumerWidget {
   }
 }
 
-class _NavItem {
-  const _NavItem({
+class DesktopNavigationItem {
+  const DesktopNavigationItem({
     required this.label,
     required this.icon,
     required this.route,
@@ -174,43 +191,43 @@ class _NavItem {
   final String route;
 }
 
-const List<_NavItem> _desktopNavItems = <_NavItem>[
-  _NavItem(
+const List<DesktopNavigationItem> _desktopNavItems = <DesktopNavigationItem>[
+  DesktopNavigationItem(
     label: 'Dashboard',
     icon: Icons.dashboard_outlined,
     route: '/dashboard',
   ),
-  _NavItem(
+  DesktopNavigationItem(
     label: 'Sales',
     icon: Icons.point_of_sale_outlined,
     route: '/sales',
   ),
-  _NavItem(
+  DesktopNavigationItem(
     label: 'Purchases',
     icon: Icons.shopping_cart_outlined,
     route: '/purchases',
   ),
-  _NavItem(
+  DesktopNavigationItem(
     label: 'Inventory',
     icon: Icons.inventory_2_outlined,
     route: '/inventory',
   ),
-  _NavItem(
+  DesktopNavigationItem(
     label: 'Master Data',
     icon: Icons.dataset_outlined,
     route: '/master-data',
   ),
-  _NavItem(
+  DesktopNavigationItem(
     label: 'Repairing',
     icon: Icons.build_outlined,
     route: '/repairing',
   ),
-  _NavItem(
+  DesktopNavigationItem(
     label: 'Reports',
     icon: Icons.bar_chart_outlined,
     route: '/reports',
   ),
-  _NavItem(
+  DesktopNavigationItem(
     label: 'Settings',
     icon: Icons.settings_outlined,
     route: '/settings',

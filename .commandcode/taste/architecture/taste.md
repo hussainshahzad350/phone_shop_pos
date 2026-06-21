@@ -1,0 +1,12 @@
+# Architecture
+- One layer per prompt: UI changes never touch BLoC; BLoC changes never touch repositories; repositories never touch DB schema. Confidence: 0.85
+- No silent renames: never rename classes/methods/files/routes unless explicitly instructed. Confidence: 0.85
+- Database schema is additive-only: never modify/drop existing columns or tables without explicit instruction. Confidence: 0.85
+- Money/ledger logic is human-owned: never touch calculations, debit/credit flows, cancel/reverse logic, stock adjustments, or rounding. Confidence: 0.85
+- Grep before delete: confirm zero active usages before removing any file/class. Confidence: 0.85
+- Audit and fix are always separate phases: never combine them in one prompt. Confidence: 0.85
+- Sales Screen (Gold Standard, 9.8/10) and core money/ledger logic is red-zone: requires explicit human sign-off before modifying. Confidence: 0.85
+- Feature flags gate all UI: hide features behind flags, never remove code from codebase; flags include imeiStock, qtyStock, repairModule, accessoriesModule, dealerIssueModule, reports. Confidence: 0.85
+- Do not build speculative UI for unconfirmed future features: build for today's requirements with clean extension points instead. Confidence: 0.80
+- Block/profile everything behind Business Profile: profiles (Mobile Only, Mobile+Accessories, Repair Shop, Hybrid) drive feature flags via Settings. Confidence: 0.80
+- Follow existing code patterns: .withValues(alpha:), WidgetStateProperty, context.mounted, PopScope, double-emit BLoC failure pattern, ErrorHandler, debounced search, fixed-pixel dialog constraints, breakpoint-based responsive panels, domain getters instead of magic strings. Confidence: 0.85

@@ -1,7 +1,7 @@
 name: phone_shop_pos
 description: Desktop-first offline POS architecture for Pakistani mobile shops.
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.1.0+2
 
 environment:
   sdk: ^3.4.0

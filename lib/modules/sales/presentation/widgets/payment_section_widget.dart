@@ -92,7 +92,7 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
             DropdownButtonFormField<String>(
               key: ValueKey<String>(widget.paymentMethod),
               focusNode: widget.paymentMethodFocusNode,
-              value: widget.paymentMethod,
+              initialValue: widget.paymentMethod,
               items: PaymentMethod.values
                   .map(
                     (value) => DropdownMenuItem<String>(

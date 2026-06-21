@@ -179,7 +179,9 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   }
 
   void _invalidateReportsAfterPurchase() {
-    ref.read(reportWorkflowCoordinatorProvider).refreshPurchaseAfterCompletion();
+    ref
+        .read(reportWorkflowCoordinatorProvider)
+        .refreshPurchaseAfterCompletion();
     ref.invalidate(inventorySummaryProvider);
     ref.invalidate(stockRowsProvider);
     ref.invalidate(lowStockProvider);
@@ -362,7 +364,9 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   }
 
   void _syncDefaultPaidAmount(PurchaseFormState formState, double total) {
-    if (_paidAmountTouched || _paidAmountFieldTapped || formState.items.isEmpty) {
+    if (_paidAmountTouched ||
+        _paidAmountFieldTapped ||
+        formState.items.isEmpty) {
       return;
     }
     final text = FormattingHelpers.decimal(total);
@@ -621,13 +625,12 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                   ),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
-                    value: formState.paymentMethod,
+                    initialValue: formState.paymentMethod,
                     items: PaymentMethod.values
                         .map(
                           (value) => DropdownMenuItem<String>(
                             value: value,
-                            child: Text(
-                                PaymentMethod.labels[value] ?? value),
+                            child: Text(PaymentMethod.labels[value] ?? value),
                           ),
                         )
                         .toList(growable: false),
