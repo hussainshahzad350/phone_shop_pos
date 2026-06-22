@@ -38,7 +38,7 @@ enum BusinessProfile {
       return null;
     }
     for (final profile in BusinessProfile.values) {
-      if (profile.name == normalized) {
+      if (profile.name.toLowerCase() == normalized) {
         return profile;
       }
     }
