@@ -17,7 +17,10 @@ class StockTableWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (rows.isEmpty) {
-      return const Center(child: Text('No stock records found.'));
+      return const AppEmptyState(
+        message: 'No stock records found.',
+        icon: Icons.inventory_2_outlined,
+      );
     }
 
     return LayoutBuilder(

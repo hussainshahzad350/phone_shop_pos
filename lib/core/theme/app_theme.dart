@@ -33,7 +33,15 @@ class AppTheme {
           ? const Color(0xFFF6F8FC)
           : colorScheme.surface,
       cardTheme: CardThemeData(
-        elevation: 0,
+        // Subtle elevation + soft shadow lifts cards off the canvas instead of
+        // the previous flat, paper-thin look. surfaceTintColor is cleared so
+        // the card keeps its configured color rather than picking up M3's
+        // elevation tint.
+        elevation: 1.5,
+        shadowColor: brightness == Brightness.light
+            ? const Color(0x14101828)
+            : Colors.black.withValues(alpha: 0.45),
+        surfaceTintColor: Colors.transparent,
         color: brightness == Brightness.light
             ? Colors.white.withValues(alpha: 0.94)
             : colorScheme.surfaceContainerLow,
@@ -41,7 +49,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
             color: brightness == Brightness.light
-                ? const Color(0xFFD9DFEC)
+                ? const Color(0xFFE3E8F2)
                 : colorScheme.outlineVariant,
           ),
         ),

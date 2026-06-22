@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phone_shop_pos/core/widgets/app_skeleton.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/brand_stock_section.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/dashboard_header.dart';
@@ -64,10 +65,7 @@ class DashboardScreen extends ConsumerWidget {
                   const SizedBox(height: 8),
                   kpisAsync.when(
                     data: (kpis) => DashboardKpiGrid(kpis: kpis),
-                    loading: () => const SizedBox(
-                      height: 160,
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
+                    loading: () => const _DashboardKpiSkeleton(),
                     error: (_, __) => const SizedBox(
                       height: 160,
                       child: Center(
@@ -103,4 +101,38 @@ class DashboardScreen extends ConsumerWidget {
 
 class _RefreshDashboardIntent extends Intent {
   const _RefreshDashboardIntent();
+}
+
+/// Skeleton placeholder for the KPI grid, mirroring its responsive column
+/// count so the layout doesn't jump when real cards arrive.
+class _DashboardKpiSkeleton extends StatelessWidget {
+  const _DashboardKpiSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final crossAxisCount = width >= 1500
+            ? 5
+            : width >= 1100
+                ? 4
+                : width >= 760
+                    ? 3
+                    : 2;
+        return GridView.builder(
+          shrinkWrap: true,
+          itemCount: 8,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+            childAspectRatio: width >= 1500 ? 2.6 : 2.3,
+          ),
+          itemBuilder: (_, __) => const AppSkeletonCard(),
+        );
+      },
+    );
+  }
 }

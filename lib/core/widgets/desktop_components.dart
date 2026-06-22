@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 const int _kDefaultPaginateThreshold = 80;
 const double _kDesktopContentMaxWidth = 2200.0;
@@ -196,12 +197,56 @@ class AppSearchField extends StatelessWidget {
   }
 }
 
+/// Consistent empty-state placeholder: a muted icon above a short message,
+/// with an optional call-to-action. Replaces ad-hoc `Center(Text('No …'))`
+/// blocks so empty lists/tables read intentionally instead of looking broken.
+class AppEmptyState extends StatelessWidget {
+  const AppEmptyState({
+    super.key,
+    required this.message,
+    this.icon = Icons.inbox_outlined,
+    this.action,
+  });
+
+  final String message;
+  final IconData icon;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
+    return Center(
+      child: Padding(
+        padding: AppSpacing.paddingLg,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(icon, size: 44, color: muted.withValues(alpha: 0.55)),
+            AppSpacing.gapMd,
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(color: muted),
+            ),
+            if (action != null) ...<Widget>[
+              AppSpacing.gapLg,
+              action!,
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class AppDataTable extends StatefulWidget {
   const AppDataTable({
     super.key,
     required this.columns,
     required this.rows,
     this.emptyMessage = 'No records found.',
+    this.emptyIcon = Icons.inbox_outlined,
     this.rowsPerPage = 25,
     this.paginateThreshold = _kDefaultPaginateThreshold,
     this.dataRowMinHeight = 38,
@@ -213,6 +258,7 @@ class AppDataTable extends StatefulWidget {
   final List<DataColumn> columns;
   final List<DataRow> rows;
   final String emptyMessage;
+  final IconData emptyIcon;
   final int rowsPerPage;
   final int paginateThreshold;
   final double dataRowMinHeight;
@@ -242,7 +288,10 @@ class _AppDataTableState extends State<AppDataTable> {
   @override
   Widget build(BuildContext context) {
     if (widget.rows.isEmpty) {
-      return Center(child: Text(widget.emptyMessage));
+      return AppEmptyState(
+        message: widget.emptyMessage,
+        icon: widget.emptyIcon,
+      );
     }
 
     final effectiveRows = List<DataRow>.generate(widget.rows.length, (index) {
