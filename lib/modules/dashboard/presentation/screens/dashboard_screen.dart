@@ -79,7 +79,8 @@ class DashboardScreen extends ConsumerWidget {
                   brandStockAsync.when(
                     data: (brands) => BrandStockSection(
                       brands: brands,
-                      onBrandTap: () {}, // Placeholder for future use
+                      onBrandTap: (brand) =>
+                          _showBrandStockPopup(context, brand),
                     ),
                     loading: () => const SizedBox(
                       height: 200,

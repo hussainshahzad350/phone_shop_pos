@@ -102,7 +102,9 @@ class DashboardService with BaseRepositoryGuard {
           COALESCE(SUM(CASE WHEN pm.has_imei = 1 THEN 1 ELSE 0 END), 0) AS phones_sold,
           COALESCE(SUM(CASE WHEN pm.has_imei = 0 THEN si.quantity ELSE 0 END), 0) AS accessories_sold,
           COALESCE(SUM(
-            si.line_total - (si.cost_price * si.quantity)
+            (si.line_total
+              - COALESCE(s.discount * si.line_total / NULLIF(s.subtotal, 0), 0))
+            - (si.cost_price * si.quantity)
           ), 0)
             - COALESCE((SELECT returned_revenue FROM return_events), 0)
             + COALESCE((SELECT returned_cost FROM return_events), 0)
@@ -362,21 +364,19 @@ class DashboardService with BaseRepositoryGuard {
         pm.id AS model_id,
         pm.name AS model_name,
         pm.brand,
-        COUNT(*) AS quantity,
-        ss.serialized_stock_id,
-        ss.imei,
+        ss.id AS serialized_stock_id,
+        ss.imei1 AS imei,
         ss.imei2,
         ss.serial_number,
         ss.cost_price,
-        ss.sale_price,
+        ss.selling_price AS sale_price,
         ss.stock_status
       FROM ${TableNames.serializedStock} ss
       JOIN ${TableNames.productModels} pm ON pm.id = ss.product_model_id
       WHERE pm.is_active = 1
         AND ss.stock_status = 'in_stock'
         AND pm.brand = ?
-      GROUP BY pm.id, ss.serialized_stock_id
-      ORDER BY pm.name ASC, ss.imei ASC
+      ORDER BY pm.name ASC, ss.imei1 ASC
       ''',
       <Object?>[brandName],
     ).then((rows) {

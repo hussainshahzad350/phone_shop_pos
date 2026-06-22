@@ -10,10 +10,33 @@ class BrandStockSection extends StatelessWidget {
   });
 
   final List<BrandStockEntity> brands;
-  final VoidCallback onBrandTap;
+
+  /// Called with the brand whose card was tapped.
+  final ValueChanged<BrandStockEntity> onBrandTap;
+
+  /// Number of brand cards per row, sized so ~8 fit on a large desktop and
+  /// the grid steps down gracefully on smaller widths.
+  int _columnsForWidth(double width) {
+    if (width >= 1500) {
+      return 8;
+    }
+    if (width >= 1200) {
+      return 6;
+    }
+    if (width >= 800) {
+      return 4;
+    }
+    if (width >= 520) {
+      return 3;
+    }
+    return 2;
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (brands.isEmpty) {
+      return const SizedBox.shrink();
+    }
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -25,20 +48,27 @@ class BrandStockSection extends StatelessWidget {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: brands.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-                childAspectRatio: 2.0,
-              ),
-              itemBuilder: (_, index) => BrandStockCard(
-                brand: brands[index],
-                onTap: onBrandTap,
-              ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: brands.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: _columnsForWidth(constraints.maxWidth),
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    // Portrait (phone-shaped) cells, tall enough to show the
+                    // icon, brand name, stock count and model count without
+                    // clipping. Fixed height keeps every card identical.
+                    mainAxisExtent: 188,
+                  ),
+                  itemBuilder: (_, index) => BrandStockCard(
+                    brand: brands[index],
+                    onTap: () => onBrandTap(brands[index]),
+                  ),
+                );
+              },
             ),
           ],
         ),

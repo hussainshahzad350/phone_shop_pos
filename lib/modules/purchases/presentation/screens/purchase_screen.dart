@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
@@ -464,18 +465,25 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
         ),
         const SizedBox(height: 4),
         SizedBox(
-          height: 156,
+          // ~25% shorter so the items table / cart area gets more room.
+          height: 118,
           child: Card(
             child: productsAsync.when(
+              // Keep showing the current results while a new search loads, so
+              // the grid doesn't flash to a spinner on every keystroke.
+              skipLoadingOnReload: true,
               data: (products) {
                 if (products.isEmpty) {
                   return const Center(child: Text('No products found'));
                 }
+                // Limit the quick bar; full list lives on the Inventory screen.
+                final shown = products.length > 12
+                    ? products.sublist(0, 12)
+                    : products;
                 return LayoutBuilder(
                   builder: (context, constraints) {
-                    final crossAxisCount = 1;
                     final mainAxisExtent =
-                        constraints.maxWidth >= 1400 ? 220.0 : 240.0;
+                        constraints.maxWidth >= 1400 ? 168.0 : 180.0;
                     final scrollStep = constraints.maxWidth * 0.75;
                     return Stack(
                       children: <Widget>[
@@ -483,22 +491,31 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 34),
                           child: GridView.builder(
                             controller: _productGridScrollController,
-                            padding: const EdgeInsets.all(8),
+                            padding: const EdgeInsets.all(6),
                             scrollDirection: Axis.horizontal,
                             gridDelegate:
                                 SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: crossAxisCount,
-                              crossAxisSpacing: 8,
-                              mainAxisSpacing: 8,
+                              crossAxisCount: 1,
+                              crossAxisSpacing: 6,
+                              mainAxisSpacing: 6,
                               mainAxisExtent: mainAxisExtent,
                             ),
-                            itemCount: products.length,
+                            // +1 for the trailing "View all in Inventory" cell.
+                            itemCount: shown.length + 1,
                             itemBuilder: (context, index) {
-                              final product = products[index];
+                              if (index == shown.length) {
+                                return _ViewAllInInventoryButton(
+                                  onPressed: () => context.go('/inventory'),
+                                );
+                              }
+                              final product = shown[index];
                               return OutlinedButton(
                                 onPressed: () => _handleAddProduct(product),
                                 style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.all(10),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 6,
+                                  ),
                                   minimumSize: Size.zero,
                                   tapTargetSize:
                                       MaterialTapTargetSize.shrinkWrap,
@@ -513,9 +530,9 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                                       product.name,
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontSize: 13),
+                                      style: const TextStyle(fontSize: 12),
                                     ),
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: 2),
                                     Text(
                                       'Cost: ${FormattingHelpers.currencyPkr(product.purchasePrice)}',
                                       style: const TextStyle(fontSize: 11),
@@ -524,7 +541,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                                       product.hasImei
                                           ? 'Serialized • IMEI'
                                           : 'Qty-based',
-                                      style: const TextStyle(fontSize: 11),
+                                      style: const TextStyle(fontSize: 10),
                                     ),
                                   ],
                                 ),
@@ -703,6 +720,43 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
             label: const Text('Save Purchase (F10)'),
             style: FilledButton.styleFrom(
               minimumSize: const Size(double.infinity, 48),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ViewAllInInventoryButton extends StatelessWidget {
+  const _ViewAllInInventoryButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(Icons.inventory_2_outlined,
+              size: 22, color: theme.colorScheme.primary),
+          const SizedBox(height: 6),
+          Text(
+            'View all\nin Inventory',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.primary,
             ),
           ),
         ],

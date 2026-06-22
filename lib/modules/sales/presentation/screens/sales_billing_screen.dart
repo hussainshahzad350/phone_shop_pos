@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
@@ -51,7 +52,26 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
   Timer? _productSearchDebounce;
 
   @override
+  void initState() {
+    super.initState();
+    // Entering the Sales screen always starts with a clean search, so the
+    // stock bar shows full stock instead of a filter left over from a previous
+    // visit (the search query lives in a global provider that survives
+    // navigation).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _productSearchController.clear();
+      ref.read(billingStateProvider.notifier).setProductSearchQuery('');
+    });
+  }
+
+  @override
   void dispose() {
+    // Clear the quick-search filter so returning to Sales shows the full stock
+    // bar instead of the last scanned/searched item.
+    ref.read(billingStateProvider.notifier).setProductSearchQuery('');
     _productSearchDebounce?.cancel();
     _productSearchController.dispose();
     _productSearchFocus.dispose();
@@ -70,7 +90,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
           );
       _showResultError(result);
       if (result.isSuccess) {
-        _focusSearchAfterAdd();
+        _clearSearchAfterAdd();
       }
       return;
     }
@@ -90,8 +110,16 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
         );
     _showResultError(result);
     if (result.isSuccess) {
-      _focusSearchAfterAdd();
+      _clearSearchAfterAdd();
     }
+  }
+
+  /// After adding an item (scan or tap), clear the search so the stock bar
+  /// resets to the full list, ready for the next scan.
+  void _clearSearchAfterAdd() {
+    _productSearchController.clear();
+    ref.read(billingStateProvider.notifier).setProductSearchQuery('');
+    _productSearchFocus.requestFocus();
   }
 
   Future<void> _handleSearchSubmitted(String query) async {
@@ -192,6 +220,12 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
 
   void _debouncedProductSearch(String value) {
     _productSearchDebounce?.cancel();
+    // Clearing should be instant (e.g. the ✕ button / Escape) so the stock bar
+    // resets to full stock immediately instead of after the debounce window.
+    if (value.isEmpty) {
+      ref.read(billingStateProvider.notifier).setProductSearchQuery('');
+      return;
+    }
     _productSearchDebounce = Timer(const Duration(milliseconds: 150), () {
       if (!mounted) {
         return;
@@ -501,6 +535,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                   ProductGridWidget(
                     onAddProduct: _handleAddProduct,
                     onRetry: _refreshSales,
+                    onViewAllInInventory: () => context.go('/inventory'),
                   ),
                   const SizedBox(height: 8),
                   Expanded(

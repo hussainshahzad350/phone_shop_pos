@@ -1,3 +1,4 @@
+import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/imei_helpers.dart';
@@ -6,6 +7,7 @@ import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_completion_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/repositories/purchase_repository.dart';
+import 'package:phone_shop_pos/modules/purchases/services/purchase_calculator.dart';
 
 class PurchaseService {
   const PurchaseService({
@@ -408,6 +410,28 @@ class PurchaseService {
       );
     }
     final normalizedNotes = NotesSafety.normalizeNullable(notes);
+
+    // Partial payment (paying less than the total) is only allowed on credit
+    // ("udhar") purchases that are tied to a supplier — otherwise the unpaid
+    // balance has no party to be owed to. Cash/card/bank must be paid in full.
+    final totals = const PurchaseCalculator()
+        .calculate(items: items, discount: discount, tax: tax);
+    const epsilon = 0.01;
+    final isUnderpaid = paidAmount < totals.total - epsilon;
+    if (isUnderpaid) {
+      final isCredit = paymentMethod == PaymentMethod.credit;
+      final hasSupplier = supplierId != null && supplierId.trim().isNotEmpty;
+      if (!isCredit || !hasSupplier) {
+        return const Failure<PurchaseCompletionEntity>(
+          AppError(
+            code: 'partial_payment_requires_credit_supplier',
+            message: 'Partial payment is only allowed when the payment method '
+                'is Credit/Udhar and a supplier is selected. Otherwise pay the '
+                'full amount.',
+          ),
+        );
+      }
+    }
 
     return _repository.createPurchaseTransaction(
       items: items,

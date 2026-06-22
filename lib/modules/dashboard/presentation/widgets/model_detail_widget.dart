@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/model_imei_stock_entity.dart';
@@ -19,8 +20,6 @@ class ModelDetailWidget extends ConsumerStatefulWidget {
 }
 
 class _ModelDetailWidgetState extends ConsumerState<ModelDetailWidget> {
-  int? _selectedImeiIndex;
-
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -61,14 +60,7 @@ class _ModelDetailWidgetState extends ConsumerState<ModelDetailWidget> {
               itemBuilder: (_, index) {
                 return _ImeiItemWidget(
                   imei: widget.modelStock.imeis[index],
-                  isSelected: _selectedImeiIndex == index,
                   onSell: () => _sellImei(context, index),
-                  onToggle: () {
-                    setState(() {
-                      _selectedImeiIndex =
-                          _selectedImeiIndex == index ? null : index;
-                    });
-                  },
                 );
               },
             ),
@@ -106,6 +98,12 @@ class _ModelDetailWidgetState extends ConsumerState<ModelDetailWidget> {
     if (!context.mounted) return;
 
     if (result.isSuccess) {
+      // Capture the router before popping so we don't touch a defunct context,
+      // then close the brand dialog and jump to the sales screen with the
+      // freshly added item already in the (global) cart.
+      final router = GoRouter.of(context);
+      Navigator.of(context).pop();
+      router.go('/sales');
       AppNotifier.success('Added to cart');
     } else {
       AppNotifier.error(result.asFailure!.error.message);
@@ -117,14 +115,10 @@ class _ImeiItemWidget extends StatelessWidget {
   const _ImeiItemWidget({
     required this.imei,
     required this.onSell,
-    required this.onToggle,
-    required this.isSelected,
   });
 
   final ImeiStockItemEntity imei;
   final VoidCallback onSell;
-  final VoidCallback onToggle;
-  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -164,26 +158,13 @@ class _ImeiItemWidget extends StatelessWidget {
               ],
             ),
           ),
-          Row(
-            children: <Widget>[
-              IconButton(
-                icon: Icon(
-                  isSelected ? Icons.check_circle : Icons.circle_outlined,
-                  color: isSelected
-                      ? Theme.of(context).colorScheme.primary
-                      : null,
-                ),
-                onPressed: onToggle,
-              ),
-              FilledButton.icon(
-                onPressed: onSell,
-                icon: const Icon(Icons.shopping_cart_outlined),
-                label: const Text('SELL'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-              ),
-            ],
+          FilledButton.icon(
+            onPressed: onSell,
+            icon: const Icon(Icons.shopping_cart_outlined),
+            label: const Text('SELL'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
           ),
         ],
       ),

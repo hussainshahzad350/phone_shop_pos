@@ -5,15 +5,21 @@ import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_query_providers.dart';
 
+/// Max product cards shown in the quick stock bar. Beyond this, the user is
+/// pointed to the Inventory screen via the trailing "View all" button.
+const int _kMaxStockBarItems = 12;
+
 class ProductGridWidget extends ConsumerStatefulWidget {
   const ProductGridWidget({
     super.key,
     required this.onAddProduct,
     required this.onRetry,
+    required this.onViewAllInInventory,
   });
 
   final ValueChanged<ProductEntity> onAddProduct;
   final VoidCallback onRetry;
+  final VoidCallback onViewAllInInventory;
 
   @override
   ConsumerState<ProductGridWidget> createState() => _ProductGridWidgetState();
@@ -33,86 +39,72 @@ class _ProductGridWidgetState extends ConsumerState<ProductGridWidget> {
     final productsAsync = ref.watch(productSearchResultsProvider);
 
     return SizedBox(
-      height: 156,
+      // ~25% shorter than before so the cart below gets more room.
+      height: 118,
       child: Card(
         child: productsAsync.when(
-          data: (products) => LayoutBuilder(
-            builder: (context, constraints) {
-              final crossAxisCount = 1;
-              final mainAxisExtent =
-                  constraints.maxWidth >= 1400 ? 220.0 : 240.0;
-              final scrollStep = constraints.maxWidth * 0.75;
-              return Stack(
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 34),
-                    child: GridView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.all(8),
-                      scrollDirection: Axis.horizontal,
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: crossAxisCount,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                        mainAxisExtent: mainAxisExtent,
+          // Keep the current cards visible while a new search loads instead of
+          // flashing to a spinner on every keystroke / scan.
+          skipLoadingOnReload: true,
+          data: (products) {
+            final shown = products.length > _kMaxStockBarItems
+                ? products.sublist(0, _kMaxStockBarItems)
+                : products;
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final mainAxisExtent =
+                    constraints.maxWidth >= 1400 ? 168.0 : 180.0;
+                final scrollStep = constraints.maxWidth * 0.75;
+                return Stack(
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 34),
+                      child: GridView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(6),
+                        scrollDirection: Axis.horizontal,
+                        gridDelegate:
+                            SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 1,
+                          crossAxisSpacing: 6,
+                          mainAxisSpacing: 6,
+                          mainAxisExtent: mainAxisExtent,
+                        ),
+                        // +1 for the trailing "View all in Inventory" button.
+                        itemCount: shown.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index == shown.length) {
+                            return _ViewAllInInventoryButton(
+                              onPressed: widget.onViewAllInInventory,
+                            );
+                          }
+                          return _ProductCardButton(
+                            product: shown[index],
+                            onPressed: () =>
+                                widget.onAddProduct(shown[index]),
+                          );
+                        },
                       ),
-                      itemCount: products.length,
-                      itemBuilder: (context, index) {
-                        final product = products[index];
-                        return OutlinedButton(
-                          onPressed: () => widget.onAddProduct(product),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.all(10),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            alignment: Alignment.centerLeft,
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: <Widget>[
-                              Text(
-                                product.name,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                FormattingHelpers.currencyPkr(
-                                  product.salePrice,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                product.hasImei
-                                    ? 'Serialized • IMEI required'
-                                    : 'Quantity product',
-                              ),
-                            ],
-                          ),
-                        );
-                      },
                     ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: _GridNavArrowButton(
-                      icon: Icons.chevron_left,
-                      onPressed: () => _scrollProductGrid(-scrollStep),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: _GridNavArrowButton(
+                        icon: Icons.chevron_left,
+                        onPressed: () => _scrollProductGrid(-scrollStep),
+                      ),
                     ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: _GridNavArrowButton(
-                      icon: Icons.chevron_right,
-                      onPressed: () => _scrollProductGrid(scrollStep),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: _GridNavArrowButton(
+                        icon: Icons.chevron_right,
+                        onPressed: () => _scrollProductGrid(scrollStep),
+                      ),
                     ),
-                  ),
-                ],
-              );
-            },
-          ),
+                  ],
+                );
+              },
+            );
+          },
           error: (_, __) => Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -148,6 +140,89 @@ class _ProductGridWidgetState extends ConsumerState<ProductGridWidget> {
       target.toDouble(),
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOutCubic,
+    );
+  }
+}
+
+class _ProductCardButton extends StatelessWidget {
+  const _ProductCardButton({
+    required this.product,
+    required this.onPressed,
+  });
+
+  final ProductEntity product;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        alignment: Alignment.centerLeft,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Text(
+            product.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            FormattingHelpers.currencyPkr(product.salePrice),
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            product.hasImei ? 'Serialized • IMEI' : 'Qty product',
+            style: const TextStyle(fontSize: 10),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ViewAllInInventoryButton extends StatelessWidget {
+  const _ViewAllInInventoryButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(Icons.inventory_2_outlined,
+              size: 22, color: theme.colorScheme.primary),
+          const SizedBox(height: 6),
+          Text(
+            'View all\nin Inventory',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

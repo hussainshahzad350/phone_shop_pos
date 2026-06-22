@@ -13,76 +13,56 @@ class BrandStockCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
     return Card(
       child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              Icon(
-                _getBrandIcon(brand.brandName),
-                size: 28,
-                color: Theme.of(context).colorScheme.primary,
+              // Same phone avatar on every brand card.
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: theme.colorScheme.primary.withValues(
+                  alpha: 0.12,
+                ),
+                child: Icon(
+                  Icons.smartphone,
+                  size: 24,
+                  color: theme.colorScheme.primary,
+                ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 10),
               Text(
                 brand.brandName,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
                 textAlign: TextAlign.center,
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Text(
-                    'Models: ${brand.modelCount}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '|',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Phones: ${brand.stockCount}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                ],
+              const SizedBox(height: 8),
+              Text(
+                'Model: ${brand.modelCount}',
+                style: theme.textTheme.bodySmall?.copyWith(color: muted),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Phone: ${brand.stockCount}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
         ),
       ),
     );
-  }
-
-  IconData _getBrandIcon(String brandName) {
-    final normalized = brandName.toLowerCase();
-    if (normalized.contains('samsung')) {
-      return Icons.phone_android;
-    }
-    if (normalized.contains('apple')) {
-      return Icons.phone_iphone;
-    }
-    if (normalized.contains('vivo') || normalized.contains('oppo') ||
-        normalized.contains('tecno') || normalized.contains('infinix')) {
-      return Icons.smartphone;
-    }
-    return Icons.branding_watermark;
   }
 }

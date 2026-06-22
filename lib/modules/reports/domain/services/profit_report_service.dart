@@ -40,7 +40,9 @@ class ProfitReportService with BaseRepositoryGuard {
           COALESCE(SUM(cost_delta), 0) AS total_cost
         FROM (
           SELECT
-            si.line_total AS revenue_delta,
+            si.line_total
+              - COALESCE(s.discount * si.line_total / NULLIF(s.subtotal, 0), 0)
+              AS revenue_delta,
             si.cost_price * si.quantity AS cost_delta
           FROM ${TableNames.sales} s
           JOIN ${TableNames.saleItems} si ON si.sale_id = s.id
@@ -104,7 +106,9 @@ class ProfitReportService with BaseRepositoryGuard {
         FROM (
           SELECT
             date(s.sale_date) AS event_day,
-            si.line_total     AS revenue_delta,
+            si.line_total
+              - COALESCE(s.discount * si.line_total / NULLIF(s.subtotal, 0), 0)
+              AS revenue_delta,
             si.cost_price * si.quantity AS cost_delta,
             CASE WHEN pm.has_imei = 1 THEN 1      ELSE 0 END AS phones_delta,
             CASE WHEN pm.has_imei = 0 THEN si.quantity ELSE 0 END AS accessories_delta
