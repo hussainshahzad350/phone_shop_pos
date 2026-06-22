@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/ledger/domain/entities/ledger_timeline_row_entity.dart';
 import 'package:phone_shop_pos/modules/ledger/domain/entities/party_summary_card_entity.dart';
@@ -189,7 +190,9 @@ class _CustomerLedgerDetailScreenState
                     child: ReportSummaryCardWidget(
                       label: 'Outstanding',
                       value: FormattingHelpers.currencyPkr(summary.outstanding),
-                      color: summary.outstanding > 0 ? Colors.orange : Colors.green,
+                      color: summary.outstanding > 0
+                          ? Theme.of(context).semantic.warning
+                          : Theme.of(context).semantic.success,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -197,7 +200,7 @@ class _CustomerLedgerDetailScreenState
                     child: ReportSummaryCardWidget(
                       label: 'Lifetime purchases',
                       value: FormattingHelpers.currencyPkr(summary.totalReceivable),
-                      color: Colors.blue,
+                      color: Theme.of(context).semantic.info,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -205,7 +208,7 @@ class _CustomerLedgerDetailScreenState
                     child: ReportSummaryCardWidget(
                       label: 'Total paid',
                       value: FormattingHelpers.currencyPkr(summary.totalPayable),
-                      color: Colors.indigo,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ],

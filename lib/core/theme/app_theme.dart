@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
+import 'package:phone_shop_pos/core/theme/app_typography.dart';
 
 class AppTheme {
   const AppTheme._();
@@ -19,7 +21,14 @@ class AppTheme {
       visualDensity: VisualDensity.compact,
     );
 
+    final textTheme = AppTypography.build(base.textTheme, colorScheme.onSurface);
+    final semanticColors = brightness == Brightness.light
+        ? AppSemanticColors.light
+        : AppSemanticColors.dark;
+
     return base.copyWith(
+      textTheme: textTheme,
+      extensions: <ThemeExtension<dynamic>>[semanticColors],
       scaffoldBackgroundColor: brightness == Brightness.light
           ? const Color(0xFFF6F8FC)
           : colorScheme.surface,
@@ -105,7 +114,7 @@ class AppTheme {
               ? const Color(0xFFEFF2FA)
               : colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
         ),
-        headingTextStyle: base.textTheme.labelLarge?.copyWith(
+        headingTextStyle: textTheme.labelLarge?.copyWith(
           fontWeight: FontWeight.w700,
         ),
         dataRowMinHeight: 40,

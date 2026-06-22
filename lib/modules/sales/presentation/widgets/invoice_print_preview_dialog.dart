@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
 
@@ -76,8 +77,10 @@ class _InvoicePrintPreviewDialogState
                 if (job.lastError != null)
                   Tooltip(
                     message: job.lastError!,
-                    child:
-                        const Icon(Icons.warning_amber, color: Colors.orange),
+                    child: Icon(
+                      Icons.warning_amber,
+                      color: Theme.of(context).semantic.warning,
+                    ),
                   ),
               ],
             ),

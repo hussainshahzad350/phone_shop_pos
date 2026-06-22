@@ -94,6 +94,67 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     }
   }
 
+  Future<void> _handleSearchSubmitted(String query) async {
+    final trimmed = query.trim();
+    final products =
+        ref.read(productSearchResultsProvider).value ?? const <ProductEntity>[];
+    if (products.isEmpty) {
+      return;
+    }
+
+    if (_isImeiFormat(trimmed)) {
+      final added = await _tryAddExactImei(trimmed, products);
+      if (added) {
+        _productSearchController.clear();
+        ref.read(billingStateProvider.notifier).setProductSearchQuery('');
+        _focusSearchAfterAdd();
+      }
+      return;
+    }
+
+    _handleAddProduct(products.first);
+  }
+
+  bool _isImeiFormat(String value) {
+    if (value.length != 14 && value.length != 15) {
+      return false;
+    }
+    return RegExp(r'^\d+$').hasMatch(value);
+  }
+
+  Future<bool> _tryAddExactImei(
+    String query,
+    List<ProductEntity> products,
+  ) async {
+    final repository = await ref.read(salesRepositoryProvider.future);
+    for (final product in products.where((p) => p.hasImei)) {
+      final result = await repository.getAvailableImeis(
+        product.id,
+        query: query,
+        limit: 1,
+      );
+      if (result.isFailure) {
+        continue;
+      }
+      final matches = result.asSuccess!.value;
+      if (matches.isEmpty) {
+        continue;
+      }
+      final stock = matches.first;
+      final addResult = await ref.read(cartStateProvider.notifier).addToCart(
+            product: product,
+            serializedStockId: stock.id,
+            imei: stock.imei1,
+            imei2: stock.imei2,
+            serialNumber: stock.serialNumber,
+            price: stock.sellingPrice ?? product.salePrice,
+          );
+      if (mounted) _showResultError(addResult);
+      return addResult.isSuccess;
+    }
+    return false;
+  }
+
   Future<SerializedStockEntity?> _showImeiPickerDialog(
       ProductEntity product) async {
     final repository = await ref.read(salesRepositoryProvider.future);
@@ -433,17 +494,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                       controller: _productSearchController,
                       focusNode: _productSearchFocus,
                       onChanged: _debouncedProductSearch,
-                      onSubmitted: (_) {
-                        final products = ref
-                                .read(
-                                  productSearchResultsProvider,
-                                )
-                                .value ??
-                            const <ProductEntity>[];
-                        if (products.isNotEmpty) {
-                          _handleAddProduct(products.first);
-                        }
-                      },
+                      onSubmitted: _handleSearchSubmitted,
                     ),
                   ),
                   const SizedBox(height: 8),

@@ -510,33 +510,21 @@ class _RepairJobsTableLayout {
   final bool isWideDesktop;
 
   factory _RepairJobsTableLayout.fromWidth(double width) {
-    if (width >= 1600) {
-      return const _RepairJobsTableLayout(
-        columnSpacing: 16,
-        dataRowMinHeight: 52,
-        dataRowMaxHeight: 60,
-        showMediumColumns: false,
-        showCompactColumns: false,
-        isWideDesktop: true,
-      );
-    }
-    if (width >= 1220) {
-      return const _RepairJobsTableLayout(
-        columnSpacing: 12,
-        dataRowMinHeight: 46,
-        dataRowMaxHeight: 54,
-        showMediumColumns: true,
-        showCompactColumns: false,
-        isWideDesktop: false,
-      );
-    }
-    return const _RepairJobsTableLayout(
-      columnSpacing: 10,
-      dataRowMinHeight: 40,
-      dataRowMaxHeight: 48,
-      showMediumColumns: false,
-      showCompactColumns: true,
-      isWideDesktop: false,
+    // Repair jobs table is denser than the others, so it uses tighter column
+    // spacing while sharing the standard row-height / tier breakpoints.
+    final m = ResponsiveTableLayout.fromWidth(
+      width,
+      wideSpacing: 16,
+      mediumSpacing: 12,
+      compactSpacing: 10,
+    );
+    return _RepairJobsTableLayout(
+      columnSpacing: m.columnSpacing,
+      dataRowMinHeight: m.dataRowMinHeight,
+      dataRowMaxHeight: m.dataRowMaxHeight,
+      showMediumColumns: m.showMediumColumns,
+      showCompactColumns: m.showCompactColumns,
+      isWideDesktop: m.isWideDesktop,
     );
   }
 

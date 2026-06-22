@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/expense_entity.dart';
@@ -308,26 +309,28 @@ class _ExpenseSummaryCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final semantic = theme.semantic;
     final cards = <Widget>[
       ReportSummaryCardWidget(
         label: 'Today\'s Expense',
         value: FormattingHelpers.currencyPkr(summary.todayTotal),
-        color: Colors.red.shade700,
+        color: semantic.danger,
       ),
       ReportSummaryCardWidget(
         label: 'Monthly Expense',
         value: FormattingHelpers.currencyPkr(summary.thisMonthTotal),
-        color: Colors.orange.shade800,
+        color: semantic.warning,
       ),
       ReportSummaryCardWidget(
         label: 'Total Expense',
         value: FormattingHelpers.currencyPkr(summary.allTimeTotal),
-        color: Colors.indigo,
+        color: theme.colorScheme.primary,
       ),
       ReportSummaryCardWidget(
         label: 'Highest Expense Category',
         value: summary.highestCategory ?? '-',
-        color: Colors.teal.shade700,
+        color: theme.colorScheme.primary,
       ),
     ];
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/user_facing_errors.dart';
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 
 enum AppNotificationType { success, error, warning, info }
 
@@ -118,11 +119,12 @@ class AppNotifier {
     }
     final effectiveShowCloseIcon = showCloseIcon || action != null;
 
+    final semantic = Theme.of(messenger.context).semantic;
     final color = switch (type) {
-      AppNotificationType.success => Colors.green.shade700,
-      AppNotificationType.error => Colors.red.shade700,
-      AppNotificationType.warning => Colors.orange.shade800,
-      AppNotificationType.info => Colors.blueGrey.shade700,
+      AppNotificationType.success => semantic.success,
+      AppNotificationType.error => semantic.danger,
+      AppNotificationType.warning => semantic.warning,
+      AppNotificationType.info => semantic.info,
     };
 
     messenger

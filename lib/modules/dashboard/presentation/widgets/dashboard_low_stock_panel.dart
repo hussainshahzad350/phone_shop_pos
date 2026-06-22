@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_low_stock_entity.dart';
 
 class DashboardLowStockPanel extends StatelessWidget {
@@ -29,9 +30,9 @@ class DashboardLowStockPanel extends StatelessWidget {
                     final row = rows[index];
                     return ListTile(
                       dense: true,
-                      leading: const Icon(
+                      leading: Icon(
                         Icons.warning_amber,
-                        color: Colors.orange,
+                        color: Theme.of(context).semantic.warning,
                       ),
                       title: Text(row.productName),
                       subtitle: Text(

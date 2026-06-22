@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_date_filter_button.dart';
@@ -76,15 +77,16 @@ class CashFlowTab extends ConsumerWidget {
                           value: FormattingHelpers.currencyPkr(
                             summary.totalCashIn,
                           ),
-                          color: Colors.green,
+                          color: Theme.of(context).semantic.success,
                         ),
                       ),
                       Expanded(
                         child: ReportSummaryCardWidget(
                           label: 'Net cash (page)',
                           value: FormattingHelpers.currencyPkr(summary.netCash),
-                          color:
-                              summary.netCash >= 0 ? Colors.green : Colors.red,
+                          color: summary.netCash >= 0
+                              ? Theme.of(context).semantic.success
+                              : Theme.of(context).semantic.danger,
                         ),
                       ),
                     ],

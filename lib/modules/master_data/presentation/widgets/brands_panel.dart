@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
+import 'package:phone_shop_pos/core/widgets/responsive_table_layout.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/brand_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/brand_providers.dart';
@@ -508,24 +509,11 @@ class _BrandsTableLayout {
   final double dataRowMaxHeight;
 
   factory _BrandsTableLayout.fromWidth(double width) {
-    if (width >= 1600) {
-      return const _BrandsTableLayout(
-        columnSpacing: 28,
-        dataRowMinHeight: 52,
-        dataRowMaxHeight: 60,
-      );
-    }
-    if (width >= 1220) {
-      return const _BrandsTableLayout(
-        columnSpacing: 20,
-        dataRowMinHeight: 46,
-        dataRowMaxHeight: 54,
-      );
-    }
-    return const _BrandsTableLayout(
-      columnSpacing: 14,
-      dataRowMinHeight: 40,
-      dataRowMaxHeight: 48,
+    final m = ResponsiveTableLayout.fromWidth(width);
+    return _BrandsTableLayout(
+      columnSpacing: m.columnSpacing,
+      dataRowMinHeight: m.dataRowMinHeight,
+      dataRowMaxHeight: m.dataRowMaxHeight,
     );
   }
 

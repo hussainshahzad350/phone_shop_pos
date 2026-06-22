@@ -4,6 +4,7 @@ import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
+import 'package:phone_shop_pos/modules/dashboard/domain/entities/brand_stock_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_kpis_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_low_stock_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_recent_sale_entity.dart';
@@ -289,6 +290,48 @@ class DashboardService with BaseRepositoryGuard {
           )
           .toList(growable: false);
     }, operation: 'get_low_stock_warnings');
+  }
+
+  Future<Result<List<BrandStockEntity>>> getBrandStock() {
+    return guard<List<BrandStockEntity>>(() async {
+      final rows = await QueryDiagnostics.trace(
+        label: 'dashboard.brand_stock',
+        action: () => _appDatabase.database.rawQuery(
+          '''
+          WITH phone_models AS (
+            SELECT
+              pm.brand AS brand_name,
+              pm.id AS product_model_id,
+              COALESCE((
+                SELECT COUNT(*)
+                FROM ${TableNames.serializedStock} ss
+                WHERE ss.product_model_id = pm.id AND ss.stock_status = 'in_stock'
+              ), 0) AS stock_count
+            FROM ${TableNames.productModels} pm
+            WHERE pm.is_active = 1 AND pm.has_imei = 1 AND pm.brand IS NOT NULL AND pm.brand != ''
+          )
+          SELECT
+            brand_name,
+            SUM(CASE WHEN stock_count > 0 THEN 1 ELSE 0 END) AS model_count,
+            SUM(stock_count) AS stock_count
+          FROM phone_models
+          GROUP BY brand_name COLLATE NOCASE
+          HAVING SUM(stock_count) > 0
+          ORDER BY brand_name COLLATE NOCASE ASC
+          ''',
+        ),
+      );
+
+      return rows
+          .map(
+            (row) => BrandStockEntity(
+              brandName: row['brand_name'] as String,
+              modelCount: (row['model_count'] as num?)?.toInt() ?? 0,
+              stockCount: (row['stock_count'] as num?)?.toInt() ?? 0,
+            ),
+          )
+          .toList(growable: false);
+    }, operation: 'get_brand_stock');
   }
 
   double _asDouble(Object? value) {

@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
+import 'package:phone_shop_pos/core/widgets/responsive_table_layout.dart';
+import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_repository_provider.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/product_management_providers.dart';
@@ -99,6 +101,10 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
 
     if (result.isSuccess) {
       ref.invalidate(managedProductsProvider);
+      ref.invalidate(dashboardBrandStockProvider);
+      ref.invalidate(dashboardKpisProvider);
+      ref.invalidate(brandPhoneModelsProvider);
+      ref.invalidate(brandPhoneStockRowsProvider);
       AppNotifier.success('Product created.');
     } else {
       AppNotifier.error(result.asFailure!.error.message);
@@ -147,6 +153,10 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
 
     if (result.isSuccess) {
       ref.invalidate(managedProductsProvider);
+      ref.invalidate(dashboardBrandStockProvider);
+      ref.invalidate(dashboardKpisProvider);
+      ref.invalidate(brandPhoneModelsProvider);
+      ref.invalidate(brandPhoneStockRowsProvider);
       AppNotifier.success('Product updated.');
     } else {
       AppNotifier.error(result.asFailure!.error.message);
@@ -176,6 +186,10 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
 
     if (result.isSuccess) {
       ref.invalidate(managedProductsProvider);
+      ref.invalidate(dashboardBrandStockProvider);
+      ref.invalidate(dashboardKpisProvider);
+      ref.invalidate(brandPhoneModelsProvider);
+      ref.invalidate(brandPhoneStockRowsProvider);
       AppNotifier.info(
         product.isActive ? 'Product archived.' : 'Product re-activated.',
       );
@@ -603,33 +617,14 @@ class _ProductsTableLayout {
   final bool isWideDesktop;
 
   factory _ProductsTableLayout.fromWidth(double width) {
-    if (width >= 1600) {
-      return const _ProductsTableLayout(
-        columnSpacing: 28,
-        dataRowMinHeight: 52,
-        dataRowMaxHeight: 60,
-        showMediumColumns: false,
-        showCompactColumns: false,
-        isWideDesktop: true,
-      );
-    }
-    if (width >= 1220) {
-      return const _ProductsTableLayout(
-        columnSpacing: 20,
-        dataRowMinHeight: 46,
-        dataRowMaxHeight: 54,
-        showMediumColumns: true,
-        showCompactColumns: false,
-        isWideDesktop: false,
-      );
-    }
-    return const _ProductsTableLayout(
-      columnSpacing: 14,
-      dataRowMinHeight: 40,
-      dataRowMaxHeight: 48,
-      showMediumColumns: false,
-      showCompactColumns: true,
-      isWideDesktop: false,
+    final m = ResponsiveTableLayout.fromWidth(width);
+    return _ProductsTableLayout(
+      columnSpacing: m.columnSpacing,
+      dataRowMinHeight: m.dataRowMinHeight,
+      dataRowMaxHeight: m.dataRowMaxHeight,
+      showMediumColumns: m.showMediumColumns,
+      showCompactColumns: m.showCompactColumns,
+      isWideDesktop: m.isWideDesktop,
     );
   }
 

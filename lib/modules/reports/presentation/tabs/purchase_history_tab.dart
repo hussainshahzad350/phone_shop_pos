@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/errors/app_error.dart';
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_date_filter_button.dart';
@@ -76,6 +77,7 @@ class PurchaseHistoryTab extends ConsumerWidget {
             data: (rows) {
               final summary = ref.watch(purchaseHistoryPageSummaryProvider);
               final layout = reportTableLayoutFor(context);
+              final semantic = Theme.of(context).semantic;
 
               return Column(
                 children: <Widget>[
@@ -91,7 +93,7 @@ class PurchaseHistoryTab extends ConsumerWidget {
                         child: ReportSummaryCardWidget(
                           label: 'Total (page)',
                           value: FormattingHelpers.currencyPkr(summary.sumTotal),
-                          color: Colors.blue,
+                          color: semantic.info,
                         ),
                       ),
                       Expanded(
@@ -101,8 +103,8 @@ class PurchaseHistoryTab extends ConsumerWidget {
                             summary.sumBalance,
                           ),
                           color: summary.sumBalance > 0
-                              ? Colors.orange
-                              : Colors.green,
+                              ? semantic.warning
+                              : semantic.success,
                         ),
                       ),
                     ],

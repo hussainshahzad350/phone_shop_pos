@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phone_shop_pos/core/widgets/responsive_table_layout.dart';
 
 /// Shared table typography and layout used across Reports tabs.
 class ReportTableLayout {
@@ -13,24 +14,11 @@ class ReportTableLayout {
   final double dataRowMaxHeight;
 
   factory ReportTableLayout.fromWidth(double width) {
-    if (width >= 1600) {
-      return const ReportTableLayout(
-        columnSpacing: 28,
-        dataRowMinHeight: 52,
-        dataRowMaxHeight: 60,
-      );
-    }
-    if (width >= 1220) {
-      return const ReportTableLayout(
-        columnSpacing: 20,
-        dataRowMinHeight: 46,
-        dataRowMaxHeight: 54,
-      );
-    }
-    return const ReportTableLayout(
-      columnSpacing: 14,
-      dataRowMinHeight: 40,
-      dataRowMaxHeight: 48,
+    final m = ResponsiveTableLayout.fromWidth(width);
+    return ReportTableLayout(
+      columnSpacing: m.columnSpacing,
+      dataRowMinHeight: m.dataRowMinHeight,
+      dataRowMaxHeight: m.dataRowMaxHeight,
     );
   }
 }

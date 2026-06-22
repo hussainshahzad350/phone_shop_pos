@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/ledger/domain/entities/party_summary_card_entity.dart';
@@ -34,6 +35,7 @@ class ReportLedgerOverview extends StatelessWidget {
         sorted.fold<double>(0, (sum, row) => sum + row.outstanding);
     final withBalance = sorted.where((row) => row.outstanding > 0.009).length;
     final layout = reportTableLayoutFor(context);
+    final semantic = Theme.of(context).semantic;
 
     return Column(
       children: <Widget>[
@@ -50,7 +52,7 @@ class ReportLedgerOverview extends StatelessWidget {
               child: ReportSummaryCardWidget(
                 label: 'With balance',
                 value: withBalance.toString(),
-                color: Colors.orange,
+                color: semantic.warning,
               ),
             ),
             const SizedBox(width: 8),
@@ -58,7 +60,7 @@ class ReportLedgerOverview extends StatelessWidget {
               child: ReportSummaryCardWidget(
                 label: 'Total outstanding',
                 value: FormattingHelpers.currencyPkr(totalOutstanding),
-                color: totalOutstanding > 0 ? Colors.orange : Colors.green,
+                color: totalOutstanding > 0 ? semantic.warning : semantic.success,
               ),
             ),
           ],

@@ -1,0 +1,70 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_issue_state_provider.dart';
+import 'package:phone_shop_pos/modules/dealer_issue/presentation/widgets/dealer_issue_table_widget.dart';
+import 'package:phone_shop_pos/modules/dealer_issue/presentation/widgets/dealer_issue_filter_widget.dart';
+import 'package:phone_shop_pos/modules/dealer_issue/presentation/widgets/dealer_issue_dialog_widget.dart';
+
+class DealerIssueScreen extends ConsumerStatefulWidget {
+  const DealerIssueScreen({super.key});
+
+  @override
+  ConsumerState<DealerIssueScreen> createState() => _DealerIssueScreenState();
+}
+
+class _DealerIssueScreenState extends ConsumerState<DealerIssueScreen> {
+  @override
+  void initState() {
+    super.initState();
+    ref.read(dealerIssueStateProvider.notifier).loadIssues();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(dealerIssueStateProvider);
+
+    return Scaffold(
+      body: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            _buildHeader(),
+            const SizedBox(height: 8),
+            DealerIssueFilterWidget(
+              onDealerSelected: (dealerId) {
+                ref.read(dealerIssueStateProvider.notifier).selectDealer(dealerId ?? '');
+              },
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: DealerIssueTableWidget(
+                issues: state.issues,
+                isLoading: state.isLoading,
+                selectedDealerId: state.selectedDealerId,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: <Widget>[
+        FilledButton.icon(
+          onPressed: () async {
+            await showDialog<bool>(
+              context: context,
+              builder: (context) => const DealerIssueDialogWidget(),
+            );
+          },
+          icon: const Icon(Icons.add),
+          label: const Text('Issue Device'),
+        ),
+      ],
+    );
+  }
+}

@@ -65,8 +65,6 @@ class AppDesktopScaffold extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Divider(height: 1),
-                const _AppFooterBar(),
               ],
             ),
           ),
@@ -464,33 +462,6 @@ class _DialogCancelIntent extends Intent {
 
 class _DialogConfirmIntent extends Intent {
   const _DialogConfirmIntent();
-}
-
-class _AppFooterBar extends StatelessWidget {
-  const _AppFooterBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 34,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: <Widget>[
-            Text(
-              '${AppRuntimeConfig.appName} • ${AppRuntimeConfig.contactPhone}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const Spacer(),
-            Text(
-              'Developed by ${AppRuntimeConfig.developerName}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class AppStatusBadge extends StatelessWidget {

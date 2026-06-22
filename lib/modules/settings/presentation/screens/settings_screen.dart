@@ -11,6 +11,7 @@ import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
 import 'package:phone_shop_pos/core/services/printing/print_job_repository.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
@@ -518,8 +519,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         const SizedBox(height: 8),
                         AppStatusBadge(
                           label: status.summary,
-                          color:
-                              status.isHealthy ? Colors.green : Colors.orange,
+                          color: status.isHealthy
+                              ? Theme.of(context).semantic.success
+                              : Theme.of(context).semantic.warning,
                         ),
                         const SizedBox(height: 8),
                         Text('DB location: ${status.databasePath}'),
@@ -685,15 +687,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                       label: job.status.label,
                                       color: switch (job.status) {
                                         InvoicePrintJobStatus.pending =>
-                                          Colors.blueGrey,
+                                          Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant,
                                         InvoicePrintJobStatus.processing =>
-                                          Colors.blue,
+                                          Theme.of(context).semantic.info,
                                         InvoicePrintJobStatus.completed =>
-                                          Colors.green,
+                                          Theme.of(context).semantic.success,
                                         InvoicePrintJobStatus.failed =>
-                                          Colors.orange,
+                                          Theme.of(context).semantic.warning,
                                         InvoicePrintJobStatus.cancelled =>
-                                          Colors.grey,
+                                          Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant,
                                       },
                                     ),
                                     Text(
@@ -765,6 +771,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       applicationName: AppRuntimeConfig.appName,
       applicationVersion: AppRuntimeConfig.fullVersion,
+      applicationLegalese: 'Developed by ${AppRuntimeConfig.developerName}',
       children: const <Widget>[
         Text('Desktop-first offline POS for mobile shops.'),
       ],

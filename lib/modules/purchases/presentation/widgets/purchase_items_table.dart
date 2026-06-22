@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
@@ -313,6 +314,7 @@ class _ImeiEntryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUsed = entry.condition == SerializedStockCondition.used;
+    final semantic = Theme.of(context).semantic;
     return Row(
       children: <Widget>[
         const SizedBox(width: 16),
@@ -325,15 +327,15 @@ class _ImeiEntryRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
             decoration: BoxDecoration(
-              color: Colors.orange.shade100,
+              color: semantic.warningContainer,
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.orange.shade400),
+              border: Border.all(color: semantic.warning),
             ),
             child: Text(
               'Used',
               style: TextStyle(
                 fontSize: 10,
-                color: Colors.orange.shade800,
+                color: semantic.warning,
                 fontWeight: FontWeight.bold,
               ),
             ),

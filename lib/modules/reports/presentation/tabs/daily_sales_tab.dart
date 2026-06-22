@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/errors/app_error.dart';
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
@@ -84,14 +85,16 @@ class DailySalesTab extends ConsumerWidget {
               child: ReportSummaryCardWidget(
                 label: 'Invoices (page)',
                 value: summary.totalInvoices.toString(),
-                color: Colors.indigo,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
             Expanded(
               child: ReportSummaryCardWidget(
                 label: 'Balance (page)',
                 value: FormattingHelpers.currencyPkr(summary.sumBalance),
-                color: summary.sumBalance > 0 ? Colors.orange : Colors.green,
+                color: summary.sumBalance > 0
+                    ? Theme.of(context).semantic.warning
+                    : Theme.of(context).semantic.success,
               ),
             ),
           ],

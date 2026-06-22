@@ -3,7 +3,10 @@ part of '../screens/repairing_screen.dart';
 class _KpiRow extends ConsumerWidget {
   const _KpiRow();
 
-  List<Widget> _buildCards(RepairKpiEntity kpis) {
+  List<Widget> _buildCards(BuildContext context, RepairKpiEntity kpis) {
+    final theme = Theme.of(context);
+    final accent = theme.colorScheme.primary;
+    final semantic = theme.semantic;
     return <Widget>[
       _KpiCard(
         value: kpis.receivedToday.toString(),
@@ -14,31 +17,31 @@ class _KpiRow extends ConsumerWidget {
         value: kpis.readyForDelivery.toString(),
         label: 'Ready for Delivery',
         icon: Icons.check_circle_outline,
-        iconColor: Colors.green,
+        iconColor: semantic.success,
       ),
       _KpiCard(
         value: kpis.pendingRepairs.toString(),
         label: 'Pending Repairs',
         icon: Icons.build_outlined,
-        iconColor: Colors.orange,
+        iconColor: semantic.warning,
       ),
       _KpiCard(
         value: FormattingHelpers.currencyPkr(kpis.todayEarnings),
         label: "Today's Earnings",
         icon: Icons.payments_outlined,
-        iconColor: Colors.teal,
+        iconColor: accent,
       ),
       _KpiCard(
         value: FormattingHelpers.currencyPkr(kpis.allTimeEarnings),
         label: 'All Time Earnings',
         icon: Icons.account_balance_wallet_outlined,
-        iconColor: Colors.indigo,
+        iconColor: accent,
       ),
       _KpiCard(
         value: kpis.allJobsDone.toString(),
         label: 'All Jobs Done',
         icon: Icons.done_all,
-        iconColor: Colors.purple,
+        iconColor: accent,
       ),
     ];
   }
@@ -53,7 +56,7 @@ class _KpiRow extends ConsumerWidget {
           final width = constraints.hasBoundedWidth
               ? constraints.maxWidth
               : MediaQuery.sizeOf(context).width - 20;
-          final cards = _buildCards(kpis);
+          final cards = _buildCards(context, kpis);
           final spacing = 8.0;
           final crossAxisCount = width >= 1500
               ? 5

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
+import 'package:phone_shop_pos/core/widgets/responsive_table_layout.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/stock_row_entity.dart';
 
@@ -32,7 +34,8 @@ class StockTableWidget extends StatelessWidget {
               .map((column) => _buildDataColumn(column, layout))
               .toList(growable: false),
           rows: rows
-              .map((row) => _buildResponsiveRow(row, visibleColumns, layout))
+              .map((row) =>
+                  _buildResponsiveRow(context, row, visibleColumns, layout))
               .toList(growable: false),
         );
       },
@@ -94,18 +97,20 @@ class StockTableWidget extends StatelessWidget {
   }
 
   DataRow _buildResponsiveRow(
+    BuildContext context,
     StockRowEntity row,
     List<_StockTableColumn> columns,
     _StockTableLayout layout,
   ) {
     return DataRow(
       cells: columns
-          .map((column) => _buildDataCell(row, column, layout))
+          .map((column) => _buildDataCell(context, row, column, layout))
           .toList(growable: false),
     );
   }
 
   DataCell _buildDataCell(
+    BuildContext context,
     StockRowEntity row,
     _StockTableColumn column,
     _StockTableLayout layout,
@@ -130,8 +135,8 @@ class StockTableWidget extends StatelessWidget {
             child: Align(
               alignment: Alignment.centerLeft,
               child: isUsed
-                  ? _chipLabel('Used', Colors.orange)
-                  : _chipLabel('New', Colors.teal),
+                  ? _chipLabel('Used', Theme.of(context).semantic.warning)
+                  : _chipLabel('New', Theme.of(context).colorScheme.primary),
             ),
           ),
         );
@@ -162,8 +167,10 @@ class StockTableWidget extends StatelessWidget {
             row.quantity?.toString() ?? '—',
             width: layout.valueWidth(column),
             style: row.isLowStock
-                ? const TextStyle(
-                    color: Colors.red, fontWeight: FontWeight.bold)
+                ? TextStyle(
+                    color: Theme.of(context).semantic.danger,
+                    fontWeight: FontWeight.bold,
+                  )
                 : null,
           ),
         );
@@ -174,7 +181,7 @@ class StockTableWidget extends StatelessWidget {
               width: layout.valueWidth(column),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: _statusBadge(row.serializedStatus),
+                child: _statusBadge(context, row.serializedStatus),
               ),
             ),
           );
@@ -185,8 +192,8 @@ class StockTableWidget extends StatelessWidget {
             child: Align(
               alignment: Alignment.centerLeft,
               child: row.isLowStock
-                  ? _chipLabel('Low Stock', Colors.red)
-                  : _chipLabel('In Stock', Colors.green),
+                  ? _chipLabel('Low Stock', Theme.of(context).semantic.danger)
+                  : _chipLabel('In Stock', Theme.of(context).semantic.success),
             ),
           ),
         );
@@ -298,31 +305,33 @@ class StockTableWidget extends StatelessWidget {
     );
   }
 
-  Widget _statusBadge(SerializedStockStatus? status) {
+  Widget _statusBadge(BuildContext context, SerializedStockStatus? status) {
     if (status == null) {
       return const Text('—');
     }
+    final theme = Theme.of(context);
+    final semantic = theme.semantic;
     Color color;
     String label;
     switch (status) {
       case SerializedStockStatus.inStock:
-        color = Colors.green;
+        color = semantic.success;
         label = 'In Stock';
         break;
       case SerializedStockStatus.sold:
-        color = Colors.grey;
+        color = theme.colorScheme.onSurfaceVariant;
         label = 'Sold';
         break;
       case SerializedStockStatus.reserved:
-        color = Colors.amber;
+        color = semantic.warning;
         label = 'Reserved';
         break;
       case SerializedStockStatus.returned:
-        color = Colors.blue;
+        color = semantic.info;
         label = 'Returned';
         break;
       case SerializedStockStatus.damaged:
-        color = Colors.red;
+        color = semantic.danger;
         label = 'Damaged';
         break;
     }
@@ -368,33 +377,14 @@ class _StockTableLayout {
   final bool isWideDesktop;
 
   factory _StockTableLayout.fromWidth(double width) {
-    if (width >= 1600) {
-      return const _StockTableLayout(
-        columnSpacing: 28,
-        dataRowMinHeight: 52,
-        dataRowMaxHeight: 60,
-        showMediumColumns: false,
-        showCompactColumns: false,
-        isWideDesktop: true,
-      );
-    }
-    if (width >= 1220) {
-      return const _StockTableLayout(
-        columnSpacing: 20,
-        dataRowMinHeight: 46,
-        dataRowMaxHeight: 54,
-        showMediumColumns: true,
-        showCompactColumns: false,
-        isWideDesktop: false,
-      );
-    }
-    return const _StockTableLayout(
-      columnSpacing: 14,
-      dataRowMinHeight: 40,
-      dataRowMaxHeight: 48,
-      showMediumColumns: false,
-      showCompactColumns: true,
-      isWideDesktop: false,
+    final m = ResponsiveTableLayout.fromWidth(width);
+    return _StockTableLayout(
+      columnSpacing: m.columnSpacing,
+      dataRowMinHeight: m.dataRowMinHeight,
+      dataRowMaxHeight: m.dataRowMaxHeight,
+      showMediumColumns: m.showMediumColumns,
+      showCompactColumns: m.showCompactColumns,
+      isWideDesktop: m.isWideDesktop,
     );
   }
 

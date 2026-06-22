@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
+import 'package:phone_shop_pos/core/widgets/responsive_table_layout.dart';
 
 const int _kReportPaginateThreshold = 200;
 
@@ -81,24 +82,11 @@ class _ReportTableLayout {
   final double dataRowMaxHeight;
 
   factory _ReportTableLayout.fromWidth(double width) {
-    if (width >= 1600) {
-      return const _ReportTableLayout(
-        columnSpacing: 28,
-        dataRowMinHeight: 52,
-        dataRowMaxHeight: 60,
-      );
-    }
-    if (width >= 1220) {
-      return const _ReportTableLayout(
-        columnSpacing: 20,
-        dataRowMinHeight: 46,
-        dataRowMaxHeight: 54,
-      );
-    }
-    return const _ReportTableLayout(
-      columnSpacing: 14,
-      dataRowMinHeight: 40,
-      dataRowMaxHeight: 48,
+    final m = ResponsiveTableLayout.fromWidth(width);
+    return _ReportTableLayout(
+      columnSpacing: m.columnSpacing,
+      dataRowMinHeight: m.dataRowMinHeight,
+      dataRowMaxHeight: m.dataRowMaxHeight,
     );
   }
 }

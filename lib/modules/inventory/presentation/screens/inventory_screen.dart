@@ -9,6 +9,7 @@ import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/inventory_summary_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
@@ -270,30 +271,32 @@ class _SummaryCards extends StatelessWidget {
             : constraints.maxWidth >= 900
                 ? (constraints.maxWidth - spacing) / 2
                 : constraints.maxWidth;
+        final theme = Theme.of(context);
+        final semantic = theme.semantic;
         final cards = <Widget>[
           _SummaryCard(
             label: 'Phones In Stock',
             value: summary.inStockPhones.toString(),
             icon: Icons.phone_android,
-            color: Colors.green,
+            color: semantic.success,
           ),
           _SummaryCard(
             label: 'Sold Phones',
             value: summary.soldPhones.toString(),
             icon: Icons.sell,
-            color: Colors.grey,
+            color: theme.colorScheme.onSurfaceVariant,
           ),
           _SummaryCard(
             label: 'Accessory Units',
             value: summary.totalAccessoryUnits.toString(),
             icon: Icons.cable,
-            color: Colors.blue,
+            color: semantic.info,
           ),
           _SummaryCard(
             label: 'Low Stock Alerts',
             value: summary.lowStockCount.toString(),
             icon: Icons.warning_amber,
-            color: summary.lowStockCount > 0 ? Colors.red : Colors.green,
+            color: summary.lowStockCount > 0 ? semantic.danger : semantic.success,
           ),
         ];
         return Wrap(

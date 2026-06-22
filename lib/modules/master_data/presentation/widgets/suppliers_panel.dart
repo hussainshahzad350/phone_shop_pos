@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
+import 'package:phone_shop_pos/core/widgets/responsive_table_layout.dart';
 import 'package:phone_shop_pos/modules/master_data/presentation/widgets/supplier_form_dialog.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/supplier_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/providers/purchase_query_providers.dart';
@@ -465,33 +466,14 @@ class _SuppliersTableLayout {
   final bool isWideDesktop;
 
   factory _SuppliersTableLayout.fromWidth(double width) {
-    if (width >= 1600) {
-      return const _SuppliersTableLayout(
-        columnSpacing: 28,
-        dataRowMinHeight: 52,
-        dataRowMaxHeight: 60,
-        showMediumColumns: false,
-        showCompactColumns: false,
-        isWideDesktop: true,
-      );
-    }
-    if (width >= 1220) {
-      return const _SuppliersTableLayout(
-        columnSpacing: 20,
-        dataRowMinHeight: 46,
-        dataRowMaxHeight: 54,
-        showMediumColumns: true,
-        showCompactColumns: false,
-        isWideDesktop: false,
-      );
-    }
-    return const _SuppliersTableLayout(
-      columnSpacing: 14,
-      dataRowMinHeight: 40,
-      dataRowMaxHeight: 48,
-      showMediumColumns: false,
-      showCompactColumns: true,
-      isWideDesktop: false,
+    final m = ResponsiveTableLayout.fromWidth(width);
+    return _SuppliersTableLayout(
+      columnSpacing: m.columnSpacing,
+      dataRowMinHeight: m.dataRowMinHeight,
+      dataRowMaxHeight: m.dataRowMaxHeight,
+      showMediumColumns: m.showMediumColumns,
+      showCompactColumns: m.showCompactColumns,
+      isWideDesktop: m.isWideDesktop,
     );
   }
 

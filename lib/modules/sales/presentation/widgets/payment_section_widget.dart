@@ -90,9 +90,8 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
                 style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              key: ValueKey<String>(widget.paymentMethod),
               focusNode: widget.paymentMethodFocusNode,
-              value: widget.paymentMethod,
+              initialValue: widget.paymentMethod,
               items: PaymentMethod.values
                   .map(
                     (value) => DropdownMenuItem<String>(

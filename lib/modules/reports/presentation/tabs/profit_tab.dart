@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/errors/app_error.dart';
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
@@ -18,6 +19,8 @@ class ProfitTab extends ConsumerWidget {
     final rowsAsync = ref.watch(profitReportRowsProvider);
     final csvService = ref.watch(csvExportServiceProvider);
     final printableService = ref.watch(printableReportServiceProvider);
+    final theme = Theme.of(context);
+    final semantic = theme.semantic;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -29,28 +32,29 @@ class ProfitTab extends ConsumerWidget {
                 child: ReportSummaryCardWidget(
                   label: 'Revenue',
                   value: FormattingHelpers.currencyPkr(report.totalRevenue),
-                  color: Colors.blue,
+                  color: semantic.info,
                 ),
               ),
               Expanded(
                 child: ReportSummaryCardWidget(
                   label: 'Cost',
                   value: FormattingHelpers.currencyPkr(report.totalCost),
-                  color: Colors.orange,
+                  color: semantic.warning,
                 ),
               ),
               Expanded(
                 child: ReportSummaryCardWidget(
                   label: 'Profit',
                   value: FormattingHelpers.currencyPkr(report.totalProfit),
-                  color: report.totalProfit >= 0 ? Colors.green : Colors.red,
+                  color:
+                      report.totalProfit >= 0 ? semantic.success : semantic.danger,
                 ),
               ),
               Expanded(
                 child: ReportSummaryCardWidget(
                   label: 'Margin',
                   value: '${FormattingHelpers.decimal(report.marginPercent)}%',
-                  color: Colors.indigo,
+                  color: theme.colorScheme.primary,
                 ),
               ),
             ],
