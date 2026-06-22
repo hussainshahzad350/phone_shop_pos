@@ -19,10 +19,11 @@ class MigrationService {
 
   Future<void> onCreate(Database database, int version) async {
     for (var currentVersion = 1; currentVersion <= version; currentVersion++) {
-      // v9, v12 and v13 are transitional table-rewrite migrations for
-      // existing databases. Fresh installs already use the latest sales
-      // schema.
+      // v9, v12, v13, and v27 are transitional table-rewrite migrations for
+      // existing databases. Fresh installs already use the latest schema
+      // (handled by _applyFreshInstallSalesChecks below).
       if (currentVersion == 9 ||
+          currentVersion == 27 ||
           ((currentVersion == 12 || currentVersion == 13) &&
               version == latestVersion)) {
         continue;
@@ -439,6 +440,72 @@ class MigrationService {
   Future<void> _applyFreshInstallSalesChecks(Database database) async {
     await database.execute('PRAGMA foreign_keys = OFF;');
     try {
+      // ── serialized_stock: rebuild with correct schema (v27 is skipped in
+      // onCreate; DROP+CREATE avoids sqlite_master FK corruption caused by the
+      // RENAME pattern used in _applyMigrationV27). ─────────────────────────
+      await database.execute(
+        'DROP TABLE IF EXISTS ${TableNames.serializedStock};',
+      );
+      await database.execute(
+        '''
+        CREATE TABLE ${TableNames.serializedStock} (
+          id TEXT PRIMARY KEY NOT NULL,
+          product_model_id TEXT NOT NULL,
+          imei1 TEXT NOT NULL UNIQUE,
+          imei2 TEXT,
+          serial_number TEXT,
+          cost_price REAL NOT NULL DEFAULT 0,
+          selling_price REAL,
+          stock_status TEXT NOT NULL CHECK (
+            stock_status IN (
+              'in_stock', 'sold', 'reserved', 'returned', 'damaged', 'with_dealer'
+            )
+          ),
+          supplier_id TEXT,
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          condition TEXT NOT NULL DEFAULT 'new' CHECK (condition IN ('new', 'used')),
+          seller_name TEXT,
+          seller_id_card TEXT,
+          seller_address TEXT,
+          remaining_warranty TEXT,
+          accessories TEXT,
+          phone_condition_notes TEXT,
+          seller_phone TEXT,
+          FOREIGN KEY (product_model_id) REFERENCES ${TableNames.productModels}(id)
+            ON UPDATE CASCADE ON DELETE RESTRICT,
+          FOREIGN KEY (supplier_id) REFERENCES ${TableNames.suppliers}(id)
+            ON UPDATE CASCADE ON DELETE SET NULL
+        );
+        ''',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_serialized_stock_imei1 ON ${TableNames.serializedStock}(imei1);',
+      );
+      await database.execute(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_serialized_stock_imei2_unique ON ${TableNames.serializedStock}(imei2) WHERE imei2 IS NOT NULL;',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_serialized_stock_status ON ${TableNames.serializedStock}(stock_status);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_serialized_stock_product_status ON ${TableNames.serializedStock}(product_model_id, stock_status);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_serialized_stock_serial_number ON ${TableNames.serializedStock}(serial_number);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_serialized_stock_product_status_created ON ${TableNames.serializedStock}(product_model_id, stock_status, created_at);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_serialized_stock_product_status_imei1 ON ${TableNames.serializedStock}(product_model_id, stock_status, imei1);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_serialized_stock_product_status_imei2 ON ${TableNames.serializedStock}(product_model_id, stock_status, imei2);',
+      );
+
+      // ── sales: drop and recreate with full v28 schema ─────────────────────
       await database.execute('DROP TABLE IF EXISTS ${TableNames.sales};');
       await database.execute(
         '''
@@ -462,6 +529,11 @@ class MigrationService {
             )
           ),
           notes TEXT,
+          status TEXT NOT NULL DEFAULT 'posted' CHECK (status IN ('posted', 'void')),
+          voided_at TEXT,
+          voided_by TEXT,
+          void_reason TEXT,
+          correction_of TEXT,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           FOREIGN KEY (customer_id) REFERENCES ${TableNames.customers}(id)
@@ -496,6 +568,12 @@ class MigrationService {
       );
       await database.execute(
         'CREATE INDEX IF NOT EXISTS idx_sales_created_at ON ${TableNames.sales}(created_at);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_status ON ${TableNames.sales}(status);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_status_date ON ${TableNames.sales}(status, sale_date);',
       );
     } finally {
       await database.execute('PRAGMA foreign_keys = ON;');
