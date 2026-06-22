@@ -337,6 +337,10 @@ class StockTableWidget extends StatelessWidget {
         color = semantic.danger;
         label = 'Damaged';
         break;
+      case SerializedStockStatus.withDealer:
+        color = semantic.warning;
+        label = 'With Dealer';
+        break;
     }
     return _chipLabel(label, color);
   }

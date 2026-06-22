@@ -5,6 +5,7 @@ import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_completion_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/supplier_option_entity.dart';
+import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/repositories/purchase_repository.dart';
 import 'package:phone_shop_pos/modules/purchases/services/purchase_service.dart';
 
@@ -203,4 +204,16 @@ class _FakePurchaseRepository implements PurchaseRepository {
   }) async {
     return const Success<List<SupplierOptionEntity>>(<SupplierOptionEntity>[]);
   }
+
+  @override
+  Future<Result<PurchaseEntity>> getPurchaseById(String purchaseId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Result<void>> voidPurchase({
+    required String purchaseId,
+    required String voidReason,
+    String? voidedBy,
+  }) =>
+      throw UnimplementedError();
 }

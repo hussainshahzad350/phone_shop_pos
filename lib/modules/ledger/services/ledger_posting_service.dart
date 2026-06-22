@@ -284,7 +284,7 @@ class LedgerPostingService with BaseRepositoryGuard {
     return guard<void>(() async {
       final db = executor ?? _appDatabase.database;
       final ledgerRows = await db.rawQuery(
-        "SELECT id, amount FROM ${TableNames.customerLedger} "
+        'SELECT id, amount FROM ${TableNames.customerLedger} '
         "WHERE transaction_id = ? AND ledger_type = 'sale' LIMIT 1",
         <Object?>[saleId],
       );
@@ -323,7 +323,7 @@ class LedgerPostingService with BaseRepositoryGuard {
     return guard<void>(() async {
       final db = executor ?? _appDatabase.database;
       final ledgerRows = await db.rawQuery(
-        "SELECT id, amount FROM ${TableNames.supplierLedger} "
+        'SELECT id, amount FROM ${TableNames.supplierLedger} '
         "WHERE transaction_id = ? AND ledger_type = 'purchase' LIMIT 1",
         <Object?>[purchaseId],
       );

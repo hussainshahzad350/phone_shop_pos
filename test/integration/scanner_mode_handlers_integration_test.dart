@@ -9,6 +9,7 @@ import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventor
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_completion_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/supplier_option_entity.dart';
+import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/repositories/purchase_repository.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/providers/purchase_form_state_provider.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/providers/purchase_repository_provider.dart';
@@ -16,6 +17,7 @@ import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.da
 import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_completion_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.dart';
+import 'package:phone_shop_pos/modules/sales/domain/entities/sale_header_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/repositories/sales_repository.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/cart_state_provider.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_repository_provider.dart';
@@ -176,6 +178,18 @@ class _FakeSalesRepository implements SalesRepository {
       );
     }
   }
+
+  @override
+  Future<Result<SaleHeaderEntity>> getSaleById(String saleId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Result<void>> voidSale({
+    required String saleId,
+    required String voidReason,
+    String? voidedBy,
+  }) =>
+      throw UnimplementedError();
 }
 
 class _FakePurchaseRepository implements PurchaseRepository {
@@ -246,4 +260,16 @@ class _FakePurchaseRepository implements PurchaseRepository {
       );
     }
   }
+
+  @override
+  Future<Result<PurchaseEntity>> getPurchaseById(String purchaseId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Result<void>> voidPurchase({
+    required String purchaseId,
+    required String voidReason,
+    String? voidedBy,
+  }) =>
+      throw UnimplementedError();
 }
