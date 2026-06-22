@@ -44,10 +44,26 @@ class ProfitTab extends ConsumerWidget {
               ),
               Expanded(
                 child: ReportSummaryCardWidget(
-                  label: 'Profit',
-                  value: FormattingHelpers.currencyPkr(report.totalProfit),
+                  label: 'Gross Profit',
+                  value: FormattingHelpers.currencyPkr(report.grossProfit),
+                  color: report.grossProfit >= 0
+                      ? semantic.success
+                      : semantic.danger,
+                ),
+              ),
+              Expanded(
+                child: ReportSummaryCardWidget(
+                  label: 'Expenses',
+                  value: FormattingHelpers.currencyPkr(report.totalExpenses),
+                  color: semantic.warning,
+                ),
+              ),
+              Expanded(
+                child: ReportSummaryCardWidget(
+                  label: 'Net Profit',
+                  value: FormattingHelpers.currencyPkr(report.netProfit),
                   color:
-                      report.totalProfit >= 0 ? semantic.success : semantic.danger,
+                      report.netProfit >= 0 ? semantic.success : semantic.danger,
                 ),
               ),
               Expanded(

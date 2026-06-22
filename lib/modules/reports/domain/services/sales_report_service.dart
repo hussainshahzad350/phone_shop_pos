@@ -50,7 +50,9 @@ class SalesReportService with BaseRepositoryGuard {
             1 AS invoice_count,
             COALESCE(s.total + COALESCE(srt.returned_total, 0), 0) AS total_sales,
             COALESCE(SUM(
-              si.line_total - (si.cost_price * si.quantity)
+              si.line_total
+                - COALESCE(s.discount * si.line_total / NULLIF(s.subtotal, 0), 0)
+                - (si.cost_price * si.quantity)
             ), 0) AS total_profit,
             COALESCE(SUM(CASE WHEN pm.has_imei = 1 THEN 1 ELSE 0 END), 0) AS phones_sold,
             COALESCE(SUM(CASE WHEN pm.has_imei = 0 THEN si.quantity ELSE 0 END), 0) AS accessories_sold,

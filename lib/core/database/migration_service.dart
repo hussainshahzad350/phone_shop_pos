@@ -145,6 +145,10 @@ class MigrationService {
       await _applyMigrationV25(database);
       return;
     }
+    if (version == 26) {
+      await _applyMigrationV26(database);
+      return;
+    }
     final statements = _migrationStatements[version];
     if (statements == null) {
       return;
@@ -1690,6 +1694,8 @@ class MigrationService {
     24: <String>[],
     // v25 is handled by dedicated _applyMigrationV25 method.
     25: <String>[],
+    // v26 is handled by dedicated _applyMigrationV26 method.
+    26: <String>[],
   };
 
   /// Migration v23: upgrade expenses table with structured category/remarks/payment fields.
@@ -1789,6 +1795,85 @@ class MigrationService {
           AND remarks IS NOT NULL
         ''',
       );
+    }
+  }
+
+  /// Migration v26: expand stock_adjustments reason codes and add
+  /// unit_cost_at_adjustment column for accurate damage-loss reporting.
+  Future<void> _applyMigrationV26(Database database) async {
+    await database.execute('PRAGMA foreign_keys = OFF;');
+    await database.execute('PRAGMA legacy_alter_table = ON;');
+    try {
+      await database.execute(
+        'ALTER TABLE ${TableNames.stockAdjustments} RENAME TO ${TableNames.stockAdjustments}_old;',
+      );
+      await database.execute(
+        '''
+        CREATE TABLE ${TableNames.stockAdjustments} (
+          id TEXT PRIMARY KEY NOT NULL,
+          product_model_id TEXT NOT NULL,
+          serialized_stock_id TEXT,
+          adjustment_type TEXT NOT NULL CHECK (
+            adjustment_type IN ('increase', 'decrease', 'write_off')
+          ),
+          quantity_delta INTEGER NOT NULL,
+          unit_cost_at_adjustment REAL NOT NULL DEFAULT 0,
+          reason TEXT NOT NULL CHECK (
+            reason IN (
+              'damage', 'theft', 'correction',
+              'miscounted', 'lost', 'broken', 'water_damage', 'other'
+            )
+          ),
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (product_model_id) REFERENCES ${TableNames.productModels}(id)
+            ON UPDATE CASCADE
+            ON DELETE RESTRICT,
+          FOREIGN KEY (serialized_stock_id) REFERENCES ${TableNames.serializedStock}(id)
+            ON UPDATE CASCADE
+            ON DELETE SET NULL
+        );
+        ''',
+      );
+      await database.execute(
+        '''
+        INSERT INTO ${TableNames.stockAdjustments} (
+          id,
+          product_model_id,
+          serialized_stock_id,
+          adjustment_type,
+          quantity_delta,
+          unit_cost_at_adjustment,
+          reason,
+          notes,
+          created_at,
+          updated_at
+        )
+        SELECT
+          id,
+          product_model_id,
+          serialized_stock_id,
+          adjustment_type,
+          quantity_delta,
+          0,
+          reason,
+          notes,
+          created_at,
+          updated_at
+        FROM ${TableNames.stockAdjustments}_old;
+        ''',
+      );
+      await _dropTableBestEffort(database, '${TableNames.stockAdjustments}_old');
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_stock_adjustments_created ON ${TableNames.stockAdjustments}(created_at DESC);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_stock_adjustments_product ON ${TableNames.stockAdjustments}(product_model_id);',
+      );
+    } finally {
+      await database.execute('PRAGMA legacy_alter_table = OFF;');
+      await database.execute('PRAGMA foreign_keys = ON;');
     }
   }
 
