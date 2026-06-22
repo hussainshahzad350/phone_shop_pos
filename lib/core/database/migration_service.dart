@@ -31,7 +31,7 @@ class MigrationService {
       await _applyMigration(database, currentVersion);
     }
 
-    if (version == latestVersion && version >= 12) {
+    if (version == DatabaseConstants.databaseVersion && version >= 12) {
       await _applyFreshInstallSalesChecks(database);
     }
   }
