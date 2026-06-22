@@ -8,7 +8,6 @@ import 'package:phone_shop_pos/modules/dashboard/domain/entities/brand_stock_ent
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_kpis_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_low_stock_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_recent_sale_entity.dart';
-import 'package:phone_shop_pos/modules/dashboard/domain/entities/brand_stock_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_return_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/model_imei_stock_entity.dart';
 
@@ -403,14 +402,14 @@ class DashboardService with BaseRepositoryGuard {
         }
 
         modelMap[modelId]!.imeis.add(ImeiStockItemEntity(
-          serializedStockId: (row['serialized_stock_id'] as String?) ?? '',
-          imei: (row['imei'] as String?) ?? '',
-          imei2: row['imei2'] as String?,
-          serialNumber: row['serial_number'] as String?,
-          costPrice: (row['cost_price'] as num?)?.toDouble() ?? 0,
-          salePrice: (row['sale_price'] as num?)?.toDouble() ?? 0,
-          stockStatus: (row['stock_status'] as String?) ?? 'in_stock',
-        ));
+              serializedStockId: (row['serialized_stock_id'] as String?) ?? '',
+              imei: (row['imei'] as String?) ?? '',
+              imei2: row['imei2'] as String?,
+              serialNumber: row['serial_number'] as String?,
+              costPrice: (row['cost_price'] as num?)?.toDouble() ?? 0,
+              salePrice: (row['sale_price'] as num?)?.toDouble() ?? 0,
+              stockStatus: (row['stock_status'] as String?) ?? 'in_stock',
+            ));
 
         modelMap[modelId]!.quantity = modelMap[modelId]!.imeis.length;
       }

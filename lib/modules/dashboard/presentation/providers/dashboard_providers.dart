@@ -4,14 +4,9 @@ import 'package:phone_shop_pos/modules/dashboard/domain/entities/brand_stock_ent
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_kpis_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_low_stock_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_recent_sale_entity.dart';
-import 'package:phone_shop_pos/modules/dashboard/domain/entities/brand_stock_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_return_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/model_imei_stock_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/services/dashboard_service.dart';
-import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
-import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
-import 'package:phone_shop_pos/modules/inventory/domain/entities/stock_row_entity.dart';
-import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_repository_provider.dart';
 
 final dashboardServiceProvider = FutureProvider<DashboardService>((ref) async {
   final appDatabase = await ref.watch(appDatabaseProvider.future);
@@ -69,7 +64,8 @@ final dashboardPendingReturnsProvider =
 });
 
 final dashboardModelImeiStockProvider =
-    FutureProvider.family<List<ModelImeiStockEntity>, String>((ref, brandName) async {
+    FutureProvider.family<List<ModelImeiStockEntity>, String>(
+        (ref, brandName) async {
   final service = await ref.watch(dashboardServiceProvider.future);
   return service.getModelImeiStock(brandName);
 });
