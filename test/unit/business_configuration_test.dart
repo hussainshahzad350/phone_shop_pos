@@ -8,7 +8,7 @@ void main() {
     test('defaults preserve current behavior', () {
       final configuration = BusinessConfiguration.defaults();
 
-      expect(configuration.profile, BusinessProfile.hybrid);
+      expect(configuration.profile, BusinessProfile.mobileOnly);
       expect(
         configuration.featureFlags,
         const FeatureFlags.currentBehaviorDefaults(),

@@ -30,12 +30,18 @@ class CashFlowService with BaseRepositoryGuard {
       final expensesArgs = <Object?>[];
       final customerSettlementArgs = <Object?>[PaymentMethod.cash];
       final supplierSettlementArgs = <Object?>[PaymentMethod.cash];
-      final salesWhere = StringBuffer('1 = 1');
-      final collectionsWhere = StringBuffer('sp.payment_method = ?');
-      final returnsWhere = StringBuffer('1 = 1');
+      final salesWhere = StringBuffer("s.status = 'posted'");
+      final collectionsWhere = StringBuffer(
+        "sp.payment_method = ? AND EXISTS (SELECT 1 FROM ${TableNames.sales} s WHERE s.id = sp.sale_id AND s.status = 'posted')",
+      );
+      final returnsWhere = StringBuffer(
+        "EXISTS (SELECT 1 FROM ${TableNames.sales} s WHERE s.id = sr.sale_id AND s.status = 'posted')",
+      );
       final purchaseReturnsArgs = <Object?>[];
       final purchaseReturnsWhere = StringBuffer('1 = 1');
-      final purchasesWhere = StringBuffer('1 = 1');
+      final purchasesWhere = StringBuffer(
+        "p.status = 'posted' AND (p.payment_method = '${PaymentMethod.cash}' OR p.payment_method IS NULL)",
+      );
       final expensesWhere = StringBuffer(
         "e.is_deleted = 0 AND (e.payment_method = '${PaymentMethod.cash}' OR e.payment_method IS NULL)",
       );

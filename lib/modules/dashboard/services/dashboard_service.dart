@@ -77,6 +77,7 @@ class DashboardService with BaseRepositoryGuard {
         FROM ${TableNames.sales} s
         LEFT JOIN sale_return_totals srt ON srt.sale_id = s.id
         WHERE s.sale_date >= ? AND s.sale_date < ?
+          AND s.status = 'posted'
         ''',
           <Object?>[
             DateTimeHelpers.toSql(start),
@@ -113,6 +114,7 @@ class DashboardService with BaseRepositoryGuard {
         JOIN ${TableNames.sales} s ON s.id = si.sale_id
         JOIN ${TableNames.productModels} pm ON pm.id = si.product_model_id
         WHERE s.sale_date >= ? AND s.sale_date < ?
+          AND s.status = 'posted'
         ''',
           <Object?>[
             DateTimeHelpers.toSql(start),
@@ -159,6 +161,7 @@ class DashboardService with BaseRepositoryGuard {
             ELSE 0
           END), 0) AS pending_balances
         FROM ${TableNames.sales} s
+        WHERE s.status = 'posted'
         ''',
         ),
       );
@@ -241,6 +244,7 @@ class DashboardService with BaseRepositoryGuard {
           s.payment_method
         FROM ${TableNames.sales} s
         LEFT JOIN ${TableNames.customers} c ON c.id = s.customer_id
+        WHERE s.status = 'posted'
         ORDER BY s.sale_date DESC
         LIMIT ?
         ''',

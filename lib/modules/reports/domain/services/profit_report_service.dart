@@ -268,7 +268,7 @@ class ProfitReportService with BaseRepositoryGuard {
     required String dateColumn,
     String? productModelColumn,
   }) {
-    final clauses = <String>['1 = 1'];
+    final clauses = <String>["s.status = 'posted'"];
 
     final start = filter.startDate;
     if (start != null) {

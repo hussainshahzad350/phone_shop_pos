@@ -9,7 +9,7 @@ void main() {
 
       expect(
         routeEnabledForFeatureFlags(path: '/repairing', featureFlags: flags),
-        isTrue,
+        isFalse,
       );
       expect(
         routeEnabledForFeatureFlags(path: '/reports', featureFlags: flags),

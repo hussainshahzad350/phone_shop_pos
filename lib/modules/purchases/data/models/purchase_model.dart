@@ -1,5 +1,6 @@
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_entity.dart';
+import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_status.dart';
 import 'package:phone_shop_pos/shared/models/base_db_model.dart';
 
 class PurchaseModel extends BaseDbModel {
@@ -13,9 +14,15 @@ class PurchaseModel extends BaseDbModel {
     required this.tax,
     required this.total,
     required this.paidAmount,
+    required this.status,
     this.supplierId,
     this.invoiceNumber,
     this.notes,
+    this.paymentMethod,
+    this.voidedAt,
+    this.voidedBy,
+    this.voidReason,
+    this.correctionOf,
   });
 
   final String? supplierId;
@@ -27,6 +34,12 @@ class PurchaseModel extends BaseDbModel {
   final double total;
   final double paidAmount;
   final String? notes;
+  final String? paymentMethod;
+  final PurchaseStatus status;
+  final DateTime? voidedAt;
+  final String? voidedBy;
+  final String? voidReason;
+  final String? correctionOf;
 
   factory PurchaseModel.fromMap(Map<String, Object?> map) {
     return PurchaseModel(
@@ -40,6 +53,14 @@ class PurchaseModel extends BaseDbModel {
       total: (map['total'] as num).toDouble(),
       paidAmount: (map['paid_amount'] as num).toDouble(),
       notes: map['notes'] as String?,
+      paymentMethod: map['payment_method'] as String?,
+      status: PurchaseStatus.fromString(map['status'] as String?),
+      voidedAt: map['voided_at'] != null
+          ? DateTimeHelpers.fromSql(map['voided_at'] as String)
+          : null,
+      voidedBy: map['voided_by'] as String?,
+      voidReason: map['void_reason'] as String?,
+      correctionOf: map['correction_of'] as String?,
       createdAt: DateTimeHelpers.fromSql(map['created_at'] as String),
       updatedAt: DateTimeHelpers.fromSql(map['updated_at'] as String),
     );
@@ -57,6 +78,12 @@ class PurchaseModel extends BaseDbModel {
       total: entity.total,
       paidAmount: entity.paidAmount,
       notes: entity.notes,
+      paymentMethod: entity.paymentMethod,
+      status: entity.status,
+      voidedAt: entity.voidedAt,
+      voidedBy: entity.voidedBy,
+      voidReason: entity.voidReason,
+      correctionOf: entity.correctionOf,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
     );
@@ -74,6 +101,12 @@ class PurchaseModel extends BaseDbModel {
       'total': total,
       'paid_amount': paidAmount,
       'notes': notes,
+      'payment_method': paymentMethod,
+      'status': status.value,
+      'voided_at': voidedAt != null ? DateTimeHelpers.toSql(voidedAt!) : null,
+      'voided_by': voidedBy,
+      'void_reason': voidReason,
+      'correction_of': correctionOf,
     };
   }
 
@@ -89,6 +122,12 @@ class PurchaseModel extends BaseDbModel {
       total: total,
       paidAmount: paidAmount,
       notes: notes,
+      paymentMethod: paymentMethod,
+      status: status,
+      voidedAt: voidedAt,
+      voidedBy: voidedBy,
+      voidReason: voidReason,
+      correctionOf: correctionOf,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );

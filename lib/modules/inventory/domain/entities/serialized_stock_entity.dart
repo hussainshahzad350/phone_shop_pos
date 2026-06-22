@@ -19,7 +19,8 @@ enum SerializedStockStatus {
   sold('sold'),
   reserved('reserved'),
   returned('returned'),
-  damaged('damaged');
+  damaged('damaged'),
+  withDealer('with_dealer');
 
   const SerializedStockStatus(this.value);
 

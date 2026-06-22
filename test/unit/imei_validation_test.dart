@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_completion_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/supplier_option_entity.dart';
+import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/repositories/purchase_repository.dart';
 import 'package:phone_shop_pos/modules/purchases/services/purchase_service.dart';
 
@@ -66,6 +67,18 @@ class _StubPurchaseRepository implements PurchaseRepository {
       ),
     );
   }
+
+  @override
+  Future<Result<PurchaseEntity>> getPurchaseById(String purchaseId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Result<void>> voidPurchase({
+    required String purchaseId,
+    required String voidReason,
+    String? voidedBy,
+  }) =>
+      throw UnimplementedError();
 }
 
 void main() {
@@ -294,8 +307,8 @@ void main() {
       expect(PaymentMethod.isValid(''), isFalse);
     });
 
-    test('values list has exactly 3 entries', () {
-      expect(PaymentMethod.values.length, 3);
+    test('values list has exactly 4 entries', () {
+      expect(PaymentMethod.values.length, 4);
     });
 
     test('labels map covers all values', () {

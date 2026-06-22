@@ -7,6 +7,7 @@ import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.da
 import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_completion_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.dart';
+import 'package:phone_shop_pos/modules/sales/domain/entities/sale_header_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/repositories/sales_repository.dart';
 import 'package:phone_shop_pos/modules/sales/services/sales_calculator.dart';
 import 'package:phone_shop_pos/modules/sales/services/sales_service.dart';
@@ -1137,6 +1138,18 @@ class _InMemorySalesRepository implements SalesRepository {
       );
     }
   }
+
+  @override
+  Future<Result<SaleHeaderEntity>> getSaleById(String saleId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Result<void>> voidSale({
+    required String saleId,
+    required String voidReason,
+    String? voidedBy,
+  }) =>
+      throw UnimplementedError();
 }
 
 class _RecordedSale {

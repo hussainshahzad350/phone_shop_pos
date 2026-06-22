@@ -13,7 +13,9 @@ import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stoc
 import 'package:phone_shop_pos/modules/purchases/data/models/purchase_item_model.dart';
 import 'package:phone_shop_pos/modules/purchases/data/models/purchase_model.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_completion_entity.dart';
+import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
+import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_status.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/supplier_option_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/repositories/purchase_repository.dart';
 import 'package:phone_shop_pos/modules/ledger/services/ledger_posting_service.dart';
@@ -203,6 +205,8 @@ class SqlitePurchaseRepository
         total: total,
         paidAmount: sanitizedPaid,
         notes: notes,
+        paymentMethod: PaymentMethod.normalizeNullable(paymentMethod),
+        status: PurchaseStatus.posted,
         createdAt: now,
         updatedAt: now,
       );
@@ -227,12 +231,14 @@ class SqlitePurchaseRepository
             throw StateError(ledgerResult.asFailure!.error.message);
           }
           if (sanitizedPaid > 0) {
+            final normalizedPm = PaymentMethod.normalizeNullable(paymentMethod)
+                ?? PaymentMethod.cash;
             final paymentLedger =
                 await _ledgerPostingService.postSupplierPayment(
               transactionId: purchaseId,
               supplierId: supplierId.trim(),
               amount: sanitizedPaid,
-              paymentMethod: PaymentMethod.cash,
+              paymentMethod: normalizedPm,
               createdAt: now,
               note: 'Initial paid amount',
               executor: transaction,
@@ -412,6 +418,191 @@ class SqlitePurchaseRepository
         quantityItemCount: quantityCount,
       );
     }, operation: 'create_purchase_transaction');
+  }
+
+  @override
+  Future<Result<PurchaseEntity>> getPurchaseById(String purchaseId) {
+    return guard<PurchaseEntity>(() async {
+      final rows = await _appDatabase.queryTable(
+        TableNames.purchases,
+        where: 'id = ?',
+        whereArgs: <Object?>[purchaseId],
+        limit: 1,
+      );
+      if (rows.isEmpty) {
+        throw StateError('Purchase not found: $purchaseId');
+      }
+      return PurchaseModel.fromMap(rows.first).toEntity();
+    }, operation: 'get_purchase_by_id');
+  }
+
+  @override
+  Future<Result<void>> voidPurchase({
+    required String purchaseId,
+    required String voidReason,
+    String? voidedBy,
+  }) {
+    return guard<void>(() async {
+      final trimmedReason = voidReason.trim();
+      if (trimmedReason.isEmpty) {
+        throw StateError('Void reason is required.');
+      }
+
+      // Pre-flight: block void if purchase_returns exist
+      final returnRows = await _appDatabase.queryTable(
+        TableNames.purchaseReturns,
+        where: 'purchase_id = ?',
+        whereArgs: <Object?>[purchaseId],
+        limit: 1,
+      );
+      if (returnRows.isNotEmpty) {
+        throw StateError('Cannot void a purchase that has return records.');
+      }
+
+      // Pre-flight: check serialized items are still in_stock
+      final itemRows = await _appDatabase.database.query(
+        TableNames.purchaseItems,
+        where: 'purchase_id = ?',
+        whereArgs: <Object?>[purchaseId],
+      );
+      for (final item in itemRows) {
+        final serializedStockId = item['serialized_stock_id'] as String?;
+        if (serializedStockId != null) {
+          final stockRows = await _appDatabase.database.query(
+            TableNames.serializedStock,
+            columns: <String>['stock_status'],
+            where: 'id = ?',
+            whereArgs: <Object?>[serializedStockId],
+            limit: 1,
+          );
+          if (stockRows.isNotEmpty) {
+            final status = stockRows.first['stock_status'] as String?;
+            if (status != SerializedStockStatus.inStock.value) {
+              throw StateError(
+                'Cannot void purchase: one or more items are no longer in stock '
+                '(sold, damaged, or with dealer).',
+              );
+            }
+          }
+        }
+      }
+
+      final now = DateTimeHelpers.nowUtc();
+
+      await _appDatabase.runInTransaction<void>((transaction) async {
+        // Re-read inside transaction to prevent race conditions
+        final purchaseRows = await transaction.query(
+          TableNames.purchases,
+          where: 'id = ?',
+          whereArgs: <Object?>[purchaseId],
+          limit: 1,
+        );
+        if (purchaseRows.isEmpty) {
+          throw StateError('Purchase not found: $purchaseId');
+        }
+        final purchaseRow = purchaseRows.first;
+        final currentStatus = purchaseRow['status'] as String?;
+        if (currentStatus == PurchaseStatus.void_.value) {
+          throw StateError('Purchase is already voided.');
+        }
+        final supplierId = purchaseRow['supplier_id'] as String?;
+
+        // Mark purchase as voided
+        await transaction.update(
+          TableNames.purchases,
+          <String, Object?>{
+            'status': PurchaseStatus.void_.value,
+            'voided_at': DateTimeHelpers.toSql(now),
+            'voided_by': voidedBy,
+            'void_reason': trimmedReason,
+            'updated_at': DateTimeHelpers.toSql(now),
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[purchaseId],
+        );
+
+        // Reverse inventory for each line item
+        for (final item in itemRows) {
+          final serializedStockId = item['serialized_stock_id'] as String?;
+          if (serializedStockId != null) {
+            // Remove serialized stock — purchase never happened
+            await transaction.delete(
+              TableNames.serializedStock,
+              where: 'id = ? AND stock_status = ?',
+              whereArgs: <Object?>[
+                serializedStockId,
+                SerializedStockStatus.inStock.value,
+              ],
+            );
+          } else {
+            // Reverse quantity and WAC
+            final productModelId = item['product_model_id'] as String;
+            final purchasedQty = (item['quantity'] as num).toInt();
+            final purchasedCost = (item['unit_cost'] as num).toDouble();
+
+            final stockRows = await transaction.query(
+              TableNames.inventoryStock,
+              columns: <String>['quantity', 'unit_cost'],
+              where: 'product_model_id = ?',
+              whereArgs: <Object?>[productModelId],
+              limit: 1,
+            );
+            if (stockRows.isNotEmpty) {
+              final oldQty =
+                  (stockRows.first['quantity'] as num?)?.toInt() ?? 0;
+              final oldCost =
+                  (stockRows.first['unit_cost'] as num?)?.toDouble() ?? 0;
+              final newQty = oldQty - purchasedQty < 0 ? 0 : oldQty - purchasedQty;
+              final newCost = newQty > 0
+                  ? ((oldQty * oldCost) - (purchasedQty * purchasedCost)) /
+                      newQty
+                  : oldCost;
+
+              await transaction.update(
+                TableNames.inventoryStock,
+                <String, Object?>{
+                  'quantity': newQty,
+                  'unit_cost': newCost < 0 ? 0.0 : newCost,
+                  'updated_at': DateTimeHelpers.toSql(now),
+                },
+                where: 'product_model_id = ?',
+                whereArgs: <Object?>[productModelId],
+              );
+            }
+          }
+        }
+
+        // Reverse ledger entry for known supplier
+        if (_ledgerPostingService != null &&
+            supplierId != null &&
+            supplierId.trim().isNotEmpty) {
+          final ledgerResult = await _ledgerPostingService.postPurchaseVoided(
+            purchaseId: purchaseId,
+            supplierId: supplierId.trim(),
+            voidedAt: now,
+            voidedBy: voidedBy,
+            note: 'Void: $trimmedReason',
+            executor: transaction,
+          );
+          if (ledgerResult.isFailure) {
+            throw ledgerResult.asFailure!.error;
+          }
+        }
+
+        // Audit log
+        await transaction.insert(
+          TableNames.auditLogs,
+          <String, Object?>{
+            'id': IdHelpers.newId(prefix: 'aud'),
+            'action': 'void_purchase',
+            'actor_id': voidedBy,
+            'entity_id': purchaseId,
+            'details': 'Purchase voided. Reason: $trimmedReason',
+            'created_at': DateTimeHelpers.toSql(now),
+          },
+        );
+      });
+    }, operation: 'void_purchase');
   }
 
   void _validatePurchaseItems(List<PurchaseFormItem> items) {

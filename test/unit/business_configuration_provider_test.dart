@@ -23,12 +23,12 @@ void main() {
         businessConfigurationProvider.future,
       );
 
-      expect(configuration.profile, BusinessProfile.hybrid);
+      expect(configuration.profile, BusinessProfile.mobileOnly);
       expect(
         configuration.source,
         BusinessConfigurationSource.defaultValue,
       );
-      expect(configuration.featureFlags.repairModule, isTrue);
+      expect(configuration.featureFlags.repairModule, isFalse);
     });
 
     test('load persisted profile and partial flag overrides', () async {

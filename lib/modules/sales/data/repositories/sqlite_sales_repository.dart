@@ -15,6 +15,8 @@ import 'package:phone_shop_pos/modules/sales/data/models/sale_model.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_completion_entity.dart';
+import 'package:phone_shop_pos/modules/sales/domain/entities/sale_header_entity.dart';
+import 'package:phone_shop_pos/modules/sales/domain/entities/sale_status.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/repositories/sales_repository.dart';
 import 'package:phone_shop_pos/modules/ledger/services/ledger_posting_service.dart';
@@ -298,6 +300,7 @@ class SqliteSalesRepository
           paidAmount: totals.paidAmount,
           paymentMethod: normalizedPaymentMethod,
           notes: notes,
+          status: SaleStatus.posted,
           createdAt: now,
           updatedAt: now,
         );
@@ -410,6 +413,160 @@ class SqliteSalesRepository
         totals: totals,
       );
     }, operation: 'create_sale_transaction');
+  }
+
+  @override
+  Future<Result<SaleHeaderEntity>> getSaleById(String saleId) {
+    return guard<SaleHeaderEntity>(() async {
+      final rows = await _appDatabase.queryTable(
+        TableNames.sales,
+        where: 'id = ?',
+        whereArgs: <Object?>[saleId],
+        limit: 1,
+      );
+      if (rows.isEmpty) {
+        throw StateError('Sale not found: $saleId');
+      }
+      final row = rows.first;
+      return SaleHeaderEntity(
+        id: row['id'] as String,
+        invoiceNumber: row['invoice_number'] as String,
+        customerId: row['customer_id'] as String?,
+        total: (row['total'] as num).toDouble(),
+        paidAmount: (row['paid_amount'] as num).toDouble(),
+        paymentMethod: row['payment_method'] as String?,
+        status: SaleStatus.fromString(row['status'] as String?),
+        voidedAt: row['voided_at'] != null
+            ? DateTimeHelpers.fromSql(row['voided_at'] as String)
+            : null,
+        voidedBy: row['voided_by'] as String?,
+        voidReason: row['void_reason'] as String?,
+        correctionOf: row['correction_of'] as String?,
+      );
+    }, operation: 'get_sale_by_id');
+  }
+
+  @override
+  Future<Result<void>> voidSale({
+    required String saleId,
+    required String voidReason,
+    String? voidedBy,
+  }) {
+    return guard<void>(() async {
+      final trimmedReason = voidReason.trim();
+      if (trimmedReason.isEmpty) {
+        throw StateError('Void reason is required.');
+      }
+
+      // Pre-flight: block void if sale_returns exist
+      final returnRows = await _appDatabase.queryTable(
+        TableNames.saleReturns,
+        where: 'sale_id = ?',
+        whereArgs: <Object?>[saleId],
+        limit: 1,
+      );
+      if (returnRows.isNotEmpty) {
+        throw StateError('Cannot void a sale that has return records.');
+      }
+
+      final now = DateTimeHelpers.nowUtc();
+
+      await _appDatabase.runInTransaction<void>((transaction) async {
+        // Re-read inside transaction to prevent race conditions
+        final saleRows = await transaction.query(
+          TableNames.sales,
+          where: 'id = ?',
+          whereArgs: <Object?>[saleId],
+          limit: 1,
+        );
+        if (saleRows.isEmpty) {
+          throw StateError('Sale not found: $saleId');
+        }
+        final saleRow = saleRows.first;
+        final currentStatus = saleRow['status'] as String?;
+        if (currentStatus == SaleStatus.void_.value) {
+          throw StateError('Sale is already voided.');
+        }
+        final customerId = saleRow['customer_id'] as String?;
+
+        // Read sale items for inventory reversal
+        final itemRows = await transaction.query(
+          TableNames.saleItems,
+          where: 'sale_id = ?',
+          whereArgs: <Object?>[saleId],
+        );
+
+        // Mark sale as voided
+        await transaction.update(
+          TableNames.sales,
+          <String, Object?>{
+            'status': SaleStatus.void_.value,
+            'voided_at': DateTimeHelpers.toSql(now),
+            'voided_by': voidedBy,
+            'void_reason': trimmedReason,
+            'updated_at': DateTimeHelpers.toSql(now),
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[saleId],
+        );
+
+        // Reverse inventory for each line item
+        for (final item in itemRows) {
+          final serializedStockId = item['serialized_stock_id'] as String?;
+          if (serializedStockId != null) {
+            await transaction.update(
+              TableNames.serializedStock,
+              <String, Object?>{
+                'stock_status': SerializedStockStatus.inStock.value,
+                'updated_at': DateTimeHelpers.toSql(now),
+              },
+              where: 'id = ?',
+              whereArgs: <Object?>[serializedStockId],
+            );
+          } else {
+            final productModelId = item['product_model_id'] as String;
+            final qty = (item['quantity'] as num).toInt();
+            await transaction.rawUpdate(
+              'UPDATE ${TableNames.inventoryStock} '
+              'SET quantity = quantity + ?, updated_at = ? '
+              'WHERE product_model_id = ?',
+              <Object?>[qty, DateTimeHelpers.toSql(now), productModelId],
+            );
+          }
+        }
+
+        // Reverse ledger entry for credit customers
+        if (_ledgerPostingService != null &&
+            customerId != null &&
+            customerId.trim().isNotEmpty &&
+            customerId.toLowerCase() != 'walk_in') {
+          final ledgerResult = await _ledgerPostingService.postSaleVoided(
+            saleId: saleId,
+            customerId: customerId.trim(),
+            voidedAt: now,
+            voidedBy: voidedBy,
+            note: 'Void: $trimmedReason',
+            executor: transaction,
+          );
+          if (ledgerResult.isFailure) {
+            throw ledgerResult.asFailure!.error;
+          }
+        }
+
+        // Audit log
+        await transaction.insert(
+          TableNames.auditLogs,
+          <String, Object?>{
+            'id': IdHelpers.newId(prefix: 'aud'),
+            'action': 'void_sale',
+            'actor_id': voidedBy,
+            'entity_id': saleId,
+            'details': 'Sale voided. Reason: $trimmedReason',
+            'created_at': DateTimeHelpers.toSql(now),
+          },
+        );
+      });
+    }, operation: 'void_sale');
   }
 
   void _validateSaleRequest({

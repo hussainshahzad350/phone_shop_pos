@@ -273,6 +273,84 @@ class LedgerPostingService with BaseRepositoryGuard {
     );
   }
 
+  Future<Result<void>> postSaleVoided({
+    required String saleId,
+    required String customerId,
+    required DateTime voidedAt,
+    String? voidedBy,
+    String? note,
+    DatabaseExecutor? executor,
+  }) {
+    return guard<void>(() async {
+      final db = executor ?? _appDatabase.database;
+      final ledgerRows = await db.rawQuery(
+        'SELECT id, amount FROM ${TableNames.customerLedger} '
+        "WHERE transaction_id = ? AND ledger_type = 'sale' LIMIT 1",
+        <Object?>[saleId],
+      );
+      if (ledgerRows.isEmpty) return;
+      final originalId = ledgerRows.first['id'] as String;
+      final originalAmount = (ledgerRows.first['amount'] as num).toDouble();
+      final result = await _customerLedgerRepository.appendEvent(
+        CustomerLedgerEventEntity(
+          id: IdHelpers.newId(prefix: 'clg'),
+          partyId: customerId,
+          transactionId: saleId,
+          ledgerType: CustomerLedgerType.reversal.value,
+          amount: originalAmount,
+          direction: LedgerDirection.credit,
+          createdAt: voidedAt,
+          createdBy: voidedBy,
+          isReversal: true,
+          reversalOf: originalId,
+          note: note,
+          paymentMethod: null,
+        ),
+        executor: executor,
+      );
+      if (result.isFailure) throw result.asFailure!.error;
+    }, operation: 'post_sale_voided');
+  }
+
+  Future<Result<void>> postPurchaseVoided({
+    required String purchaseId,
+    required String supplierId,
+    required DateTime voidedAt,
+    String? voidedBy,
+    String? note,
+    DatabaseExecutor? executor,
+  }) {
+    return guard<void>(() async {
+      final db = executor ?? _appDatabase.database;
+      final ledgerRows = await db.rawQuery(
+        'SELECT id, amount FROM ${TableNames.supplierLedger} '
+        "WHERE transaction_id = ? AND ledger_type = 'purchase' LIMIT 1",
+        <Object?>[purchaseId],
+      );
+      if (ledgerRows.isEmpty) return;
+      final originalId = ledgerRows.first['id'] as String;
+      final originalAmount = (ledgerRows.first['amount'] as num).toDouble();
+      final result = await _supplierLedgerRepository.appendEvent(
+        SupplierLedgerEventEntity(
+          id: IdHelpers.newId(prefix: 'slg'),
+          partyId: supplierId,
+          transactionId: purchaseId,
+          ledgerType: SupplierLedgerType.reversal.value,
+          amount: originalAmount,
+          direction: LedgerDirection.debit,
+          createdAt: voidedAt,
+          createdBy: voidedBy,
+          isReversal: true,
+          reversalOf: originalId,
+          note: note,
+          paymentMethod: null,
+        ),
+        executor: executor,
+      );
+      if (result.isFailure) throw result.asFailure!.error;
+    }, operation: 'post_purchase_voided');
+  }
+
   Future<Result<List<LedgerTimelineRowEntity>>> fetchCustomerTimeline(
     LedgerTimelineQuery query,
   ) {

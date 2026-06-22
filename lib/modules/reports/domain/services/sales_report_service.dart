@@ -246,7 +246,7 @@ class SalesReportService with BaseRepositoryGuard {
     required String dateColumn,
     String? productModelMatchColumn,
   }) {
-    final clauses = <String>['1 = 1'];
+    final clauses = <String>["s.status = 'posted'"];
 
     final start = filter.startDate;
     if (start != null) {
