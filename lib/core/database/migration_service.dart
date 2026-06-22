@@ -1811,9 +1811,43 @@ class MigrationService {
     await database.execute('PRAGMA foreign_keys = OFF;');
     await database.execute('PRAGMA legacy_alter_table = ON;');
     try {
+      // Drop all named indexes on serialized_stock BEFORE renaming the table.
+      // With legacy_alter_table = ON, renamed-table indexes keep their original
+      // sql text ("ON serialized_stock(...)"). If a new serialized_stock table
+      // is then created before those indexes are dropped, SQLite becomes confused
+      // about which table the indexes belong to and throws "sql logic error" when
+      // DROP TABLE is attempted. Removing indexes first avoids the ambiguity.
+      await database.execute(
+        'DROP INDEX IF EXISTS idx_serialized_stock_imei1;',
+      );
+      await database.execute(
+        'DROP INDEX IF EXISTS idx_serialized_stock_imei2;',
+      );
+      await database.execute(
+        'DROP INDEX IF EXISTS idx_serialized_stock_imei2_unique;',
+      );
+      await database.execute(
+        'DROP INDEX IF EXISTS idx_serialized_stock_status;',
+      );
+      await database.execute(
+        'DROP INDEX IF EXISTS idx_serialized_stock_product_status;',
+      );
+      await database.execute(
+        'DROP INDEX IF EXISTS idx_serialized_stock_serial_number;',
+      );
+      await database.execute(
+        'DROP INDEX IF EXISTS idx_serialized_stock_product_status_created;',
+      );
+      await database.execute(
+        'DROP INDEX IF EXISTS idx_serialized_stock_product_status_imei1;',
+      );
+      await database.execute(
+        'DROP INDEX IF EXISTS idx_serialized_stock_product_status_imei2;',
+      );
+
       // Rebuild serialized_stock with 'with_dealer' added to stock_status CHECK.
       await database.execute(
-        'ALTER TABLE ${TableNames.serializedStock} RENAME TO ${TableNames.serializedStock}_v26;',
+        'ALTER TABLE ${TableNames.serializedStock} RENAME TO ${TableNames.serializedStock}_old;',
       );
       await database.execute(
         '''
@@ -1865,12 +1899,14 @@ class MigrationService {
           COALESCE(condition, 'new'),
           seller_name, seller_id_card, seller_address,
           remaining_warranty, accessories, phone_condition_notes, seller_phone
-        FROM ${TableNames.serializedStock}_v26;
+        FROM ${TableNames.serializedStock}_old;
         ''',
       );
-      await _dropTableBestEffort(database, '${TableNames.serializedStock}_v26');
+      await database.execute(
+        'DROP TABLE ${TableNames.serializedStock}_old;',
+      );
 
-      // Recreate all serialized_stock indexes dropped with the old table.
+      // Recreate all serialized_stock indexes on the rebuilt table.
       await database.execute(
         'CREATE INDEX IF NOT EXISTS idx_serialized_stock_imei1 ON ${TableNames.serializedStock}(imei1);',
       );
