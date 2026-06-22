@@ -44,7 +44,7 @@ void main() {
     );
 
     expect(result.isFailure, isTrue);
-    expect(result.asFailure?.error.code, 'paid_amount_required');
+    expect(result.asFailure?.error.code, 'walk_in_requires_full_payment');
     expect(repository.createCalls, 0);
   });
 

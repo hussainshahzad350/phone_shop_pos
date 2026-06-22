@@ -3,10 +3,16 @@ import 'package:phone_shop_pos/core/config/feature_flags.dart';
 
 void main() {
   group('FeatureFlags', () {
-    test('current behavior defaults keep existing capabilities enabled', () {
+    test('current behavior defaults reflect expected capability set', () {
       const flags = FeatureFlags.currentBehaviorDefaults();
 
-      expect(flags.toMap().values, everyElement(isTrue));
+      expect(flags.imeiStock, isTrue);
+      expect(flags.qtyStock, isTrue);
+      expect(flags.repairModule, isFalse);
+      expect(flags.accessoriesModule, isFalse);
+      expect(flags.dealerIssueModule, isFalse);
+      expect(flags.reports, isTrue);
+      expect(flags.navigationStyle, isFalse);
     });
 
     test('fromMap merges partial overrides with defaults', () {

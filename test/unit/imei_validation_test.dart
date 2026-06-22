@@ -307,8 +307,8 @@ void main() {
       expect(PaymentMethod.isValid(''), isFalse);
     });
 
-    test('values list has exactly 3 entries', () {
-      expect(PaymentMethod.values.length, 3);
+    test('values list has exactly 4 entries', () {
+      expect(PaymentMethod.values.length, 4);
     });
 
     test('labels map covers all values', () {

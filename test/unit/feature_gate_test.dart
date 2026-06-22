@@ -75,8 +75,8 @@ void main() {
           ],
           child: MaterialApp(
             home: FeatureGate(
-              // The default is true for repairModule
-              condition: (flags) => flags.repairModule,
+              // imeiStock defaults to true, so Child should show while loading
+              condition: (flags) => flags.imeiStock,
               fallback: const Text('Fallback'),
               child: const Text('Child'),
             ),
@@ -84,9 +84,9 @@ void main() {
         ),
       );
 
-      // In loading state, it should use currentBehaviorDefaults, so 'Child' should be shown
+      // In loading state, uses currentBehaviorDefaults — imeiStock=true → Child
       expect(find.text('Child'), findsOneWidget);
-      
+
       completer.complete(const FeatureFlags.currentBehaviorDefaults());
       await tester.pumpAndSettle();
     });

@@ -575,6 +575,33 @@ class MigrationService {
       await database.execute(
         'CREATE INDEX IF NOT EXISTS idx_sales_status_date ON ${TableNames.sales}(status, sale_date);',
       );
+
+      // ── dealer_issues: created by v27 (skipped in onCreate); add here ──────
+      await database.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS ${TableNames.dealerIssues} (
+          issue_id TEXT PRIMARY KEY NOT NULL,
+          dealer_id TEXT NOT NULL,
+          imei_list TEXT NOT NULL,
+          issue_date TEXT NOT NULL,
+          return_status INTEGER NOT NULL DEFAULT 0 CHECK (return_status IN (0, 1)),
+          returned_at TEXT,
+          converted_to_sale INTEGER NOT NULL DEFAULT 0
+            CHECK (converted_to_sale IN (0, 1)),
+          sale_invoice_id TEXT,
+          sold_status INTEGER NOT NULL DEFAULT 0 CHECK (sold_status IN (0, 1)),
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        ''',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_dealer_issues_dealer ON ${TableNames.dealerIssues}(dealer_id);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_dealer_issues_date ON ${TableNames.dealerIssues}(issue_date DESC);',
+      );
     } finally {
       await database.execute('PRAGMA foreign_keys = ON;');
     }

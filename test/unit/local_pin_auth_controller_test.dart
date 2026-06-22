@@ -44,7 +44,7 @@ void main() {
       authService,
       nowProvider: () => now,
     );
-    await _settle();
+    await _settle(controller);
 
     for (var attempt = 0; attempt < 5; attempt++) {
       final success = await controller.loginWithPin('9999');
@@ -58,7 +58,7 @@ void main() {
       authService,
       nowProvider: () => now,
     );
-    await _settle();
+    await _settle(restartedController);
 
     expect(restartedController.state.lockedUntil, isNotNull);
     expect(restartedController.state.failedAttempts, 5);
@@ -79,7 +79,7 @@ void main() {
       authService,
       nowProvider: () => now,
     );
-    await _settle();
+    await _settle(controller);
 
     expect(controller.state.lockedUntil, isNull);
     expect(controller.state.failedAttempts, 0);
@@ -96,7 +96,7 @@ void main() {
       authService,
       nowProvider: () => now,
     );
-    await _settle();
+    await _settle(controller);
 
     for (var attempt = 0; attempt < 5; attempt++) {
       final success = await controller.loginWithPin('9999');
@@ -122,7 +122,8 @@ void main() {
   });
 }
 
-Future<void> _settle() async {
-  await Future<void>.delayed(Duration.zero);
-  await Future<void>.delayed(Duration.zero);
+Future<void> _settle(LocalPinAuthController controller) async {
+  for (var i = 0; i < 200 && !controller.state.isInitialized; i++) {
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+  }
 }
