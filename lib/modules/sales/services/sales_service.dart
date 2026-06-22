@@ -5,6 +5,7 @@ import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_completion_entity.dart';
+import 'package:phone_shop_pos/modules/sales/domain/entities/sale_header_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/repositories/sales_repository.dart';
 
@@ -298,6 +299,31 @@ class SalesService {
       userId: userId,
       paymentMethod: normalizedPaymentMethod,
       notes: normalizedNotes,
+    );
+  }
+
+  Future<Result<SaleHeaderEntity>> getSaleById(String saleId) {
+    return _repository.getSaleById(saleId);
+  }
+
+  Future<Result<void>> voidSale({
+    required String saleId,
+    required String voidReason,
+    String? voidedBy,
+  }) async {
+    final trimmedReason = voidReason.trim();
+    if (trimmedReason.isEmpty) {
+      return const Failure<void>(
+        AppError(
+          code: 'void_reason_required',
+          message: 'Please provide a reason for voiding this sale.',
+        ),
+      );
+    }
+    return _repository.voidSale(
+      saleId: saleId,
+      voidReason: trimmedReason,
+      voidedBy: voidedBy,
     );
   }
 }

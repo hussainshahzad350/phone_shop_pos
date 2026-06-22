@@ -5,6 +5,7 @@ import 'package:phone_shop_pos/core/utils/imei_helpers.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_completion_entity.dart';
+import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/repositories/purchase_repository.dart';
 import 'package:phone_shop_pos/modules/purchases/services/purchase_calculator.dart';
@@ -442,6 +443,31 @@ class PurchaseService {
       supplierId: supplierId,
       invoiceNumber: invoiceNumber,
       notes: normalizedNotes,
+    );
+  }
+
+  Future<Result<PurchaseEntity>> getPurchaseById(String purchaseId) {
+    return _repository.getPurchaseById(purchaseId);
+  }
+
+  Future<Result<void>> voidPurchase({
+    required String purchaseId,
+    required String voidReason,
+    String? voidedBy,
+  }) async {
+    final trimmedReason = voidReason.trim();
+    if (trimmedReason.isEmpty) {
+      return const Failure<void>(
+        AppError(
+          code: 'void_reason_required',
+          message: 'Please provide a reason for voiding this purchase.',
+        ),
+      );
+    }
+    return _repository.voidPurchase(
+      purchaseId: purchaseId,
+      voidReason: trimmedReason,
+      voidedBy: voidedBy,
     );
   }
 

@@ -5,6 +5,7 @@ import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stoc
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_completion_entity.dart';
+import 'package:phone_shop_pos/modules/sales/domain/entities/sale_header_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.dart';
 
 abstract class SalesRepository extends BaseRepository {
@@ -39,5 +40,13 @@ abstract class SalesRepository extends BaseRepository {
     String? userId,
     String? paymentMethod,
     String? notes,
+  });
+
+  Future<Result<SaleHeaderEntity>> getSaleById(String saleId);
+
+  Future<Result<void>> voidSale({
+    required String saleId,
+    required String voidReason,
+    String? voidedBy,
   });
 }

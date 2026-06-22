@@ -153,6 +153,10 @@ class MigrationService {
       await _applyMigrationV27(database);
       return;
     }
+    if (version == 28) {
+      await _applyMigrationV28(database);
+      return;
+    }
     final statements = _migrationStatements[version];
     if (statements == null) {
       return;
@@ -2041,6 +2045,59 @@ class MigrationService {
       await database.execute('PRAGMA legacy_alter_table = OFF;');
       await database.execute('PRAGMA foreign_keys = ON;');
     }
+  }
+
+  Future<void> _applyMigrationV28(Database database) async {
+    // ── sales: add status + void metadata columns ───────────────────────────
+    await database.execute(
+      "ALTER TABLE ${TableNames.sales} ADD COLUMN status TEXT NOT NULL DEFAULT 'posted' CHECK(status IN ('posted','void'));",
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.sales} ADD COLUMN voided_at TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.sales} ADD COLUMN voided_by TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.sales} ADD COLUMN void_reason TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.sales} ADD COLUMN correction_of TEXT;',
+    );
+
+    // ── purchases: add payment_method + status + void metadata columns ──────
+    await database.execute(
+      "ALTER TABLE ${TableNames.purchases} ADD COLUMN payment_method TEXT CHECK(payment_method IN ('cash','card','bank','credit'));",
+    );
+    await database.execute(
+      "ALTER TABLE ${TableNames.purchases} ADD COLUMN status TEXT NOT NULL DEFAULT 'posted' CHECK(status IN ('posted','void'));",
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.purchases} ADD COLUMN voided_at TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.purchases} ADD COLUMN voided_by TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.purchases} ADD COLUMN void_reason TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.purchases} ADD COLUMN correction_of TEXT;',
+    );
+
+    // ── indexes ─────────────────────────────────────────────────────────────
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sales_status ON ${TableNames.sales}(status);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sales_status_date ON ${TableNames.sales}(status, sale_date);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_purchases_status ON ${TableNames.purchases}(status);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_purchases_status_date ON ${TableNames.purchases}(status, purchase_date);',
+    );
   }
 
   Future<void> _applyMigrationV25(Database database) async {

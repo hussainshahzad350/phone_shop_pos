@@ -1,5 +1,6 @@
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
+import 'package:phone_shop_pos/modules/sales/domain/entities/sale_status.dart';
 import 'package:phone_shop_pos/shared/models/base_db_model.dart';
 
 class SaleModel extends BaseDbModel {
@@ -14,10 +15,15 @@ class SaleModel extends BaseDbModel {
     required this.tax,
     required this.total,
     required this.paidAmount,
+    required this.status,
     this.customerId,
     this.userId,
     this.paymentMethod,
     this.notes,
+    this.voidedAt,
+    this.voidedBy,
+    this.voidReason,
+    this.correctionOf,
   });
 
   final String invoiceNumber;
@@ -31,6 +37,11 @@ class SaleModel extends BaseDbModel {
   final double paidAmount;
   final String? paymentMethod;
   final String? notes;
+  final SaleStatus status;
+  final DateTime? voidedAt;
+  final String? voidedBy;
+  final String? voidReason;
+  final String? correctionOf;
 
   factory SaleModel.fromMap(Map<String, Object?> map) {
     return SaleModel(
@@ -50,6 +61,13 @@ class SaleModel extends BaseDbModel {
         map['payment_method'] as String?,
       ),
       notes: map['notes'] as String?,
+      status: SaleStatus.fromString(map['status'] as String?),
+      voidedAt: map['voided_at'] != null
+          ? DateTimeHelpers.fromSql(map['voided_at'] as String)
+          : null,
+      voidedBy: map['voided_by'] as String?,
+      voidReason: map['void_reason'] as String?,
+      correctionOf: map['correction_of'] as String?,
     );
   }
 
@@ -67,6 +85,11 @@ class SaleModel extends BaseDbModel {
       'paid_amount': paidAmount,
       'payment_method': PaymentMethod.normalizeNullable(paymentMethod),
       'notes': notes,
+      'status': status.value,
+      'voided_at': voidedAt != null ? DateTimeHelpers.toSql(voidedAt!) : null,
+      'voided_by': voidedBy,
+      'void_reason': voidReason,
+      'correction_of': correctionOf,
     };
   }
 }

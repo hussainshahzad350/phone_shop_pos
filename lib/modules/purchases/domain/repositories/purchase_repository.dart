@@ -2,6 +2,7 @@ import 'package:phone_shop_pos/core/database/base_repository.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_completion_entity.dart';
+import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/supplier_option_entity.dart';
 
@@ -27,5 +28,13 @@ abstract class PurchaseRepository extends BaseRepository {
     String? supplierId,
     String? invoiceNumber,
     String? notes,
+  });
+
+  Future<Result<PurchaseEntity>> getPurchaseById(String purchaseId);
+
+  Future<Result<void>> voidPurchase({
+    required String purchaseId,
+    required String voidReason,
+    String? voidedBy,
   });
 }
