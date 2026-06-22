@@ -3,6 +3,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/database/app_database.dart';
+import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/domain/entities/dealer_issue_entity.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/domain/repositories/dealer_issue_repository.dart';
 
@@ -12,16 +13,13 @@ class SqliteDealerIssueRepository implements DealerIssueRepository {
   SqliteDealerIssueRepository({required AppDatabase appDatabase})
       : _appDatabase = appDatabase;
 
-  static const String _tableName = 'dealer_issues';
-
-  Future<Database> get _database async => _appDatabase.database;
+  Database get _db => _appDatabase.database;
 
   @override
   Future<Result<List<DealerIssueEntity>>> getAllIssues() async {
     return await guard(() async {
-      final db = await _database;
-      final List<Map<String, dynamic>> maps = await db.query(
-        _tableName,
+      final List<Map<String, dynamic>> maps = await _db.query(
+        TableNames.dealerIssues,
         orderBy: 'issue_date DESC',
       );
       return maps.map((map) => DealerIssueEntity.fromMap(map)).toList();
@@ -31,9 +29,8 @@ class SqliteDealerIssueRepository implements DealerIssueRepository {
   @override
   Future<Result<DealerIssueEntity>> getIssueById(String issueId) async {
     return await guard(() async {
-      final db = await _database;
-      final List<Map<String, dynamic>> maps = await db.query(
-        _tableName,
+      final List<Map<String, dynamic>> maps = await _db.query(
+        TableNames.dealerIssues,
         where: 'issue_id = ?',
         whereArgs: [issueId],
         limit: 1,
@@ -50,9 +47,8 @@ class SqliteDealerIssueRepository implements DealerIssueRepository {
   @override
   Future<Result<List<DealerIssueEntity>>> getIssuesByDealer(String dealerId) async {
     return await guard(() async {
-      final db = await _database;
-      final List<Map<String, dynamic>> maps = await db.query(
-        _tableName,
+      final List<Map<String, dynamic>> maps = await _db.query(
+        TableNames.dealerIssues,
         where: 'dealer_id = ?',
         whereArgs: [dealerId],
         orderBy: 'issue_date DESC',
@@ -64,9 +60,8 @@ class SqliteDealerIssueRepository implements DealerIssueRepository {
   @override
   Future<Result<List<DealerIssueEntity>>> getIssuesByStatus(String status) async {
     return await guard(() async {
-      final db = await _database;
-      final List<Map<String, dynamic>> maps = await db.query(
-        _tableName,
+      final List<Map<String, dynamic>> maps = await _db.query(
+        TableNames.dealerIssues,
         where: 'sold_status = ?',
         whereArgs: [status == 'Sold' ? 1 : 0],
         orderBy: 'issue_date DESC',
@@ -75,12 +70,39 @@ class SqliteDealerIssueRepository implements DealerIssueRepository {
     });
   }
 
+  /// Creates a dealer issue and marks each listed IMEI as 'with_dealer' in
+  /// serialized_stock. Fails atomically if any IMEI is not currently 'in_stock'.
   @override
   Future<Result<DealerIssueEntity>> createIssue(DealerIssueEntity issue) async {
     return await guard(() async {
-      final db = await _database;
+      await _db.transaction((txn) async {
+        final now = DateTime.now().toIso8601String();
 
-      await db.insert(_tableName, issue.toMap());
+        for (final imei in issue.imeiList) {
+          final rows = await txn.query(
+            TableNames.serializedStock,
+            columns: ['id'],
+            where: "(imei1 = ? OR imei2 = ?) AND stock_status = 'in_stock'",
+            whereArgs: [imei, imei],
+            limit: 1,
+          );
+          if (rows.isEmpty) {
+            throw AppError(
+              code: 'imei_not_available',
+              message:
+                  'IMEI $imei is not available for issue (not in stock or already issued)',
+            );
+          }
+          await txn.update(
+            TableNames.serializedStock,
+            {'stock_status': 'with_dealer', 'updated_at': now},
+            where: 'imei1 = ? OR imei2 = ?',
+            whereArgs: [imei, imei],
+          );
+        }
+
+        await txn.insert(TableNames.dealerIssues, issue.toMap());
+      });
 
       return issue;
     });
@@ -89,9 +111,8 @@ class SqliteDealerIssueRepository implements DealerIssueRepository {
   @override
   Future<Result<bool>> updateIssue(DealerIssueEntity issue) async {
     return await guard(() async {
-      final db = await _database;
-      final rows = await db.update(
-        _tableName,
+      final rows = await _db.update(
+        TableNames.dealerIssues,
         issue.toMap(),
         where: 'issue_id = ?',
         whereArgs: [issue.issueId],
@@ -100,45 +121,56 @@ class SqliteDealerIssueRepository implements DealerIssueRepository {
     });
   }
 
-  @override
-  Future<Result<bool>> deleteIssue(String issueId) async {
-    return await guard(() async {
-      final db = await _database;
-      final rows = await db.delete(
-        _tableName,
-        where: 'issue_id = ?',
-        whereArgs: [issueId],
-      );
-      return rows > 0;
-    });
-  }
-
+  /// Marks the issue as returned and restores each IMEI's stock_status to
+  /// 'in_stock' (only those still 'with_dealer' — converted ones stay 'sold').
   @override
   Future<Result<bool>> markAsReturned(String issueId) async {
     return await guard(() async {
-      final db = await _database;
-      final now = DateTime.now();
-      final rows = await db.update(
-        _tableName,
-        {
-          'return_status': 1,
-          'returned_at': now.toIso8601String(),
-          'updated_at': now.toIso8601String(),
-        },
-        where: 'issue_id = ?',
-        whereArgs: [issueId],
-      );
-      return rows > 0;
+      bool updated = false;
+      await _db.transaction((txn) async {
+        final maps = await txn.query(
+          TableNames.dealerIssues,
+          where: 'issue_id = ?',
+          whereArgs: [issueId],
+          limit: 1,
+        );
+        if (maps.isEmpty) {
+          throw AppError(code: 'not_found', message: 'Issue not found');
+        }
+        final issue = DealerIssueEntity.fromMap(maps.first);
+        final now = DateTime.now().toIso8601String();
+
+        for (final imei in issue.imeiList) {
+          await txn.update(
+            TableNames.serializedStock,
+            {'stock_status': 'in_stock', 'updated_at': now},
+            where: "(imei1 = ? OR imei2 = ?) AND stock_status = 'with_dealer'",
+            whereArgs: [imei, imei],
+          );
+        }
+
+        final rows = await txn.update(
+          TableNames.dealerIssues,
+          {
+            'return_status': 1,
+            'returned_at': now,
+            'updated_at': now,
+          },
+          where: 'issue_id = ?',
+          whereArgs: [issueId],
+        );
+        updated = rows > 0;
+      });
+      return updated;
     });
   }
 
   @override
   Future<Result<bool>> convertToSale(String issueId, String saleInvoiceId) async {
     return await guard(() async {
-      final db = await _database;
       final now = DateTime.now();
-      final rows = await db.update(
-        _tableName,
+      final rows = await _db.update(
+        TableNames.dealerIssues,
         {
           'converted_to_sale': 1,
           'sale_invoice_id': saleInvoiceId,
@@ -154,10 +186,9 @@ class SqliteDealerIssueRepository implements DealerIssueRepository {
   @override
   Future<Result<bool>> markAsSold(String issueId) async {
     return await guard(() async {
-      final db = await _database;
       final now = DateTime.now();
-      final rows = await db.update(
-        _tableName,
+      final rows = await _db.update(
+        TableNames.dealerIssues,
         {
           'sold_status': 1,
           'updated_at': now.toIso8601String(),
@@ -169,19 +200,57 @@ class SqliteDealerIssueRepository implements DealerIssueRepository {
     });
   }
 
+  /// Deletes the dealer issue. If the issue was not yet returned or converted,
+  /// each IMEI is restored to 'in_stock' so the stock pool is correct.
+  @override
+  Future<Result<bool>> deleteIssue(String issueId) async {
+    return await guard(() async {
+      bool deleted = false;
+      await _db.transaction((txn) async {
+        final maps = await txn.query(
+          TableNames.dealerIssues,
+          where: 'issue_id = ?',
+          whereArgs: [issueId],
+          limit: 1,
+        );
+        if (maps.isEmpty) {
+          deleted = false;
+          return;
+        }
+        final issue = DealerIssueEntity.fromMap(maps.first);
+
+        if (!issue.returnStatus && !issue.convertedToSale) {
+          final now = DateTime.now().toIso8601String();
+          for (final imei in issue.imeiList) {
+            await txn.update(
+              TableNames.serializedStock,
+              {'stock_status': 'in_stock', 'updated_at': now},
+              where: "(imei1 = ? OR imei2 = ?) AND stock_status = 'with_dealer'",
+              whereArgs: [imei, imei],
+            );
+          }
+        }
+
+        final rows = await txn.delete(
+          TableNames.dealerIssues,
+          where: 'issue_id = ?',
+          whereArgs: [issueId],
+        );
+        deleted = rows > 0;
+      });
+      return deleted;
+    });
+  }
+
   @override
   Future<Result<List<String>>> getAvailableImeisForIssue(String dealerId) async {
     return await guard(() async {
-      final db = await _database;
-
-      final List<Map<String, dynamic>> maps = await db.rawQuery('''
-        SELECT DISTINCT imei1, imei2
-        FROM serialized_stock
-        WHERE serialized_status = 'in_stock'
-        AND id IN (
-          SELECT stock_id FROM inventory_stock WHERE dealer_id = ?
-        )
-      ''', [dealerId]);
+      final List<Map<String, dynamic>> maps = await _db.rawQuery('''
+        SELECT imei1, imei2
+        FROM ${TableNames.serializedStock}
+        WHERE stock_status = 'in_stock'
+        ORDER BY created_at DESC
+      ''');
 
       final imeis = <String>[];
       for (final map in maps) {
@@ -196,9 +265,7 @@ class SqliteDealerIssueRepository implements DealerIssueRepository {
   @override
   Future<Result<bool>> isImeiUniqueForDealer(String imei, String dealerId, {String? excludeIssueId}) async {
     return await guard(() async {
-      final db = await _database;
-
-      String whereClause = 'imei1 = ? OR imei2 = ?';
+      String whereClause = "(imei1 = ? OR imei2 = ?) AND stock_status = 'with_dealer'";
       List<Object?> whereArgs = [imei, imei];
 
       if (excludeIssueId != null) {
@@ -206,13 +273,10 @@ class SqliteDealerIssueRepository implements DealerIssueRepository {
         whereArgs.add(excludeIssueId);
       }
 
-      final List<Map<String, dynamic>> maps = await db.rawQuery('''
-        SELECT id FROM serialized_stock
-        WHERE $whereClause
-        AND id IN (
-          SELECT stock_id FROM inventory_stock WHERE dealer_id = ?
-        )
-      ''', whereArgs);
+      final List<Map<String, dynamic>> maps = await _db.rawQuery(
+        'SELECT id FROM ${TableNames.serializedStock} WHERE $whereClause',
+        whereArgs,
+      );
 
       return maps.isEmpty;
     });

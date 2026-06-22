@@ -36,7 +36,9 @@ class CashFlowService with BaseRepositoryGuard {
       final purchaseReturnsArgs = <Object?>[];
       final purchaseReturnsWhere = StringBuffer('1 = 1');
       final purchasesWhere = StringBuffer('1 = 1');
-      final expensesWhere = StringBuffer('e.is_deleted = 0');
+      final expensesWhere = StringBuffer(
+        "e.is_deleted = 0 AND (e.payment_method = '${PaymentMethod.cash}' OR e.payment_method IS NULL)",
+      );
       final customerSettlementWhere = StringBuffer('cpt.payment_method = ?');
       final supplierSettlementWhere = StringBuffer('spt.payment_method = ?');
 

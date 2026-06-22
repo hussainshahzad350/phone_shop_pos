@@ -27,6 +27,8 @@ class TableNames {
 
   static const String repairJobs = 'repair_jobs';
 
+  static const String dealerIssues = 'dealer_issues';
+
   /// Sequence table used for atomic, collision-free invoice number generation.
   static const String invoiceSequences = 'invoice_sequences';
 }
