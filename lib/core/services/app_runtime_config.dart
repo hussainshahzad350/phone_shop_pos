@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'package:phone_shop_pos/core/constants/app_constants.dart';
+import 'package:phone_shop_pos/core/config/feature_flags.dart';
 
 class AppRuntimeConfig {
   const AppRuntimeConfig._();
@@ -20,13 +21,14 @@ class AppRuntimeConfig {
   );
   static const String buildNumber = String.fromEnvironment(
     'POS_BUILD_NUMBER',
-    defaultValue: '1',
+    defaultValue: '2',
   );
   // Feature flag for seed/demo data. Enabled in debug/local runs only.
-  static const bool kEnableSeedData = kDebugMode || bool.fromEnvironment(
-    'POS_ENABLE_SEED_DATA',
-    defaultValue: false,
-  );
+  static const bool kEnableSeedData = kDebugMode ||
+      bool.fromEnvironment(
+        'POS_ENABLE_SEED_DATA',
+        defaultValue: false,
+      );
   static const int autoBackupIntervalHours = int.fromEnvironment(
     'POS_AUTO_BACKUP_INTERVAL_HOURS',
     defaultValue: 24,
@@ -34,4 +36,16 @@ class AppRuntimeConfig {
 
   static String get fullVersion => '$appVersion+$buildNumber';
   static String get contactSummary => '$contactPhone | $contactEmail';
+
+  // Feature flag helpers for quick access
+  static bool get showRepairModule =>
+      FeatureFlags.currentBehaviorDefaults().repairModule;
+  static bool get showAccessoriesModule =>
+      FeatureFlags.currentBehaviorDefaults().accessoriesModule;
+  static bool get showDealerIssueModule =>
+      FeatureFlags.currentBehaviorDefaults().dealerIssueModule;
+  static bool get showReports =>
+      FeatureFlags.currentBehaviorDefaults().reports;
+  static bool get showNavigationStyle =>
+      FeatureFlags.currentBehaviorDefaults().navigationStyle;
 }
