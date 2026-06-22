@@ -33,12 +33,13 @@ class StockAdjustmentService with BaseRepositoryGuard {
       await _appDatabase.runInTransaction<void>((transaction) async {
         final rows = await transaction.query(
           TableNames.inventoryStock,
-          columns: <String>['quantity'],
+          columns: <String>['quantity', 'unit_cost'],
           where: 'product_model_id = ?',
           whereArgs: <Object?>[productModelId],
           limit: 1,
         );
 
+        double unitCostAtAdjustment;
         if (rows.isEmpty) {
           if (delta < 0) {
             throw StateError(
@@ -55,8 +56,11 @@ class StockAdjustmentService with BaseRepositoryGuard {
             'updated_at': DateTimeHelpers.toSql(now),
           });
           newQty = delta;
+          unitCostAtAdjustment = 0;
         } else {
           final currentQty = (rows.first['quantity'] as num?)?.toInt() ?? 0;
+          unitCostAtAdjustment =
+              (rows.first['unit_cost'] as num?)?.toDouble() ?? 0;
           final nextQty = currentQty + delta;
           if (nextQty < 0) {
             throw StateError('Stock cannot go below zero.');
@@ -79,6 +83,7 @@ class StockAdjustmentService with BaseRepositoryGuard {
           'serialized_stock_id': null,
           'adjustment_type': delta > 0 ? 'increase' : 'decrease',
           'quantity_delta': delta,
+          'unit_cost_at_adjustment': unitCostAtAdjustment,
           'reason': reason.trim().toLowerCase(),
           'notes': normalizedNotes,
           'created_at': DateTimeHelpers.toSql(now),
@@ -103,7 +108,12 @@ class StockAdjustmentService with BaseRepositoryGuard {
       await _appDatabase.runInTransaction<void>((transaction) async {
         final rows = await transaction.query(
           TableNames.serializedStock,
-          columns: <String>['product_model_id', 'stock_status', 'imei1'],
+          columns: <String>[
+            'product_model_id',
+            'stock_status',
+            'imei1',
+            'cost_price',
+          ],
           where: 'id = ?',
           whereArgs: <Object?>[serializedStockId],
           limit: 1,
@@ -116,6 +126,8 @@ class StockAdjustmentService with BaseRepositoryGuard {
         if (status != 'in_stock') {
           throw StateError('Only in-stock IMEIs can be written off.');
         }
+        final unitCostAtAdjustment =
+            (row['cost_price'] as num?)?.toDouble() ?? 0;
 
         await transaction.update(
           TableNames.serializedStock,
@@ -133,6 +145,7 @@ class StockAdjustmentService with BaseRepositoryGuard {
           'serialized_stock_id': serializedStockId,
           'adjustment_type': 'write_off',
           'quantity_delta': -1,
+          'unit_cost_at_adjustment': unitCostAtAdjustment,
           'reason': reason.trim().toLowerCase(),
           'notes': normalizedNotes,
           'created_at': DateTimeHelpers.toSql(now),
@@ -143,11 +156,20 @@ class StockAdjustmentService with BaseRepositoryGuard {
   }
 
   void _validateAdjustmentReason(String reason) {
-    final normalized = reason.trim().toLowerCase();
-    if (normalized != 'damage' &&
-        normalized != 'theft' &&
-        normalized != 'correction') {
-      throw StateError('Reason must be damage, theft, or correction.');
+    const valid = {
+      'damage',
+      'theft',
+      'correction',
+      'miscounted',
+      'lost',
+      'broken',
+      'water_damage',
+      'other',
+    };
+    if (!valid.contains(reason.trim().toLowerCase())) {
+      throw StateError(
+        'Reason must be one of: ${valid.join(', ')}.',
+      );
     }
   }
 }

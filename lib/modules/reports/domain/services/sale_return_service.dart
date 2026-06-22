@@ -57,6 +57,42 @@ class SaleReturnService with BaseRepositoryGuard {
         final unitCostPrice =
             (saleItemRows.first['cost_price'] as num?)?.toDouble() ?? 0;
 
+        // ── Read sale header for discount prorating and financial totals ───
+        // Reading all required columns in one query avoids a second round-trip.
+        final saleHeaderRows = await transaction.query(
+          TableNames.sales,
+          columns: <String>[
+            'discount',
+            'subtotal',
+            'total',
+            'paid_amount',
+            'payment_method',
+            'customer_id',
+          ],
+          where: 'id = ?',
+          whereArgs: <Object?>[saleId],
+          limit: 1,
+        );
+        if (saleHeaderRows.isEmpty) {
+          throw StateError('Sale not found for financial adjustment.');
+        }
+        final invoiceDiscount =
+            (saleHeaderRows.first['discount'] as num?)?.toDouble() ?? 0;
+
+        // Total qty across all line items in this sale — used to prorate the
+        // invoice discount proportionally to the returned quantity (BR-11).
+        final totalQtyRow = await transaction.rawQuery(
+          'SELECT COALESCE(SUM(quantity), 1) AS total_qty'
+          ' FROM ${TableNames.saleItems} WHERE sale_id = ?',
+          <Object?>[saleId],
+        );
+        final totalSaleQty =
+            (totalQtyRow.first['total_qty'] as num?)?.toInt() ?? 1;
+        // Prorated share of the invoice discount attributed to this return.
+        final proratedDiscount = totalSaleQty > 0
+            ? (quantity / totalSaleQty) * invoiceDiscount
+            : 0.0;
+
         late double returnAmount;
         String? returnedSerializedId;
         String returnType;
@@ -91,7 +127,9 @@ class SaleReturnService with BaseRepositoryGuard {
             whereArgs: <Object?>[serializedId],
           );
 
-          returnAmount = item.lineTotal;
+          // Return revenue = line_total - prorated invoice discount (BR-11).
+          returnAmount =
+              (item.lineTotal - proratedDiscount).clamp(0.0, item.lineTotal);
           returnedSerializedId = serializedId;
           returnType = 'imei';
         } else {
@@ -111,7 +149,7 @@ class SaleReturnService with BaseRepositoryGuard {
 
           final stockRows = await transaction.query(
             TableNames.inventoryStock,
-            columns: <String>['quantity'],
+            columns: <String>['quantity', 'unit_cost'],
             where: 'product_model_id = ?',
             whereArgs: <Object?>[item.productModelId],
             limit: 1,
@@ -120,44 +158,44 @@ class SaleReturnService with BaseRepositoryGuard {
             throw StateError('Inventory row missing for return item.');
           }
           final oldQty = (stockRows.first['quantity'] as num?)?.toInt() ?? 0;
+          final oldUnitCost =
+              (stockRows.first['unit_cost'] as num?)?.toDouble() ?? 0;
           final newQty = oldQty + quantity;
+
+          // Recalculate WAC using unit_cost_at_sale as the cost of returned
+          // units re-entering inventory (BR-10: WAC is recalculated on every
+          // stock increase; Section 4.1 specifies using unit_cost_at_sale).
+          final newUnitCost = newQty <= 0
+              ? oldUnitCost
+              : ((oldQty * oldUnitCost) + (quantity * unitCostPrice)) / newQty;
 
           await transaction.update(
             TableNames.inventoryStock,
             <String, Object?>{
               'quantity': newQty,
+              'unit_cost': newUnitCost,
               'updated_at': DateTimeHelpers.toSql(now),
             },
             where: 'product_model_id = ?',
             whereArgs: <Object?>[item.productModelId],
           );
 
-          returnAmount = item.unitPrice * quantity;
+          // Return revenue = (unit_price × qty) - prorated invoice discount
+          // (BR-11).
+          returnAmount =
+              ((item.unitPrice * quantity) - proratedDiscount)
+                  .clamp(0.0, item.unitPrice * quantity);
           returnedSerializedId = null;
           returnType = 'quantity';
         }
 
-        // ── Insert return audit record ────────────────────────────────────
-        final saleRows = await transaction.query(
-          TableNames.sales,
-          columns: <String>[
-            'total',
-            'paid_amount',
-            'payment_method',
-            'customer_id'
-          ],
-          where: 'id = ?',
-          whereArgs: <Object?>[saleId],
-          limit: 1,
-        );
-        if (saleRows.isEmpty) {
-          throw StateError('Sale not found for financial adjustment.');
-        }
-        final currentTotal = (saleRows.first['total'] as num?)?.toDouble() ?? 0;
+        // ── Compute financial adjustments from the already-read sale header ─
+        final currentTotal =
+            (saleHeaderRows.first['total'] as num?)?.toDouble() ?? 0;
         final currentPaid =
-            (saleRows.first['paid_amount'] as num?)?.toDouble() ?? 0;
+            (saleHeaderRows.first['paid_amount'] as num?)?.toDouble() ?? 0;
         final salePaymentMethod = PaymentMethod.normalizeNullable(
-          saleRows.first['payment_method'] as String?,
+          saleHeaderRows.first['payment_method'] as String?,
         );
         final newTotal = (currentTotal - returnAmount).clamp(0.0, currentTotal);
         final newPaid = currentPaid.clamp(0.0, newTotal).toDouble();
@@ -251,7 +289,7 @@ class SaleReturnService with BaseRepositoryGuard {
           whereArgs: <Object?>[saleId],
         );
 
-        final customerId = saleRows.first['customer_id'] as String?;
+        final customerId = saleHeaderRows.first['customer_id'] as String?;
         if (_ledgerPostingService != null &&
             customerId != null &&
             customerId.trim().isNotEmpty &&

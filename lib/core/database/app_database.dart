@@ -633,6 +633,7 @@ class AppDatabase {
         'unit_price': 104000,
         'discount': 0,
         'line_total': 104000,
+        'cost_price': 97000,
         'created_at': now,
         'updated_at': now,
       });
@@ -645,6 +646,7 @@ class AppDatabase {
         'unit_price': 1800,
         'discount': 0,
         'line_total': 1800,
+        'cost_price': 1200,
         'created_at': now,
         'updated_at': now,
       });
@@ -675,6 +677,7 @@ class AppDatabase {
         'unit_price': 500,
         'discount': 0,
         'line_total': 1000,
+        'cost_price': 300,
         'created_at': now,
         'updated_at': now,
       });
@@ -687,6 +690,7 @@ class AppDatabase {
         'unit_price': 300,
         'discount': 0,
         'line_total': 300,
+        'cost_price': 150,
         'created_at': now,
         'updated_at': now,
       });
@@ -717,6 +721,7 @@ class AppDatabase {
         'unit_price': 2500,
         'discount': 0,
         'line_total': 5000,
+        'cost_price': 1800,
         'created_at': now,
         'updated_at': now,
       });
@@ -747,6 +752,7 @@ class AppDatabase {
         'unit_price': 232000,
         'discount': 0,
         'line_total': 232000,
+        'cost_price': 218000,
         'created_at': now,
         'updated_at': now,
       });
@@ -777,6 +783,7 @@ class AppDatabase {
         'unit_price': 150,
         'discount': 0,
         'line_total': 750,
+        'cost_price': 80,
         'created_at': now,
         'updated_at': now,
       });
@@ -789,6 +796,7 @@ class AppDatabase {
         'unit_price': 1800,
         'discount': 0,
         'line_total': 1800,
+        'cost_price': 1200,
         'created_at': now,
         'updated_at': now,
       });
@@ -819,6 +827,7 @@ class AppDatabase {
         'unit_price': 500,
         'discount': 500,
         'line_total': 4500,
+        'cost_price': 300,
         'created_at': now,
         'updated_at': now,
       });

@@ -19,6 +19,9 @@ class ProfitReportService with BaseRepositoryGuard {
     return guard<ProfitReportEntity>(() async {
       final saleArgs = <Object?>[];
       final returnArgs = <Object?>[];
+      final expenseArgs = <Object?>[];
+      final adjArgs = <Object?>[];
+
       final saleWhere = _buildWhereClause(
         filter,
         args: saleArgs,
@@ -30,10 +33,22 @@ class ProfitReportService with BaseRepositoryGuard {
         dateColumn: 'sr.created_at',
         productModelColumn: 'si.product_model_id',
       );
+      final expenseWhere = _buildDateOnlyWhereClause(
+        filter,
+        args: expenseArgs,
+        dateColumn: 'expense_date',
+      );
+      final adjWhere = _buildDateOnlyWhereClause(
+        filter,
+        args: adjArgs,
+        dateColumn: 'sa.created_at',
+      );
 
-      final rows = await QueryDiagnostics.trace(
+      final db = _appDatabase.database;
+
+      final revCostRows = await QueryDiagnostics.trace(
         label: 'reports.profit',
-        action: () => _appDatabase.database.rawQuery(
+        action: () => db.rawQuery(
           '''
         SELECT
           COALESCE(SUM(revenue_delta), 0) AS total_revenue,
@@ -63,14 +78,77 @@ class ProfitReportService with BaseRepositoryGuard {
         ),
       );
 
-      final row = rows.first;
-      final revenue = (row['total_revenue'] as num?)?.toDouble() ?? 0;
-      final cost = (row['total_cost'] as num?)?.toDouble() ?? 0;
+      final expenseRows = await QueryDiagnostics.trace(
+        label: 'reports.profit_expenses',
+        action: () => db.rawQuery(
+          'SELECT COALESCE(SUM(amount), 0) AS total_expenses'
+          ' FROM ${TableNames.expenses}'
+          ' WHERE is_deleted = 0 AND $expenseWhere',
+          expenseArgs,
+        ),
+      );
+
+      final adjRows = await QueryDiagnostics.trace(
+        label: 'reports.profit_adjustments',
+        action: () => db.rawQuery(
+          '''
+          SELECT
+            COALESCE(SUM(
+              CASE
+                WHEN sa.adjustment_type IN ('write_off', 'decrease')
+                  AND sa.reason IN ('damage', 'theft', 'lost', 'broken', 'water_damage')
+                THEN ABS(sa.quantity_delta)
+                     * COALESCE(NULLIF(sa.unit_cost_at_adjustment, 0), ist.unit_cost, 0)
+                ELSE 0
+              END
+            ), 0) AS total_damage_losses,
+            COALESCE(SUM(
+              CASE
+                WHEN sa.adjustment_type = 'decrease'
+                  AND sa.reason IN ('correction', 'miscounted', 'other')
+                THEN ABS(sa.quantity_delta)
+                     * COALESCE(NULLIF(sa.unit_cost_at_adjustment, 0), ist.unit_cost, 0)
+                ELSE 0
+              END
+            ), 0) AS total_adj_losses,
+            COALESCE(SUM(
+              CASE
+                WHEN sa.adjustment_type = 'increase'
+                  AND sa.reason IN ('correction', 'miscounted', 'other')
+                THEN ABS(sa.quantity_delta)
+                     * COALESCE(NULLIF(sa.unit_cost_at_adjustment, 0), ist.unit_cost, 0)
+                ELSE 0
+              END
+            ), 0) AS total_adj_gains
+          FROM ${TableNames.stockAdjustments} sa
+          LEFT JOIN ${TableNames.inventoryStock} ist
+            ON ist.product_model_id = sa.product_model_id
+          WHERE $adjWhere
+          ''',
+          adjArgs,
+        ),
+      );
+
+      final revRow = revCostRows.first;
+      final adjRow = adjRows.first;
+      final revenue = (revRow['total_revenue'] as num?)?.toDouble() ?? 0;
+      final cost = (revRow['total_cost'] as num?)?.toDouble() ?? 0;
+      final expenses =
+          (expenseRows.first['total_expenses'] as num?)?.toDouble() ?? 0;
+      final damageLosses =
+          (adjRow['total_damage_losses'] as num?)?.toDouble() ?? 0;
+      final adjLosses =
+          (adjRow['total_adj_losses'] as num?)?.toDouble() ?? 0;
+      final adjGains =
+          (adjRow['total_adj_gains'] as num?)?.toDouble() ?? 0;
 
       return ProfitReportEntity(
         totalRevenue: revenue,
         totalCost: cost,
-        totalProfit: revenue - cost,
+        totalExpenses: expenses,
+        totalDamageLosses: damageLosses,
+        totalAdjLosses: adjLosses,
+        totalAdjGains: adjGains,
       );
     }, operation: 'profit_report');
   }
@@ -156,6 +234,32 @@ class ProfitReportService with BaseRepositoryGuard {
           )
           .toList(growable: false);
     }, operation: 'profit_report_rows');
+  }
+
+  String _buildDateOnlyWhereClause(
+    ReportFilterEntity filter, {
+    required List<Object?> args,
+    required String dateColumn,
+  }) {
+    final clauses = <String>['1 = 1'];
+
+    final start = filter.startDate;
+    if (start != null) {
+      final startUtc = DateTime.utc(start.year, start.month, start.day);
+      clauses.add('$dateColumn >= ?');
+      args.add(DateTimeHelpers.toSql(startUtc));
+    }
+
+    final end = filter.endDate;
+    if (end != null) {
+      final endUtc = DateTime.utc(end.year, end.month, end.day).add(
+        const Duration(days: 1),
+      );
+      clauses.add('$dateColumn < ?');
+      args.add(DateTimeHelpers.toSql(endUtc));
+    }
+
+    return clauses.join(' AND ');
   }
 
   String _buildWhereClause(

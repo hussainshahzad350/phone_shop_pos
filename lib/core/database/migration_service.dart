@@ -145,6 +145,14 @@ class MigrationService {
       await _applyMigrationV25(database);
       return;
     }
+    if (version == 26) {
+      await _applyMigrationV26(database);
+      return;
+    }
+    if (version == 27) {
+      await _applyMigrationV27(database);
+      return;
+    }
     final statements = _migrationStatements[version];
     if (statements == null) {
       return;
@@ -1690,6 +1698,10 @@ class MigrationService {
     24: <String>[],
     // v25 is handled by dedicated _applyMigrationV25 method.
     25: <String>[],
+    // v26 is handled by dedicated _applyMigrationV26 method.
+    26: <String>[],
+    // v27 is handled by dedicated _applyMigrationV27 method.
+    27: <String>[],
   };
 
   /// Migration v23: upgrade expenses table with structured category/remarks/payment fields.
@@ -1789,6 +1801,245 @@ class MigrationService {
           AND remarks IS NOT NULL
         ''',
       );
+    }
+  }
+
+  /// Migration v27: add 'with_dealer' to serialized_stock.stock_status CHECK
+  /// and create the dealer_issues table so dealer stock movements are tracked
+  /// atomically as a separate pool per FINANCIAL_RULES.md §8.2 (BR-04).
+  Future<void> _applyMigrationV27(Database database) async {
+    await database.execute('PRAGMA foreign_keys = OFF;');
+    await database.execute('PRAGMA legacy_alter_table = ON;');
+    try {
+      // Drop all named indexes on serialized_stock BEFORE renaming the table.
+      // With legacy_alter_table = ON, renamed-table indexes keep their original
+      // sql text ("ON serialized_stock(...)"). If a new serialized_stock table
+      // is then created before those indexes are dropped, SQLite becomes confused
+      // about which table the indexes belong to and throws "sql logic error" when
+      // DROP TABLE is attempted. Removing indexes first avoids the ambiguity.
+      await database.execute(
+        'DROP INDEX IF EXISTS idx_serialized_stock_imei1;',
+      );
+      await database.execute(
+        'DROP INDEX IF EXISTS idx_serialized_stock_imei2;',
+      );
+      await database.execute(
+        'DROP INDEX IF EXISTS idx_serialized_stock_imei2_unique;',
+      );
+      await database.execute(
+        'DROP INDEX IF EXISTS idx_serialized_stock_status;',
+      );
+      await database.execute(
+        'DROP INDEX IF EXISTS idx_serialized_stock_product_status;',
+      );
+      await database.execute(
+        'DROP INDEX IF EXISTS idx_serialized_stock_serial_number;',
+      );
+      await database.execute(
+        'DROP INDEX IF EXISTS idx_serialized_stock_product_status_created;',
+      );
+      await database.execute(
+        'DROP INDEX IF EXISTS idx_serialized_stock_product_status_imei1;',
+      );
+      await database.execute(
+        'DROP INDEX IF EXISTS idx_serialized_stock_product_status_imei2;',
+      );
+
+      // Rebuild serialized_stock with 'with_dealer' added to stock_status CHECK.
+      await database.execute(
+        'ALTER TABLE ${TableNames.serializedStock} RENAME TO ${TableNames.serializedStock}_old;',
+      );
+      await database.execute(
+        '''
+        CREATE TABLE ${TableNames.serializedStock} (
+          id TEXT PRIMARY KEY NOT NULL,
+          product_model_id TEXT NOT NULL,
+          imei1 TEXT NOT NULL UNIQUE,
+          imei2 TEXT,
+          serial_number TEXT,
+          cost_price REAL NOT NULL DEFAULT 0,
+          selling_price REAL,
+          stock_status TEXT NOT NULL CHECK (
+            stock_status IN (
+              'in_stock', 'sold', 'reserved', 'returned', 'damaged', 'with_dealer'
+            )
+          ),
+          supplier_id TEXT,
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          condition TEXT NOT NULL DEFAULT 'new' CHECK (condition IN ('new', 'used')),
+          seller_name TEXT,
+          seller_id_card TEXT,
+          seller_address TEXT,
+          remaining_warranty TEXT,
+          accessories TEXT,
+          phone_condition_notes TEXT,
+          seller_phone TEXT,
+          FOREIGN KEY (product_model_id) REFERENCES ${TableNames.productModels}(id)
+            ON UPDATE CASCADE ON DELETE RESTRICT,
+          FOREIGN KEY (supplier_id) REFERENCES ${TableNames.suppliers}(id)
+            ON UPDATE CASCADE ON DELETE SET NULL
+        );
+        ''',
+      );
+      await database.execute(
+        '''
+        INSERT INTO ${TableNames.serializedStock} (
+          id, product_model_id, imei1, imei2, serial_number,
+          cost_price, selling_price, stock_status, supplier_id, notes,
+          created_at, updated_at, condition, seller_name, seller_id_card,
+          seller_address, remaining_warranty, accessories,
+          phone_condition_notes, seller_phone
+        )
+        SELECT
+          id, product_model_id, imei1, imei2, serial_number,
+          cost_price, selling_price, stock_status, supplier_id, notes,
+          created_at, updated_at,
+          COALESCE(condition, 'new'),
+          seller_name, seller_id_card, seller_address,
+          remaining_warranty, accessories, phone_condition_notes, seller_phone
+        FROM ${TableNames.serializedStock}_old;
+        ''',
+      );
+      await database.execute(
+        'DROP TABLE ${TableNames.serializedStock}_old;',
+      );
+
+      // Recreate all serialized_stock indexes on the rebuilt table.
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_serialized_stock_imei1 ON ${TableNames.serializedStock}(imei1);',
+      );
+      await database.execute(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_serialized_stock_imei2_unique ON ${TableNames.serializedStock}(imei2) WHERE imei2 IS NOT NULL;',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_serialized_stock_status ON ${TableNames.serializedStock}(stock_status);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_serialized_stock_product_status ON ${TableNames.serializedStock}(product_model_id, stock_status);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_serialized_stock_serial_number ON ${TableNames.serializedStock}(serial_number);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_serialized_stock_product_status_created ON ${TableNames.serializedStock}(product_model_id, stock_status, created_at);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_serialized_stock_product_status_imei1 ON ${TableNames.serializedStock}(product_model_id, stock_status, imei1);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_serialized_stock_product_status_imei2 ON ${TableNames.serializedStock}(product_model_id, stock_status, imei2);',
+      );
+
+      // Create dealer_issues table.
+      await database.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS ${TableNames.dealerIssues} (
+          issue_id TEXT PRIMARY KEY NOT NULL,
+          dealer_id TEXT NOT NULL,
+          imei_list TEXT NOT NULL,
+          issue_date TEXT NOT NULL,
+          return_status INTEGER NOT NULL DEFAULT 0 CHECK (return_status IN (0, 1)),
+          returned_at TEXT,
+          converted_to_sale INTEGER NOT NULL DEFAULT 0
+            CHECK (converted_to_sale IN (0, 1)),
+          sale_invoice_id TEXT,
+          sold_status INTEGER NOT NULL DEFAULT 0 CHECK (sold_status IN (0, 1)),
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        ''',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_dealer_issues_dealer ON ${TableNames.dealerIssues}(dealer_id);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_dealer_issues_date ON ${TableNames.dealerIssues}(issue_date DESC);',
+      );
+    } finally {
+      await database.execute('PRAGMA legacy_alter_table = OFF;');
+      await database.execute('PRAGMA foreign_keys = ON;');
+    }
+  }
+
+  /// Migration v26: expand stock_adjustments reason codes and add
+  /// unit_cost_at_adjustment column for accurate damage-loss reporting.
+  Future<void> _applyMigrationV26(Database database) async {
+    await database.execute('PRAGMA foreign_keys = OFF;');
+    await database.execute('PRAGMA legacy_alter_table = ON;');
+    try {
+      await database.execute(
+        'ALTER TABLE ${TableNames.stockAdjustments} RENAME TO ${TableNames.stockAdjustments}_old;',
+      );
+      await database.execute(
+        '''
+        CREATE TABLE ${TableNames.stockAdjustments} (
+          id TEXT PRIMARY KEY NOT NULL,
+          product_model_id TEXT NOT NULL,
+          serialized_stock_id TEXT,
+          adjustment_type TEXT NOT NULL CHECK (
+            adjustment_type IN ('increase', 'decrease', 'write_off')
+          ),
+          quantity_delta INTEGER NOT NULL,
+          unit_cost_at_adjustment REAL NOT NULL DEFAULT 0,
+          reason TEXT NOT NULL CHECK (
+            reason IN (
+              'damage', 'theft', 'correction',
+              'miscounted', 'lost', 'broken', 'water_damage', 'other'
+            )
+          ),
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (product_model_id) REFERENCES ${TableNames.productModels}(id)
+            ON UPDATE CASCADE
+            ON DELETE RESTRICT,
+          FOREIGN KEY (serialized_stock_id) REFERENCES ${TableNames.serializedStock}(id)
+            ON UPDATE CASCADE
+            ON DELETE SET NULL
+        );
+        ''',
+      );
+      await database.execute(
+        '''
+        INSERT INTO ${TableNames.stockAdjustments} (
+          id,
+          product_model_id,
+          serialized_stock_id,
+          adjustment_type,
+          quantity_delta,
+          unit_cost_at_adjustment,
+          reason,
+          notes,
+          created_at,
+          updated_at
+        )
+        SELECT
+          id,
+          product_model_id,
+          serialized_stock_id,
+          adjustment_type,
+          quantity_delta,
+          0,
+          reason,
+          notes,
+          created_at,
+          updated_at
+        FROM ${TableNames.stockAdjustments}_old;
+        ''',
+      );
+      await _dropTableBestEffort(database, '${TableNames.stockAdjustments}_old');
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_stock_adjustments_created ON ${TableNames.stockAdjustments}(created_at DESC);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_stock_adjustments_product ON ${TableNames.stockAdjustments}(product_model_id);',
+      );
+    } finally {
+      await database.execute('PRAGMA legacy_alter_table = OFF;');
+      await database.execute('PRAGMA foreign_keys = ON;');
     }
   }
 
