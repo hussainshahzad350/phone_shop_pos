@@ -495,6 +495,73 @@ class DashboardService with BaseRepositoryGuard {
     });
   }
 
+  /// Fetches all in-stock serialized items across every brand, grouped as
+  /// `{ brandName: [ModelImeiStockEntity, ...] }`, sorted brand → model → IMEI.
+  Future<Map<String, List<ModelImeiStockEntity>>> getAllModelImeiStock() {
+    return _appDatabase.database.rawQuery(
+      '''
+      SELECT
+        pm.brand,
+        pm.id AS model_id,
+        pm.name AS model_name,
+        ss.id AS serialized_stock_id,
+        ss.imei1 AS imei,
+        ss.imei2,
+        ss.serial_number,
+        ss.cost_price,
+        ss.selling_price AS sale_price,
+        ss.stock_status
+      FROM ${TableNames.serializedStock} ss
+      JOIN ${TableNames.productModels} pm ON pm.id = ss.product_model_id
+      WHERE pm.is_active = 1
+        AND ss.stock_status = 'in_stock'
+        AND pm.brand IS NOT NULL AND pm.brand != ''
+      ORDER BY pm.brand ASC COLLATE NOCASE,
+               pm.name  ASC COLLATE NOCASE,
+               ss.imei1 ASC
+      ''',
+    ).then((rows) {
+      if (rows.isEmpty) return <String, List<ModelImeiStockEntity>>{};
+
+      final brandMap = <String, List<ModelImeiStockEntity>>{};
+      final modelMap = <String, ModelImeiStockEntity>{};
+
+      for (final row in rows) {
+        final brand = row['brand'] as String;
+        final modelId = row['model_id'] as String;
+
+        if (!brandMap.containsKey(brand)) {
+          brandMap[brand] = <ModelImeiStockEntity>[];
+        }
+
+        if (!modelMap.containsKey(modelId)) {
+          final model = ModelImeiStockEntity(
+            modelId: modelId,
+            modelName: row['model_name'] as String,
+            brandName: brand,
+            quantity: 0,
+            imeis: <ImeiStockItemEntity>[],
+          );
+          modelMap[modelId] = model;
+          brandMap[brand]!.add(model);
+        }
+
+        modelMap[modelId]!.imeis.add(ImeiStockItemEntity(
+          serializedStockId: (row['serialized_stock_id'] as String?) ?? '',
+          imei: (row['imei'] as String?) ?? '',
+          imei2: row['imei2'] as String?,
+          serialNumber: row['serial_number'] as String?,
+          costPrice: (row['cost_price'] as num?)?.toDouble() ?? 0,
+          salePrice: (row['sale_price'] as num?)?.toDouble() ?? 0,
+          stockStatus: (row['stock_status'] as String?) ?? 'in_stock',
+        ));
+        modelMap[modelId]!.quantity = modelMap[modelId]!.imeis.length;
+      }
+
+      return brandMap;
+    }).catchError((_) => <String, List<ModelImeiStockEntity>>{});
+  }
+
   double _asDouble(Object? value) {
     if (value is num) {
       return value.toDouble();
