@@ -1,0 +1,37 @@
+class KpiCardConfig {
+  const KpiCardConfig({
+    required this.id,
+    required this.label,
+    this.visible = true,
+    required this.order,
+  });
+
+  final String id;
+  final String label;
+  final bool visible;
+  final int order;
+
+  KpiCardConfig copyWith({bool? visible, int? order}) => KpiCardConfig(
+        id: id,
+        label: label,
+        visible: visible ?? this.visible,
+        order: order ?? this.order,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'visible': visible,
+        'order': order,
+      };
+}
+
+const kpiCardDefaults = <KpiCardConfig>[
+  KpiCardConfig(id: 'today_sales', label: 'Today Sales', order: 0),
+  KpiCardConfig(id: 'today_profit', label: 'Today Profit', order: 1),
+  KpiCardConfig(id: 'phones_sold_today', label: 'Phones Sold Today', order: 2),
+  KpiCardConfig(id: 'accessories_sold_today', label: 'Accessories Sold Today', order: 3),
+  KpiCardConfig(id: 'low_stock_count', label: 'Low Stock Count', order: 4),
+  KpiCardConfig(id: 'available_stock_count', label: 'Available Stock Count', order: 5),
+  KpiCardConfig(id: 'total_stock_worth', label: 'Total Stock Worth', order: 6),
+  KpiCardConfig(id: 'pending_balances', label: 'Pending Balances', order: 7),
+];

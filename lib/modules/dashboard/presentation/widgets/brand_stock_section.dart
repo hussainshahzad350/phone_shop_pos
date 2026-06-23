@@ -43,11 +43,6 @@ class BrandStockSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              'Brand Stock',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
             LayoutBuilder(
               builder: (context, constraints) {
                 return GridView.builder(

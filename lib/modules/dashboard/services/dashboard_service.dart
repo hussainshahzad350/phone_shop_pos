@@ -10,6 +10,7 @@ import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_low_s
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_recent_sale_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_return_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/model_imei_stock_entity.dart';
+import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_balance_customer_entity.dart';
 
 class DashboardService with BaseRepositoryGuard {
   DashboardService({
@@ -298,6 +299,76 @@ class DashboardService with BaseRepositoryGuard {
           )
           .toList(growable: false);
     }, operation: 'get_low_stock_warnings');
+  }
+
+  Future<Result<List<DashboardRecentSaleEntity>>> getTodaySalesDetails() {
+    return guard<List<DashboardRecentSaleEntity>>(() async {
+      final now = _nowProvider();
+      final start = DateTime.utc(now.year, now.month, now.day);
+      final end = start.add(const Duration(days: 1));
+
+      final rows = await _appDatabase.database.rawQuery(
+        '''
+        SELECT
+          s.id AS sale_id,
+          s.invoice_number,
+          s.sale_date,
+          COALESCE(c.name, 'Walk-in Customer') AS customer_name,
+          s.total,
+          s.paid_amount,
+          s.payment_method
+        FROM ${TableNames.sales} s
+        LEFT JOIN ${TableNames.customers} c ON c.id = s.customer_id
+        WHERE s.status = 'posted'
+          AND s.sale_date >= ? AND s.sale_date < ?
+        ORDER BY s.sale_date DESC
+        ''',
+        <Object?>[DateTimeHelpers.toSql(start), DateTimeHelpers.toSql(end)],
+      );
+
+      return rows
+          .map((row) => DashboardRecentSaleEntity(
+                saleId: row['sale_id']?.toString(),
+                invoiceNumber: row['invoice_number'] as String,
+                saleDate: DateTimeHelpers.fromSql(row['sale_date'] as String),
+                customerName: row['customer_name'] as String,
+                total: (row['total'] as num?)?.toDouble() ?? 0,
+                paidAmount: (row['paid_amount'] as num?)?.toDouble() ?? 0,
+                paymentMethod: row['payment_method'] as String?,
+              ))
+          .toList(growable: false);
+    }, operation: 'get_today_sales_details');
+  }
+
+  Future<Result<List<PendingBalanceCustomerEntity>>> getPendingBalanceDetails() {
+    return guard<List<PendingBalanceCustomerEntity>>(() async {
+      final rows = await _appDatabase.database.rawQuery(
+        '''
+        SELECT
+          COALESCE(c.name, 'Walk-in Customer') AS customer_name,
+          s.invoice_number,
+          s.total,
+          s.paid_amount,
+          s.sale_date
+        FROM ${TableNames.sales} s
+        LEFT JOIN ${TableNames.customers} c ON c.id = s.customer_id
+        WHERE s.status = 'posted'
+          AND s.total > s.paid_amount
+        ORDER BY (s.total - s.paid_amount) DESC
+        LIMIT 50
+        ''',
+      );
+
+      return rows
+          .map((row) => PendingBalanceCustomerEntity(
+                customerName: row['customer_name'] as String,
+                invoiceNumber: row['invoice_number'] as String,
+                total: (row['total'] as num?)?.toDouble() ?? 0,
+                paidAmount: (row['paid_amount'] as num?)?.toDouble() ?? 0,
+                saleDate: DateTimeHelpers.fromSql(row['sale_date'] as String),
+              ))
+          .toList(growable: false);
+    }, operation: 'get_pending_balance_details');
   }
 
   Future<List<BrandStockEntity>> getBrandStock() {

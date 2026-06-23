@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_low_s
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_recent_sale_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_return_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/model_imei_stock_entity.dart';
+import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_balance_customer_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/services/dashboard_service.dart';
 
 final dashboardServiceProvider = FutureProvider<DashboardService>((ref) async {
@@ -61,6 +62,36 @@ final dashboardPendingReturnsProvider =
     FutureProvider<List<PendingReturnEntity>>((ref) async {
   final service = await ref.watch(dashboardServiceProvider.future);
   return service.getPendingReturns();
+});
+
+final dashboardTodaySalesDetailsProvider =
+    FutureProvider<List<DashboardRecentSaleEntity>>((ref) async {
+  final service = await ref.watch(dashboardServiceProvider.future);
+  final result = await service.getTodaySalesDetails();
+  return result.fold(
+    onSuccess: (v) => v,
+    onFailure: (_) => const <DashboardRecentSaleEntity>[],
+  );
+});
+
+final dashboardPendingBalanceDetailsProvider =
+    FutureProvider<List<PendingBalanceCustomerEntity>>((ref) async {
+  final service = await ref.watch(dashboardServiceProvider.future);
+  final result = await service.getPendingBalanceDetails();
+  return result.fold(
+    onSuccess: (v) => v,
+    onFailure: (_) => const <PendingBalanceCustomerEntity>[],
+  );
+});
+
+final dashboardAllLowStockProvider =
+    FutureProvider<List<DashboardLowStockEntity>>((ref) async {
+  final service = await ref.watch(dashboardServiceProvider.future);
+  final result = await service.getLowStockWarnings(limit: 50);
+  return result.fold(
+    onSuccess: (v) => v,
+    onFailure: (_) => const <DashboardLowStockEntity>[],
+  );
 });
 
 final dashboardModelImeiStockProvider =
