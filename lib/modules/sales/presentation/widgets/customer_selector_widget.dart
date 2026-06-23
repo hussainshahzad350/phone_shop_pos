@@ -67,7 +67,8 @@ class _CustomerSelectorWidgetState
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             TextField(
@@ -143,6 +144,7 @@ class _CustomerSelectorWidgetState
               ),
             ],
           ],
+          ),
         ),
       ),
     );

@@ -671,6 +671,7 @@ class MigrationService {
   }
 
   Future<void> _rebuildSaleItemsTable(Database database) async {
+    await _dropTableBestEffort(database, '${TableNames.saleItems}_old');
     await database.execute(
       'ALTER TABLE ${TableNames.saleItems} RENAME TO ${TableNames.saleItems}_old;',
     );
@@ -746,6 +747,7 @@ class MigrationService {
   }
 
   Future<void> _rebuildSalePaymentsTable(Database database) async {
+    await _dropTableBestEffort(database, '${TableNames.salePayments}_old');
     await database.execute(
       'ALTER TABLE ${TableNames.salePayments} RENAME TO ${TableNames.salePayments}_old;',
     );
@@ -800,6 +802,7 @@ class MigrationService {
   }
 
   Future<void> _rebuildSaleReturnsTable(Database database) async {
+    await _dropTableBestEffort(database, '${TableNames.saleReturns}_old');
     await database.execute(
       'ALTER TABLE ${TableNames.saleReturns} RENAME TO ${TableNames.saleReturns}_old;',
     );
@@ -2532,6 +2535,7 @@ class MigrationService {
   }
 
   Future<void> _rebuildStockAdjustmentsTable(Database database) async {
+    await _dropTableBestEffort(database, '${TableNames.stockAdjustments}_old');
     await database.execute(
       'ALTER TABLE ${TableNames.stockAdjustments} RENAME TO ${TableNames.stockAdjustments}_old;',
     );
@@ -2602,6 +2606,7 @@ class MigrationService {
   }
 
   Future<void> _rebuildPurchaseReturnsTable(Database database) async {
+    await _dropTableBestEffort(database, '${TableNames.purchaseReturns}_old');
     await database.execute(
       'ALTER TABLE ${TableNames.purchaseReturns} RENAME TO ${TableNames.purchaseReturns}_old;',
     );
