@@ -2529,6 +2529,14 @@ class MigrationService {
       )) {
         await _rebuildPurchaseReturnsTable(database);
       }
+
+      if (await _tableReferencesParent(
+        database,
+        tableName: TableNames.purchaseItems,
+        parentTableName: legacySerializedStockParent,
+      )) {
+        await _rebuildPurchaseItemsTable(database);
+      }
     } finally {
       await database.execute('PRAGMA foreign_keys = ON;');
     }
@@ -2690,6 +2698,67 @@ class MigrationService {
     );
     await database.execute(
       'CREATE INDEX IF NOT EXISTS idx_purchase_returns_created_at ON ${TableNames.purchaseReturns}(created_at);',
+    );
+  }
+
+  Future<void> _rebuildPurchaseItemsTable(Database database) async {
+    await _dropTableBestEffort(database, '${TableNames.purchaseItems}_old');
+    await database.execute(
+      'ALTER TABLE ${TableNames.purchaseItems} RENAME TO ${TableNames.purchaseItems}_old;',
+    );
+    await database.execute(
+      '''
+      CREATE TABLE ${TableNames.purchaseItems} (
+        id TEXT PRIMARY KEY NOT NULL,
+        purchase_id TEXT NOT NULL,
+        product_model_id TEXT NOT NULL,
+        serialized_stock_id TEXT,
+        quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+        unit_cost REAL NOT NULL DEFAULT 0,
+        line_total REAL NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (purchase_id) REFERENCES ${TableNames.purchases}(id)
+          ON UPDATE CASCADE
+          ON DELETE CASCADE,
+        FOREIGN KEY (product_model_id) REFERENCES ${TableNames.productModels}(id)
+          ON UPDATE CASCADE
+          ON DELETE RESTRICT,
+        FOREIGN KEY (serialized_stock_id) REFERENCES ${TableNames.serializedStock}(id)
+          ON UPDATE CASCADE
+          ON DELETE SET NULL
+      );
+      ''',
+    );
+    await database.execute(
+      '''
+      INSERT INTO ${TableNames.purchaseItems} (
+        id,
+        purchase_id,
+        product_model_id,
+        serialized_stock_id,
+        quantity,
+        unit_cost,
+        line_total,
+        created_at,
+        updated_at
+      )
+      SELECT
+        id,
+        purchase_id,
+        product_model_id,
+        serialized_stock_id,
+        quantity,
+        unit_cost,
+        line_total,
+        created_at,
+        updated_at
+      FROM ${TableNames.purchaseItems}_old;
+      ''',
+    );
+    await _dropTableBestEffort(database, '${TableNames.purchaseItems}_old');
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_purchase_items_purchase_id ON ${TableNames.purchaseItems}(purchase_id);',
     );
   }
 }
