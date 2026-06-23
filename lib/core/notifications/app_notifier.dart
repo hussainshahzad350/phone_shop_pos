@@ -138,6 +138,13 @@ class AppNotifier {
           action: action,
           showCloseIcon: effectiveShowCloseIcon,
           closeIconColor: Colors.white,
+          // Zero-duration animation ensures the snackbar reaches its final
+          // layout position within a single pump() frame so that the close
+          // button is hittable in widget tests and interactive immediately.
+          animationStyle: AnimationStyle(
+            duration: Duration.zero,
+            reverseDuration: Duration.zero,
+          ),
         ),
       );
   }

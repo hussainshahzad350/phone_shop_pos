@@ -17,12 +17,13 @@ class ProfitReportEntity {
 
   double get grossProfit => totalRevenue - totalCost;
 
+  // Only damage/theft/loss write-offs are real financial losses.
+  // Correction adjustments (both increase and decrease) are inventory data
+  // fixes and do not represent actual financial gains or losses.
   double get netProfit =>
       grossProfit -
       totalExpenses -
-      totalDamageLosses -
-      totalAdjLosses +
-      totalAdjGains;
+      totalDamageLosses;
 
   /// Backward-compatible alias so existing call sites keep compiling.
   double get totalProfit => netProfit;

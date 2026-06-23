@@ -78,7 +78,9 @@ class _CustomerSelectorWidgetState
                 labelText: 'Customer',
                 hintText: 'Search customer',
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: const Icon(Icons.arrow_drop_down),
+                suffixIcon: widget.selectedCustomerId != null
+                    ? const Icon(Icons.check_circle)
+                    : const Icon(Icons.arrow_drop_down),
               ),
             ),
             if (customersAsync?.isLoading == true) ...<Widget>[
@@ -115,21 +117,26 @@ class _CustomerSelectorWidgetState
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 8),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 240),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).dividerColor),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: ListView(
-                    shrinkWrap: true,
-                    children: <Widget>[
-                      _walkInTile(),
-                      ..._filteredCustomers(customers).map(_customerTile),
-                      if (_canShowMoreRow(customers)) _moreTile(),
-                    ],
-                  ),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Theme.of(context).dividerColor),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 240),
+                      child: ListView(
+                        shrinkWrap: true,
+                        children: <Widget>[
+                          _walkInTile(),
+                          ..._filteredCustomers(customers).map(_customerTile),
+                        ],
+                      ),
+                    ),
+                    if (_canShowMoreRow(customers)) _moreTile(),
+                  ],
                 ),
               ),
             ],
