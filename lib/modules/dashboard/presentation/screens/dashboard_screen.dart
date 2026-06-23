@@ -75,7 +75,7 @@ class DashboardScreen extends ConsumerWidget {
                           child: Text('Failed to load dashboard metrics.')),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const _SectionDivider(),
                   brandStockAsync.when(
                     data: (brands) => BrandStockSection(
                       brands: brands,
@@ -105,6 +105,44 @@ class DashboardScreen extends ConsumerWidget {
 
 class _RefreshDashboardIntent extends Intent {
   const _RefreshDashboardIntent();
+}
+
+class _SectionDivider extends StatelessWidget {
+  const _SectionDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Divider(
+              color: theme.colorScheme.outlineVariant,
+              thickness: 1,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Text(
+              'Brand Stock',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.outline,
+                letterSpacing: 0.6,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Divider(
+              color: theme.colorScheme.outlineVariant,
+              thickness: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Skeleton placeholder for the KPI grid, mirroring its responsive column

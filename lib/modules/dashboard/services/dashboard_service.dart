@@ -10,6 +10,7 @@ import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_low_s
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_recent_sale_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_return_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/model_imei_stock_entity.dart';
+import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_balance_customer_entity.dart';
 
 class DashboardService with BaseRepositoryGuard {
   DashboardService({
@@ -300,6 +301,76 @@ class DashboardService with BaseRepositoryGuard {
     }, operation: 'get_low_stock_warnings');
   }
 
+  Future<Result<List<DashboardRecentSaleEntity>>> getTodaySalesDetails() {
+    return guard<List<DashboardRecentSaleEntity>>(() async {
+      final now = _nowProvider();
+      final start = DateTime.utc(now.year, now.month, now.day);
+      final end = start.add(const Duration(days: 1));
+
+      final rows = await _appDatabase.database.rawQuery(
+        '''
+        SELECT
+          s.id AS sale_id,
+          s.invoice_number,
+          s.sale_date,
+          COALESCE(c.name, 'Walk-in Customer') AS customer_name,
+          s.total,
+          s.paid_amount,
+          s.payment_method
+        FROM ${TableNames.sales} s
+        LEFT JOIN ${TableNames.customers} c ON c.id = s.customer_id
+        WHERE s.status = 'posted'
+          AND s.sale_date >= ? AND s.sale_date < ?
+        ORDER BY s.sale_date DESC
+        ''',
+        <Object?>[DateTimeHelpers.toSql(start), DateTimeHelpers.toSql(end)],
+      );
+
+      return rows
+          .map((row) => DashboardRecentSaleEntity(
+                saleId: row['sale_id']?.toString(),
+                invoiceNumber: row['invoice_number'] as String,
+                saleDate: DateTimeHelpers.fromSql(row['sale_date'] as String),
+                customerName: row['customer_name'] as String,
+                total: (row['total'] as num?)?.toDouble() ?? 0,
+                paidAmount: (row['paid_amount'] as num?)?.toDouble() ?? 0,
+                paymentMethod: row['payment_method'] as String?,
+              ))
+          .toList(growable: false);
+    }, operation: 'get_today_sales_details');
+  }
+
+  Future<Result<List<PendingBalanceCustomerEntity>>> getPendingBalanceDetails() {
+    return guard<List<PendingBalanceCustomerEntity>>(() async {
+      final rows = await _appDatabase.database.rawQuery(
+        '''
+        SELECT
+          COALESCE(c.name, 'Walk-in Customer') AS customer_name,
+          s.invoice_number,
+          s.total,
+          s.paid_amount,
+          s.sale_date
+        FROM ${TableNames.sales} s
+        LEFT JOIN ${TableNames.customers} c ON c.id = s.customer_id
+        WHERE s.status = 'posted'
+          AND s.total > s.paid_amount
+        ORDER BY (s.total - s.paid_amount) DESC
+        LIMIT 50
+        ''',
+      );
+
+      return rows
+          .map((row) => PendingBalanceCustomerEntity(
+                customerName: row['customer_name'] as String,
+                invoiceNumber: row['invoice_number'] as String,
+                total: (row['total'] as num?)?.toDouble() ?? 0,
+                paidAmount: (row['paid_amount'] as num?)?.toDouble() ?? 0,
+                saleDate: DateTimeHelpers.fromSql(row['sale_date'] as String),
+              ))
+          .toList(growable: false);
+    }, operation: 'get_pending_balance_details');
+  }
+
   Future<List<BrandStockEntity>> getBrandStock() {
     return _appDatabase.database.rawQuery(
       '''
@@ -422,6 +493,73 @@ class DashboardService with BaseRepositoryGuard {
     }).catchError((error) {
       return <ModelImeiStockEntity>[];
     });
+  }
+
+  /// Fetches all in-stock serialized items across every brand, grouped as
+  /// `{ brandName: [ModelImeiStockEntity, ...] }`, sorted brand → model → IMEI.
+  Future<Map<String, List<ModelImeiStockEntity>>> getAllModelImeiStock() {
+    return _appDatabase.database.rawQuery(
+      '''
+      SELECT
+        pm.brand,
+        pm.id AS model_id,
+        pm.name AS model_name,
+        ss.id AS serialized_stock_id,
+        ss.imei1 AS imei,
+        ss.imei2,
+        ss.serial_number,
+        ss.cost_price,
+        ss.selling_price AS sale_price,
+        ss.stock_status
+      FROM ${TableNames.serializedStock} ss
+      JOIN ${TableNames.productModels} pm ON pm.id = ss.product_model_id
+      WHERE pm.is_active = 1
+        AND ss.stock_status = 'in_stock'
+        AND pm.brand IS NOT NULL AND pm.brand != ''
+      ORDER BY pm.brand ASC COLLATE NOCASE,
+               pm.name  ASC COLLATE NOCASE,
+               ss.imei1 ASC
+      ''',
+    ).then((rows) {
+      if (rows.isEmpty) return <String, List<ModelImeiStockEntity>>{};
+
+      final brandMap = <String, List<ModelImeiStockEntity>>{};
+      final modelMap = <String, ModelImeiStockEntity>{};
+
+      for (final row in rows) {
+        final brand = row['brand'] as String;
+        final modelId = row['model_id'] as String;
+
+        if (!brandMap.containsKey(brand)) {
+          brandMap[brand] = <ModelImeiStockEntity>[];
+        }
+
+        if (!modelMap.containsKey(modelId)) {
+          final model = ModelImeiStockEntity(
+            modelId: modelId,
+            modelName: row['model_name'] as String,
+            brandName: brand,
+            quantity: 0,
+            imeis: <ImeiStockItemEntity>[],
+          );
+          modelMap[modelId] = model;
+          brandMap[brand]!.add(model);
+        }
+
+        modelMap[modelId]!.imeis.add(ImeiStockItemEntity(
+          serializedStockId: (row['serialized_stock_id'] as String?) ?? '',
+          imei: (row['imei'] as String?) ?? '',
+          imei2: row['imei2'] as String?,
+          serialNumber: row['serial_number'] as String?,
+          costPrice: (row['cost_price'] as num?)?.toDouble() ?? 0,
+          salePrice: (row['sale_price'] as num?)?.toDouble() ?? 0,
+          stockStatus: (row['stock_status'] as String?) ?? 'in_stock',
+        ));
+        modelMap[modelId]!.quantity = modelMap[modelId]!.imeis.length;
+      }
+
+      return brandMap;
+    }).catchError((_) => <String, List<ModelImeiStockEntity>>{});
   }
 
   double _asDouble(Object? value) {
