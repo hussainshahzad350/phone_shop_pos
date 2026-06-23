@@ -30,18 +30,24 @@ void main() {
     );
     addTearDown(container.dispose);
 
+    final manualFocusNode = FocusNode();
+    addTearDown(manualFocusNode.dispose);
+
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(
+        child: MaterialApp(
           home: Scaffold(
             body: Stack(
               children: <Widget>[
                 Padding(
-                  padding: EdgeInsets.all(8),
-                  child: TextField(key: Key('manual-field')),
+                  padding: const EdgeInsets.all(8),
+                  child: TextField(
+                    key: const Key('manual-field'),
+                    focusNode: manualFocusNode,
+                  ),
                 ),
-                GlobalScannerInput(),
+                const GlobalScannerInput(),
               ],
             ),
           ),

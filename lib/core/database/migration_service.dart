@@ -164,6 +164,10 @@ class MigrationService {
       await _applyMigrationV29(database);
       return;
     }
+    if (version == 30) {
+      await _applyMigrationV30(database);
+      return;
+    }
     final statements = _migrationStatements[version];
     if (statements == null) {
       return;
@@ -2467,6 +2471,220 @@ class MigrationService {
     );
     await database.execute(
       'CREATE INDEX IF NOT EXISTS idx_dealer_issues_date ON ${TableNames.dealerIssues}(issue_date DESC);',
+    );
+  }
+
+  /// Migration v30: repair dangling FK references to `serialized_stock_old`.
+  ///
+  /// Migration v27 renames `serialized_stock → serialized_stock_old`, then
+  /// drops it.  SQLite rewrites child-table FK metadata in sqlite_master during
+  /// the rename, so every table that had
+  ///   FOREIGN KEY (serialized_stock_id) REFERENCES serialized_stock(id)
+  /// now silently points at the deleted `serialized_stock_old` table.  Any
+  /// INSERT into those tables then throws "no such table: main.serialized_stock_old".
+  ///
+  /// This migration detects the corruption with PRAGMA foreign_key_list and
+  /// rebuilds only the affected tables, restoring the correct FK target.
+  Future<void> _applyMigrationV30(Database database) async {
+    await _repairSerializedStockOldForeignKeyReferences(database);
+  }
+
+  Future<void> _repairSerializedStockOldForeignKeyReferences(
+      Database database) async {
+    await database.execute('PRAGMA foreign_keys = OFF;');
+    try {
+      const legacySerializedStockParent = '${TableNames.serializedStock}_old';
+
+      if (await _tableReferencesParent(
+        database,
+        tableName: TableNames.saleItems,
+        parentTableName: legacySerializedStockParent,
+      )) {
+        await _rebuildSaleItemsTable(database);
+      }
+
+      if (await _tableReferencesParent(
+        database,
+        tableName: TableNames.saleReturns,
+        parentTableName: legacySerializedStockParent,
+      )) {
+        await _rebuildSaleReturnsTable(database);
+      }
+
+      if (await _tableReferencesParent(
+        database,
+        tableName: TableNames.stockAdjustments,
+        parentTableName: legacySerializedStockParent,
+      )) {
+        await _rebuildStockAdjustmentsTable(database);
+      }
+
+      if (await _tableReferencesParent(
+        database,
+        tableName: TableNames.purchaseReturns,
+        parentTableName: legacySerializedStockParent,
+      )) {
+        await _rebuildPurchaseReturnsTable(database);
+      }
+    } finally {
+      await database.execute('PRAGMA foreign_keys = ON;');
+    }
+  }
+
+  Future<void> _rebuildStockAdjustmentsTable(Database database) async {
+    await database.execute(
+      'ALTER TABLE ${TableNames.stockAdjustments} RENAME TO ${TableNames.stockAdjustments}_old;',
+    );
+    await database.execute(
+      '''
+      CREATE TABLE ${TableNames.stockAdjustments} (
+        id TEXT PRIMARY KEY NOT NULL,
+        product_model_id TEXT NOT NULL,
+        serialized_stock_id TEXT,
+        adjustment_type TEXT NOT NULL CHECK (
+          adjustment_type IN ('increase', 'decrease', 'write_off')
+        ),
+        quantity_delta INTEGER NOT NULL,
+        unit_cost_at_adjustment REAL NOT NULL DEFAULT 0,
+        reason TEXT NOT NULL CHECK (
+          reason IN (
+            'damage', 'theft', 'correction',
+            'miscounted', 'lost', 'broken', 'water_damage', 'other'
+          )
+        ),
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (product_model_id) REFERENCES ${TableNames.productModels}(id)
+          ON UPDATE CASCADE
+          ON DELETE RESTRICT,
+        FOREIGN KEY (serialized_stock_id) REFERENCES ${TableNames.serializedStock}(id)
+          ON UPDATE CASCADE
+          ON DELETE SET NULL
+      );
+      ''',
+    );
+    await database.execute(
+      '''
+      INSERT INTO ${TableNames.stockAdjustments} (
+        id,
+        product_model_id,
+        serialized_stock_id,
+        adjustment_type,
+        quantity_delta,
+        unit_cost_at_adjustment,
+        reason,
+        notes,
+        created_at,
+        updated_at
+      )
+      SELECT
+        id,
+        product_model_id,
+        serialized_stock_id,
+        adjustment_type,
+        quantity_delta,
+        unit_cost_at_adjustment,
+        reason,
+        notes,
+        created_at,
+        updated_at
+      FROM ${TableNames.stockAdjustments}_old;
+      ''',
+    );
+    await _dropTableBestEffort(database, '${TableNames.stockAdjustments}_old');
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_stock_adjustments_created ON ${TableNames.stockAdjustments}(created_at DESC);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_stock_adjustments_product ON ${TableNames.stockAdjustments}(product_model_id);',
+    );
+  }
+
+  Future<void> _rebuildPurchaseReturnsTable(Database database) async {
+    await database.execute(
+      'ALTER TABLE ${TableNames.purchaseReturns} RENAME TO ${TableNames.purchaseReturns}_old;',
+    );
+    await database.execute(
+      '''
+      CREATE TABLE ${TableNames.purchaseReturns} (
+        id TEXT PRIMARY KEY NOT NULL,
+        purchase_id TEXT NOT NULL,
+        purchase_item_id TEXT NOT NULL,
+        product_model_id TEXT NOT NULL,
+        serialized_stock_id TEXT,
+        return_type TEXT NOT NULL CHECK (return_type IN ('imei', 'quantity')),
+        return_qty INTEGER NOT NULL CHECK (return_qty > 0),
+        return_amount REAL NOT NULL DEFAULT 0,
+        reason TEXT NOT NULL,
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        cost_price REAL NOT NULL DEFAULT 0,
+        refunded_paid_amount REAL NOT NULL DEFAULT 0,
+        refunded_cash_amount REAL NOT NULL DEFAULT 0,
+        FOREIGN KEY (purchase_id) REFERENCES ${TableNames.purchases}(id)
+          ON UPDATE CASCADE
+          ON DELETE CASCADE,
+        FOREIGN KEY (purchase_item_id) REFERENCES ${TableNames.purchaseItems}(id)
+          ON UPDATE CASCADE
+          ON DELETE CASCADE,
+        FOREIGN KEY (product_model_id) REFERENCES ${TableNames.productModels}(id)
+          ON UPDATE CASCADE
+          ON DELETE RESTRICT,
+        FOREIGN KEY (serialized_stock_id) REFERENCES ${TableNames.serializedStock}(id)
+          ON UPDATE CASCADE
+          ON DELETE SET NULL
+      );
+      ''',
+    );
+    await database.execute(
+      '''
+      INSERT INTO ${TableNames.purchaseReturns} (
+        id,
+        purchase_id,
+        purchase_item_id,
+        product_model_id,
+        serialized_stock_id,
+        return_type,
+        return_qty,
+        return_amount,
+        reason,
+        notes,
+        created_at,
+        updated_at,
+        cost_price,
+        refunded_paid_amount,
+        refunded_cash_amount
+      )
+      SELECT
+        id,
+        purchase_id,
+        purchase_item_id,
+        product_model_id,
+        serialized_stock_id,
+        return_type,
+        return_qty,
+        return_amount,
+        reason,
+        notes,
+        created_at,
+        updated_at,
+        cost_price,
+        refunded_paid_amount,
+        refunded_cash_amount
+      FROM ${TableNames.purchaseReturns}_old;
+      ''',
+    );
+    await _dropTableBestEffort(database, '${TableNames.purchaseReturns}_old');
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_purchase_returns_purchase_item ON ${TableNames.purchaseReturns}(purchase_id, purchase_item_id);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_purchase_returns_serialized ON ${TableNames.purchaseReturns}(serialized_stock_id);',
+    );
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_purchase_returns_created_at ON ${TableNames.purchaseReturns}(created_at);',
     );
   }
 }

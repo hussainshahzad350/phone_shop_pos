@@ -126,7 +126,9 @@ class _CustomerSelectorWidgetState
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 240),
+                      constraints: BoxConstraints(
+                        maxHeight: _showAllCustomers ? double.infinity : 240,
+                      ),
                       child: ListView(
                         shrinkWrap: true,
                         children: <Widget>[
