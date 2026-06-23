@@ -21,7 +21,7 @@ void main() {
       'Sale completed. Invoice: INV-1',
       action: SnackBarAction(label: 'Print Preview', onPressed: () {}),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text('Print Preview'), findsOneWidget);
     expect(find.byIcon(Icons.close), findsOneWidget);

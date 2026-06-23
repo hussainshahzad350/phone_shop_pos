@@ -171,6 +171,8 @@ class SqliteCustomerLedgerRepository
       );
 
       var runningBalance = 0.0;
+      // Running balance is accumulated in chronological (ascending) order so
+      // that the last entry's runningBalance equals the account's net balance.
       return rows.map((row) {
         final direction = LedgerDirection.fromValue(row['direction'] as String);
         final amount = (row['amount'] as num?)?.toDouble() ?? 0;
@@ -191,14 +193,7 @@ class SqliteCustomerLedgerRepository
           paymentMethod: row['payment_method'] as String?,
           sourceLabel: row['transaction_id'] as String,
         );
-      }).toList(growable: false)
-        ..sort((a, b) {
-          final byDate = b.createdAt.compareTo(a.createdAt);
-          if (byDate != 0) {
-            return byDate;
-          }
-          return b.id.compareTo(a.id);
-        });
+      }).toList(growable: false);
     }, operation: 'fetch_customer_ledger_timeline');
   }
 

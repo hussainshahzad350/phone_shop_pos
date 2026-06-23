@@ -56,14 +56,6 @@ class _GlobalScannerInputState extends ConsumerState<GlobalScannerInput>
     if (!mounted) {
       return;
     }
-    // Only steal focus back if no other interactive widget currently holds it.
-    // This prevents the 500ms timer from evicting the user from text fields.
-    final primaryFocus = FocusManager.instance.primaryFocus;
-    final someoneElseHasFocus =
-        primaryFocus != null && primaryFocus != _focusNode;
-    if (someoneElseHasFocus) {
-      return;
-    }
     if (!_focusNode.hasFocus) {
       _focusNode.requestFocus();
     }
@@ -125,11 +117,9 @@ class _GlobalScannerInputState extends ConsumerState<GlobalScannerInput>
               keyboardType: TextInputType.number,
               textInputAction: TextInputAction.done,
               onTapOutside: (_) {
-                // Only grab focus back when nothing else needs it.
-                // Do NOT steal from a text field the user just tapped into.
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _restoreFocus();
-                });
+                // Focus reclamation is handled by the periodic timer.
+                // Do not steal immediately so the user can interact with
+                // manual input fields between timer ticks.
               },
               onSubmitted: _submit,
               onEditingComplete: _restoreFocus,
