@@ -548,61 +548,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         Text('Profile: ${config.profile.displayName}'),
                         Text('Source: ${config.source.name}'),
                         Text('Schema Version: ${config.schemaVersion}'),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Feature Flags',
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: config.featureFlags.toMap().entries.map((e) {
-                            final isEnabled = e.value == true;
-                            return Chip(
-                              label:
-                                  Text('${e.key}: ${isEnabled ? "ON" : "OFF"}'),
-                              backgroundColor: isEnabled
-                                  ? Theme.of(context).semantic.successContainer
-                                  : Theme.of(context).semantic.dangerContainer,
-                              side: BorderSide.none,
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 12),
-                        const Divider(),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Business Profile',
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: BusinessProfile.values.map((profile) {
-                            final isSelected = config.profile == profile;
-                            return ChoiceChip(
-                              label: Text(profile.displayName),
-                              selected: isSelected,
-                              onSelected: (selected) {
-                                if (selected && !mounted) return;
-                                _changeBusinessProfile(profile);
-                              },
-                              selectedColor: Theme.of(context).colorScheme.primary,
-                              backgroundColor: isSelected
-                                  ? Theme.of(context).colorScheme.primaryContainer
-                                  : null,
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          config.profile.description,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
-                        ),
                       ],
                     ),
                     loading: () => const SizedBox(

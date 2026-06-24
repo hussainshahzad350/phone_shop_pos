@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
-import 'package:phone_shop_pos/core/widgets/glass_surface.dart';
 
 const int _kDefaultPaginateThreshold = 80;
 const double _kDesktopContentMaxWidth = 2200.0;
@@ -50,30 +49,27 @@ class AppDesktopScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: AppGlassBackground(
-        child: Row(
-          children: <Widget>[
-            sidebar,
-            const VerticalDivider(width: 1),
-            Expanded(
-              child: Column(
-                children: <Widget>[
-                  topBar,
-                  const Divider(height: 1),
-                  Expanded(
-                    child: _DesktopContentArea(
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 180),
-                        child: child,
-                      ),
+      body: Row(
+        children: <Widget>[
+          sidebar,
+          const VerticalDivider(width: 1),
+          Expanded(
+            child: Column(
+              children: <Widget>[
+                topBar,
+                const Divider(height: 1),
+                Expanded(
+                  child: _DesktopContentArea(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 180),
+                      child: child,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -94,23 +90,15 @@ class AppSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    return GlassSurface(
-      borderRadius: BorderRadius.zero,
-      lightOpacity: 0.72,
-      darkOpacity: 0.14,
-      blur: 16,
-      showBorder: false,
-      child: NavigationRail(
-        backgroundColor: Colors.transparent,
-        selectedIndex: selectedIndex,
-        onDestinationSelected: onDestinationSelected,
-        labelType: width >= 1600
-            ? NavigationRailLabelType.none
-            : NavigationRailLabelType.all,
-        extended: width >= 1600,
-        minExtendedWidth: 208,
-        destinations: destinations,
-      ),
+    return NavigationRail(
+      selectedIndex: selectedIndex,
+      onDestinationSelected: onDestinationSelected,
+      labelType: width >= 1600
+          ? NavigationRailLabelType.none
+          : NavigationRailLabelType.all,
+      extended: width >= 1600,
+      minExtendedWidth: 208,
+      destinations: destinations,
     );
   }
 }
@@ -127,38 +115,31 @@ class AppTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassSurface(
-      borderRadius: BorderRadius.zero,
-      lightOpacity: 0.78,
-      darkOpacity: 0.12,
-      blur: 12,
-      showBorder: false,
-      child: SizedBox(
-        height: 56,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: <Widget>[
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Text(
-                    AppRuntimeConfig.appName,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-              const Spacer(),
-              if (trailing != null) trailing!,
-            ],
-          ),
+    return SizedBox(
+      height: 56,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: <Widget>[
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Text(
+                  AppRuntimeConfig.appName,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+            const Spacer(),
+            if (trailing != null) trailing!,
+          ],
         ),
       ),
     );
