@@ -109,7 +109,7 @@ class ProfitTab extends ConsumerWidget {
                     children: <Widget>[
                       Row(
                         children: <Widget>[
-                          Expanded(child: reportSectionTitle('Profit by Day')),
+                          Expanded(child: reportSectionTitle(context, 'Profit by Day')),
                           ReportExportActionWidget(
                             title: 'Profit Report',
                             fileBaseName: 'profit_report',

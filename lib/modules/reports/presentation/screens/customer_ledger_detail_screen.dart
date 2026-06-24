@@ -144,7 +144,7 @@ class _CustomerLedgerDetailScreenState
             children: <Widget>[
               Text(
                 displayName,
-                style: reportSectionTitleStyle.copyWith(fontSize: 18),
+                style: Theme.of(context).textTheme.headlineSmall,
               ),
               Text(
                 customerLedgerBalanceSubtitle(summary),

@@ -39,7 +39,7 @@ class ReportTableSection extends StatelessWidget {
               ],
               Row(
                 children: <Widget>[
-                  Expanded(child: reportSectionTitle(title)),
+                  Expanded(child: reportSectionTitle(context, title)),
                   if (trailing != null) trailing!,
                 ],
               ),

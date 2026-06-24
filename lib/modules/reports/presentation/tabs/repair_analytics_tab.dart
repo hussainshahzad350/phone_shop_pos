@@ -319,7 +319,7 @@ class _AnalyticsTable extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            reportSectionTitle(title),
+            reportSectionTitle(context, title),
             const SizedBox(height: 8),
             const Divider(height: 1),
             const SizedBox(height: 8),

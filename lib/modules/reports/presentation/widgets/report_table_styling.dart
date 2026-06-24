@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 import 'package:phone_shop_pos/core/widgets/responsive_table_layout.dart';
 
 /// Shared table typography and layout used across Reports tabs.
@@ -27,14 +28,8 @@ ReportTableLayout reportTableLayoutFor(BuildContext context) {
   return ReportTableLayout.fromWidth(MediaQuery.sizeOf(context).width);
 }
 
-/// Section title style matching Daily Sales tab.
-const TextStyle reportSectionTitleStyle = TextStyle(
-  fontWeight: FontWeight.bold,
-  fontSize: 16,
-);
-
-Widget reportSectionTitle(String title) {
-  return Text(title, style: reportSectionTitleStyle);
+Widget reportSectionTitle(BuildContext context, String title) {
+  return Text(title, style: Theme.of(context).textTheme.titleLarge);
 }
 
 Widget reportStyledTableHeaderCell(
@@ -110,7 +105,8 @@ Widget reportStyledStatusCell(
 ) {
   final theme = Theme.of(context);
   return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
     decoration: BoxDecoration(
       color: bgColor,
       borderRadius: BorderRadius.circular(999),

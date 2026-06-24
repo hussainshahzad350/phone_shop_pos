@@ -109,7 +109,7 @@ class DailySalesTab extends ConsumerWidget {
                 children: <Widget>[
                   Row(
                     children: <Widget>[
-                      Expanded(child: reportSectionTitle('Sales Details')),
+                      Expanded(child: reportSectionTitle(context, 'Sales Details')),
                       ReportExportActionWidget(
                         title: 'Daily Sales Details Report',
                         fileBaseName: 'daily_sales_details_report',
