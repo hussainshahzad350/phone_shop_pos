@@ -50,38 +50,14 @@ void main() {
       );
     });
 
-    test('omits repairing from navigation for non-repair profiles', () {
-      final mobileOnlyItems =
-          desktopNavigationItemsForProfile(BusinessProfile.mobileOnly);
-      final accessoriesItems =
-          desktopNavigationItemsForProfile(BusinessProfile.mobileAccessories);
-
-      expect(mobileOnlyItems.map((i) => i.route),
-          isNot(contains('/repairing')));
-      expect(accessoriesItems.map((i) => i.route),
-          isNot(contains('/repairing')));
-      expect(mobileOnlyItems.map((i) => i.route), contains('/dashboard'));
-      expect(mobileOnlyItems.map((i) => i.route), contains('/settings'));
-    });
-
-    test('includes repairing in navigation for repair and hybrid profiles', () {
-      final repairItems =
-          desktopNavigationItemsForProfile(BusinessProfile.repairShop);
-      final hybridItems =
-          desktopNavigationItemsForProfile(BusinessProfile.hybrid);
-
-      expect(repairItems.map((i) => i.route), contains('/repairing'));
-      expect(hybridItems.map((i) => i.route), contains('/repairing'));
-    });
-
-    test('falls back to dashboard index when current route is not in nav', () {
-      expect(
-        desktopNavigationSelectedIndexForPath(
-          '/repairing',
-          profile: BusinessProfile.mobileOnly,
-        ),
-        0,
-      );
+    test('all nav items are shown for every profile', () {
+      for (final profile in BusinessProfile.values) {
+        final items = desktopNavigationItemsForProfile(profile);
+        expect(items.map((i) => i.route), contains('/repairing'));
+        expect(items.map((i) => i.route), contains('/reports'));
+        expect(items.map((i) => i.route), contains('/dashboard'));
+        expect(items.map((i) => i.route), contains('/settings'));
+      }
     });
   });
 }

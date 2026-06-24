@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:phone_shop_pos/core/config/business_configuration_providers.dart';
-import 'package:phone_shop_pos/core/config/business_profile.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 
-class DashboardHeader extends ConsumerWidget {
+class DashboardHeader extends StatelessWidget {
   const DashboardHeader({
     super.key,
     required this.onRefresh,
@@ -14,13 +11,9 @@ class DashboardHeader extends ConsumerWidget {
   final VoidCallback onRefresh;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final semantic = Theme.of(context).semantic;
     final colorScheme = Theme.of(context).colorScheme;
-    final profile =
-        ref.watch(businessProfileProvider).valueOrNull ?? BusinessProfile.mobileOnly;
-    final showRepair = profile == BusinessProfile.repairShop ||
-        profile == BusinessProfile.hybrid;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -57,13 +50,12 @@ class DashboardHeader extends ConsumerWidget {
               color: semantic.warning,
               onTap: () => context.go('/inventory/audit'),
             ),
-            if (showRepair)
-              _QuickActionButton(
-                label: 'Repair',
-                icon: Icons.build_outlined,
-                color: semantic.danger,
-                onTap: () => context.go('/repairing'),
-              ),
+            _QuickActionButton(
+              label: 'Repair',
+              icon: Icons.build_outlined,
+              color: semantic.danger,
+              onTap: () => context.go('/repairing'),
+            ),
             OutlinedButton.icon(
               onPressed: onRefresh,
               icon: const Icon(Icons.refresh),

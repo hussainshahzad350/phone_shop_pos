@@ -4,19 +4,11 @@ bool routeEnabledForProfile({
   required String path,
   required BusinessProfile profile,
 }) {
-  final normalizedPath = normalizeRoutePath(path);
-  if (_routeMatches(normalizedPath, '/repairing')) {
-    return profile == BusinessProfile.repairShop ||
-        profile == BusinessProfile.hybrid;
-  }
   return true;
 }
 
 String profileRouteFallback(BusinessProfile profile) {
-  if (routeEnabledForProfile(path: '/dashboard', profile: profile)) {
-    return '/dashboard';
-  }
-  return '/settings';
+  return '/dashboard';
 }
 
 String normalizeRoutePath(String value) {
