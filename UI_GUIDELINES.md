@@ -1,27 +1,27 @@
 # UI Design Guidelines — Phone Shop POS
 
-> Sirf design, color, aur UI patterns. Business logic yahan nahi hai.
-> Naya screen ya widget banane se pehle yahan se start karo.
+> Design, color, and UI patterns only. No business logic here.
+> Start here before building any new screen or widget.
 
 ---
 
-## App Ka Visual Style
+## App Visual Style
 
-**Soft Card Style** — Material 3 base, clean aur light.
+**Soft Card Style** — Material 3 base, clean and light.
 
-- Background: off-white (`#F6F8FC`) — pure white nahi, thoda bluish tint
+- Background: off-white (`#F6F8FC`) — not pure white, slight bluish tint
 - Cards: near-opaque white (`94% opacity`) + subtle shadow + border
 - Primary accent: Indigo-blue (`#5167F6`)
-- Corners: rounded (4px se 16px tak — purpose ke hisaab se)
-- **Glass/frosted blur effect: NAHI HAI** — agar chahiye to neeche pattern diya hai
+- Corners: rounded (4px to 16px — depends on purpose)
+- **Glass/frosted blur effect: IS IMPLEMENTED** — see pattern below
 
 ---
 
 ## 1. Color Palette
 
 ### Primary Colors
-| Token | Hex | Kahan use hota hai |
-|-------|-----|-------------------|
+| Token | Hex | Where used |
+|-------|-----|------------|
 | Primary | `#5167F6` | Buttons, active states, links |
 | Scaffold background | `#F6F8FC` | Screen background (light mode) |
 | Card surface | `rgba(255,255,255, 0.94)` | Cards |
@@ -30,7 +30,7 @@
 | Input border | `#D7DBE7` | Text field outline |
 | Input focused | `#5167F6 @ 1.2px` | Active input border |
 
-### Semantic Colors — status ke liye HAMESHA yahi use karo
+### Semantic Colors — ALWAYS use these for status
 ```dart
 final semantic = Theme.of(context).semantic;
 
@@ -47,7 +47,7 @@ semantic.info             // #2F6FED  — neutral info
 semantic.infoContainer    // #DBE7FE  — info background
 ```
 
-> Dark mode ke liye automatically alag shades hain — `Colors.green` wagera hardcode karna toot jaata hai dark mode mein.
+> Dark mode automatically uses different shades — hardcoding `Colors.green` etc. breaks in dark mode.
 
 ---
 
@@ -60,7 +60,7 @@ xs = 4    sm = 8    md = 12    lg = 16    xl = 24    xxl = 32
 ```dart
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
-// ✅ Token use karo
+// ✅ Use tokens
 const SizedBox(height: AppSpacing.sm)   // 8
 Padding(padding: EdgeInsets.all(AppSpacing.md))  // 12
 
@@ -70,7 +70,7 @@ AppSpacing.gapMd   // SizedBox 12×12
 AppSpacing.gapLg   // SizedBox 16×16
 
 // ❌ Magic numbers
-const SizedBox(height: 8)    // kahan se aaya 8?
+const SizedBox(height: 8)
 Padding(padding: EdgeInsets.all(12))
 ```
 
@@ -100,9 +100,9 @@ BorderRadius.circular(16)          // ❌
 
 ## 4. Typography
 
-Scale define hai — `fontWeight: FontWeight.bold` ad-hoc mat karo.
+Scale is defined — do not use `fontWeight: FontWeight.bold` ad hoc.
 
-| Style | Size | Weight | Kahan |
+| Style | Size | Weight | Where |
 |-------|------|--------|-------|
 | `titleLarge` | 17 | w600 | Page section headings |
 | `titleMedium` | 15 | w600 | Card titles, dialog titles |
@@ -114,14 +114,14 @@ Scale define hai — `fontWeight: FontWeight.bold` ad-hoc mat karo.
 | `labelMedium` | 12 | w600 | Chips, badges |
 | `labelSmall` | 11 | w500 | Metadata, timestamps (muted) |
 
-### Tabular figures — currency/numbers ke liye
+### Tabular figures — for currency/numbers
 ```dart
 import 'package:phone_shop_pos/core/theme/app_typography.dart';
 
 Text(
   'Rs. 1,234',
   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-    fontFeatures: AppTypography.tabularFigures,  // digits column mein align rehte hain
+    fontFeatures: AppTypography.tabularFigures,  // digits stay aligned in columns
   ),
 )
 ```
@@ -130,7 +130,7 @@ Text(
 
 ## 5. Cards
 
-Theme se automatic aata hai — sirf `Card()` wrap karo:
+Comes automatically from the theme — just wrap with `Card()`:
 
 ```dart
 Card(
@@ -141,20 +141,20 @@ Card(
 )
 ```
 
-Jo automatically milta hai:
+What you get automatically:
 - `elevation: 1.5` — subtle shadow
 - `borderRadius: 16` (AppRadii.lgRadius)
 - Border: `#E3E8F2`
 - Color: `white @ 94%`
-- No surface tint (M3 ka elevation tint off hai)
+- No surface tint (M3 elevation tint is off)
 
-**Colored cards** (status ke liye):
+**Colored cards** (for status):
 ```dart
 Card(
   color: Theme.of(context).colorScheme.secondaryContainer,  // ✅ theme-aware
-  // ya
+  // or
   color: semantic.successContainer,  // ✅ semantic
-  // ❌ nahi
+  // ❌ avoid
   color: Colors.green.withOpacity(0.1),
 )
 ```
@@ -163,12 +163,12 @@ Card(
 
 ## 6. Buttons
 
-Teen types hain — kab kaunsa:
+Three types — when to use which:
 
-| Widget | Kab |
-|--------|-----|
-| `FilledButton` / `FilledButton.icon` | Primary action — ek screen pe sirf ek |
-| `OutlinedButton` / `OutlinedButton.icon` | Secondary action — page pe multiple ho sakte |
+| Widget | When |
+|--------|------|
+| `FilledButton` / `FilledButton.icon` | Primary action — only one per screen |
+| `OutlinedButton` / `OutlinedButton.icon` | Secondary action — multiple per page is fine |
 | `TextButton` | Tertiary / destructive / cancel |
 
 ```dart
@@ -210,31 +210,31 @@ FilledButton(
 
 ## 7. Form Fields
 
-Default theme se inputs already styled hain (filled, rounded, dense). Sirf ye rules follow karo:
+Default theme already styles inputs (filled, rounded, dense). Just follow these rules:
 
 ```dart
 // Standard input
 TextFormField(
   decoration: const InputDecoration(
     labelText: 'Field Name',
-    // border, fill, radius theme se auto aata hai
-    // isDense: true bhi theme se auto — explicit nahi likhna
+    // border, fill, radius come from the theme automatically
+    // isDense: true also comes from the theme — don't write it explicitly
   ),
 )
 
-// Icon ke saath
+// With icon
 InputDecoration(
   labelText: 'Search',
-  prefixIcon: const Icon(Icons.search, size: 18),  // size: 18 compact ke liye
+  prefixIcon: const Icon(Icons.search, size: 18),  // size: 18 for compact layout
 )
 
-// ❌ Avoid OutlineInputBorder() inline likhna — theme pehle se sahi set hai
-// Sirf tab likhna jab kuch override karna ho
+// ❌ Avoid writing OutlineInputBorder() inline — the theme already has the right setup
+// Only write it when you need to override something specific
 ```
 
 **Dropdown:**
 ```dart
-// ✅ initialValue use karo (value deprecated hai Flutter 3.33+)
+// ✅ Use initialValue (value is deprecated in Flutter 3.33+)
 DropdownButtonFormField<String>(
   initialValue: _selected,
   decoration: const InputDecoration(labelText: 'Select'),
@@ -258,11 +258,11 @@ AlertDialog(
     ),
   ),
   actions: [
-    TextButton(                          // Cancel — hamesha baya
+    TextButton(                          // Cancel — always on the left
       onPressed: () => Navigator.of(context).pop(),
       child: const Text('Cancel'),
     ),
-    FilledButton(                        // Confirm — hamesha seedha
+    FilledButton(                        // Confirm — always on the right
       onPressed: _isLoading ? null : _submit,
       child: Text(_isLoading ? 'Saving…' : 'Confirm'),
     ),
@@ -292,10 +292,10 @@ AppStatusBadge(label: 'Sold', color: Theme.of(context).colorScheme.primaryContai
 ## 10. Empty States
 
 ```dart
-// ✅ Yahi use karo — Center(Text('No data')) nahi
+// ✅ Use this — not Center(Text('No data'))
 AppEmptyState(
   message: 'No records found.',
-  icon: Icons.inbox_outlined,       // optional, default yahi hai
+  icon: Icons.inbox_outlined,       // optional, this is the default
   action: FilledButton(             // optional CTA
     onPressed: _openAdd,
     child: const Text('Add First'),
@@ -307,12 +307,12 @@ AppEmptyState(
 
 ## 11. Tables
 
-`AppDataTable` use karo — zebra rows, sticky header, pagination sab automatic:
+Use `AppDataTable` — zebra rows, sticky header, and pagination are all automatic:
 
 ```dart
 AppDataTable(
   columns: const [
-    DataColumn(label: Text('#')),      // serial number — HAMESHA pehla column
+    DataColumn(label: Text('#')),      // serial number — ALWAYS the first column
     DataColumn(label: Text('Date')),
     DataColumn(label: Text('Amount'), numeric: true),
   ],
@@ -327,19 +327,19 @@ AppDataTable(
 )
 ```
 
-**Table heading color:** `#EFF2FA` (light) — theme se automatic aata hai.
-**Pagination:** 80+ rows pe automatically paginated mode switch ho jaata hai.
-**Sticky header:** Sirf tab kaam karta hai jab table `Expanded` ke andar ho.
+**Table heading color:** `#EFF2FA` (light) — comes from theme automatically.
+**Pagination:** Switches to paginated mode automatically at 80+ rows.
+**Sticky header:** Only works when the table is inside an `Expanded` widget.
 
 ---
 
 ## 12. Glass / Frosted Effect
 
-**App mein glass effect IMPLEMENTED hai** (`lib/core/widgets/glass_surface.dart`).
+**The glass effect IS implemented** (`lib/core/widgets/glass_surface.dart`).
 
-**Background:** `AppGlassBackground` — gradient canvas with 3 radial orbs (blue, purple, sky-blue). `AppDesktopScaffold` automatically apply karta hai — manually lagane ki zaroorat nahi.
+**Background:** `AppGlassBackground` — gradient canvas with 3 radial orbs (blue, purple, sky-blue). `AppDesktopScaffold` applies this automatically — no need to add it manually.
 
-**Glass panels:** `GlassSurface` — kisi bhi widget ke around wrap karo:
+**Glass panels:** `GlassSurface` — wrap it around any widget:
 
 ```dart
 import 'package:phone_shop_pos/core/widgets/glass_surface.dart';
@@ -347,27 +347,27 @@ import 'package:phone_shop_pos/core/widgets/glass_surface.dart';
 GlassSurface(
   borderRadius: AppRadii.lgRadius,   // default
   blur: 12,                          // blur strength (default 12)
-  lightOpacity: 0.70,                // surface opacity light mode (default)
-  darkOpacity: 0.13,                 // surface opacity dark mode (default)
+  lightOpacity: 0.70,                // surface opacity in light mode (default)
+  darkOpacity: 0.13,                 // surface opacity in dark mode (default)
   showBorder: true,                  // subtle white border (default)
   child: YourWidget(),
 )
 ```
 
-**Sidebar / TopBar** mein `borderRadius: BorderRadius.zero` aur `showBorder: false` use hota hai (full-height panels ke liye).
+**Sidebar / TopBar** use `borderRadius: BorderRadius.zero` and `showBorder: false` (for full-height panels).
 
-> **Performance note:** `BackdropFilter` heavy hai — sirf hero elements pe use karo (sidebar, topbar, modal overlay). Data tables aur form fields pe nahi.
+> **Performance note:** `BackdropFilter` is expensive — only use it on hero elements (sidebar, topbar, modal overlay). Do not apply to data tables or form fields.
 
 ---
 
 ## 13. Navigation Rail (Sidebar)
 
 ```dart
-// Width behavior (theme se automatic):
+// Width behavior (automatic from theme):
 // < 1600px wide screen  → icons + labels (collapsed rail)
 // ≥ 1600px wide screen  → extended rail (208px min)
 
-// Background: white @ 82% opacity — thoda transparent but not blurred
+// Background: white @ 82% opacity — slightly transparent, not blurred
 // Indicator shape: AppRadii.lgRadius
 ```
 
@@ -375,7 +375,7 @@ GlassSurface(
 
 ## Quick Reference
 
-| Kaam | File |
+| Task | File |
 |------|------|
 | Colors, spacing, radii tokens | `lib/core/theme/app_spacing.dart` |
 | Semantic colors (success/warning/danger) | `lib/core/theme/app_semantic_colors.dart` |
