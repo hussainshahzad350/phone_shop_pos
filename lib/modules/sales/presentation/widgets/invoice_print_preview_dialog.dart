@@ -5,6 +5,7 @@ import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class InvoicePrintPreviewDialog extends ConsumerStatefulWidget {
   const InvoicePrintPreviewDialog({
@@ -91,7 +92,7 @@ class _InvoicePrintPreviewDialogState
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: AppRadii.xsRadius,
                 ),
                 child: SingleChildScrollView(
                   child: SelectableText(

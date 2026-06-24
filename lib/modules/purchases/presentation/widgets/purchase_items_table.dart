@@ -5,6 +5,7 @@ import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class PurchaseItemsTable extends StatefulWidget {
   const PurchaseItemsTable({
@@ -328,7 +329,7 @@ class _ImeiEntryRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
             decoration: BoxDecoration(
               color: semantic.warningContainer,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: AppRadii.xsRadius,
               border: Border.all(color: semantic.warning),
             ),
             child: Text(

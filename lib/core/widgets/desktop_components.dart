@@ -21,14 +21,14 @@ InputDecoration appDesktopInputDecoration({
     suffixIcon: suffixIcon,
     isDense: isDense,
     border: const OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(14)),
+      borderRadius: AppRadii.lgRadius,
     ),
     enabledBorder: const OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(14)),
+      borderRadius: AppRadii.lgRadius,
       borderSide: BorderSide(color: Color(0xFFD7DBE7)),
     ),
     focusedBorder: const OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(14)),
+      borderRadius: AppRadii.lgRadius,
       borderSide: BorderSide(color: Color(0xFF5167F6), width: 1.2),
     ),
   );

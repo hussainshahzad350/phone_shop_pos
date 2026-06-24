@@ -131,7 +131,7 @@ class _CartItemCardState extends State<_CartItemCard> {
       margin: const EdgeInsets.only(bottom: 8),
       elevation: widget.selected ? 1 : 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: AppRadii.lgRadius,
         side: BorderSide(
           color: widget.selected
               ? colorScheme.primary
@@ -140,7 +140,7 @@ class _CartItemCardState extends State<_CartItemCard> {
         ),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: AppRadii.lgRadius,
         onTap: widget.onTap,
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -289,7 +289,7 @@ class _InfoChip extends StatelessWidget {
       decoration: BoxDecoration(
         color:
             theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadii.mdRadius,
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
@@ -356,7 +356,7 @@ class _QtyStepper extends StatelessWidget {
       decoration: BoxDecoration(
         color:
             theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: AppRadii.lgRadius,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

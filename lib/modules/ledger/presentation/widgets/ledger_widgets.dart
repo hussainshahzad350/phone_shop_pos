@@ -280,7 +280,7 @@ class LedgerTimelineEntryCard extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadii.mdRadius,
         side: BorderSide(color: colorScheme.outlineVariant),
       ),
       child: Padding(
@@ -293,7 +293,7 @@ class LedgerTimelineEntryCard extends StatelessWidget {
               height: 72,
               decoration: BoxDecoration(
                 color: accent,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: AppRadii.xsRadius,
               ),
             ),
             const SizedBox(width: 12),

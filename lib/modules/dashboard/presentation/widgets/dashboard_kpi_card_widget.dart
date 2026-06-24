@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class DashboardKpiCardWidget extends StatelessWidget {
   const DashboardKpiCardWidget({
@@ -19,7 +20,7 @@ class DashboardKpiCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final content = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
       child: Row(
         children: <Widget>[
           Icon(icon, color: color, size: 30),
@@ -56,7 +57,7 @@ class DashboardKpiCardWidget extends StatelessWidget {
       child: onTap != null
           ? InkWell(
               onTap: onTap,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: AppRadii.lgRadius,
               child: content,
             )
           : content,

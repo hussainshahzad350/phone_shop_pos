@@ -7,6 +7,7 @@ import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_recen
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_low_stock_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_balance_customer_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 void showKpiDetailSheet(
   BuildContext context,
@@ -301,7 +302,7 @@ class _TodayProfitContent extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: AppRadii.smRadius,
             ),
             child: Row(
               children: <Widget>[

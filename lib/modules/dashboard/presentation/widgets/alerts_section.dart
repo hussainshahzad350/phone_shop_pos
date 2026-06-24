@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_return_entity.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class AlertsSection extends StatelessWidget {
   const AlertsSection({
@@ -41,7 +42,7 @@ class AlertsSection extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: Colors.red.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: AppRadii.mdRadius,
                     ),
                     child: Text(
                       '$totalAlerts',
