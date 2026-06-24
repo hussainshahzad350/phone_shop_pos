@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/ledger/domain/entities/ledger_timeline_row_entity.dart';
 import 'package:phone_shop_pos/modules/ledger/domain/entities/party_summary_card_entity.dart';
@@ -180,7 +181,7 @@ class _CustomerLedgerDetailScreenState
           ],
         ),
         body: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             children: <Widget>[
               Row(

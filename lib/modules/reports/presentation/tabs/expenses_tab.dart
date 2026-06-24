@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/expense_entity.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/dialogs/expense_delete_dialog.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/dialogs/expense_form_dialog.dart';
@@ -84,7 +85,7 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
             const SizedBox(height: 8),
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(AppSpacing.sm),
                 child: Wrap(
                   spacing: 8,
                   runSpacing: 8,

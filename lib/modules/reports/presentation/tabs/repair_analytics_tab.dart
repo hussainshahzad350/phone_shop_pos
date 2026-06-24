@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_date_
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_card_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class RepairAnalyticsTab extends ConsumerWidget {
   const RepairAnalyticsTab({super.key});
@@ -20,13 +21,13 @@ class RepairAnalyticsTab extends ConsumerWidget {
       children: <Widget>[
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(AppSpacing.sm),
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: <Widget>[
-                FilledButton.icon(
+                FilledButton.tonal(
                   onPressed: () {
                     final now = DateTime.now();
                     ref
@@ -36,8 +37,7 @@ class RepairAnalyticsTab extends ConsumerWidget {
                         .read(reportRepairAnalyticsEndDateProvider.notifier)
                         .state = DateTime(now.year, now.month + 1, 0);
                   },
-                  icon: const Icon(Icons.calendar_view_month, size: 16),
-                  label: const Text('This Month'),
+                  child: const Text('This Month'),
                 ),
                 FilledButton.tonal(
                   onPressed: () {
