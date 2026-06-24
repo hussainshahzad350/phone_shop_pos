@@ -237,6 +237,40 @@ class DealerIssueStateNotifier extends StateNotifier<DealerIssueState> {
     );
   }
 
+  Future<String?> markAsSoldViaDealer({
+    required String issueId,
+    required double salePrice,
+    required String paymentMethod,
+  }) async {
+    state = state.copyWith(isSubmitting: true, errorMessage: null);
+
+    final result = await _repository.markAsSoldViaDealer(
+      issueId: issueId,
+      salePrice: salePrice,
+      paymentMethod: paymentMethod,
+    );
+    state = state.copyWith(isSubmitting: false);
+
+    return result.fold(
+      onSuccess: (invoiceNumber) {
+        AppNotifier.success('Sale recorded – $invoiceNumber');
+        state = state.copyWith(
+          issues: state.issues
+              .map((i) => i.issueId == issueId
+                  ? i.copyWith(soldStatus: true, saleInvoiceId: invoiceNumber)
+                  : i)
+              .toList(),
+        );
+        return invoiceNumber;
+      },
+      onFailure: (error) {
+        AppNotifier.error('Failed to record sale: ${error.message}');
+        state = state.copyWith(errorMessage: error.message);
+        return null;
+      },
+    );
+  }
+
   void selectIssue(DealerIssueEntity issue) {
     state = state.copyWith(selectedIssue: issue);
   }

@@ -57,6 +57,13 @@ class DashboardHeader extends StatelessWidget {
                 color: semantic.danger,
                 onTap: () => context.go('/repairing'),
               ),
+            if (AppRuntimeConfig.showDealerIssueModule)
+              _QuickActionButton(
+                label: 'Dealer',
+                icon: Icons.swap_horiz_outlined,
+                color: colorScheme.secondary,
+                onTap: () => context.go('/dealer-issues'),
+              ),
             OutlinedButton.icon(
               onPressed: onRefresh,
               icon: const Icon(Icons.refresh),

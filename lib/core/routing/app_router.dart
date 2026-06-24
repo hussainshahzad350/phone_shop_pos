@@ -13,6 +13,7 @@ import 'package:phone_shop_pos/modules/dashboard/presentation/screens/dashboard_
 import 'package:phone_shop_pos/modules/inventory/presentation/screens/inventory_screen.dart';
 import 'package:phone_shop_pos/modules/master_data/presentation/screens/master_data_screen.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/screens/purchase_screen.dart';
+import 'package:phone_shop_pos/modules/dealer_issue/presentation/screens/dealer_issue_screen.dart';
 import 'package:phone_shop_pos/modules/repairing/presentation/screens/repairing_screen.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/screens/reports_screen.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/screens/sales_billing_screen.dart';
@@ -117,6 +118,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/customers',
             redirect: (context, state) => '/sales',
+          ),
+          GoRoute(
+            path: '/dealer-issues',
+            builder: (context, state) => const DealerIssueScreen(),
           ),
           GoRoute(
             path: '/repairing',

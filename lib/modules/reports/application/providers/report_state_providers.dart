@@ -9,6 +9,7 @@ enum ReportsTab {
   repairAnalytics,
   customerLedger,
   supplierLedger,
+  dealerIssues,
 }
 
 final selectedReportsTabProvider = StateProvider<ReportsTab>(
