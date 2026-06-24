@@ -8,6 +8,7 @@ import 'package:phone_shop_pos/modules/reports/presentation/providers/report_pro
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_export_action_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_card_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_row.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_section_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
 
 class ProfitTab extends ConsumerWidget {
@@ -101,30 +102,17 @@ class ProfitTab extends ConsumerWidget {
               final exportRows = ref.watch(profitExportRowsProvider);
               final layout = reportTableLayoutFor(context);
 
-              return Card(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  child: Column(
-                    children: <Widget>[
-                      Row(
-                        children: <Widget>[
-                          Expanded(child: reportSectionTitle(context, 'Profit by Day')),
-                          ReportExportActionWidget(
-                            title: 'Profit Report',
-                            fileBaseName: 'profit_report',
-                            headers: headers,
-                            rows: exportRows,
-                            csvExportService: csvService,
-                            printableReportService: printableService,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      const Divider(height: 1),
-                      const SizedBox(height: 8),
-                      Expanded(
-                        child: AppDataTable(
+              return ReportTableSection(
+                title: 'Profit by Day',
+                trailing: ReportExportActionWidget(
+                  title: 'Profit Report',
+                  fileBaseName: 'profit_report',
+                  headers: headers,
+                  rows: exportRows,
+                  csvExportService: csvService,
+                  printableReportService: printableService,
+                ),
+                child: AppDataTable(
                           columnSpacing: layout.columnSpacing,
                           dataRowMinHeight: layout.dataRowMinHeight,
                           dataRowMaxHeight: layout.dataRowMaxHeight,
@@ -212,10 +200,6 @@ class ProfitTab extends ConsumerWidget {
                             );
                           }).toList(growable: false),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),

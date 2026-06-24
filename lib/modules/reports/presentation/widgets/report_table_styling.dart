@@ -47,8 +47,9 @@ Widget reportStyledTableHeaderCell(
         fontWeight: FontWeight.w700,
         letterSpacing: 0.2,
       ),
+      softWrap: true,
       overflow: TextOverflow.ellipsis,
-      maxLines: 1,
+      maxLines: 2,
     ),
   );
 }

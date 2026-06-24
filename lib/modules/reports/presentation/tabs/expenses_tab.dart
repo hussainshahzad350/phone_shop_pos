@@ -475,11 +475,7 @@ class _ExpenseDesktopTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final layout = reportTableLayoutFor(context);
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: SizedBox(
-        width: 1100,
-        child: AppDataTable(
+    return AppDataTable(
           columnSpacing: layout.columnSpacing,
           dataRowMinHeight: 64,
           dataRowMaxHeight: 88,
@@ -598,8 +594,6 @@ class _ExpenseDesktopTable extends StatelessWidget {
                 }
               )
               .toList(growable: false),
-        ),
-      ),
     );
   }
 }

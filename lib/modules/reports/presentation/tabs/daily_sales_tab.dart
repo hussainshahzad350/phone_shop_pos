@@ -8,6 +8,7 @@ import 'package:phone_shop_pos/modules/reports/presentation/providers/report_pro
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_export_action_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_card_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_row.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_section_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
 
 class DailySalesTab extends ConsumerWidget {
@@ -102,38 +103,26 @@ class DailySalesTab extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Column(
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Expanded(child: reportSectionTitle(context, 'Sales Details')),
-                      ReportExportActionWidget(
-                        title: 'Daily Sales Details Report',
-                        fileBaseName: 'daily_sales_details_report',
-                        headers: const <String>[
-                          'Invoice',
-                          'Date',
-                          'Customer',
-                          'Total (PKR)',
-                          'Paid (PKR)',
-                          'Balance (PKR)',
-                          'Payment',
-                          'Status',
-                        ],
-                        rows: detailExportRows,
-                        csvExportService: csvService,
-                        printableReportService: printableService,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Divider(height: 1),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: AppDataTable(
+          child: ReportTableSection(
+            title: 'Sales Details',
+            trailing: ReportExportActionWidget(
+              title: 'Daily Sales Details Report',
+              fileBaseName: 'daily_sales_details_report',
+              headers: const <String>[
+                'Invoice',
+                'Date',
+                'Customer',
+                'Total (PKR)',
+                'Paid (PKR)',
+                'Balance (PKR)',
+                'Payment',
+                'Status',
+              ],
+              rows: detailExportRows,
+              csvExportService: csvService,
+              printableReportService: printableService,
+            ),
+            child: AppDataTable(
                       columnSpacing: layout.columnSpacing,
                       dataRowMinHeight: layout.dataRowMinHeight,
                       dataRowMaxHeight: layout.dataRowMaxHeight,
@@ -216,10 +205,6 @@ class DailySalesTab extends ConsumerWidget {
                         if (detailRows.isNotEmpty) totalsRow(),
                       ],
                     ),
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
       ],
