@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
+import 'package:phone_shop_pos/core/config/business_configuration_providers.dart';
+import 'package:phone_shop_pos/core/config/business_profile.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 
-class DashboardHeader extends StatelessWidget {
+class DashboardHeader extends ConsumerWidget {
   const DashboardHeader({
     super.key,
     required this.onRefresh,
@@ -12,9 +14,14 @@ class DashboardHeader extends StatelessWidget {
   final VoidCallback onRefresh;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final semantic = Theme.of(context).semantic;
     final colorScheme = Theme.of(context).colorScheme;
+    final profile =
+        ref.watch(businessProfileProvider).valueOrNull ?? BusinessProfile.mobileOnly;
+    final showRepair = profile == BusinessProfile.repairShop ||
+        profile == BusinessProfile.hybrid;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: <Widget>[
@@ -50,19 +57,12 @@ class DashboardHeader extends StatelessWidget {
               color: semantic.warning,
               onTap: () => context.go('/inventory/audit'),
             ),
-            if (AppRuntimeConfig.showRepairModule)
+            if (showRepair)
               _QuickActionButton(
                 label: 'Repair',
                 icon: Icons.build_outlined,
                 color: semantic.danger,
                 onTap: () => context.go('/repairing'),
-              ),
-            if (AppRuntimeConfig.showDealerIssueModule)
-              _QuickActionButton(
-                label: 'Dealer',
-                icon: Icons.swap_horiz_outlined,
-                color: colorScheme.secondary,
-                onTap: () => context.go('/dealer-issues'),
               ),
             OutlinedButton.icon(
               onPressed: onRefresh,
