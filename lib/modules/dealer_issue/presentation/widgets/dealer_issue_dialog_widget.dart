@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_issue_state_provider.dart';
-import 'package:phone_shop_pos/modules/purchases/presentation/providers/supplier_providers.dart';
+import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_providers.dart';
+import 'package:phone_shop_pos/modules/dealer_issue/presentation/widgets/add_dealer_dialog.dart';
 
 class DealerIssueDialogWidget extends ConsumerStatefulWidget {
   const DealerIssueDialogWidget({super.key});
@@ -60,36 +61,48 @@ class _DealerIssueDialogWidgetState extends ConsumerState<DealerIssueDialogWidge
   }
 
   Widget _buildDealerSelector() {
-    final suppliersAsync = ref.watch(supplierListProvider);
+    final dealersAsync = ref.watch(dealerListProvider);
 
-    return suppliersAsync.when(
-      data: (dealers) {
-        if (dealers.isEmpty) {
-          return const Text('No dealers available');
-        }
-
-        return DropdownButtonFormField<String>(
-          initialValue: _selectedDealerId,
-          decoration: const InputDecoration(
-            labelText: 'Select Dealer',
-            border: OutlineInputBorder(),
-            isDense: true,
+    return dealersAsync.when(
+      data: (dealers) => Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: <Widget>[
+          Expanded(
+            child: DropdownButtonFormField<String>(
+              initialValue: _selectedDealerId,
+              decoration: const InputDecoration(
+                labelText: 'Select Dealer',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              hint: dealers.isEmpty
+                  ? const Text('No dealers — add one →')
+                  : null,
+              items: dealers
+                  .map((d) => DropdownMenuItem<String>(
+                        value: d.id,
+                        child: Text(d.name),
+                      ))
+                  .toList(growable: false),
+              onChanged: (value) {
+                if (value != null) setState(() => _selectedDealerId = value);
+              },
+            ),
           ),
-          items: dealers.map((dealer) {
-            return DropdownMenuItem<String>(
-              value: dealer.id,
-              child: Text(dealer.name),
-            );
-          }).toList(growable: false),
-          onChanged: (value) {
-            if (value != null) {
-              setState(() {
-                _selectedDealerId = value;
-              });
-            }
-          },
-        );
-      },
+          const SizedBox(width: 8),
+          IconButton.outlined(
+            tooltip: 'Add new dealer',
+            icon: const Icon(Icons.person_add_outlined, size: 18),
+            onPressed: () async {
+              final created = await AddDealerDialog.show(context);
+              if (created != null) {
+                ref.invalidate(dealerListProvider);
+                setState(() => _selectedDealerId = created.id);
+              }
+            },
+          ),
+        ],
+      ),
       loading: () => const SizedBox(
         height: 48,
         child: Center(child: CircularProgressIndicator()),
@@ -105,9 +118,11 @@ class _DealerIssueDialogWidgetState extends ConsumerState<DealerIssueDialogWidge
           child: TextField(
             controller: _imeiController,
             decoration: const InputDecoration(
-              labelText: 'Enter IMEI',
+              labelText: 'Scan or enter IMEI',
+              hintText: 'Scan barcode or type manually',
               border: OutlineInputBorder(),
               isDense: true,
+              prefixIcon: Icon(Icons.qr_code_scanner, size: 18),
             ),
             onSubmitted: (_) => _addImei(),
           ),

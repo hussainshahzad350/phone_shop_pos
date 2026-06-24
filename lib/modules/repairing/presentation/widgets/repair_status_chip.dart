@@ -1,31 +1,12 @@
 part of '../screens/repairing_screen.dart';
 
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final colors = _statusPillColors(status, colorScheme);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: colors.background,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        _statusLabel(status),
-        style: theme.textTheme.labelMedium?.copyWith(
-          color: colors.foreground,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
+Widget _repairStatusBadge(BuildContext context, String status) {
+  final colors = _statusPillColors(status, Theme.of(context).colorScheme);
+  return AppStatusBadge(
+    label: _statusLabel(status),
+    color: colors.background,
+    foreground: colors.foreground,
+  );
 }
 
 ({Color background, Color foreground}) _statusPillColors(

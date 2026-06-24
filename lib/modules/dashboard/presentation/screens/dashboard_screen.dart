@@ -9,6 +9,7 @@ import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/brand_stoc
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/brand_stock_section.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/dashboard_header.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/dashboard_kpi_grid.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -62,7 +63,7 @@ class DashboardScreen extends ConsumerWidget {
           body: LayoutBuilder(
             builder: (context, constraints) {
               return ListView(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(AppSpacing.sm),
                 children: <Widget>[
                   DashboardHeader(onRefresh: () => _refresh(ref)),
                   const SizedBox(height: 8),
@@ -114,7 +115,7 @@ class _SectionDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
       child: Row(
         children: <Widget>[
           Expanded(
@@ -124,7 +125,7 @@ class _SectionDivider extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: Text(
               'Brand Stock',
               style: theme.textTheme.labelSmall?.copyWith(

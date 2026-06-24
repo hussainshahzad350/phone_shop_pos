@@ -39,10 +39,16 @@ abstract final class AppSpacing {
 /// Corner-radius design tokens. Cards, inputs, chips and dialogs should pull
 /// from one of these so radii read as a deliberate scale, not per-widget guesses.
 abstract final class AppRadii {
+  /// 4 — subtle rounding for table cells, inner containers.
+  static const double xs = 4;
+  /// 8 — small controls and chips.
   static const double sm = 8;
+  /// 12 — standard controls (buttons, chips, form fields).
   static const double md = 12;
+  /// 16 — cards, panels, dialogs.
   static const double lg = 16;
 
+  static const BorderRadius xsRadius = BorderRadius.all(Radius.circular(xs));
   static const BorderRadius smRadius = BorderRadius.all(Radius.circular(sm));
   static const BorderRadius mdRadius = BorderRadius.all(Radius.circular(md));
   static const BorderRadius lgRadius = BorderRadius.all(Radius.circular(lg));

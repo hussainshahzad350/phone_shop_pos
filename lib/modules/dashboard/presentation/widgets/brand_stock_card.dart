@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/brand_stock_entity.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class BrandStockCard extends StatelessWidget {
   const BrandStockCard({
@@ -18,7 +19,7 @@ class BrandStockCard extends StatelessWidget {
     return Card(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadii.lgRadius,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
           child: Column(

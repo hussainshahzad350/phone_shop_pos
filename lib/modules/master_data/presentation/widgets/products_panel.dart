@@ -11,6 +11,7 @@ import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_repository_provider.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/product_management_providers.dart';
 import 'package:phone_shop_pos/modules/master_data/presentation/widgets/product_form_dialog.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class ProductsPanel extends ConsumerStatefulWidget {
   const ProductsPanel({super.key});
@@ -380,7 +381,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
                   icon: const Icon(Icons.edit_outlined, size: 18),
                   visualDensity: VisualDensity.compact,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: AppSpacing.xs),
                 IconButton.filledTonal(
                   tooltip: item.isActive ? 'Archive' : 'Unarchive',
                   onPressed: () => _toggleActive(item),
@@ -473,7 +474,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
       child: Align(
         alignment: Alignment.centerLeft,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(999),
@@ -553,7 +554,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
         Expanded(
           child: Card(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
               child: productsAsync.when(
                 data: _buildProductsTable,
                 loading: () => const Center(child: CircularProgressIndicator()),

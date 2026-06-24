@@ -37,8 +37,15 @@ class StockTableWidget extends StatelessWidget {
               .map((column) => _buildDataColumn(column, layout))
               .toList(growable: false),
           rows: rows
-              .map((row) =>
-                  _buildResponsiveRow(context, row, visibleColumns, layout))
+              .asMap()
+              .entries
+              .map((e) => _buildResponsiveRow(
+                    context,
+                    e.value,
+                    visibleColumns,
+                    layout,
+                    e.key,
+                  ))
               .toList(growable: false),
         );
       },
@@ -48,6 +55,7 @@ class StockTableWidget extends StatelessWidget {
   List<_StockTableColumn> _visibleColumns(_StockTableLayout layout) {
     if (layout.showCompactColumns) {
       return const <_StockTableColumn>[
+        _StockTableColumn.serial,
         _StockTableColumn.type,
         _StockTableColumn.product,
         _StockTableColumn.imeiOrQty,
@@ -57,6 +65,7 @@ class StockTableWidget extends StatelessWidget {
     }
     if (layout.showMediumColumns) {
       return const <_StockTableColumn>[
+        _StockTableColumn.serial,
         _StockTableColumn.type,
         _StockTableColumn.product,
         _StockTableColumn.brand,
@@ -67,6 +76,7 @@ class StockTableWidget extends StatelessWidget {
       ];
     }
     return const <_StockTableColumn>[
+      _StockTableColumn.serial,
       _StockTableColumn.type,
       _StockTableColumn.condition,
       _StockTableColumn.product,
@@ -104,10 +114,11 @@ class StockTableWidget extends StatelessWidget {
     StockRowEntity row,
     List<_StockTableColumn> columns,
     _StockTableLayout layout,
+    int rowIndex,
   ) {
     return DataRow(
       cells: columns
-          .map((column) => _buildDataCell(context, row, column, layout))
+          .map((column) => _buildDataCell(context, row, column, layout, rowIndex))
           .toList(growable: false),
     );
   }
@@ -117,9 +128,14 @@ class StockTableWidget extends StatelessWidget {
     StockRowEntity row,
     _StockTableColumn column,
     _StockTableLayout layout,
+    int rowIndex,
   ) {
     final isSerialized = row.type == StockRowType.serialized;
     switch (column) {
+      case _StockTableColumn.serial:
+        return DataCell(
+          _textCell('${rowIndex + 1}', width: layout.valueWidth(column)),
+        );
       case _StockTableColumn.type:
         return DataCell(
           _textCell(
@@ -241,6 +257,8 @@ class StockTableWidget extends StatelessWidget {
 
   String _columnLabel(_StockTableColumn column) {
     switch (column) {
+      case _StockTableColumn.serial:
+        return '#';
       case _StockTableColumn.type:
         return 'Type';
       case _StockTableColumn.condition:
@@ -354,6 +372,7 @@ class StockTableWidget extends StatelessWidget {
 }
 
 enum _StockTableColumn {
+  serial,
   type,
   condition,
   product,
@@ -402,6 +421,8 @@ class _StockTableLayout {
   double valueWidth(_StockTableColumn column) {
     if (isWideDesktop) {
       switch (column) {
+        case _StockTableColumn.serial:
+          return 40;
         case _StockTableColumn.type:
           return 92;
         case _StockTableColumn.condition:
@@ -425,6 +446,8 @@ class _StockTableLayout {
     }
     if (showMediumColumns) {
       switch (column) {
+        case _StockTableColumn.serial:
+          return 40;
         case _StockTableColumn.type:
           return 88;
         case _StockTableColumn.condition:
@@ -447,6 +470,8 @@ class _StockTableLayout {
       }
     }
     switch (column) {
+      case _StockTableColumn.serial:
+        return 40;
       case _StockTableColumn.type:
         return 84;
       case _StockTableColumn.condition:

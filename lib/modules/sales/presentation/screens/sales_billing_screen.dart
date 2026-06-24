@@ -30,6 +30,7 @@ import 'package:phone_shop_pos/modules/sales/presentation/widgets/payment_sectio
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/product_grid_widget.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/product_search_bar.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/totals_panel_widget.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class SalesBillingScreen extends ConsumerStatefulWidget {
   const SalesBillingScreen({super.key});
@@ -519,7 +520,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
             isLoading: _isCompleting,
             label: 'Completing sale...',
             child: Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
                 children: <Widget>[
                   FocusTraversalOrder(

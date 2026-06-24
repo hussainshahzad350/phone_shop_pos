@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/modules/ledger/domain/entities/ledger_timeline_ro
 import 'package:phone_shop_pos/modules/ledger/domain/entities/party_summary_card_entity.dart';
 import 'package:phone_shop_pos/modules/ledger/presentation/ledger_timeline_labels.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class LedgerSummaryCards extends StatelessWidget {
   const LedgerSummaryCards({
@@ -279,7 +280,7 @@ class LedgerTimelineEntryCard extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadii.mdRadius,
         side: BorderSide(color: colorScheme.outlineVariant),
       ),
       child: Padding(
@@ -292,7 +293,7 @@ class LedgerTimelineEntryCard extends StatelessWidget {
               height: 72,
               decoration: BoxDecoration(
                 color: accent,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: AppRadii.xsRadius,
               ),
             ),
             const SizedBox(width: 12),
@@ -326,7 +327,7 @@ class LedgerTimelineEntryCard extends StatelessWidget {
                       color: colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: AppSpacing.xs),
                   Wrap(
                     spacing: 8,
                     runSpacing: 4,
@@ -353,7 +354,7 @@ class LedgerTimelineEntryCard extends StatelessWidget {
                     ],
                   ),
                   if ((row.note ?? '').trim().isNotEmpty) ...<Widget>[
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       row.note!.trim(),
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -374,33 +375,28 @@ class LedgerTimelineEntryCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final badges = <Widget>[];
     if (row.isReversal) {
-      badges.add(_badge('Reversed', colorScheme.errorContainer,
-          colorScheme.onErrorContainer));
+      badges.add(AppStatusBadge(
+        label: 'Reversed',
+        color: colorScheme.errorContainer,
+        foreground: colorScheme.onErrorContainer,
+      ));
     }
     final type = row.ledgerType.toLowerCase();
     if (type.contains('payment') || type.contains('settlement')) {
-      badges.add(_badge(
-          'Settlement', colorScheme.primaryContainer, colorScheme.onPrimaryContainer));
+      badges.add(AppStatusBadge(
+        label: 'Settlement',
+        color: colorScheme.primaryContainer,
+        foreground: colorScheme.onPrimaryContainer,
+      ));
     }
     if (type.contains('return') || type.contains('refund')) {
-      badges.add(
-          _badge('Refunded', colorScheme.tertiaryContainer, colorScheme.onTertiaryContainer));
+      badges.add(AppStatusBadge(
+        label: 'Refunded',
+        color: colorScheme.tertiaryContainer,
+        foreground: colorScheme.onTertiaryContainer,
+      ));
     }
     return badges;
-  }
-
-  Widget _badge(String label, Color bg, Color fg) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(color: fg, fontSize: 11, fontWeight: FontWeight.w600),
-      ),
-    );
   }
 }
 
@@ -469,7 +465,7 @@ class _SummaryCard extends StatelessWidget {
     return Card(
       color: emphasized ? colorScheme.primaryContainer.withValues(alpha: 0.35) : null,
       child: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[

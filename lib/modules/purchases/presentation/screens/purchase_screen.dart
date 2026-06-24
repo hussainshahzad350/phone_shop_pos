@@ -22,6 +22,7 @@ import 'package:phone_shop_pos/modules/purchases/presentation/widgets/purchase_i
 import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_query_providers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class PurchaseScreen extends ConsumerStatefulWidget {
   const PurchaseScreen({super.key});
@@ -253,7 +254,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
             isLoading: _isSubmitting,
             label: 'Saving purchase...',
             child: Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
                 children: <Widget>[
                   _buildTopBar(formState, suppliersAsync),
@@ -491,7 +492,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 34),
                           child: GridView.builder(
                             controller: _productGridScrollController,
-                            padding: const EdgeInsets.all(6),
+                            padding: const EdgeInsets.all(AppSpacing.xs),
                             scrollDirection: Axis.horizontal,
                             gridDelegate:
                                 SliverGridDelegateWithFixedCrossAxisCount(
@@ -513,8 +514,8 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                                 onPressed: () => _handleAddProduct(product),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 6,
+                                    horizontal: AppSpacing.sm,
+                                    vertical: AppSpacing.xs,
                                   ),
                                   minimumSize: Size.zero,
                                   tapTargetSize:
@@ -640,7 +641,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                     'Payment Method',
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: AppSpacing.xs),
                   DropdownButtonFormField<String>(
                     initialValue: formState.paymentMethod,
                     items: PaymentMethod.values
@@ -739,7 +740,7 @@ class _ViewAllInInventoryButton extends StatelessWidget {
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
@@ -749,7 +750,7 @@ class _ViewAllInInventoryButton extends StatelessWidget {
         children: <Widget>[
           Icon(Icons.inventory_2_outlined,
               size: 22, color: theme.colorScheme.primary),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             'View all\nin Inventory',
             textAlign: TextAlign.center,

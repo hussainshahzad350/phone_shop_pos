@@ -5,6 +5,7 @@ import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_entity.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_query_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class CustomerSelectorWidget extends ConsumerStatefulWidget {
   const CustomerSelectorWidget({
@@ -121,7 +122,7 @@ class _CustomerSelectorWidgetState
               DecoratedBox(
                 decoration: BoxDecoration(
                   border: Border.all(color: Theme.of(context).dividerColor),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: AppRadii.smRadius,
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

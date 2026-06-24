@@ -22,6 +22,7 @@ import 'package:phone_shop_pos/modules/inventory/presentation/widgets/inventory_
 import 'package:phone_shop_pos/modules/inventory/presentation/widgets/stock_table_widget.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 const int _kReservePhoneFetchLimit = 5000;
 
@@ -110,7 +111,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         },
         child: Scaffold(
           body: Padding(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -433,7 +434,7 @@ class _ReservePhoneDialogState extends ConsumerState<_ReservePhoneDialog> {
                   ? null
                   : (value) => setState(() => _selectedSerializedStockId = value),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               selectedStatus == SerializedStockStatus.reserved
                   ? 'This phone is currently reserved and can be released back to in-stock.'
@@ -629,12 +630,12 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
                 labelText: 'Notes (optional)',
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: AppSpacing.sm),
             const Text(
               'Adjustment History',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: AppSpacing.xs),
             Expanded(
               child: adjustmentAsync.when(
                 data: (rows) => AppDataTable(

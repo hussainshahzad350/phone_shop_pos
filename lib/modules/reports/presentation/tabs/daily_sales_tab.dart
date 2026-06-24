@@ -52,6 +52,7 @@ class DailySalesTab extends ConsumerWidget {
           Theme.of(context).colorScheme.primaryContainer.withAlpha(76),
         ),
         cells: <DataCell>[
+          const DataCell(SizedBox(width: 48)),
           DataCell(Text('TOTAL', style: style)),
           DataCell(Text('Days: ${summary.totalDays}', style: style)),
           DataCell(Text('Cust: ${summary.totalCustomers}', style: style)),
@@ -108,7 +109,7 @@ class DailySalesTab extends ConsumerWidget {
                 children: <Widget>[
                   Row(
                     children: <Widget>[
-                      Expanded(child: reportSectionTitle('Sales Details')),
+                      Expanded(child: reportSectionTitle(context, 'Sales Details')),
                       ReportExportActionWidget(
                         title: 'Daily Sales Details Report',
                         fileBaseName: 'daily_sales_details_report',
@@ -139,6 +140,9 @@ class DailySalesTab extends ConsumerWidget {
                       showCheckboxColumn: false,
                       columns: <DataColumn>[
                         DataColumn(
+                          label: reportStyledTableHeaderCell(context, '#', width: 48),
+                        ),
+                        DataColumn(
                           label: reportStyledTableHeaderCell(context, 'Invoice', width: 130),
                         ),
                         DataColumn(
@@ -167,9 +171,12 @@ class DailySalesTab extends ConsumerWidget {
                         ),
                       ],
                       rows: <DataRow>[
-                        ...detailRows.map(
-                          (row) => DataRow(
+                        ...detailRows.asMap().entries.map(
+                          (entry) {
+                            final row = entry.value;
+                            return DataRow(
                             cells: <DataCell>[
+                              DataCell(reportStyledTableCell('${entry.key + 1}', width: 48)),
                               DataCell(reportStyledTableCell(row.invoiceNumber, width: 130)),
                               DataCell(reportStyledTableCell(FormattingHelpers.dateYmd(row.saleDate), width: 110)),
                               DataCell(reportStyledTableCell(row.customerName, width: 220)),
@@ -203,7 +210,8 @@ class DailySalesTab extends ConsumerWidget {
                                 ),
                               ),
                             ],
-                          ),
+                          );
+                          },
                         ),
                         if (detailRows.isNotEmpty) totalsRow(),
                       ],

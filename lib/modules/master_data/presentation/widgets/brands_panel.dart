@@ -10,6 +10,7 @@ import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/brand_providers.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_repository_provider.dart';
 import 'package:phone_shop_pos/modules/master_data/presentation/widgets/brand_form_dialog.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class _BrandUsageCounts {
   const _BrandUsageCounts({required this.active, required this.inactive});
@@ -325,7 +326,7 @@ class _BrandsPanelState extends ConsumerState<BrandsPanel> {
                   icon: const Icon(Icons.edit_outlined, size: 18),
                   visualDensity: VisualDensity.compact,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: AppSpacing.xs),
                 IconButton.filledTonal(
                   tooltip: item.isActive ? 'Archive' : 'Unarchive',
                   onPressed: () => _toggleActive(item),
@@ -403,7 +404,7 @@ class _BrandsPanelState extends ConsumerState<BrandsPanel> {
       child: Align(
         alignment: Alignment.centerLeft,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(999),
@@ -458,7 +459,7 @@ class _BrandsPanelState extends ConsumerState<BrandsPanel> {
         Expanded(
           child: Card(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
               child: brandsAsync.when(
                 data: (items) => _buildBrandsTable(
                   items,

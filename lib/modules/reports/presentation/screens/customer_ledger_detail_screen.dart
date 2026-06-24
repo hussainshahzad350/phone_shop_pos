@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/ledger/domain/entities/ledger_timeline_row_entity.dart';
 import 'package:phone_shop_pos/modules/ledger/domain/entities/party_summary_card_entity.dart';
@@ -11,7 +12,6 @@ import 'package:phone_shop_pos/modules/reports/presentation/screens/ledger_detai
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/receive_customer_credit_dialog.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_card_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_section_widget.dart';
-import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
 
 class CustomerLedgerDetailScreen extends ConsumerStatefulWidget {
   const CustomerLedgerDetailScreen({
@@ -144,7 +144,7 @@ class _CustomerLedgerDetailScreenState
             children: <Widget>[
               Text(
                 displayName,
-                style: reportSectionTitleStyle.copyWith(fontSize: 18),
+                style: Theme.of(context).textTheme.headlineSmall,
               ),
               Text(
                 customerLedgerBalanceSubtitle(summary),
@@ -181,7 +181,7 @@ class _CustomerLedgerDetailScreenState
           ],
         ),
         body: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             children: <Widget>[
               Row(

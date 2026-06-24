@@ -109,7 +109,7 @@ class ProfitTab extends ConsumerWidget {
                     children: <Widget>[
                       Row(
                         children: <Widget>[
-                          Expanded(child: reportSectionTitle('Profit by Day')),
+                          Expanded(child: reportSectionTitle(context, 'Profit by Day')),
                           ReportExportActionWidget(
                             title: 'Profit Report',
                             fileBaseName: 'profit_report',
@@ -131,6 +131,10 @@ class ProfitTab extends ConsumerWidget {
                           showCheckboxColumn: false,
                           emptyMessage: 'No profit rows found.',
                           columns: <DataColumn>[
+                            DataColumn(
+                                label: reportStyledTableHeaderCell(
+                                    context, '#',
+                                    width: 48)),
                             DataColumn(
                                 label: reportStyledTableHeaderCell(
                                     context, 'Date',
@@ -160,11 +164,14 @@ class ProfitTab extends ConsumerWidget {
                                     context, 'Margin %',
                                     width: 90)),
                           ],
-                          rows: rows.map((r) {
+                          rows: rows.asMap().entries.map((entry) {
+                            final r = entry.value;
                             final isNegative = r.totalProfit < 0;
                             final colorScheme = Theme.of(context).colorScheme;
                             return DataRow(
                               cells: <DataCell>[
+                                DataCell(reportStyledTableCell(
+                                    '${entry.key + 1}', width: 48)),
                                 DataCell(
                                     reportStyledTableCell(r.day, width: 110)),
                                 DataCell(reportStyledTableCell(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/theme/app_typography.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class AppTheme {
   const AppTheme._();
@@ -46,7 +47,7 @@ class AppTheme {
             ? Colors.white.withValues(alpha: 0.94)
             : colorScheme.surfaceContainerLow,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadii.lgRadius,
           side: BorderSide(
             color: brightness == Brightness.light
                 ? const Color(0xFFE3E8F2)
@@ -62,7 +63,7 @@ class AppTheme {
             ? const Color(0xFFFAFBFE)
             : colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadii.lgRadius,
           borderSide: BorderSide(
             color: brightness == Brightness.light
                 ? const Color(0xFFD7DBE7)
@@ -70,7 +71,7 @@ class AppTheme {
           ),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadii.lgRadius,
           borderSide: BorderSide(
             color: brightness == Brightness.light
                 ? const Color(0xFFD7DBE7)
@@ -78,29 +79,29 @@ class AppTheme {
           ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadii.lgRadius,
           borderSide: BorderSide(color: colorScheme.primary, width: 1.2),
         ),
       ),
       chipTheme: base.chipTheme.copyWith(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: AppRadii.mdRadius),
         side: BorderSide(color: colorScheme.outlineVariant),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: AppRadii.mdRadius,
           ),
           side: BorderSide(color: colorScheme.outlineVariant),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: AppRadii.mdRadius,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
         ),
       ),
       navigationRailTheme: NavigationRailThemeData(
@@ -108,7 +109,7 @@ class AppTheme {
             ? Colors.white.withValues(alpha: 0.82)
             : colorScheme.surfaceContainer,
         indicatorShape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadii.lgRadius,
         ),
         minWidth: 76,
       ),

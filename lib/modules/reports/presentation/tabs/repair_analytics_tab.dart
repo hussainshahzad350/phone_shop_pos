@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_date_
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_card_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class RepairAnalyticsTab extends ConsumerWidget {
   const RepairAnalyticsTab({super.key});
@@ -20,13 +21,13 @@ class RepairAnalyticsTab extends ConsumerWidget {
       children: <Widget>[
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(AppSpacing.sm),
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: <Widget>[
-                FilledButton.icon(
+                FilledButton.tonal(
                   onPressed: () {
                     final now = DateTime.now();
                     ref
@@ -36,8 +37,7 @@ class RepairAnalyticsTab extends ConsumerWidget {
                         .read(reportRepairAnalyticsEndDateProvider.notifier)
                         .state = DateTime(now.year, now.month + 1, 0);
                   },
-                  icon: const Icon(Icons.calendar_view_month, size: 16),
-                  label: const Text('This Month'),
+                  child: const Text('This Month'),
                 ),
                 FilledButton.tonal(
                   onPressed: () {
@@ -294,6 +294,24 @@ class _AnalyticsTable extends StatelessWidget {
   Widget build(BuildContext context) {
     final layout = reportTableLayoutFor(context);
 
+    final indexedColumns = <DataColumn>[
+      DataColumn(
+        label: reportStyledTableHeaderCell(context, '#', width: 40),
+      ),
+      ...columns,
+    ];
+    final indexedRows = List<DataRow>.generate(
+      rows.length,
+      (i) => DataRow(
+        color: rows[i].color,
+        onSelectChanged: rows[i].onSelectChanged,
+        cells: <DataCell>[
+          DataCell(reportStyledTableCell('${i + 1}', width: 40)),
+          ...rows[i].cells,
+        ],
+      ),
+    );
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -301,7 +319,7 @@ class _AnalyticsTable extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            reportSectionTitle(title),
+            reportSectionTitle(context, title),
             const SizedBox(height: 8),
             const Divider(height: 1),
             const SizedBox(height: 8),
@@ -312,8 +330,8 @@ class _AnalyticsTable extends StatelessWidget {
                 dataRowMinHeight: layout.dataRowMinHeight,
                 dataRowMaxHeight: layout.dataRowMaxHeight,
                 showCheckboxColumn: false,
-                columns: columns,
-                rows: rows,
+                columns: indexedColumns,
+                rows: indexedRows,
                 emptyMessage: emptyMessage,
               ),
             ),

@@ -200,6 +200,133 @@ class SqliteDealerIssueRepository implements DealerIssueRepository {
     });
   }
 
+  @override
+  Future<Result<String>> markAsSoldViaDealer({
+    required String issueId,
+    required double salePrice,
+    required String paymentMethod,
+  }) async {
+    return await guard(() async {
+      String invoiceNumber = '';
+
+      await _db.transaction((txn) async {
+        final now = DateTime.now();
+        final nowStr = now.toIso8601String();
+
+        final issueMaps = await txn.query(
+          TableNames.dealerIssues,
+          where: 'issue_id = ?',
+          whereArgs: [issueId],
+          limit: 1,
+        );
+        if (issueMaps.isEmpty) {
+          throw AppError(code: 'not_found', message: 'Issue not found');
+        }
+        final issue = DealerIssueEntity.fromMap(issueMaps.first);
+        if (!issue.canBeConverted) {
+          throw AppError(
+            code: 'invalid_state',
+            message: 'Issue cannot be marked as sold in its current state',
+          );
+        }
+
+        final List<Map<String, Object?>> stockSnapshots = [];
+        for (final imei in issue.imeiList) {
+          final rows = await txn.rawQuery('''
+            SELECT id, product_model_id, cost_price
+            FROM ${TableNames.serializedStock}
+            WHERE (imei1 = ? OR imei2 = ?) AND stock_status = 'with_dealer'
+            LIMIT 1
+          ''', [imei, imei]);
+          if (rows.isEmpty) {
+            throw AppError(
+              code: 'imei_not_available',
+              message: 'IMEI $imei is not currently with dealer',
+            );
+          }
+          stockSnapshots.add(rows.first);
+          await txn.update(
+            TableNames.serializedStock,
+            {'stock_status': 'sold', 'updated_at': nowStr},
+            where: 'id = ?',
+            whereArgs: [rows.first['id']],
+          );
+        }
+
+        final dateStr =
+            '${now.year.toString().padLeft(4, '0')}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+        await txn.rawInsert(
+          'INSERT OR IGNORE INTO ${TableNames.invoiceSequences} (date_key, last_seq) VALUES (?, 0)',
+          [dateStr],
+        );
+        await txn.rawUpdate(
+          'UPDATE ${TableNames.invoiceSequences} SET last_seq = last_seq + 1 WHERE date_key = ?',
+          [dateStr],
+        );
+        final seqResult = await txn.rawQuery(
+          'SELECT last_seq FROM ${TableNames.invoiceSequences} WHERE date_key = ?',
+          [dateStr],
+        );
+        final seq = seqResult.first['last_seq'] as int;
+        invoiceNumber =
+            'INV-$dateStr-${seq.toString().padLeft(4, '0')}';
+
+        final saleId = now.microsecondsSinceEpoch.toString();
+        final itemCount = stockSnapshots.length;
+        final pricePerItem = itemCount > 0 ? salePrice / itemCount : salePrice;
+        final paidAmount = paymentMethod == 'credit' ? 0.0 : salePrice;
+
+        await txn.insert(TableNames.sales, {
+          'id': saleId,
+          'invoice_number': invoiceNumber,
+          'customer_id': null,
+          'user_id': null,
+          'sale_date': nowStr,
+          'subtotal': salePrice,
+          'discount': 0.0,
+          'tax': 0.0,
+          'total': salePrice,
+          'paid_amount': paidAmount,
+          'payment_method': paymentMethod,
+          'notes': 'Dealer sale – Issue #${issueId.substring(0, 8)}',
+          'status': 'completed',
+          'created_at': nowStr,
+          'updated_at': nowStr,
+        });
+
+        for (int i = 0; i < stockSnapshots.length; i++) {
+          final snap = stockSnapshots[i];
+          await txn.insert(TableNames.saleItems, {
+            'id': '${saleId}_$i',
+            'sale_id': saleId,
+            'product_model_id': snap['product_model_id'] as String,
+            'serialized_stock_id': snap['id'] as String,
+            'quantity': 1,
+            'unit_price': pricePerItem,
+            'discount': 0.0,
+            'line_total': pricePerItem,
+            'cost_price': (snap['cost_price'] as num?)?.toDouble() ?? 0.0,
+            'created_at': nowStr,
+            'updated_at': nowStr,
+          });
+        }
+
+        await txn.update(
+          TableNames.dealerIssues,
+          {
+            'sold_status': 1,
+            'sale_invoice_id': invoiceNumber,
+            'updated_at': nowStr,
+          },
+          where: 'issue_id = ?',
+          whereArgs: [issueId],
+        );
+      });
+
+      return invoiceNumber;
+    });
+  }
+
   /// Deletes the dealer issue. If the issue was not yet returned or converted,
   /// each IMEI is restored to 'in_stock' so the stock pool is correct.
   @override

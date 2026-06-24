@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_query_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 /// Max product cards shown in the quick stock bar. Beyond this, the user is
 /// pointed to the Inventory screen via the trailing "View all" button.
@@ -61,7 +62,7 @@ class _ProductGridWidgetState extends ConsumerState<ProductGridWidget> {
                       padding: const EdgeInsets.symmetric(horizontal: 34),
                       child: GridView.builder(
                         controller: _scrollController,
-                        padding: const EdgeInsets.all(6),
+                        padding: const EdgeInsets.all(AppSpacing.xs),
                         scrollDirection: Axis.horizontal,
                         gridDelegate:
                             SliverGridDelegateWithFixedCrossAxisCount(
@@ -110,7 +111,7 @@ class _ProductGridWidgetState extends ConsumerState<ProductGridWidget> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 const Text('Failed to load products'),
-                const SizedBox(height: 6),
+                const SizedBox(height: AppSpacing.xs),
                 OutlinedButton.icon(
                   onPressed: widget.onRetry,
                   icon: const Icon(Icons.refresh),
@@ -158,7 +159,7 @@ class _ProductCardButton extends StatelessWidget {
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         alignment: Alignment.centerLeft,
@@ -201,7 +202,7 @@ class _ViewAllInInventoryButton extends StatelessWidget {
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
@@ -211,7 +212,7 @@ class _ViewAllInInventoryButton extends StatelessWidget {
         children: <Widget>[
           Icon(Icons.inventory_2_outlined,
               size: 22, color: theme.colorScheme.primary),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             'View all\nin Inventory',
             textAlign: TextAlign.center,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/kpi_card_config.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/providers/kpi_preferences_provider.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 Future<void> showKpiCustomizeDialog(BuildContext context) {
   return showDialog<void>(
@@ -27,7 +28,7 @@ class _KpiCustomizeDialog extends ConsumerWidget {
           Text('Customize KPI Cards'),
         ],
       ),
-      contentPadding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
+      contentPadding: const EdgeInsets.only(top: AppSpacing.md),
       content: SizedBox(
         width: 380,
         child: prefsAsync.when(

@@ -122,6 +122,13 @@ class PurchaseHistoryTab extends ConsumerWidget {
                           DataColumn(
                             label: reportStyledTableHeaderCell(
                               context,
+                              '#',
+                              width: 48,
+                            ),
+                          ),
+                          DataColumn(
+                            label: reportStyledTableHeaderCell(
+                              context,
                               'Date',
                               width: 110,
                             ),
@@ -169,9 +176,16 @@ class PurchaseHistoryTab extends ConsumerWidget {
                             ),
                           ),
                         ],
-                        rows: rows.map((row) {
+                        rows: rows.asMap().entries.map((entry) {
+                          final row = entry.value;
                           return DataRow(
                             cells: <DataCell>[
+                              DataCell(
+                                reportStyledTableCell(
+                                  '${entry.key + 1}',
+                                  width: 48,
+                                ),
+                              ),
                               DataCell(
                                 reportStyledTableCell(
                                   FormattingHelpers.dateYmd(row.purchaseDate),

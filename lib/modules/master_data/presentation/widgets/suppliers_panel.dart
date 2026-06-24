@@ -10,6 +10,7 @@ import 'package:phone_shop_pos/modules/purchases/domain/entities/supplier_entity
 import 'package:phone_shop_pos/modules/purchases/presentation/providers/purchase_query_providers.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/providers/supplier_providers.dart';
 import 'package:phone_shop_pos/modules/reports/application/providers/report_query_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class SuppliersPanel extends ConsumerStatefulWidget {
   const SuppliersPanel({super.key});
@@ -293,7 +294,7 @@ class _SuppliersPanelState extends ConsumerState<SuppliersPanel> {
                   icon: const Icon(Icons.edit_outlined, size: 18),
                   visualDensity: VisualDensity.compact,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: AppSpacing.xs),
                 IconButton.filledTonal(
                   tooltip: item.isActive ? 'Archive' : 'Unarchive',
                   onPressed: () => _toggleActive(item),
@@ -371,7 +372,7 @@ class _SuppliersPanelState extends ConsumerState<SuppliersPanel> {
       child: Align(
         alignment: Alignment.centerLeft,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(999),
@@ -425,7 +426,7 @@ class _SuppliersPanelState extends ConsumerState<SuppliersPanel> {
         Expanded(
           child: Card(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
               child: suppliersAsync.when(
                 data: _buildSuppliersTable,
                 loading: () => const Center(child: CircularProgressIndicator()),

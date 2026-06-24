@@ -4,6 +4,7 @@ import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/domain/entities/dealer_issue_entity.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_issue_state_provider.dart';
+import 'package:phone_shop_pos/modules/dealer_issue/presentation/widgets/dealer_issue_mark_sold_dialog.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class DealerIssueTableWidget extends ConsumerWidget {
@@ -112,9 +113,9 @@ class DealerIssueTableWidget extends ConsumerWidget {
           ),
         if (issue.canBeConverted)
           IconButton(
-            icon: const Icon(Icons.receipt_long_outlined),
-            tooltip: 'Convert to Sale',
-            onPressed: () => _showConvertDialog(context, ref, issue),
+            icon: const Icon(Icons.sell_outlined),
+            tooltip: 'Mark as Sold',
+            onPressed: () => _showMarkSoldDialog(context, ref, issue),
           ),
         if (issue.canBeDeleted)
           IconButton(
@@ -150,31 +151,10 @@ class DealerIssueTableWidget extends ConsumerWidget {
     );
   }
 
-  void _showConvertDialog(BuildContext context, WidgetRef ref, DealerIssueEntity issue) {
-    showDialog(
+  void _showMarkSoldDialog(BuildContext context, WidgetRef ref, DealerIssueEntity issue) {
+    showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Convert to Sale'),
-        content: TextField(
-          decoration: const InputDecoration(
-            labelText: 'Sale Invoice Number',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(context).pop(true);
-              ref.read(dealerIssueStateProvider.notifier).convertToSale(issue.issueId, 'INV-001');
-            },
-            child: const Text('Convert'),
-          ),
-        ],
-      ),
+      builder: (context) => DealerIssueMarkSoldDialog(issue: issue),
     );
   }
 

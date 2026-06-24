@@ -8,7 +8,9 @@ class DashboardKpisEntity {
     required this.availableStockCount,
     required this.pendingBalances,
     double? totalStockWorth,
-  }) : _totalStockWorth = totalStockWorth;
+    int? dealerStockCount,
+  })  : _totalStockWorth = totalStockWorth,
+        _dealerStockCount = dealerStockCount;
 
   final double todaySales;
   final double todayProfit;
@@ -18,6 +20,8 @@ class DashboardKpisEntity {
   final int availableStockCount;
   final double pendingBalances;
   final double? _totalStockWorth;
+  final int? _dealerStockCount;
 
   double get totalStockWorth => _totalStockWorth ?? 0;
+  int get dealerStockCount => _dealerStockCount ?? 0;
 }

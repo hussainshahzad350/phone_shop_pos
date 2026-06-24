@@ -12,6 +12,11 @@ abstract class DealerIssueRepository {
   Future<Result<bool>> markAsReturned(String issueId);
   Future<Result<bool>> convertToSale(String issueId, String saleInvoiceId);
   Future<Result<bool>> markAsSold(String issueId);
+  Future<Result<String>> markAsSoldViaDealer({
+    required String issueId,
+    required double salePrice,
+    required String paymentMethod,
+  });
   Future<Result<List<String>>> getAvailableImeisForIssue(String dealerId);
   Future<Result<bool>> isImeiUniqueForDealer(String imei, String dealerId, {String? excludeIssueId});
 }

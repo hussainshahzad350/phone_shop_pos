@@ -109,6 +109,10 @@ class CashFlowTab extends ConsumerWidget {
                         showCheckboxColumn: false,
                         columns: <DataColumn>[
                           DataColumn(
+                            label: reportStyledTableHeaderCell(context, '#',
+                                width: 48),
+                          ),
+                          DataColumn(
                             label: reportStyledTableHeaderCell(context, 'Day',
                                 width: 105),
                           ),
@@ -158,11 +162,14 @@ class CashFlowTab extends ConsumerWidget {
                                 width: 130),
                           ),
                         ],
-                        rows: rows.map((row) {
+                        rows: rows.asMap().entries.map((entry) {
+                          final row = entry.value;
                           final colorScheme = Theme.of(context).colorScheme;
                           final isNegative = row.netCash < 0;
                           return DataRow(
                             cells: <DataCell>[
+                              DataCell(reportStyledTableCell(
+                                  '${entry.key + 1}', width: 48)),
                               DataCell(
                                   reportStyledTableCell(row.day, width: 105)),
                               DataCell(reportStyledTableCell(
