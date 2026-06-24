@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/domain/entities/dealer_issue_entity.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_issue_state_provider.dart';
 
@@ -32,6 +31,7 @@ class _DealerIssueMarkSoldDialogState
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    _formKey.currentState!.save();
 
     final salePrice = double.tryParse(_priceController.text.trim());
     if (salePrice == null || salePrice <= 0) return;
@@ -98,7 +98,7 @@ class _DealerIssueMarkSoldDialogState
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _paymentMethod,
+              initialValue: _paymentMethod,
               decoration: const InputDecoration(
                 labelText: 'Payment Method',
                 border: OutlineInputBorder(),
@@ -106,10 +106,12 @@ class _DealerIssueMarkSoldDialogState
               ),
               items: const <DropdownMenuItem<String>>[
                 DropdownMenuItem(value: 'cash', child: Text('Cash')),
-                DropdownMenuItem(value: 'credit', child: Text('Credit (unpaid)')),
+                DropdownMenuItem(
+                    value: 'credit', child: Text('Credit (unpaid)')),
               ],
-              onChanged: (value) {
-                if (value != null) setState(() => _paymentMethod = value);
+              onChanged: (value) {},
+              onSaved: (value) {
+                if (value != null) _paymentMethod = value;
               },
             ),
           ],
