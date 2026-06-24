@@ -294,6 +294,24 @@ class _AnalyticsTable extends StatelessWidget {
   Widget build(BuildContext context) {
     final layout = reportTableLayoutFor(context);
 
+    final indexedColumns = <DataColumn>[
+      DataColumn(
+        label: reportStyledTableHeaderCell(context, '#', width: 40),
+      ),
+      ...columns,
+    ];
+    final indexedRows = List<DataRow>.generate(
+      rows.length,
+      (i) => DataRow(
+        color: rows[i].color,
+        onSelectChanged: rows[i].onSelectChanged,
+        cells: <DataCell>[
+          DataCell(reportStyledTableCell('${i + 1}', width: 40)),
+          ...rows[i].cells,
+        ],
+      ),
+    );
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -312,8 +330,8 @@ class _AnalyticsTable extends StatelessWidget {
                 dataRowMinHeight: layout.dataRowMinHeight,
                 dataRowMaxHeight: layout.dataRowMaxHeight,
                 showCheckboxColumn: false,
-                columns: columns,
-                rows: rows,
+                columns: indexedColumns,
+                rows: indexedRows,
                 emptyMessage: emptyMessage,
               ),
             ),

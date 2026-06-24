@@ -285,6 +285,22 @@ class _AppDataTableState extends State<AppDataTable> {
     super.dispose();
   }
 
+  // Returns columns with invisible labels — used in the body DataTable so the
+  // header row occupies zero height while column widths still match the pinned
+  // header above (cells carry explicit SizedBox widths that DataTable honours).
+  static List<DataColumn> _inertColumns(List<DataColumn> columns) {
+    return columns
+        .map(
+          (c) => DataColumn(
+            label: const SizedBox.shrink(),
+            numeric: c.numeric,
+            onSort: c.onSort,
+            mouseCursor: c.mouseCursor,
+          ),
+        )
+        .toList(growable: false);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.rows.isEmpty) {
@@ -355,26 +371,74 @@ class _AppDataTableState extends State<AppDataTable> {
       );
     }
 
-    return Scrollbar(
-      controller: _verticalScrollController,
-      thumbVisibility: true,
-      child: SingleChildScrollView(
-        controller: _verticalScrollController,
-        scrollDirection: Axis.vertical,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(_kDesktopCardRadius),
-          child: DataTable(
-            columns: effectiveColumns,
-            rows: effectiveRows,
-            columnSpacing: widget.columnSpacing,
-            dataRowMinHeight: widget.dataRowMinHeight,
-            dataRowMaxHeight: widget.dataRowMaxHeight,
-            headingRowHeight: 56,
-            dividerThickness: 0.6,
-            showCheckboxColumn: widget.showCheckboxColumn,
+    // For non-paginated tables, use a sticky header when the widget has a
+    // bounded height (i.e. it lives inside an Expanded or fixed-height
+    // container). The header DataTable renders the heading row only; the body
+    // DataTable renders data rows with a zero-height heading row so column
+    // widths still align with the pinned header.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.hasBoundedHeight) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(_kDesktopCardRadius),
+            child: Column(
+              children: <Widget>[
+                DataTable(
+                  columns: effectiveColumns,
+                  rows: const <DataRow>[],
+                  columnSpacing: widget.columnSpacing,
+                  headingRowHeight: 56,
+                  dividerThickness: 0,
+                  showCheckboxColumn: widget.showCheckboxColumn,
+                ),
+                Expanded(
+                  child: Scrollbar(
+                    controller: _verticalScrollController,
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
+                      controller: _verticalScrollController,
+                      child: DataTable(
+                        columns: _inertColumns(effectiveColumns),
+                        rows: effectiveRows,
+                        columnSpacing: widget.columnSpacing,
+                        dataRowMinHeight: widget.dataRowMinHeight,
+                        dataRowMaxHeight: widget.dataRowMaxHeight,
+                        headingRowHeight: 0,
+                        dividerThickness: 0.6,
+                        showCheckboxColumn: widget.showCheckboxColumn,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Unbounded height (e.g. inside a scrolling analytics card): fall back
+        // to the classic full-table scroll so the layout doesn't break.
+        return Scrollbar(
+          controller: _verticalScrollController,
+          thumbVisibility: true,
+          child: SingleChildScrollView(
+            controller: _verticalScrollController,
+            scrollDirection: Axis.vertical,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(_kDesktopCardRadius),
+              child: DataTable(
+                columns: effectiveColumns,
+                rows: effectiveRows,
+                columnSpacing: widget.columnSpacing,
+                dataRowMinHeight: widget.dataRowMinHeight,
+                dataRowMaxHeight: widget.dataRowMaxHeight,
+                headingRowHeight: 56,
+                dividerThickness: 0.6,
+                showCheckboxColumn: widget.showCheckboxColumn,
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
