@@ -200,9 +200,10 @@ class DashboardService with BaseRepositoryGuard {
       final dealerCountRows = await QueryDiagnostics.trace(
         label: 'dashboard.dealer_stock_count',
         action: () => _appDatabase.database.rawQuery(
-          "SELECT COALESCE(COUNT(*), 0) AS dealer_count "
-          "FROM ${TableNames.serializedStock} "
-          "WHERE stock_status = 'with_dealer'",
+          'SELECT COALESCE(COUNT(*), 0) AS dealer_count '
+          'FROM ${TableNames.serializedStock} '
+          'WHERE stock_status = ?',
+          <Object?>['with_dealer'],
         ),
       );
 
