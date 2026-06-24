@@ -4,6 +4,7 @@ import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_date_filter_button.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_card_widget.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_section_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
@@ -312,30 +313,18 @@ class _AnalyticsTable extends StatelessWidget {
       ),
     );
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            reportSectionTitle(context, title),
-            const SizedBox(height: 8),
-            const Divider(height: 1),
-            const SizedBox(height: 8),
-            ConstrainedBox(
-              constraints: BoxConstraints(minHeight: minHeight),
-              child: AppDataTable(
-                columnSpacing: layout.columnSpacing,
-                dataRowMinHeight: layout.dataRowMinHeight,
-                dataRowMaxHeight: layout.dataRowMaxHeight,
-                showCheckboxColumn: false,
-                columns: indexedColumns,
-                rows: indexedRows,
-                emptyMessage: emptyMessage,
-              ),
-            ),
-          ],
+    return ReportTableSection(
+      title: title,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: minHeight),
+        child: AppDataTable(
+          columnSpacing: layout.columnSpacing,
+          dataRowMinHeight: layout.dataRowMinHeight,
+          dataRowMaxHeight: layout.dataRowMaxHeight,
+          showCheckboxColumn: false,
+          columns: indexedColumns,
+          rows: indexedRows,
+          emptyMessage: emptyMessage,
         ),
       ),
     );

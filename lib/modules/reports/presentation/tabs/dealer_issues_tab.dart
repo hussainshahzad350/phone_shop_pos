@@ -8,6 +8,7 @@ import 'package:phone_shop_pos/modules/dealer_issue/domain/entities/dealer_issue
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_issue_state_provider.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/widgets/dealer_issue_mark_sold_dialog.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_card_widget.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_section_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
 
 class DealerIssuesTab extends ConsumerStatefulWidget {
@@ -47,93 +48,83 @@ class _DealerIssuesTabState extends ConsumerState<DealerIssuesTab> {
 
     final layout = reportTableLayoutFor(context);
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: ReportSummaryCardWidget(
-                  label: 'Total Issues',
-                  value: issues.length.toString(),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: ReportSummaryCardWidget(
-                  label: 'Active',
-                  value: activeCount.toString(),
-                  color: Theme.of(context).semantic.warning,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: ReportSummaryCardWidget(
-                  label: 'Sold',
-                  value: soldCount.toString(),
-                  color: Theme.of(context).semantic.success,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: ReportSummaryCardWidget(
-                  label: 'Returned',
-                  value: returnedCount.toString(),
-                  color: Theme.of(context).semantic.info,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: <Widget>[
-                  FilterChip(
-                    label: const Text('All'),
-                    selected: _statusFilter == 'all',
-                    onSelected: (_) => setState(() => _statusFilter = 'all'),
-                  ),
-                  FilterChip(
-                    label: const Text('Active'),
-                    selected: _statusFilter == 'issued',
-                    onSelected: (_) =>
-                        setState(() => _statusFilter = 'issued'),
-                  ),
-                  FilterChip(
-                    label: const Text('Sold'),
-                    selected: _statusFilter == 'sold',
-                    onSelected: (_) =>
-                        setState(() => _statusFilter = 'sold'),
-                  ),
-                  FilterChip(
-                    label: const Text('Returned'),
-                    selected: _statusFilter == 'returned',
-                    onSelected: (_) =>
-                        setState(() => _statusFilter = 'returned'),
-                  ),
-                ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: ReportSummaryCardWidget(
+                label: 'Total Issues',
+                value: issues.length.toString(),
               ),
             ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: ReportSummaryCardWidget(
+                label: 'Active',
+                value: activeCount.toString(),
+                color: Theme.of(context).semantic.warning,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: ReportSummaryCardWidget(
+                label: 'Sold',
+                value: soldCount.toString(),
+                color: Theme.of(context).semantic.success,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: ReportSummaryCardWidget(
+                label: 'Returned',
+                value: returnedCount.toString(),
+                color: Theme.of(context).semantic.info,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: <Widget>[
+                FilterChip(
+                  label: const Text('All'),
+                  selected: _statusFilter == 'all',
+                  onSelected: (_) => setState(() => _statusFilter = 'all'),
+                ),
+                FilterChip(
+                  label: const Text('Active'),
+                  selected: _statusFilter == 'issued',
+                  onSelected: (_) =>
+                      setState(() => _statusFilter = 'issued'),
+                ),
+                FilterChip(
+                  label: const Text('Sold'),
+                  selected: _statusFilter == 'sold',
+                  onSelected: (_) =>
+                      setState(() => _statusFilter = 'sold'),
+                ),
+                FilterChip(
+                  label: const Text('Returned'),
+                  selected: _statusFilter == 'returned',
+                  onSelected: (_) =>
+                      setState(() => _statusFilter = 'returned'),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Card(
-            child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  reportSectionTitle(context, 'Dealer Issues'),
-                  const SizedBox(height: 8),
-                  const Divider(height: 1),
-                  const SizedBox(height: 8),
-                  AppDataTable(
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Expanded(
+          child: ReportTableSection(
+            title: 'Dealer Issues',
+            child: AppDataTable(
                     columnSpacing: layout.columnSpacing,
                     dataRowMinHeight: layout.dataRowMinHeight,
                     dataRowMaxHeight: layout.dataRowMaxHeight,
@@ -210,14 +201,11 @@ class _DealerIssuesTabState extends ConsumerState<DealerIssuesTab> {
                           ],
                         );
                       },
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
-        ],
-      ),
+        ),
+        ),
+      ],
     );
   }
 
