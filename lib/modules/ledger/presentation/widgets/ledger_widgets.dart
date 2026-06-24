@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/modules/ledger/domain/entities/ledger_timeline_ro
 import 'package:phone_shop_pos/modules/ledger/domain/entities/party_summary_card_entity.dart';
 import 'package:phone_shop_pos/modules/ledger/presentation/ledger_timeline_labels.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class LedgerSummaryCards extends StatelessWidget {
   const LedgerSummaryCards({
@@ -326,7 +327,7 @@ class LedgerTimelineEntryCard extends StatelessWidget {
                       color: colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: AppSpacing.xs),
                   Wrap(
                     spacing: 8,
                     runSpacing: 4,
@@ -353,7 +354,7 @@ class LedgerTimelineEntryCard extends StatelessWidget {
                     ],
                   ),
                   if ((row.note ?? '').trim().isNotEmpty) ...<Widget>[
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       row.note!.trim(),
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -469,7 +470,7 @@ class _SummaryCard extends StatelessWidget {
     return Card(
       color: emphasized ? colorScheme.primaryContainer.withValues(alpha: 0.35) : null,
       child: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[

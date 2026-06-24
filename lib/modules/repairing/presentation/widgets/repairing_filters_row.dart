@@ -12,7 +12,7 @@ class _FiltersRow extends ConsumerWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
           children: <Widget>[
             Expanded(

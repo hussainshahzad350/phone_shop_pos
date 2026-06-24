@@ -3,6 +3,7 @@ import 'package:phone_shop_pos/modules/master_data/presentation/widgets/brands_p
 import 'package:phone_shop_pos/modules/master_data/presentation/widgets/customers_panel.dart';
 import 'package:phone_shop_pos/modules/master_data/presentation/widgets/products_panel.dart';
 import 'package:phone_shop_pos/modules/master_data/presentation/widgets/suppliers_panel.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class MasterDataScreen extends StatelessWidget {
   const MasterDataScreen({super.key});
@@ -15,7 +16,7 @@ class MasterDataScreen extends StatelessWidget {
       length: 4,
       child: Scaffold(
         body: Padding(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -68,7 +69,7 @@ class _MasterDataTabLabel extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: colorScheme.outlineVariant),

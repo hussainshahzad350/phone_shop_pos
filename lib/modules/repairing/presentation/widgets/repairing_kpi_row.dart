@@ -120,7 +120,7 @@ class _KpiCard extends StatelessWidget {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
         child: Row(
           children: <Widget>[
             Icon(icon, size: 32, color: iconColor ?? theme.colorScheme.primary),

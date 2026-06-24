@@ -23,6 +23,7 @@ import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_heade
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_pagination_bar.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_tab_chips.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 bool hasNextReportsPageCandidate({
   required int resultsLength,
@@ -156,7 +157,7 @@ class ReportsScreen extends ConsumerWidget {
         },
         child: Scaffold(
           body: Padding(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[

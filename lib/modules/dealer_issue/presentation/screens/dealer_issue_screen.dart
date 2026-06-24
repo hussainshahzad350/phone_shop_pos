@@ -4,6 +4,7 @@ import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/deale
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/widgets/dealer_issue_table_widget.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/widgets/dealer_issue_filter_widget.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/widgets/dealer_issue_dialog_widget.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class DealerIssueScreen extends ConsumerStatefulWidget {
   const DealerIssueScreen({super.key});
@@ -25,7 +26,7 @@ class _DealerIssueScreenState extends ConsumerState<DealerIssueScreen> {
 
     return Scaffold(
       body: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[

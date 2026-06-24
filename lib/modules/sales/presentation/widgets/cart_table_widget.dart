@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class CartTableWidget extends StatefulWidget {
   const CartTableWidget({
@@ -201,7 +202,7 @@ class _CartItemCardState extends State<_CartItemCard> {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppSpacing.sm),
               Wrap(
                 spacing: 10,
                 runSpacing: 8,
@@ -291,7 +292,7 @@ class _InfoChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
         child: Text(
           '$label: $value',
           style: theme.textTheme.bodySmall,

@@ -10,6 +10,7 @@ import 'package:phone_shop_pos/core/widgets/responsive_table_layout.dart';
 import 'package:phone_shop_pos/modules/repairing/domain/entities/repair_analytics_entity.dart';
 import 'package:phone_shop_pos/modules/repairing/domain/entities/repair_job_entity.dart';
 import 'package:phone_shop_pos/modules/repairing/presentation/providers/repairing_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 part '../dialogs/collect_payment_dialog.dart';
 part '../dialogs/repair_job_form_dialog.dart';
@@ -27,7 +28,7 @@ class RepairingScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       body: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[

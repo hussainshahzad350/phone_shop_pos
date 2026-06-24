@@ -21,6 +21,7 @@ import 'package:phone_shop_pos/shared/providers/core_providers.dart';
 import 'package:phone_shop_pos/core/config/business_profile.dart';
 import 'package:phone_shop_pos/core/config/feature_flags.dart';
 import 'package:phone_shop_pos/core/config/business_configuration.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -215,7 +216,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       LengthLimitingTextInputFormatter(6),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: AppSpacing.sm),
                   TextField(
                     controller: newPinController,
                     decoration: appDesktopInputDecoration(
@@ -228,7 +229,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       LengthLimitingTextInputFormatter(6),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: AppSpacing.sm),
                   TextField(
                     controller: confirmPinController,
                     decoration: appDesktopInputDecoration(
@@ -424,7 +425,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const Text(
                   'Enter current PIN to generate a new recovery code. The previous recovery code will stop working.',
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.sm),
                 TextField(
                   controller: currentPinController,
                   decoration: appDesktopInputDecoration(
@@ -500,7 +501,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         isLoading: _isProcessing,
         label: 'Processing...',
         child: Padding(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: ListView(
             children: <Widget>[
               Row(
@@ -711,7 +712,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           'Checked: ${FormattingHelpers.dateYmdHm(status.checkedAt)}',
                         ),
                         if (status.warnings.isNotEmpty) ...<Widget>[
-                          const SizedBox(height: 6),
+                          const SizedBox(height: AppSpacing.xs),
                           ...status.warnings.map(
                             (warning) => Text('• $warning'),
                           ),

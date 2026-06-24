@@ -11,7 +11,7 @@ class _RepairJobsTable extends ConsumerWidget {
     return jobsAsync.when(
       data: (jobs) => Card(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
           child: LayoutBuilder(
             builder: (context, constraints) {
               final layout = _RepairJobsTableLayout.fromWidth(
