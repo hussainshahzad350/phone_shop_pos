@@ -168,6 +168,10 @@ class MigrationService {
       await _applyMigrationV30(database);
       return;
     }
+    if (version == 31) {
+      await _applyMigrationV31(database);
+      return;
+    }
     final statements = _migrationStatements[version];
     if (statements == null) {
       return;
@@ -2759,6 +2763,29 @@ class MigrationService {
     await _dropTableBestEffort(database, '${TableNames.purchaseItems}_old');
     await database.execute(
       'CREATE INDEX IF NOT EXISTS idx_purchase_items_purchase_id ON ${TableNames.purchaseItems}(purchase_id);',
+    );
+  }
+
+  /// Migration v31: create the `dealers` table.
+  ///
+  /// Dealers are small shop owners who take phones on consignment.
+  /// Previously dealer_issues used supplier IDs as a proxy; now dealers
+  /// have their own first-class table independent of suppliers.
+  Future<void> _applyMigrationV31(Database database) async {
+    await database.execute('''
+      CREATE TABLE IF NOT EXISTS ${TableNames.dealers} (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL,
+        phone TEXT,
+        address TEXT,
+        notes TEXT,
+        is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    ''');
+    await database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_dealers_name ON ${TableNames.dealers}(name);',
     );
   }
 }

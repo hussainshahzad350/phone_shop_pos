@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_kpis_
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_recent_sale_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_low_stock_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_balance_customer_entity.dart';
+import 'package:phone_shop_pos/modules/dashboard/domain/entities/dealer_stock_breakdown_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
@@ -147,6 +148,8 @@ class _KpiDetailSheet extends ConsumerWidget {
         );
       case 'pending_balances':
         return const _PendingBalancesContent();
+      case 'dealer_stock':
+        return const _DealerStockContent();
       default:
         return const Center(
           child: Padding(
@@ -175,6 +178,8 @@ class _KpiDetailSheet extends ConsumerWidget {
         return Icons.savings_outlined;
       case 'pending_balances':
         return Icons.account_balance_wallet_outlined;
+      case 'dealer_stock':
+        return Icons.swap_horiz_outlined;
       default:
         return Icons.info_outline;
     }
@@ -516,6 +521,73 @@ class _PendingBalanceTile extends StatelessWidget {
         style: theme.textTheme.bodyMedium?.copyWith(
           color: theme.semantic.warning,
           fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Dealer Stock ──────────────────────────────────────────────────────────────
+
+class _DealerStockContent extends ConsumerWidget {
+  const _DealerStockContent();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(dashboardDealerStockBreakdownProvider);
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) =>
+          const Center(child: Text('Failed to load dealer data.')),
+      data: (dealers) {
+        if (dealers.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Icon(Icons.check_circle_outline,
+                      color: Theme.of(context).semantic.success),
+                  const SizedBox(width: 8),
+                  const Text('No phones currently with dealers.'),
+                ],
+              ),
+            ),
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          itemCount: dealers.length,
+          separatorBuilder: (_, __) => const Divider(height: 1, indent: 16),
+          itemBuilder: (context, i) => _DealerStockTile(item: dealers[i]),
+        );
+      },
+    );
+  }
+}
+
+class _DealerStockTile extends StatelessWidget {
+  const _DealerStockTile({required this.item});
+  final DealerStockBreakdownEntity item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ListTile(
+      dense: true,
+      leading: CircleAvatar(
+        radius: 16,
+        backgroundColor: theme.colorScheme.secondaryContainer,
+        child: Icon(Icons.person_outline,
+            size: 16, color: theme.colorScheme.onSecondaryContainer),
+      ),
+      title: Text(item.dealerName, style: theme.textTheme.bodyMedium),
+      trailing: Text(
+        '${item.count} phone${item.count == 1 ? '' : 's'}',
+        style: theme.textTheme.bodyMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: theme.colorScheme.primary,
         ),
       ),
     );

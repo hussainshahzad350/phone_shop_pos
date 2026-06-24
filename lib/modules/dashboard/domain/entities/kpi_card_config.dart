@@ -34,4 +34,5 @@ const kpiCardDefaults = <KpiCardConfig>[
   KpiCardConfig(id: 'available_stock_count', label: 'Available Stock Count', order: 5),
   KpiCardConfig(id: 'total_stock_worth', label: 'Total Stock Worth', order: 6),
   KpiCardConfig(id: 'pending_balances', label: 'Pending Balances', order: 7),
+  KpiCardConfig(id: 'dealer_stock', label: 'Phones with Dealers', order: 8),
 ];

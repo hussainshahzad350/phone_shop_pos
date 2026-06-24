@@ -10,6 +10,7 @@ import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_low_s
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_recent_sale_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_return_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/model_imei_stock_entity.dart';
+import 'package:phone_shop_pos/modules/dashboard/domain/entities/dealer_stock_breakdown_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_balance_customer_entity.dart';
 
 class DashboardService with BaseRepositoryGuard {
@@ -196,6 +197,15 @@ class DashboardService with BaseRepositoryGuard {
         ),
       );
 
+      final dealerCountRows = await QueryDiagnostics.trace(
+        label: 'dashboard.dealer_stock_count',
+        action: () => _appDatabase.database.rawQuery(
+          "SELECT COALESCE(COUNT(*), 0) AS dealer_count "
+          "FROM ${TableNames.serializedStock} "
+          "WHERE stock_status = 'with_dealer'",
+        ),
+      );
+
       final sales = salesRows.first;
       final items = itemRows.first;
       final stock = stockRows.first;
@@ -213,6 +223,7 @@ class DashboardService with BaseRepositoryGuard {
             _asInt(serialized['in_stock_serialized']),
         pendingBalances: _asDouble(pending['pending_balances']),
         totalStockWorth: _asDouble(stockWorth['total_stock_worth']),
+        dealerStockCount: _asInt(dealerCountRows.first['dealer_count']),
       );
 
       _cachedKpis = entity;
@@ -560,6 +571,33 @@ class DashboardService with BaseRepositoryGuard {
 
       return brandMap;
     }).catchError((_) => <String, List<ModelImeiStockEntity>>{});
+  }
+
+  Future<List<DealerStockBreakdownEntity>> getDealerStockBreakdown() {
+    return _appDatabase.database.rawQuery(
+      '''
+      SELECT
+        COALESCE(d.name, 'Unknown Dealer') AS dealer_name,
+        SUM(
+          CASE
+            WHEN di.imei_list IS NULL OR di.imei_list = '' THEN 0
+            ELSE length(di.imei_list) - length(replace(di.imei_list, ',', '')) + 1
+          END
+        ) AS phone_count
+      FROM ${TableNames.dealerIssues} di
+      LEFT JOIN ${TableNames.dealers} d ON d.id = di.dealer_id AND d.is_active = 1
+      WHERE di.return_status = 0 AND di.sold_status = 0
+      GROUP BY di.dealer_id, d.name
+      ORDER BY phone_count DESC
+      ''',
+    ).then(
+      (rows) => rows
+          .map((r) => DealerStockBreakdownEntity(
+                dealerName: r['dealer_name'] as String,
+                count: (r['phone_count'] as num?)?.toInt() ?? 0,
+              ))
+          .toList(growable: false),
+    ).catchError((_) => <DealerStockBreakdownEntity>[]);
   }
 
   double _asDouble(Object? value) {

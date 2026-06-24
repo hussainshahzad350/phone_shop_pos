@@ -147,6 +147,12 @@ class DashboardKpiGrid extends ConsumerWidget {
         icon = Icons.account_balance_wallet_outlined;
         color = kpis.pendingBalances > 0 ? semantic.warning : semantic.success;
         break;
+      case 'dealer_stock':
+        label = 'Phones with Dealers';
+        value = kpis.dealerStockCount.toString();
+        icon = Icons.swap_horiz_outlined;
+        color = kpis.dealerStockCount > 0 ? semantic.warning : accent;
+        break;
       default:
         return const SizedBox.shrink();
     }

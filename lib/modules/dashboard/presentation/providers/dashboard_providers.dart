@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_low_s
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_recent_sale_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_return_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/model_imei_stock_entity.dart';
+import 'package:phone_shop_pos/modules/dashboard/domain/entities/dealer_stock_breakdown_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_balance_customer_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/services/dashboard_service.dart';
 
@@ -99,4 +100,10 @@ final dashboardModelImeiStockProvider =
         (ref, brandName) async {
   final service = await ref.watch(dashboardServiceProvider.future);
   return service.getModelImeiStock(brandName);
+});
+
+final dashboardDealerStockBreakdownProvider =
+    FutureProvider<List<DealerStockBreakdownEntity>>((ref) async {
+  final service = await ref.watch(dashboardServiceProvider.future);
+  return service.getDealerStockBreakdown();
 });
