@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:phone_shop_pos/core/config/feature_flags.dart';
+import 'package:phone_shop_pos/core/config/business_profile.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_navigation_shell.dart';
 
 void main() {
@@ -50,30 +50,14 @@ void main() {
       );
     });
 
-    test('omits disabled feature routes from navigation items', () {
-      final items = desktopNavigationItemsForFlags(
-        const FeatureFlags.currentBehaviorDefaults().copyWith(
-          repairModule: false,
-          reports: false,
-        ),
-      );
-
-      expect(items.map((item) => item.route), isNot(contains('/repairing')));
-      expect(items.map((item) => item.route), isNot(contains('/reports')));
-      expect(items.map((item) => item.route), contains('/dashboard'));
-      expect(items.map((item) => item.route), contains('/settings'));
-    });
-
-    test('falls back to dashboard when current feature route is hidden', () {
-      expect(
-        desktopNavigationSelectedIndexForPath(
-          '/reports',
-          featureFlags: const FeatureFlags.currentBehaviorDefaults().copyWith(
-            reports: false,
-          ),
-        ),
-        0,
-      );
+    test('all nav items are shown for every profile', () {
+      for (final profile in BusinessProfile.values) {
+        final items = desktopNavigationItemsForProfile(profile);
+        expect(items.map((i) => i.route), contains('/repairing'));
+        expect(items.map((i) => i.route), contains('/reports'));
+        expect(items.map((i) => i.route), contains('/dashboard'));
+        expect(items.map((i) => i.route), contains('/settings'));
+      }
     });
   });
 }

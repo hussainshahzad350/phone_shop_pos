@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,10 +27,9 @@ void main() {
         configuration.source,
         BusinessConfigurationSource.defaultValue,
       );
-      expect(configuration.featureFlags.repairModule, isFalse);
     });
 
-    test('load persisted profile and partial flag overrides', () async {
+    test('load persisted profile from database', () async {
       final context = await _createContainer();
       addTearDown(context.dispose);
       final appDatabase =
@@ -41,16 +39,7 @@ void main() {
         TableNames.appSettings,
         <String, Object?>{
           'key': BusinessConfigurationRepository.businessProfileKey,
-          'value': BusinessProfile.mobileOnly.name,
-          'updated_at': '2026-01-01T00:00:00.000Z',
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-      await appDatabase.database.insert(
-        TableNames.appSettings,
-        <String, Object?>{
-          'key': BusinessConfigurationRepository.featureFlagsKey,
-          'value': jsonEncode(<String, Object?>{'repairModule': false}),
+          'value': BusinessProfile.hybrid.name,
           'updated_at': '2026-01-01T00:00:00.000Z',
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
@@ -60,9 +49,7 @@ void main() {
         businessConfigurationProvider.future,
       );
 
-      expect(configuration.profile, BusinessProfile.mobileOnly);
-      expect(configuration.featureFlags.repairModule, isFalse);
-      expect(configuration.featureFlags.imeiStock, isTrue);
+      expect(configuration.profile, BusinessProfile.hybrid);
       expect(
         configuration.source,
         BusinessConfigurationSource.persisted,

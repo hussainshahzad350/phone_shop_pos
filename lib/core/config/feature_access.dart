@@ -1,30 +1,14 @@
-import 'package:phone_shop_pos/core/config/feature_flags.dart';
+import 'package:phone_shop_pos/core/config/business_profile.dart';
 
-bool routeEnabledForFeatureFlags({
+bool routeEnabledForProfile({
   required String path,
-  required FeatureFlags featureFlags,
+  required BusinessProfile profile,
 }) {
-  final normalizedPath = normalizeRoutePath(path);
-  if (_routeMatches(normalizedPath, '/repairing')) {
-    return featureFlags.repairModule;
-  }
-  if (_routeMatches(normalizedPath, '/reports')) {
-    return featureFlags.reports;
-  }
-  if (_routeMatches(normalizedPath, '/inventory')) {
-    return featureFlags.imeiStock || featureFlags.qtyStock;
-  }
   return true;
 }
 
-String featureFlagRouteFallback(FeatureFlags featureFlags) {
-  if (routeEnabledForFeatureFlags(
-    path: '/dashboard',
-    featureFlags: featureFlags,
-  )) {
-    return '/dashboard';
-  }
-  return '/settings';
+String profileRouteFallback(BusinessProfile profile) {
+  return '/dashboard';
 }
 
 String normalizeRoutePath(String value) {
@@ -43,9 +27,3 @@ String normalizeRoutePath(String value) {
   return path;
 }
 
-bool _routeMatches(String currentPath, String routePrefix) {
-  final normalizedPath = normalizeRoutePath(currentPath);
-  final normalizedPrefix = normalizeRoutePath(routePrefix);
-  return normalizedPath == normalizedPrefix ||
-      normalizedPath.startsWith('$normalizedPrefix/');
-}

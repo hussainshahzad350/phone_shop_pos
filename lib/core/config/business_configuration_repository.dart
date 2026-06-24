@@ -1,10 +1,7 @@
-import 'dart:convert';
-
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:phone_shop_pos/core/config/business_configuration.dart';
 import 'package:phone_shop_pos/core/config/business_profile.dart';
-import 'package:phone_shop_pos/core/config/feature_flags.dart';
 import 'package:phone_shop_pos/core/database/app_database.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
@@ -14,7 +11,6 @@ class BusinessConfigurationRepository {
       : _appDatabase = appDatabase;
 
   static const String businessProfileKey = 'business_profile';
-  static const String featureFlagsKey = 'feature_flags';
   static const String configurationVersionKey =
       'business_configuration_version';
 
@@ -25,20 +21,15 @@ class BusinessConfigurationRepository {
     DateTime? loadedAt,
   }) async {
     final profileValue = await _readSetting(businessProfileKey);
-    final flagsValue = await _readSetting(featureFlagsKey);
     final versionValue = await _readSetting(configurationVersionKey);
 
     final parsedProfile = BusinessProfile.tryParse(profileValue);
-    final parsedFlags = _decodeFeatureFlags(
-      flagsValue,
-      defaults: defaults.featureFlags,
-    );
     final parsedVersion = int.tryParse(versionValue?.trim() ?? '');
 
     final hasAnyPersistedValue =
-        profileValue != null || flagsValue != null || versionValue != null;
+        profileValue != null || versionValue != null;
     final hasAnyValidPersistedValue =
-        parsedProfile != null || parsedFlags != null || parsedVersion != null;
+        parsedProfile != null || parsedVersion != null;
 
     final source = !hasAnyPersistedValue
         ? BusinessConfigurationSource.defaultValue
@@ -48,7 +39,6 @@ class BusinessConfigurationRepository {
 
     return defaults.copyWith(
       profile: parsedProfile ?? defaults.profile,
-      featureFlags: parsedFlags ?? defaults.featureFlags,
       source: source,
       schemaVersion: parsedVersion ?? defaults.schemaVersion,
       loadedAt: loadedAt ?? DateTimeHelpers.nowUtc(),
@@ -59,10 +49,6 @@ class BusinessConfigurationRepository {
     await _writeSetting(
       businessProfileKey,
       configuration.profile.name,
-    );
-    await _writeSetting(
-      featureFlagsKey,
-      jsonEncode(configuration.featureFlags.toMap()),
     );
     await _writeSetting(
       configurationVersionKey,
@@ -94,23 +80,5 @@ class BusinessConfigurationRepository {
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-  }
-
-  FeatureFlags? _decodeFeatureFlags(
-    String? raw, {
-    required FeatureFlags defaults,
-  }) {
-    if (raw == null || raw.trim().isEmpty) {
-      return null;
-    }
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is! Map<String, dynamic>) {
-        return null;
-      }
-      return FeatureFlags.fromMap(decoded, defaults: defaults);
-    } catch (_) {
-      return null;
-    }
   }
 }

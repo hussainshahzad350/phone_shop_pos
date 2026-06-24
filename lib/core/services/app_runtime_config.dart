@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 
 import 'package:phone_shop_pos/core/constants/app_constants.dart';
-import 'package:phone_shop_pos/core/config/feature_flags.dart';
 
 class AppRuntimeConfig {
   const AppRuntimeConfig._();
@@ -36,16 +35,4 @@ class AppRuntimeConfig {
 
   static String get fullVersion => '$appVersion+$buildNumber';
   static String get contactSummary => '$contactPhone | $contactEmail';
-
-  // Feature flag helpers for quick access
-  static bool get showRepairModule =>
-      FeatureFlags.currentBehaviorDefaults().repairModule;
-  static bool get showAccessoriesModule =>
-      FeatureFlags.currentBehaviorDefaults().accessoriesModule;
-  static bool get showDealerIssueModule =>
-      FeatureFlags.currentBehaviorDefaults().dealerIssueModule;
-  static bool get showReports =>
-      FeatureFlags.currentBehaviorDefaults().reports;
-  static bool get showNavigationStyle =>
-      FeatureFlags.currentBehaviorDefaults().navigationStyle;
 }

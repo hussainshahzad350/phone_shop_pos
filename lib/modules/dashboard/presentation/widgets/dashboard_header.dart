@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 
 class DashboardHeader extends StatelessWidget {
@@ -15,6 +14,7 @@ class DashboardHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final semantic = Theme.of(context).semantic;
     final colorScheme = Theme.of(context).colorScheme;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: <Widget>[
@@ -50,20 +50,12 @@ class DashboardHeader extends StatelessWidget {
               color: semantic.warning,
               onTap: () => context.go('/inventory/audit'),
             ),
-            if (AppRuntimeConfig.showRepairModule)
-              _QuickActionButton(
-                label: 'Repair',
-                icon: Icons.build_outlined,
-                color: semantic.danger,
-                onTap: () => context.go('/repairing'),
-              ),
-            if (AppRuntimeConfig.showDealerIssueModule)
-              _QuickActionButton(
-                label: 'Dealer',
-                icon: Icons.swap_horiz_outlined,
-                color: colorScheme.secondary,
-                onTap: () => context.go('/dealer-issues'),
-              ),
+            _QuickActionButton(
+              label: 'Repair',
+              icon: Icons.build_outlined,
+              color: semantic.danger,
+              onTap: () => context.go('/repairing'),
+            ),
             OutlinedButton.icon(
               onPressed: onRefresh,
               icon: const Icon(Icons.refresh),

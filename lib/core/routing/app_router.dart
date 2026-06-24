@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:phone_shop_pos/core/config/business_configuration_providers.dart';
+import 'package:phone_shop_pos/core/config/business_profile.dart';
 import 'package:phone_shop_pos/core/config/feature_access.dart';
-import 'package:phone_shop_pos/core/config/feature_flags.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_navigation_shell.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/providers/local_pin_auth_providers.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/screens/login_screen.dart';
@@ -30,8 +30,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final isAuthenticated = ref.watch(
     localPinAuthControllerProvider.select((state) => state.isAuthenticated),
   );
-  final featureFlags = ref.watch(featureFlagsProvider).valueOrNull ??
-      const FeatureFlags.currentBehaviorDefaults();
+  final profile = ref.watch(businessProfileProvider).valueOrNull ??
+      BusinessProfile.mobileOnly;
   return GoRouter(
     navigatorKey: navigatorKey,
     redirect: (context, state) {
@@ -53,11 +53,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (onPublicRoute) {
         return '/dashboard';
       }
-      if (!routeEnabledForFeatureFlags(
-        path: path,
-        featureFlags: featureFlags,
-      )) {
-        return featureFlagRouteFallback(featureFlags);
+      if (!routeEnabledForProfile(path: path, profile: profile)) {
+        return profileRouteFallback(profile);
       }
       return null;
     },
