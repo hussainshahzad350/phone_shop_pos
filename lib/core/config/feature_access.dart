@@ -27,9 +27,3 @@ String normalizeRoutePath(String value) {
   return path;
 }
 
-bool _routeMatches(String currentPath, String routePrefix) {
-  final normalizedPath = normalizeRoutePath(currentPath);
-  final normalizedPrefix = normalizeRoutePath(routePrefix);
-  return normalizedPath == normalizedPrefix ||
-      normalizedPath.startsWith('$normalizedPrefix/');
-}
