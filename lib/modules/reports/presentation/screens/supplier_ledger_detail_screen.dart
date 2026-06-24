@@ -11,7 +11,6 @@ import 'package:phone_shop_pos/modules/reports/presentation/screens/ledger_detai
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/pay_supplier_credit_dialog.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_card_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_section_widget.dart';
-import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
 
 class SupplierLedgerDetailScreen extends ConsumerStatefulWidget {
   const SupplierLedgerDetailScreen({
