@@ -335,30 +335,28 @@ AppDataTable(
 
 ## 12. Glass / Frosted Effect
 
-**Abhi app mein glass effect nahi hai.** Agar kabhi add karna ho:
+**App mein glass effect IMPLEMENTED hai** (`lib/core/widgets/glass_surface.dart`).
+
+**Background:** `AppGlassBackground` — gradient canvas with 3 radial orbs (blue, purple, sky-blue). `AppDesktopScaffold` automatically apply karta hai — manually lagane ki zaroorat nahi.
+
+**Glass panels:** `GlassSurface` — kisi bhi widget ke around wrap karo:
 
 ```dart
-import 'dart:ui';
+import 'package:phone_shop_pos/core/widgets/glass_surface.dart';
 
-ClipRRect(
-  borderRadius: AppRadii.lgRadius,
-  child: BackdropFilter(
-    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),   // blur strength
-    child: Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.18),     // transparency
-        borderRadius: AppRadii.lgRadius,
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.25),
-        ),
-      ),
-      child: ...,
-    ),
-  ),
+GlassSurface(
+  borderRadius: AppRadii.lgRadius,   // default
+  blur: 12,                          // blur strength (default 12)
+  lightOpacity: 0.70,                // surface opacity light mode (default)
+  darkOpacity: 0.13,                 // surface opacity dark mode (default)
+  showBorder: true,                  // subtle white border (default)
+  child: YourWidget(),
 )
 ```
 
-> Performance note: `BackdropFilter` har frame paint karta hai — zyada jagah use mat karna, sirf hero elements pe (sidebar, top bar, modal overlay).
+**Sidebar / TopBar** mein `borderRadius: BorderRadius.zero` aur `showBorder: false` use hota hai (full-height panels ke liye).
+
+> **Performance note:** `BackdropFilter` heavy hai — sirf hero elements pe use karo (sidebar, topbar, modal overlay). Data tables aur form fields pe nahi.
 
 ---
 

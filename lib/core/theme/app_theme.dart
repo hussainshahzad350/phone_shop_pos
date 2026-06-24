@@ -44,8 +44,8 @@ class AppTheme {
             : Colors.black.withValues(alpha: 0.45),
         surfaceTintColor: Colors.transparent,
         color: brightness == Brightness.light
-            ? Colors.white.withValues(alpha: 0.94)
-            : colorScheme.surfaceContainerLow,
+            ? Colors.white.withValues(alpha: 0.82)
+            : Colors.white.withValues(alpha: 0.07),
         shape: RoundedRectangleBorder(
           borderRadius: AppRadii.lgRadius,
           side: BorderSide(
