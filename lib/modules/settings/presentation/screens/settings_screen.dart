@@ -18,9 +18,6 @@ import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_pro
 import 'package:phone_shop_pos/modules/auth/presentation/providers/local_pin_auth_providers.dart';
 import 'package:phone_shop_pos/modules/settings/presentation/providers/settings_providers.dart';
 import 'package:phone_shop_pos/shared/providers/core_providers.dart';
-import 'package:phone_shop_pos/core/config/business_profile.dart';
-import 'package:phone_shop_pos/core/config/feature_flags.dart';
-import 'package:phone_shop_pos/core/config/business_configuration.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -313,96 +310,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
     );
-  }
-
-  Future<void> _changeBusinessProfile(BusinessProfile profile) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      useRootNavigator: true,
-      builder: (context) => AppConfirmationDialog(
-        title: 'Change Business Profile?',
-        message:
-            'Changing the business profile will update all feature flags.\n\n'
-            'This will restart the application to apply the new configuration.',
-        confirmLabel: 'Change Profile',
-        cancelLabel: 'Cancel',
-      ),
-    );
-
-    if (confirmed != true || !mounted) {
-      return;
-    }
-
-    setState(() => _isProcessing = true);
-    final repository = await ref.read(businessConfigurationRepositoryProvider.future);
-    final newConfig = BusinessConfiguration(
-      profile: profile,
-      featureFlags: _getFeatureFlagsForProfile(profile),
-      source: BusinessConfigurationSource.persisted,
-      schemaVersion: BusinessConfiguration.currentSchemaVersion,
-      loadedAt: DateTime.now().toUtc(),
-    );
-
-    await repository.save(newConfig);
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() => _isProcessing = false);
-
-    AppNotifier.success('Business profile changed successfully.');
-    ref.invalidate(businessConfigurationProvider);
-    ref.invalidate(appDatabaseProvider);
-    ref.invalidate(sqliteDatabaseProvider);
-    if (context.mounted) {
-      Navigator.of(context).pop();
-    }
-  }
-
-  FeatureFlags _getFeatureFlagsForProfile(BusinessProfile profile) {
-    switch (profile) {
-      case BusinessProfile.mobileOnly:
-        return const FeatureFlags(
-          imeiStock: true,
-          qtyStock: true,
-          repairModule: false,
-          accessoriesModule: false,
-          dealerIssueModule: false,
-          reports: true,
-          navigationStyle: false,
-        );
-      case BusinessProfile.mobileAccessories:
-        return const FeatureFlags(
-          imeiStock: true,
-          qtyStock: true,
-          repairModule: false,
-          accessoriesModule: true,
-          dealerIssueModule: false,
-          reports: true,
-          navigationStyle: false,
-        );
-      case BusinessProfile.repairShop:
-        return const FeatureFlags(
-          imeiStock: true,
-          qtyStock: true,
-          repairModule: true,
-          accessoriesModule: false,
-          dealerIssueModule: false,
-          reports: true,
-          navigationStyle: false,
-        );
-      case BusinessProfile.hybrid:
-        return const FeatureFlags(
-          imeiStock: true,
-          qtyStock: true,
-          repairModule: true,
-          accessoriesModule: true,
-          dealerIssueModule: false,
-          reports: true,
-          navigationStyle: false,
-        );
-    }
   }
 
   Future<void> _showRegenerateRecoveryCodeDialog() async {
