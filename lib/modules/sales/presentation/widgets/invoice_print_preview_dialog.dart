@@ -91,7 +91,7 @@ class _InvoicePrintPreviewDialogState
                 width: double.infinity,
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
+                  border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                   borderRadius: AppRadii.xsRadius,
                 ),
                 child: SingleChildScrollView(

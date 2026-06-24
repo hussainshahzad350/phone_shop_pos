@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_return_entity.dart';
-import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class AlertsSection extends StatelessWidget {
   const AlertsSection({
@@ -41,13 +42,13 @@ class AlertsSection extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.1),
+                      color: Theme.of(context).semantic.dangerContainer,
                       borderRadius: AppRadii.mdRadius,
                     ),
                     child: Text(
                       '$totalAlerts',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.red,
+                            color: Theme.of(context).semantic.danger,
                             fontWeight: FontWeight.bold,
                           ),
                     ),
@@ -125,7 +126,7 @@ class _AlertItem extends StatelessWidget {
           Icon(
             type == 'low_stock' ? Icons.warning_amber : Icons.warning,
             size: 16,
-            color: Colors.orange,
+            color: Theme.of(context).semantic.warning,
           ),
           const SizedBox(width: 8),
           Expanded(

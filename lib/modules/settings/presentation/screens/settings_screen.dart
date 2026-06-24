@@ -563,8 +563,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               label:
                                   Text('${e.key}: ${isEnabled ? "ON" : "OFF"}'),
                               backgroundColor: isEnabled
-                                  ? Colors.green.withValues(alpha: 0.1)
-                                  : Colors.red.withValues(alpha: 0.1),
+                                  ? Theme.of(context).semantic.successContainer
+                                  : Theme.of(context).semantic.dangerContainer,
                               side: BorderSide.none,
                             );
                           }).toList(),

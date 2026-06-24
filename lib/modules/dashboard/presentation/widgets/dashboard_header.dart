@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 
 class DashboardHeader extends StatelessWidget {
   const DashboardHeader({
@@ -12,6 +13,8 @@ class DashboardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final semantic = Theme.of(context).semantic;
+    final colorScheme = Theme.of(context).colorScheme;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: <Widget>[
@@ -26,32 +29,32 @@ class DashboardHeader extends StatelessWidget {
             _QuickActionButton(
               label: 'Sale',
               icon: Icons.point_of_sale_outlined,
-              color: Colors.green,
+              color: semantic.success,
               onTap: () => context.go('/sales'),
             ),
             _QuickActionButton(
               label: 'Purchase',
               icon: Icons.shopping_cart_outlined,
-              color: Colors.blue,
+              color: colorScheme.primary,
               onTap: () => context.go('/purchases'),
             ),
             _QuickActionButton(
               label: 'Inventory',
               icon: Icons.inventory_2_outlined,
-              color: Colors.indigo,
+              color: semantic.info,
               onTap: () => context.go('/inventory'),
             ),
             _QuickActionButton(
               label: 'Audit',
               icon: Icons.search,
-              color: Colors.orange,
+              color: semantic.warning,
               onTap: () => context.go('/inventory/audit'),
             ),
             if (AppRuntimeConfig.showRepairModule)
               _QuickActionButton(
                 label: 'Repair',
                 icon: Icons.build_outlined,
-                color: Colors.red,
+                color: semantic.danger,
                 onTap: () => context.go('/repairing'),
               ),
             OutlinedButton.icon(
