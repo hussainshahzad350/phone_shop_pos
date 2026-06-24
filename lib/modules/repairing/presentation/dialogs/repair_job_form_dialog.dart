@@ -319,16 +319,16 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                     controller: _problemController,
                     enabled: !isReadOnly,
                     maxLines: 2,
-                    style: const TextStyle(color: Colors.black87),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                     decoration: InputDecoration(
                       border: const OutlineInputBorder(),
                       isDense: true,
                       labelText: 'Problem Description *',
                       labelStyle: isReadOnly
-                          ? const TextStyle(color: Colors.black54)
+                          ? TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)
                           : null,
-                      disabledBorder: const OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey),
+                      disabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
                       ),
                     ),
                     onChanged: (_) => setState(() {}),
@@ -336,16 +336,16 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     initialValue: _issueType,
-                    style: const TextStyle(color: Colors.black87),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                     decoration: InputDecoration(
                       border: const OutlineInputBorder(),
                       isDense: true,
                       labelText: 'Issue Type (optional)',
                       labelStyle: _isSubmitting || isReadOnly
-                          ? const TextStyle(color: Colors.black54)
+                          ? TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)
                           : null,
-                      disabledBorder: const OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey),
+                      disabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
                       ),
                     ),
                     items: <DropdownMenuItem<String>>[
@@ -449,17 +449,17 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                         border: OutlineInputBorder(),
                         isDense: true,
                         labelText: 'Status',
-                        labelStyle: TextStyle(color: Colors.black54),
+                        labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                       ),
                       child: Text(
                         _statusLabel(_status),
-                        style: const TextStyle(color: Colors.black87),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       ),
                     )
                   else
                     DropdownButtonFormField<String>(
                       initialValue: _status,
-                      style: const TextStyle(color: Colors.black87),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         isDense: true,
@@ -514,10 +514,10 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontWeight: FontWeight.w600,
           fontSize: 12,
-          color: Colors.black87,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),
     );
@@ -539,15 +539,15 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
       keyboardType: numeric
           ? const TextInputType.numberWithOptions(decimal: true)
           : TextInputType.text,
-      style: const TextStyle(color: Colors.black87),
+      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
       decoration: InputDecoration(
         border: const OutlineInputBorder(),
         isDense: true,
         labelText: label,
-        labelStyle: enabled ? null : const TextStyle(color: Colors.black54),
+        labelStyle: enabled ? null : TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
         hintText: hint,
-        disabledBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.grey),
+        disabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
         ),
       ),
       onChanged: onChanged != null ? (_) => onChanged() : null,
