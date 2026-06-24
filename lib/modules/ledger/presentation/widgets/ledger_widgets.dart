@@ -375,33 +375,28 @@ class LedgerTimelineEntryCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final badges = <Widget>[];
     if (row.isReversal) {
-      badges.add(_badge('Reversed', colorScheme.errorContainer,
-          colorScheme.onErrorContainer));
+      badges.add(AppStatusBadge(
+        label: 'Reversed',
+        color: colorScheme.errorContainer,
+        foreground: colorScheme.onErrorContainer,
+      ));
     }
     final type = row.ledgerType.toLowerCase();
     if (type.contains('payment') || type.contains('settlement')) {
-      badges.add(_badge(
-          'Settlement', colorScheme.primaryContainer, colorScheme.onPrimaryContainer));
+      badges.add(AppStatusBadge(
+        label: 'Settlement',
+        color: colorScheme.primaryContainer,
+        foreground: colorScheme.onPrimaryContainer,
+      ));
     }
     if (type.contains('return') || type.contains('refund')) {
-      badges.add(
-          _badge('Refunded', colorScheme.tertiaryContainer, colorScheme.onTertiaryContainer));
+      badges.add(AppStatusBadge(
+        label: 'Refunded',
+        color: colorScheme.tertiaryContainer,
+        foreground: colorScheme.onTertiaryContainer,
+      ));
     }
     return badges;
-  }
-
-  Widget _badge(String label, Color bg, Color fg) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(color: fg, fontSize: 11, fontWeight: FontWeight.w600),
-      ),
-    );
   }
 }
 

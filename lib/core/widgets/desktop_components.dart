@@ -582,24 +582,35 @@ class AppStatusBadge extends StatelessWidget {
     super.key,
     required this.label,
     required this.color,
+    this.foreground,
   });
 
   final String label;
   final Color color;
 
+  /// Explicit foreground color. When null, auto-derived from [color] brightness.
+  final Color? foreground;
+
   @override
   Widget build(BuildContext context) {
-    final brightness = ThemeData.estimateBrightnessForColor(color);
-    final foreground =
-        brightness == Brightness.dark ? Colors.white : Colors.black87;
-    return Chip(
-      label: Text(
-        label,
-        style: TextStyle(fontSize: 11, color: foreground),
+    final fg = foreground ??
+        (ThemeData.estimateBrightnessForColor(color) == Brightness.dark
+            ? Colors.white
+            : Colors.black87);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(999),
       ),
-      backgroundColor: color,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      visualDensity: VisualDensity.compact,
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: fg,
+              fontWeight: FontWeight.w600,
+            ),
+      ),
     );
   }
 }

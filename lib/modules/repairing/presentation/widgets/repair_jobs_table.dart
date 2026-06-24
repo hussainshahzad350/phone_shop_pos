@@ -373,7 +373,7 @@ class _RepairJobsTable extends ConsumerWidget {
               width: columnWidths[column],
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: _StatusChip(status: job.status),
+                child: _repairStatusBadge(context, job.status),
               ),
             ),
           );
