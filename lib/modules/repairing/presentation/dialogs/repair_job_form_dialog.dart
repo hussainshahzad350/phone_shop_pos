@@ -445,8 +445,8 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                   _buildSectionHeader('Status'),
                   if (isReadOnly)
                     InputDecorator(
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(),
                         isDense: true,
                         labelText: 'Status',
                         labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
