@@ -1,82 +1,84 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:phone_shop_pos/core/config/business_profile.dart';
 import 'package:phone_shop_pos/core/config/feature_access.dart';
-import 'package:phone_shop_pos/core/config/feature_flags.dart';
 
 void main() {
-  group('routeEnabledForFeatureFlags', () {
-    test('allows all current routes with default flags', () {
-      const flags = FeatureFlags.currentBehaviorDefaults();
-
+  group('routeEnabledForProfile', () {
+    test('repairing only enabled for repairShop and hybrid', () {
       expect(
-        routeEnabledForFeatureFlags(path: '/repairing', featureFlags: flags),
+        routeEnabledForProfile(
+            path: '/repairing', profile: BusinessProfile.mobileOnly),
         isFalse,
       );
       expect(
-        routeEnabledForFeatureFlags(path: '/reports', featureFlags: flags),
+        routeEnabledForProfile(
+            path: '/repairing', profile: BusinessProfile.mobileAccessories),
+        isFalse,
+      );
+      expect(
+        routeEnabledForProfile(
+            path: '/repairing', profile: BusinessProfile.repairShop),
         isTrue,
       );
       expect(
-        routeEnabledForFeatureFlags(path: '/inventory', featureFlags: flags),
-        isTrue,
-      );
-    });
-
-    test('blocks repair and report routes when their flags are disabled', () {
-      final flags = const FeatureFlags.currentBehaviorDefaults().copyWith(
-        repairModule: false,
-        reports: false,
-      );
-
-      expect(
-        routeEnabledForFeatureFlags(path: '/repairing', featureFlags: flags),
-        isFalse,
-      );
-      expect(
-        routeEnabledForFeatureFlags(
-            path: '/reports/daily', featureFlags: flags),
-        isFalse,
-      );
-      expect(
-        routeEnabledForFeatureFlags(path: '/settings', featureFlags: flags),
+        routeEnabledForProfile(
+            path: '/repairing', profile: BusinessProfile.hybrid),
         isTrue,
       );
     });
 
-    test('blocks inventory only when both inventory modes are disabled', () {
-      final imeiOnly = const FeatureFlags.currentBehaviorDefaults().copyWith(
-        qtyStock: false,
-      );
-      final disabled = const FeatureFlags.currentBehaviorDefaults().copyWith(
-        imeiStock: false,
-        qtyStock: false,
-      );
-
+    test('nested repairing path follows the same rule', () {
       expect(
-        routeEnabledForFeatureFlags(path: '/inventory', featureFlags: imeiOnly),
-        isTrue,
-      );
-      expect(
-        routeEnabledForFeatureFlags(path: '/inventory', featureFlags: disabled),
+        routeEnabledForProfile(
+            path: '/repairing/jobs/123',
+            profile: BusinessProfile.mobileOnly),
         isFalse,
       );
+      expect(
+        routeEnabledForProfile(
+            path: '/repairing/jobs/123', profile: BusinessProfile.hybrid),
+        isTrue,
+      );
+    });
+
+    test('reports and inventory are enabled for all profiles', () {
+      for (final profile in BusinessProfile.values) {
+        expect(
+          routeEnabledForProfile(path: '/reports', profile: profile),
+          isTrue,
+          reason: 'reports should be enabled for $profile',
+        );
+        expect(
+          routeEnabledForProfile(path: '/inventory', profile: profile),
+          isTrue,
+          reason: 'inventory should be enabled for $profile',
+        );
+      }
+    });
+
+    test('other routes are always enabled regardless of profile', () {
+      for (final profile in BusinessProfile.values) {
+        expect(
+          routeEnabledForProfile(path: '/dashboard', profile: profile),
+          isTrue,
+        );
+        expect(
+          routeEnabledForProfile(path: '/settings', profile: profile),
+          isTrue,
+        );
+        expect(
+          routeEnabledForProfile(path: '/sales', profile: profile),
+          isTrue,
+        );
+      }
     });
   });
 
-  group('featureFlagRouteFallback', () {
-    test('returns dashboard by default', () {
-      const flags = FeatureFlags.currentBehaviorDefaults();
-      expect(featureFlagRouteFallback(flags), '/dashboard');
-    });
-
-    test('returns settings if dashboard is somehow disabled', () {
-      // Assuming navigationStyle disables dashboard
-      final flags = const FeatureFlags.currentBehaviorDefaults().copyWith(
-        navigationStyle: false,
-      );
-      // Currently routeEnabledForFeatureFlags always returns true for dashboard
-      // so this test might need adjustment if dashboard is ever gated.
-      // But we just verify the helper function logic.
-      expect(featureFlagRouteFallback(flags), '/dashboard');
+  group('profileRouteFallback', () {
+    test('returns dashboard for all profiles', () {
+      for (final profile in BusinessProfile.values) {
+        expect(profileRouteFallback(profile), '/dashboard');
+      }
     });
   });
 }

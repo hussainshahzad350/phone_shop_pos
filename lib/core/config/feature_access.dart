@@ -1,27 +1,19 @@
-import 'package:phone_shop_pos/core/config/feature_flags.dart';
+import 'package:phone_shop_pos/core/config/business_profile.dart';
 
-bool routeEnabledForFeatureFlags({
+bool routeEnabledForProfile({
   required String path,
-  required FeatureFlags featureFlags,
+  required BusinessProfile profile,
 }) {
   final normalizedPath = normalizeRoutePath(path);
   if (_routeMatches(normalizedPath, '/repairing')) {
-    return featureFlags.repairModule;
-  }
-  if (_routeMatches(normalizedPath, '/reports')) {
-    return featureFlags.reports;
-  }
-  if (_routeMatches(normalizedPath, '/inventory')) {
-    return featureFlags.imeiStock || featureFlags.qtyStock;
+    return profile == BusinessProfile.repairShop ||
+        profile == BusinessProfile.hybrid;
   }
   return true;
 }
 
-String featureFlagRouteFallback(FeatureFlags featureFlags) {
-  if (routeEnabledForFeatureFlags(
-    path: '/dashboard',
-    featureFlags: featureFlags,
-  )) {
+String profileRouteFallback(BusinessProfile profile) {
+  if (routeEnabledForProfile(path: '/dashboard', profile: profile)) {
     return '/dashboard';
   }
   return '/settings';

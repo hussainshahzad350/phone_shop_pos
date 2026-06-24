@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/config/business_configuration.dart';
 import 'package:phone_shop_pos/core/config/business_configuration_repository.dart';
 import 'package:phone_shop_pos/core/config/business_profile.dart';
-import 'package:phone_shop_pos/core/config/feature_flags.dart';
 import 'package:phone_shop_pos/core/database/database_provider.dart';
 
 final businessConfigurationDefaultsProvider =
@@ -23,11 +22,6 @@ final businessConfigurationProvider =
   final repository =
       await ref.watch(businessConfigurationRepositoryProvider.future);
   return repository.load(defaults);
-});
-
-final featureFlagsProvider = FutureProvider<FeatureFlags>((ref) async {
-  final configuration = await ref.watch(businessConfigurationProvider.future);
-  return configuration.featureFlags;
 });
 
 final businessProfileProvider = FutureProvider<BusinessProfile>((ref) async {

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:phone_shop_pos/core/config/feature_flags.dart';
+import 'package:phone_shop_pos/core/config/business_profile.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_navigation_shell.dart';
 
 void main() {
@@ -50,27 +50,35 @@ void main() {
       );
     });
 
-    test('omits disabled feature routes from navigation items', () {
-      final items = desktopNavigationItemsForFlags(
-        const FeatureFlags.currentBehaviorDefaults().copyWith(
-          repairModule: false,
-          reports: false,
-        ),
-      );
+    test('omits repairing from navigation for non-repair profiles', () {
+      final mobileOnlyItems =
+          desktopNavigationItemsForProfile(BusinessProfile.mobileOnly);
+      final accessoriesItems =
+          desktopNavigationItemsForProfile(BusinessProfile.mobileAccessories);
 
-      expect(items.map((item) => item.route), isNot(contains('/repairing')));
-      expect(items.map((item) => item.route), isNot(contains('/reports')));
-      expect(items.map((item) => item.route), contains('/dashboard'));
-      expect(items.map((item) => item.route), contains('/settings'));
+      expect(mobileOnlyItems.map((i) => i.route),
+          isNot(contains('/repairing')));
+      expect(accessoriesItems.map((i) => i.route),
+          isNot(contains('/repairing')));
+      expect(mobileOnlyItems.map((i) => i.route), contains('/dashboard'));
+      expect(mobileOnlyItems.map((i) => i.route), contains('/settings'));
     });
 
-    test('falls back to dashboard when current feature route is hidden', () {
+    test('includes repairing in navigation for repair and hybrid profiles', () {
+      final repairItems =
+          desktopNavigationItemsForProfile(BusinessProfile.repairShop);
+      final hybridItems =
+          desktopNavigationItemsForProfile(BusinessProfile.hybrid);
+
+      expect(repairItems.map((i) => i.route), contains('/repairing'));
+      expect(hybridItems.map((i) => i.route), contains('/repairing'));
+    });
+
+    test('falls back to dashboard index when current route is not in nav', () {
       expect(
         desktopNavigationSelectedIndexForPath(
-          '/reports',
-          featureFlags: const FeatureFlags.currentBehaviorDefaults().copyWith(
-            reports: false,
-          ),
+          '/repairing',
+          profile: BusinessProfile.mobileOnly,
         ),
         0,
       );

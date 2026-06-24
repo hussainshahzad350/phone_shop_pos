@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phone_shop_pos/core/config/business_configuration_providers.dart';
+import 'package:phone_shop_pos/core/config/business_profile.dart';
 import 'package:phone_shop_pos/core/config/feature_access.dart';
-import 'package:phone_shop_pos/core/config/feature_flags.dart';
 import 'package:phone_shop_pos/core/routing/navigation_leave_guard.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
@@ -26,9 +26,9 @@ bool desktopRouteMatches({
 
 int desktopNavigationSelectedIndexForPath(
   String currentPath, {
-  FeatureFlags featureFlags = const FeatureFlags.currentBehaviorDefaults(),
+  BusinessProfile profile = BusinessProfile.mobileOnly,
 }) {
-  final navItems = desktopNavigationItemsForFlags(featureFlags);
+  final navItems = desktopNavigationItemsForProfile(profile);
   final selectedIndex = navItems.indexWhere(
     (item) =>
         desktopRouteMatches(currentPath: currentPath, routePrefix: item.route),
@@ -38,9 +38,9 @@ int desktopNavigationSelectedIndexForPath(
 
 String desktopNavigationLabelForPath(
   String currentPath, {
-  FeatureFlags featureFlags = const FeatureFlags.currentBehaviorDefaults(),
+  BusinessProfile profile = BusinessProfile.mobileOnly,
 }) {
-  final navItems = desktopNavigationItemsForFlags(featureFlags);
+  final navItems = desktopNavigationItemsForProfile(profile);
   return navItems
       .firstWhere(
         (item) => desktopRouteMatches(
@@ -50,14 +50,14 @@ String desktopNavigationLabelForPath(
       .label;
 }
 
-List<DesktopNavigationItem> desktopNavigationItemsForFlags(
-  FeatureFlags featureFlags,
+List<DesktopNavigationItem> desktopNavigationItemsForProfile(
+  BusinessProfile profile,
 ) {
   return _desktopNavItems
       .where(
-        (item) => routeEnabledForFeatureFlags(
+        (item) => routeEnabledForProfile(
           path: item.route,
-          featureFlags: featureFlags,
+          profile: profile,
         ),
       )
       .toList(growable: false);
@@ -77,16 +77,16 @@ class DesktopNavigationShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final activeOperations = ref.watch(activeCriticalOperationsProvider);
     final pendingPrintJobs = ref.watch(pendingPrintJobCountProvider);
-    final featureFlags = ref.watch(featureFlagsProvider).valueOrNull ??
-        const FeatureFlags.currentBehaviorDefaults();
-    final navItems = desktopNavigationItemsForFlags(featureFlags);
+    final profile = ref.watch(businessProfileProvider).valueOrNull ??
+        BusinessProfile.mobileOnly;
+    final navItems = desktopNavigationItemsForProfile(profile);
     final selectedIndex = desktopNavigationSelectedIndexForPath(
       currentPath,
-      featureFlags: featureFlags,
+      profile: profile,
     );
     final currentLabel = desktopNavigationLabelForPath(
       currentPath,
-      featureFlags: featureFlags,
+      profile: profile,
     );
     final scannerMode = ScannerModePath.fromPath(currentPath);
     final scannerController = ref.read(scannerControllerProvider.notifier);
