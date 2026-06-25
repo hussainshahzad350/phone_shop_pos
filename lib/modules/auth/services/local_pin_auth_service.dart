@@ -34,6 +34,7 @@ class LocalPinAuthService {
   static const String _recoverySaltKey = 'auth.recovery.salt';
   static const String _failedAttemptsKey = 'auth.pin.failed_attempts';
   static const String _lockedUntilKey = 'auth.pin.locked_until';
+  static const String _recoveryEmailKey = 'auth.recovery.email';
 
   Future<bool> hasPinConfigured() async {
     final hash = await _readSetting(_pinHashKey);
@@ -107,6 +108,42 @@ class LocalPinAuthService {
     await _writePinHash(newPin);
     await clearLockoutState();
     return true;
+  }
+
+  Future<void> setRecoveryEmail(String email) async {
+    await _writeSetting(_recoveryEmailKey, email.trim());
+  }
+
+  Future<String?> getRecoveryEmail() async {
+    final value = await _readSetting(_recoveryEmailKey);
+    if (value == null || value.trim().isEmpty) {
+      return null;
+    }
+    return value.trim();
+  }
+
+  Future<bool> hasRecoveryEmail() async {
+    return (await getRecoveryEmail()) != null;
+  }
+
+  Future<void> clearRecoveryEmail() async {
+    await _deleteSetting(_recoveryEmailKey);
+  }
+
+  /// Resets the PIN after the owner has proven control of their recovery email
+  /// (via an out-of-band one-time code). Business data is untouched; this only
+  /// rewrites the access PIN and issues a fresh recovery code, which is
+  /// returned so it can be shown once to the owner.
+  Future<String> resetPinAfterEmailVerification(String newPin) async {
+    await _writePinHash(newPin);
+    await clearLockoutState();
+
+    final recoveryCode = _generateRecoveryCode();
+    final recoverySalt = _generateSalt();
+    final recoveryHash = _hashWithSalt(value: recoveryCode, salt: recoverySalt);
+    await _writeSetting(_recoverySaltKey, recoverySalt);
+    await _writeSetting(_recoveryHashKey, recoveryHash);
+    return recoveryCode;
   }
 
   Future<LocalPinLockoutState> getLockoutState() async {
