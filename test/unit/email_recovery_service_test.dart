@@ -73,6 +73,21 @@ void main() {
       expect(result.maskedEmail, isNot('owner@shop.com'));
     });
 
+    test('requestResetCode reports failure when sending fails', () async {
+      final context = await _createContainer();
+      addTearDown(context.dispose);
+      final auth = await context.authService();
+      await auth.setRecoveryEmail('owner@shop.com');
+      final fake = _FakeOtpClient(sendOk: false);
+      final service =
+          EmailRecoveryService(otpClient: fake, authService: auth);
+
+      final result = await service.requestResetCode();
+
+      expect(result.status, RecoveryRequestStatus.failure);
+      expect(result.error, isNotNull);
+    });
+
     test('verifyAndResetPin resets the PIN on a valid code', () async {
       final context = await _createContainer();
       addTearDown(context.dispose);
