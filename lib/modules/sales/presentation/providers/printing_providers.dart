@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/core/database/database_provider.dart';
 import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
+import 'package:phone_shop_pos/core/services/printing/invoice_pdf_renderer.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_renderer.dart';
 import 'package:phone_shop_pos/core/services/printing/print_job_repository.dart';
@@ -127,6 +128,10 @@ class InvoicePrintQueueNotifier extends StateNotifier<List<InvoicePrintJob>> {
 
 final invoicePrintRendererProvider = Provider<InvoicePrintRenderer>(
   (ref) => const InvoicePrintRenderer(),
+);
+
+final invoicePdfRendererProvider = Provider<InvoicePdfRenderer>(
+  (ref) => const InvoicePdfRenderer(),
 );
 
 final printerServiceProvider = FutureProvider<PrinterService>((ref) async {

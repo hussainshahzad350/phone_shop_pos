@@ -1,5 +1,11 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:printing/printing.dart';
 
 import 'package:phone_shop_pos/core/config/shop_profile_providers.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
@@ -88,6 +94,28 @@ class _InvoicePrintPreviewDialogState
               ],
             ),
             const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                OutlinedButton.icon(
+                  onPressed: _isPrinting ? null : _printPdf,
+                  icon: const Icon(Icons.print_outlined),
+                  label: const Text('Print PDF'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _isPrinting ? null : _savePdf,
+                  icon: const Icon(Icons.picture_as_pdf_outlined),
+                  label: const Text('Save PDF'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _isPrinting ? null : _sharePdf,
+                  icon: const Icon(Icons.share_outlined),
+                  label: const Text('Share / WhatsApp'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             Flexible(
               child: Container(
                 width: double.infinity,
@@ -149,5 +177,98 @@ class _InvoicePrintPreviewDialogState
         onPressed: _printNow,
       ),
     );
+  }
+
+  String _safeInvoiceName() {
+    return widget.job.invoiceNumber.replaceAll(
+      RegExp(r'[<>:"/\\|?*\x00-\x1F]'),
+      '_',
+    );
+  }
+
+  Future<Uint8List?> _generatePdfBytes() async {
+    try {
+      final renderer = ref.read(invoicePdfRendererProvider);
+      return await renderer.build(
+        document: widget.job.document,
+        paperSize: _paperSize,
+        shopProfile: ref.read(shopProfileProvider),
+      );
+    } catch (_) {
+      if (mounted) {
+        AppNotifier.error('Could not generate the PDF receipt.');
+      }
+      return null;
+    }
+  }
+
+  Future<void> _printPdf() async {
+    setState(() => _isPrinting = true);
+    final bytes = await _generatePdfBytes();
+    try {
+      if (bytes != null) {
+        await Printing.layoutPdf(
+          name: _safeInvoiceName(),
+          onLayout: (_) async => bytes,
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        AppNotifier.error('Could not open the print dialog.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPrinting = false);
+      }
+    }
+  }
+
+  Future<void> _savePdf() async {
+    setState(() => _isPrinting = true);
+    final bytes = await _generatePdfBytes();
+    try {
+      if (bytes != null) {
+        final documentsDir = await getApplicationDocumentsDirectory();
+        final receiptsDir = Directory(p.join(documentsDir.path, 'receipts'));
+        if (!await receiptsDir.exists()) {
+          await receiptsDir.create(recursive: true);
+        }
+        final filePath =
+            p.join(receiptsDir.path, '${_safeInvoiceName()}.pdf');
+        await File(filePath).writeAsBytes(bytes, flush: true);
+        if (mounted) {
+          AppNotifier.success('PDF receipt saved: $filePath');
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        AppNotifier.error('Could not save the PDF receipt.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPrinting = false);
+      }
+    }
+  }
+
+  Future<void> _sharePdf() async {
+    setState(() => _isPrinting = true);
+    final bytes = await _generatePdfBytes();
+    try {
+      if (bytes != null) {
+        await Printing.sharePdf(
+          bytes: bytes,
+          filename: '${_safeInvoiceName()}.pdf',
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        AppNotifier.error('Could not share the PDF receipt.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPrinting = false);
+      }
+    }
   }
 }
