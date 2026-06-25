@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:phone_shop_pos/core/config/shop_profile.dart';
-import 'package:phone_shop_pos/core/config/shop_profile_providers.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/services/backup/database_backup_service.dart';
