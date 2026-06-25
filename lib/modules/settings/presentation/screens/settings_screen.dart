@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
+import 'package:phone_shop_pos/core/config/shop_profile.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/services/backup/database_backup_service.dart';
@@ -179,6 +180,115 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } else {
       AppNotifier.error(result.asFailure!.error.message);
     }
+  }
+
+  Future<void> _showShopInfoDialog(ShopProfile current) async {
+    final nameController = TextEditingController(text: current.shopName);
+    final phoneController = TextEditingController(text: current.phone);
+    final emailController = TextEditingController(text: current.email);
+    final addressController = TextEditingController(text: current.address);
+    final footerController =
+        TextEditingController(text: current.footerNote ?? '');
+
+    await showDialog<void>(
+      context: context,
+      useRootNavigator: true,
+      builder: (dialogContext) {
+        return AlertDialog(
+          scrollable: true,
+          title: const Text('Edit Shop Information'),
+          content: SizedBox(
+            width: 460,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                TextField(
+                  controller: nameController,
+                  decoration: appDesktopInputDecoration(
+                    labelText: 'Shop name',
+                  ),
+                  textCapitalization: TextCapitalization.words,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: phoneController,
+                  decoration: appDesktopInputDecoration(
+                    labelText: 'Phone',
+                  ),
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: emailController,
+                  decoration: appDesktopInputDecoration(
+                    labelText: 'Email (optional)',
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: addressController,
+                  decoration: appDesktopInputDecoration(
+                    labelText: 'Address',
+                  ),
+                  textCapitalization: TextCapitalization.words,
+                  maxLines: 2,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: footerController,
+                  decoration: appDesktopInputDecoration(
+                    labelText: 'Receipt footer note (optional)',
+                    hintText: 'e.g. No returns after 7 days',
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final name = nameController.text.trim();
+                if (name.isEmpty) {
+                  AppNotifier.error('Shop name is required.');
+                  return;
+                }
+                final footer = footerController.text.trim();
+                final updated = current.copyWith(
+                  shopName: name,
+                  phone: phoneController.text.trim(),
+                  email: emailController.text.trim(),
+                  address: addressController.text.trim(),
+                  footerNote: footer.isEmpty ? null : footer,
+                  clearFooterNote: footer.isEmpty,
+                );
+                final navigator = Navigator.of(dialogContext);
+                try {
+                  await ref.read(shopProfileProvider.notifier).save(updated);
+                } catch (error) {
+                  AppNotifier.error('Could not save shop information.');
+                  return;
+                }
+                navigator.pop();
+                AppNotifier.success('Shop information updated.');
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    nameController.dispose();
+    phoneController.dispose();
+    emailController.dispose();
+    addressController.dispose();
+    footerController.dispose();
   }
 
   Future<void> _showChangePinDialog() async {
@@ -402,6 +512,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final printQueue = ref.watch(invoicePrintQueueProvider);
     final authState = ref.watch(localPinAuthControllerProvider);
     final businessConfigAsync = ref.watch(businessConfigurationProvider);
+    final shopProfile = ref.watch(shopProfileProvider);
 
     return Scaffold(
       body: AppLoadingOverlay(
@@ -467,6 +578,55 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         child: Text('Failed to load business configuration.'),
                       ),
                     ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          Text(
+                            'Shop Information',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const Spacer(),
+                          FilledButton.tonalIcon(
+                            onPressed: () =>
+                                _showShopInfoDialog(shopProfile),
+                            icon: const Icon(Icons.edit_outlined),
+                            label: const Text('Edit'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Shop name: ${shopProfile.shopName}'),
+                      Text(
+                        'Phone: ${_orDash(shopProfile.phone)}',
+                      ),
+                      Text(
+                        'Email: ${_orDash(shopProfile.email)}',
+                      ),
+                      Text(
+                        'Address: ${_orDash(shopProfile.address)}',
+                      ),
+                      Text(
+                        'Receipt footer: ${_orDash(shopProfile.footerNote ?? '')}',
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'These details appear on every printed and PDF receipt.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -786,6 +946,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       ),
     );
+  }
+
+  String _orDash(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? '—' : trimmed;
   }
 
   String _formatBytes(int bytes) {

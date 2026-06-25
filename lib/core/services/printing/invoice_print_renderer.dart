@@ -1,3 +1,4 @@
+import 'package:phone_shop_pos/core/config/shop_profile.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
@@ -8,13 +9,28 @@ class InvoicePrintRenderer {
   String render({
     required InvoicePrintDocument document,
     required InvoicePaperSize paperSize,
+    ShopProfile? shopProfile,
   }) {
     final width = paperSize.charactersPerLine;
-    final buffer = StringBuffer()
-      ..writeln(_center(document.storeName, width))
-      ..writeln(_center(document.storeContactPhone, width))
-      ..writeln(_center(document.storeContactEmail, width))
-      ..writeln(_center(document.storeContactAddress, width))
+
+    // Shop identity is treated as live letterhead: prefer the currently
+    // configured profile, falling back to whatever was snapshotted on the
+    // document (for older print jobs or callers that pass no profile).
+    final storeName = _orFallback(shopProfile?.shopName, document.storeName);
+    final storePhone =
+        _orFallback(shopProfile?.phone, document.storeContactPhone);
+    final storeEmail =
+        _orFallback(shopProfile?.email, document.storeContactEmail);
+    final storeAddress =
+        _orFallback(shopProfile?.address, document.storeContactAddress);
+
+    final buffer = StringBuffer()..writeln(_center(storeName, width));
+    for (final line in <String>[storePhone, storeEmail, storeAddress]) {
+      if (line.trim().isNotEmpty) {
+        buffer.writeln(_center(line, width));
+      }
+    }
+    buffer
       ..writeln(_center(document.invoiceNumber, width))
       ..writeln('-' * width)
       ..writeln('Date: ${FormattingHelpers.dateYmdHm(document.saleDate.toLocal())}')
@@ -60,11 +76,22 @@ class InvoicePrintRenderer {
         ..writeln(_truncate(notes, width));
     }
 
-    buffer
-      ..writeln('-' * width)
-      ..writeln(_center('Thank you for your purchase', width));
+    buffer.writeln('-' * width);
+    final footerNote = shopProfile?.footerNote?.trim();
+    if (footerNote != null && footerNote.isNotEmpty) {
+      buffer.writeln(_center(_truncate(footerNote, width), width));
+    }
+    buffer.writeln(_center('Thank you for your purchase', width));
 
     return buffer.toString();
+  }
+
+  String _orFallback(String? primary, String fallback) {
+    final value = primary?.trim();
+    if (value == null || value.isEmpty) {
+      return fallback;
+    }
+    return value;
   }
 
   String _center(String value, int width) {
