@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:phone_shop_pos/core/config/shop_profile_providers.dart';
 import 'package:phone_shop_pos/core/database/database_provider.dart';
 import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
@@ -81,6 +82,7 @@ class InvoicePrintQueueNotifier extends StateNotifier<List<InvoicePrintJob>> {
         final renderedPayload = renderer.render(
           document: job.document,
           paperSize: paperSize,
+          shopProfile: _ref.read(shopProfileProvider),
         );
 
         final result = await printerService.printInvoice(

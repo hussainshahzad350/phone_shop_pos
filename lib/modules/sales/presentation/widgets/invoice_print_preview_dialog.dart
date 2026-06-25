@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:phone_shop_pos/core/config/shop_profile_providers.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
@@ -41,6 +42,7 @@ class _InvoicePrintPreviewDialogState
     final preview = renderer.render(
       document: job.document,
       paperSize: _paperSize,
+      shopProfile: ref.watch(shopProfileProvider),
     );
 
     return AlertDialog(

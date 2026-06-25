@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:phone_shop_pos/core/config/shop_profile.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_renderer.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
@@ -55,6 +56,30 @@ void main() {
 
     final lines = output.split('\n');
     expect(lines.any((line) => line.length >= 60), isTrue);
+  });
+
+  test('renders live shop profile as the receipt header', () {
+    const profile = ShopProfile(
+      shopName: 'Ali Mobiles',
+      phone: '0300-1234567',
+      email: '',
+      address: 'Hall Road',
+      footerNote: 'No returns after 7 days',
+    );
+
+    final output = renderer.render(
+      document: buildDocument(),
+      paperSize: InvoicePaperSize.thermal80,
+      shopProfile: profile,
+    );
+
+    expect(output, contains('Ali Mobiles'));
+    expect(output, contains('0300-1234567'));
+    expect(output, contains('Hall Road'));
+    expect(output, contains('No returns after 7 days'));
+    // Empty contact lines (email here) must not produce a blank header line.
+    final headerLines = output.split('\n').take(4).toList();
+    expect(headerLines.any((line) => line.trim().isEmpty), isFalse);
   });
 
   test('defensively renders notes as compact single-line text', () {
