@@ -70,9 +70,7 @@ void main() {
       addTearDown(controller.dispose);
       // Let the controller's async _initialize finish so it does not race with
       // teardown disposal.
-      while (!controller.debugState.isInitialized) {
-        await Future<void>.delayed(const Duration(milliseconds: 5));
-      }
+      await Future<void>.delayed(const Duration(milliseconds: 200));
 
       final code = await controller.setupPin(
         pin: '1234',
@@ -92,9 +90,7 @@ void main() {
       addTearDown(controller.dispose);
       // Let the controller's async _initialize finish so it does not race with
       // teardown disposal.
-      while (!controller.debugState.isInitialized) {
-        await Future<void>.delayed(const Duration(milliseconds: 5));
-      }
+      await Future<void>.delayed(const Duration(milliseconds: 200));
 
       final code = await controller.setupPin(
         pin: '1234',
