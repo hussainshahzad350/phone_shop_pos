@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:phone_shop_pos/core/database/database_provider.dart';
 import 'package:phone_shop_pos/core/database/sqlite_service.dart';
+import 'package:phone_shop_pos/modules/auth/presentation/providers/local_pin_auth_providers.dart';
 import 'package:phone_shop_pos/modules/auth/services/local_pin_auth_service.dart';
 
 void main() {
@@ -57,6 +58,43 @@ void main() {
         ),
         isTrue,
       );
+    });
+  });
+
+  group('LocalPinAuthController setup with email', () {
+    test('stores a valid recovery email on setup', () async {
+      final context = await _createContainer();
+      addTearDown(context.dispose);
+      final service = await context.service();
+      final controller = LocalPinAuthController(service);
+      addTearDown(controller.dispose);
+
+      final code = await controller.setupPin(
+        pin: '1234',
+        confirmPin: '1234',
+        recoveryEmail: '  owner@shop.com  ',
+      );
+
+      expect(code, isNotNull);
+      expect(await service.getRecoveryEmail(), 'owner@shop.com');
+    });
+
+    test('rejects an invalid recovery email and does not set a PIN', () async {
+      final context = await _createContainer();
+      addTearDown(context.dispose);
+      final service = await context.service();
+      final controller = LocalPinAuthController(service);
+      addTearDown(controller.dispose);
+
+      final code = await controller.setupPin(
+        pin: '1234',
+        confirmPin: '1234',
+        recoveryEmail: 'not-an-email',
+      );
+
+      expect(code, isNull);
+      expect(await service.hasPinConfigured(), isFalse);
+      expect(await service.getRecoveryEmail(), isNull);
     });
   });
 }

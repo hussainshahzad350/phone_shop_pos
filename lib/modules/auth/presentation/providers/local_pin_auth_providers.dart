@@ -72,6 +72,9 @@ class LocalPinAuthController extends StateNotifier<LocalPinAuthState> {
   static const int _maxAttempts = 5;
   static const Duration _lockDuration = Duration(seconds: 60);
   static final RegExp _pinPattern = RegExp(r'^\d{4,6}$');
+  static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+  static bool isValidEmail(String email) => _emailPattern.hasMatch(email.trim());
 
   Future<void> _initialize() async {
     final hasPin = await _service.hasPinConfigured();
@@ -101,6 +104,7 @@ class LocalPinAuthController extends StateNotifier<LocalPinAuthState> {
   Future<String?> setupPin({
     required String pin,
     required String confirmPin,
+    String? recoveryEmail,
   }) async {
     if (state.hasPinConfigured) {
       state = state.copyWith(
@@ -117,10 +121,20 @@ class LocalPinAuthController extends StateNotifier<LocalPinAuthState> {
       state = state.copyWith(errorMessage: 'PIN confirmation does not match.');
       return null;
     }
+    final email = recoveryEmail?.trim() ?? '';
+    if (email.isNotEmpty && !isValidEmail(email)) {
+      state = state.copyWith(
+        errorMessage: 'Enter a valid recovery email or leave it blank.',
+      );
+      return null;
+    }
 
     state = state.copyWith(isBusy: true, clearErrorMessage: true);
     try {
       final recoveryCode = await _service.configurePin(pin);
+      if (email.isNotEmpty) {
+        await _service.setRecoveryEmail(email);
+      }
       state = state.copyWith(
         isBusy: false,
         hasPinConfigured: true,
@@ -317,4 +331,11 @@ final localPinAuthControllerProvider =
     StateNotifierProvider<LocalPinAuthController, LocalPinAuthState>((ref) {
   final service = ref.watch(localPinAuthServiceProvider);
   return LocalPinAuthController(service);
+});
+
+/// Current recovery email, or null if none is configured. Invalidate after
+/// changing it to refresh the UI.
+final recoveryEmailProvider = FutureProvider<String?>((ref) async {
+  final service = ref.watch(localPinAuthServiceProvider);
+  return service.getRecoveryEmail();
 });

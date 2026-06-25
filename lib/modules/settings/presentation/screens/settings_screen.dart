@@ -291,6 +291,77 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     footerController.dispose();
   }
 
+  Future<void> _showRecoveryEmailDialog(String? current) async {
+    final controller = TextEditingController(text: current ?? '');
+    await showDialog<void>(
+      context: context,
+      useRootNavigator: true,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Recovery Email'),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const Text(
+                  'Enter the email used to reset your PIN if you forget both '
+                  'your PIN and recovery code. Leave blank to remove it.',
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: controller,
+                  decoration: appDesktopInputDecoration(
+                    labelText: 'Recovery email',
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final email = controller.text.trim();
+                if (email.isNotEmpty &&
+                    !LocalPinAuthController.isValidEmail(email)) {
+                  AppNotifier.error('Enter a valid email or leave it blank.');
+                  return;
+                }
+                final navigator = Navigator.of(dialogContext);
+                final service = ref.read(localPinAuthServiceProvider);
+                try {
+                  if (email.isEmpty) {
+                    await service.clearRecoveryEmail();
+                  } else {
+                    await service.setRecoveryEmail(email);
+                  }
+                } catch (_) {
+                  AppNotifier.error('Could not save the recovery email.');
+                  return;
+                }
+                ref.invalidate(recoveryEmailProvider);
+                navigator.pop();
+                AppNotifier.success(
+                  email.isEmpty
+                      ? 'Recovery email removed.'
+                      : 'Recovery email saved.',
+                );
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    controller.dispose();
+  }
+
   Future<void> _showChangePinDialog() async {
     final currentPinController = TextEditingController();
     final newPinController = TextEditingController();
@@ -512,6 +583,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final printQueue = ref.watch(invoicePrintQueueProvider);
     final authState = ref.watch(localPinAuthControllerProvider);
     final businessConfigAsync = ref.watch(businessConfigurationProvider);
+    final recoveryEmail = ref.watch(recoveryEmailProvider).asData?.value;
     final shopProfile = ref.watch(shopProfileProvider);
 
     return Scaffold(
@@ -662,6 +734,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             : null,
                         icon: const Icon(Icons.key),
                         label: const Text('Regenerate Recovery Code'),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Recovery email: ${recoveryEmail ?? 'Not set'}'),
+                      const SizedBox(height: 8),
+                      FilledButton.tonalIcon(
+                        onPressed: authState.hasPinConfigured
+                            ? () => _showRecoveryEmailDialog(recoveryEmail)
+                            : null,
+                        icon: const Icon(Icons.email_outlined),
+                        label: Text(
+                          recoveryEmail == null
+                              ? 'Add Recovery Email'
+                              : 'Change Recovery Email',
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Used to reset your PIN by email if you forget both '
+                        'your PIN and recovery code.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
                       ),
                       const SizedBox(height: 12),
                       const Divider(),
