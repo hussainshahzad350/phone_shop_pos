@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
+import 'package:phone_shop_pos/modules/auth/presentation/dialogs/email_recovery_dialog.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/dialogs/recovery_code_dialog.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/dialogs/reset_pin_dialog.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/providers/local_pin_auth_providers.dart';
@@ -18,6 +20,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
+  final _setupEmailController = TextEditingController();
   final _recoveryCodeController = TextEditingController();
   final _newPinController = TextEditingController();
   final _newPinConfirmController = TextEditingController();
@@ -27,6 +30,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void dispose() {
     _pinController.dispose();
     _confirmPinController.dispose();
+    _setupEmailController.dispose();
     _recoveryCodeController.dispose();
     _newPinController.dispose();
     _newPinConfirmController.dispose();
@@ -52,6 +56,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final recoveryCode = await authController.setupPin(
       pin: _pinController.text,
       confirmPin: _confirmPinController.text,
+      recoveryEmail: _setupEmailController.text,
     );
     if (recoveryCode == null) return;
     if (!ctx.mounted) return;
@@ -62,6 +67,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!ctx.mounted) return;
     _pinController.clear();
     _confirmPinController.clear();
+    _setupEmailController.clear();
     ctx.go('/dashboard');
   }
 
@@ -114,6 +120,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         : () => _showForgotPinDialog(context),
                     child: const Text('Forgot PIN?'),
                   ),
+                  TextButton(
+                    onPressed: authState.isBusy
+                        ? null
+                        : () => _showEmailRecoveryDialog(context),
+                    child: const Text('Forgot recovery code too? Reset via email'),
+                  ),
                 ] else ...<Widget>[
                   PinInputField(
                     controller: _pinController,
@@ -128,8 +140,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     controller: _confirmPinController,
                     labelText: 'Confirm PIN',
                     focusNode: _confirmPinFocus,
-                    textInputAction: TextInputAction.done,
+                    textInputAction: TextInputAction.next,
                     onSubmitted: (_) => _doSetupPin(),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _setupEmailController,
+                    decoration: appDesktopInputDecoration(
+                      labelText: 'Recovery email (recommended)',
+                      hintText: 'Lets you reset your PIN if you forget it',
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                    onSubmitted: (_) => _doSetupPin(),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Without an email you cannot recover access if you forget '
+                    'both your PIN and recovery code.',
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -197,6 +225,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('PIN reset successful. Log in with new PIN.'),
+      ),
+    );
+  }
+
+  Future<void> _showEmailRecoveryDialog(BuildContext context) async {
+    ref.read(localPinAuthControllerProvider.notifier).clearError();
+
+    final newRecoveryCode = await showDialog<String>(
+      context: context,
+      builder: (context) => const EmailRecoveryDialog(),
+    );
+
+    if (!context.mounted || newRecoveryCode == null) {
+      return;
+    }
+    await _showRecoveryCodeDialog(
+      context: context,
+      recoveryCode: newRecoveryCode,
+    );
+    if (!context.mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('PIN reset successful. Log in with your new PIN.'),
       ),
     );
   }
