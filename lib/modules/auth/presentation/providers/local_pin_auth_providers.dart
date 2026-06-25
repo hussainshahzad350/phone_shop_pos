@@ -85,6 +85,9 @@ class LocalPinAuthController extends StateNotifier<LocalPinAuthState> {
     if (isExpired || (!hasPin && lockoutState.failedAttempts > 0)) {
       await _service.clearLockoutState();
     }
+    if (!mounted) {
+      return;
+    }
     state = state.copyWith(
       isInitialized: true,
       hasPinConfigured: hasPin,
