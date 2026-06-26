@@ -8,6 +8,8 @@ import 'package:phone_shop_pos/core/config/shop_profile.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/services/backup/database_backup_service.dart';
+import 'package:phone_shop_pos/core/services/cloud/cloud_providers.dart';
+import 'package:phone_shop_pos/core/services/cloud/cloud_storage_client.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
 import 'package:phone_shop_pos/core/services/printing/print_job_repository.dart';
@@ -18,6 +20,7 @@ import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/providers/local_pin_auth_providers.dart';
 import 'package:phone_shop_pos/modules/settings/presentation/providers/settings_providers.dart';
+import 'package:phone_shop_pos/modules/settings/presentation/widgets/cloud_sign_in_dialog.dart';
 import 'package:phone_shop_pos/shared/providers/core_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
@@ -134,6 +137,135 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           onPressed: _performRestore,
         ),
       );
+    }
+  }
+
+  Future<void> _showCloudSignInDialog() async {
+    final signedIn = await showDialog<bool>(
+      context: context,
+      useRootNavigator: true,
+      builder: (_) => const CloudSignInDialog(),
+    );
+    if (signedIn == true) {
+      ref.invalidate(cloudSignedInProvider);
+      ref.invalidate(cloudAccountEmailProvider);
+      AppNotifier.success('Signed in to cloud backup.');
+    }
+  }
+
+  Future<void> _cloudSignOut() async {
+    final authService = await ref.read(cloudAuthServiceProvider.future);
+    await authService.signOut();
+    ref.invalidate(cloudSignedInProvider);
+    ref.invalidate(cloudAccountEmailProvider);
+    AppNotifier.info('Signed out of cloud backup.');
+  }
+
+  Future<void> _cloudBackupNow() async {
+    setState(() => _isProcessing = true);
+    final service = await ref.read(cloudBackupServiceProvider.future);
+    final result = await ref
+        .read(operationManagerProvider.notifier)
+        .track<Result<CloudStorageObject>>(
+          code: 'cloud_backup',
+          label: 'Backing up to cloud',
+          progressLabel: 'Uploading the backup to the cloud',
+          action: (_) => service.backupNow(),
+        );
+
+    if (!mounted) {
+      return;
+    }
+    setState(() => _isProcessing = false);
+    if (result.isSuccess) {
+      AppNotifier.success('Cloud backup complete: ${result.asSuccess!.value.name}');
+    } else {
+      AppNotifier.error(
+        'Cloud backup failed: ${result.asFailure!.error.message}',
+        action: SnackBarAction(label: 'Retry', onPressed: _cloudBackupNow),
+      );
+    }
+  }
+
+  Future<void> _showCloudRestoreDialog() async {
+    setState(() => _isProcessing = true);
+    final service = await ref.read(cloudBackupServiceProvider.future);
+    final listResult = await service.listBackups();
+    if (!mounted) {
+      return;
+    }
+    setState(() => _isProcessing = false);
+    if (listResult.isFailure) {
+      AppNotifier.error(
+        'Could not list cloud backups: ${listResult.asFailure!.error.message}',
+      );
+      return;
+    }
+    final backups = listResult.asSuccess!.value;
+    if (backups.isEmpty) {
+      AppNotifier.info('No cloud backups found yet.');
+      return;
+    }
+
+    final selected = await showDialog<CloudStorageObject>(
+      context: context,
+      useRootNavigator: true,
+      builder: (dialogContext) {
+        return SimpleDialog(
+          title: const Text('Restore from Cloud'),
+          children: <Widget>[
+            for (final backup in backups)
+              SimpleDialogOption(
+                onPressed: () => Navigator.of(dialogContext).pop(backup),
+                child: Text('${backup.name}  (${_formatBytes(backup.sizeBytes)})'),
+              ),
+          ],
+        );
+      },
+    );
+    if (!mounted) {
+      return;
+    }
+    if (selected == null) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      useRootNavigator: true,
+      builder: (context) => AppConfirmationDialog(
+        title: 'Restore from Cloud',
+        message: 'Replace the live shop data with "${selected.name}"?\n\n'
+            'Make a fresh backup first and ensure no one else is using the app.',
+        confirmLabel: 'Restore',
+      ),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    setState(() => _isProcessing = true);
+    final result =
+        await ref.read(operationManagerProvider.notifier).track<Result<void>>(
+              code: 'cloud_restore',
+              label: 'Restoring from cloud',
+              progressLabel: 'Downloading and restoring the backup',
+              action: (_) => service.restoreFromCloud(selected.name),
+            );
+
+    if (!mounted) {
+      return;
+    }
+    setState(() => _isProcessing = false);
+    _refreshHealthProviders();
+    if (result.isSuccess) {
+      ref.read(databaseRecoveryEpochProvider.notifier).state++;
+      ref.invalidate(appDatabaseProvider);
+      ref.invalidate(sqliteDatabaseProvider);
+      ref.invalidate(databaseBackupServiceProvider);
+      AppNotifier.success('Restore from cloud completed successfully.');
+    } else {
+      AppNotifier.error('Restore failed: ${result.asFailure!.error.message}');
     }
   }
 
@@ -584,6 +716,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final authState = ref.watch(localPinAuthControllerProvider);
     final businessConfigAsync = ref.watch(businessConfigurationProvider);
     final recoveryEmail = ref.watch(recoveryEmailProvider).asData?.value;
+    final cloudSignedIn = ref.watch(cloudSignedInProvider).asData?.value ?? false;
+    final cloudEmail = ref.watch(cloudAccountEmailProvider).asData?.value;
     final shopProfile = ref.watch(shopProfileProvider);
 
     return Scaffold(
@@ -889,6 +1023,60 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       Text(
                         'Backup folder: ${settings.backupDirectoryPath ?? 'Default app backup folder'}',
                       ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Cloud Backup',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      if (!cloudSignedIn) ...<Widget>[
+                        const Text(
+                          'Sign in to keep an off-site copy of your shop data, '
+                          'so you can recover it on another computer if this one '
+                          'is lost or damaged.',
+                        ),
+                        const SizedBox(height: 8),
+                        FilledButton.tonalIcon(
+                          onPressed: _isProcessing ? null : _showCloudSignInDialog,
+                          icon: const Icon(Icons.cloud_outlined),
+                          label: const Text('Sign in to Cloud Backup'),
+                        ),
+                      ] else ...<Widget>[
+                        Text('Signed in as: ${cloudEmail ?? '—'}'),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: <Widget>[
+                            FilledButton.icon(
+                              onPressed: _isProcessing ? null : _cloudBackupNow,
+                              icon: const Icon(Icons.cloud_upload_outlined),
+                              label: const Text('Back up to Cloud now'),
+                            ),
+                            FilledButton.tonalIcon(
+                              onPressed:
+                                  _isProcessing ? null : _showCloudRestoreDialog,
+                              icon: const Icon(Icons.cloud_download_outlined),
+                              label: const Text('Restore from Cloud'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: _isProcessing ? null : _cloudSignOut,
+                              icon: const Icon(Icons.logout),
+                              label: const Text('Sign out'),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
