@@ -177,8 +177,32 @@ class MigrationService {
       return;
     }
     for (final statement in statements) {
-      await database.execute(statement);
+      await _executeMigrationStatement(database, statement);
     }
+  }
+
+  /// Executes a single map-based migration statement. Bare
+  /// `ALTER TABLE ... ADD COLUMN` statements are made idempotent: if the column
+  /// is already present (e.g. it was created by an earlier table-rebuild
+  /// migration on this upgrade path) the statement is skipped instead of
+  /// crashing the app at startup with "duplicate column name".
+  Future<void> _executeMigrationStatement(
+    Database database,
+    String statement,
+  ) async {
+    final match = RegExp(
+      r'ALTER\s+TABLE\s+(\w+)\s+ADD\s+COLUMN\s+(\w+)',
+      caseSensitive: false,
+    ).firstMatch(statement);
+    if (match != null) {
+      final table = match.group(1)!;
+      final column = match.group(2)!;
+      final columns = await database.rawQuery('PRAGMA table_info($table);');
+      if (columns.any((row) => row['name'] == column)) {
+        return;
+      }
+    }
+    await database.execute(statement);
   }
 
   Future<void> _applyMigrationV7(Database database) async {
@@ -888,27 +912,17 @@ class MigrationService {
   /// `condition` is NOT NULL DEFAULT 'new'; all seller/condition detail columns
   /// are nullable so existing rows remain valid without any backfill.
   Future<void> _applyMigrationV15(Database database) async {
-    await database.execute(
-      "ALTER TABLE ${TableNames.serializedStock} ADD COLUMN condition TEXT NOT NULL DEFAULT 'new' CHECK (condition IN ('new', 'used'));",
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN seller_name TEXT;',
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN seller_id_card TEXT;',
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN seller_address TEXT;',
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN remaining_warranty TEXT;',
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN accessories TEXT;',
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN phone_condition_notes TEXT;',
-    );
+    // Guarded: the v12 serialized_stock rebuild already creates these columns,
+    // so an upgrade through both v12 and v15 would otherwise duplicate them.
+    final table = TableNames.serializedStock;
+    await _addColumnIfMissing(database, table, 'condition',
+        "TEXT NOT NULL DEFAULT 'new' CHECK (condition IN ('new', 'used'))");
+    await _addColumnIfMissing(database, table, 'seller_name', 'TEXT');
+    await _addColumnIfMissing(database, table, 'seller_id_card', 'TEXT');
+    await _addColumnIfMissing(database, table, 'seller_address', 'TEXT');
+    await _addColumnIfMissing(database, table, 'remaining_warranty', 'TEXT');
+    await _addColumnIfMissing(database, table, 'accessories', 'TEXT');
+    await _addColumnIfMissing(database, table, 'phone_condition_notes', 'TEXT');
   }
 
   /// Migration v17: normalize expenses schema for reports-driven expense
@@ -2171,43 +2185,52 @@ class MigrationService {
     }
   }
 
+  /// Adds a column only when it is not already present, mirroring the v24
+  /// pattern. Several upgrade paths run a table-rebuild migration (e.g. the
+  /// v12/v13 sales & serialized_stock rebuilds) that already creates columns a
+  /// later `ADD COLUMN` migration tries to add again — an unguarded ALTER then
+  /// crashes the whole app at startup with "duplicate column name". Guarding is
+  /// behaviour-preserving: identical to a bare ADD COLUMN when the column is
+  /// absent, a safe no-op when it already exists.
+  Future<void> _addColumnIfMissing(
+    Database database,
+    String table,
+    String column,
+    String definition,
+  ) async {
+    final columns = await database.rawQuery('PRAGMA table_info($table);');
+    final exists = columns.any((row) => row['name'] == column);
+    if (!exists) {
+      await database.execute(
+        'ALTER TABLE $table ADD COLUMN $column $definition;',
+      );
+    }
+  }
+
   Future<void> _applyMigrationV28(Database database) async {
     // ── sales: add status + void metadata columns ───────────────────────────
-    await database.execute(
-      "ALTER TABLE ${TableNames.sales} ADD COLUMN status TEXT NOT NULL DEFAULT 'posted' CHECK(status IN ('posted','void'));",
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.sales} ADD COLUMN voided_at TEXT;',
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.sales} ADD COLUMN voided_by TEXT;',
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.sales} ADD COLUMN void_reason TEXT;',
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.sales} ADD COLUMN correction_of TEXT;',
-    );
+    await _addColumnIfMissing(database, TableNames.sales, 'status',
+        "TEXT NOT NULL DEFAULT 'posted' CHECK(status IN ('posted','void'))");
+    await _addColumnIfMissing(database, TableNames.sales, 'voided_at', 'TEXT');
+    await _addColumnIfMissing(database, TableNames.sales, 'voided_by', 'TEXT');
+    await _addColumnIfMissing(
+        database, TableNames.sales, 'void_reason', 'TEXT');
+    await _addColumnIfMissing(
+        database, TableNames.sales, 'correction_of', 'TEXT');
 
     // ── purchases: add payment_method + status + void metadata columns ──────
-    await database.execute(
-      "ALTER TABLE ${TableNames.purchases} ADD COLUMN payment_method TEXT CHECK(payment_method IN ('cash','card','bank','credit'));",
-    );
-    await database.execute(
-      "ALTER TABLE ${TableNames.purchases} ADD COLUMN status TEXT NOT NULL DEFAULT 'posted' CHECK(status IN ('posted','void'));",
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.purchases} ADD COLUMN voided_at TEXT;',
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.purchases} ADD COLUMN voided_by TEXT;',
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.purchases} ADD COLUMN void_reason TEXT;',
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.purchases} ADD COLUMN correction_of TEXT;',
-    );
+    await _addColumnIfMissing(database, TableNames.purchases, 'payment_method',
+        "TEXT CHECK(payment_method IN ('cash','card','bank','credit'))");
+    await _addColumnIfMissing(database, TableNames.purchases, 'status',
+        "TEXT NOT NULL DEFAULT 'posted' CHECK(status IN ('posted','void'))");
+    await _addColumnIfMissing(
+        database, TableNames.purchases, 'voided_at', 'TEXT');
+    await _addColumnIfMissing(
+        database, TableNames.purchases, 'voided_by', 'TEXT');
+    await _addColumnIfMissing(
+        database, TableNames.purchases, 'void_reason', 'TEXT');
+    await _addColumnIfMissing(
+        database, TableNames.purchases, 'correction_of', 'TEXT');
 
     // ── indexes ─────────────────────────────────────────────────────────────
     await database.execute(
