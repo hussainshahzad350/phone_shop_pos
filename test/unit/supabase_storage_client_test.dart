@@ -30,7 +30,7 @@ void main() {
     test('upload posts bytes to the object path and succeeds on 2xx', () async {
       http.Request? captured;
       final client = _client(MockClient((request) async {
-        captured = request as http.Request;
+        captured = request;
         return http.Response('', 200);
       }));
 
