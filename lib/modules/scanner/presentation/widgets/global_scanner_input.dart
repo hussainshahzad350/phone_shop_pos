@@ -54,11 +54,11 @@ class _GlobalScannerInputState extends ConsumerState<GlobalScannerInput>
 
   void _restoreFocus() {
     if (!mounted) return;
-    // Only reclaim focus when nothing else holds it. If a user has explicitly
-    // focused another field (e.g. a search bar or form input), leave it alone
-    // so the periodic timer does not fight with intentional user interaction.
+    // Reclaim only when nothing user-interactive holds focus. A FocusScopeNode
+    // as primaryFocus means focus was released (e.g. via unfocus()) but no
+    // leaf widget has it — treat that the same as null so the scanner reclaims.
     final primary = FocusManager.instance.primaryFocus;
-    if (primary == null || primary == _focusNode) {
+    if (primary == null || primary == _focusNode || primary is FocusScopeNode) {
       _focusNode.requestFocus();
     }
   }
