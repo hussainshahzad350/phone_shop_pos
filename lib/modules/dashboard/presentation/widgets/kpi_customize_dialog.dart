@@ -56,7 +56,7 @@ class _KpiCustomizeDialog extends ConsumerWidget {
                   child: ReorderableListView.builder(
                     shrinkWrap: true,
                     itemCount: configs.length,
-                    onReorderItem: (oldIndex, newIndex) {
+                    onReorder: (oldIndex, newIndex) {
                       notifier.reorder(oldIndex, newIndex);
                     },
                     itemBuilder: (context, index) {
