@@ -51,91 +51,53 @@ class MigrationService {
   Future<void> _applyMigration(Database database, int version) async {
     // Migration for customer ledger table schema upgrade (master data alignment)
     if (version == 22) {
-      Future<bool> tableExists(String name) async {
-        final rows = await database.rawQuery(
-          "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
-          [name],
-        );
-        return rows.isNotEmpty;
-      }
-
-      final mainExists = await tableExists(TableNames.customerLedger);
-      final oldExists =
-          await tableExists('${TableNames.customerLedger}_old');
-
-      // If neither table exists, v21 never ran; v29 will create it — nothing
-      // to migrate here.
-      if (!mainExists && !oldExists) return;
-
-      // If both tables exist a previous run renamed + created the new table but
-      // crashed before the DROP. The data is already in the new table; just
-      // clean up the leftover _old and exit.
-      if (mainExists && oldExists) {
-        await _dropTableBestEffort(database, '${TableNames.customerLedger}_old');
-        return;
-      }
-
-      // Normal path: main table exists, _old does not → rename it.
-      if (mainExists && !oldExists) {
-        await database.execute(
-          'ALTER TABLE ${TableNames.customerLedger} RENAME TO ${TableNames.customerLedger}_old;',
-        );
-      }
-      // Partial-run path: _old exists but main does not → a previous run
-      // renamed the table but crashed before creating the new one. Fall through.
-
-      // Create new table with updated schema (updated_at added).
+      // 1. Rename old table — guard against a partially-applied prior run where
+      // the rename already happened but the copy/drop did not complete.
+      await database.execute(
+          'ALTER TABLE ${TableNames.customerLedger} RENAME TO ${TableNames.customerLedger}_old;');
+      // 2. Create new table with updated schema
       await database.execute('''
-        CREATE TABLE ${TableNames.customerLedger} (
-          id TEXT PRIMARY KEY NOT NULL,
-          party_id TEXT NOT NULL,
-          transaction_id TEXT NOT NULL,
-          ledger_type TEXT NOT NULL,
-          amount REAL NOT NULL CHECK (amount >= 0),
-          direction TEXT NOT NULL CHECK (direction IN ('debit', 'credit')),
-          note TEXT,
-          created_at TEXT NOT NULL,
-          updated_at TEXT NOT NULL,
-          created_by TEXT,
-          is_reversal INTEGER NOT NULL DEFAULT 0 CHECK (is_reversal IN (0, 1)),
-          reversal_of TEXT,
-          payment_method TEXT,
-          FOREIGN KEY (party_id) REFERENCES ${TableNames.customers}(id)
-            ON UPDATE CASCADE
-            ON DELETE RESTRICT
-        );
-      ''');
-
-      // Copy data from the _old table (updated_at = created_at for existing rows).
+            CREATE TABLE ${TableNames.customerLedger} (
+              id TEXT PRIMARY KEY NOT NULL,
+              party_id TEXT NOT NULL,
+              transaction_id TEXT NOT NULL,
+              ledger_type TEXT NOT NULL,
+              amount REAL NOT NULL CHECK (amount >= 0),
+              direction TEXT NOT NULL CHECK (direction IN ('debit', 'credit')),
+              note TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              created_by TEXT,
+              is_reversal INTEGER NOT NULL DEFAULT 0 CHECK (is_reversal IN (0, 1)),
+              reversal_of TEXT,
+              payment_method TEXT,
+              FOREIGN KEY (party_id) REFERENCES ${TableNames.customers}(id)
+                ON UPDATE CASCADE
+                ON DELETE RESTRICT
+            );
+          ''');
+      // 3. Copy data from old table (set updated_at = created_at for existing rows)
       await database.execute('''
-        INSERT INTO ${TableNames.customerLedger} (
-          id, party_id, transaction_id, ledger_type, amount, direction, note,
-          created_at, updated_at, created_by, is_reversal, reversal_of, payment_method
-        )
-        SELECT
-          id, party_id, transaction_id, ledger_type, amount, direction, note,
-          created_at, created_at AS updated_at, created_by, is_reversal, reversal_of, payment_method
-        FROM ${TableNames.customerLedger}_old;
-      ''');
-
-      // Restore indexes.
+            INSERT INTO ${TableNames.customerLedger} (
+              id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, updated_at, created_by, is_reversal, reversal_of, payment_method
+            )
+            SELECT
+              id, party_id, transaction_id, ledger_type, amount, direction, note, created_at, created_at as updated_at, created_by, is_reversal, reversal_of, payment_method
+            FROM ${TableNames.customerLedger}_old;
+          ''');
+      // 4. Restore indexes
       await database.execute(
-        'CREATE INDEX IF NOT EXISTS idx_customer_ledger_party_id ON ${TableNames.customerLedger}(party_id);',
-      );
+          'CREATE INDEX IF NOT EXISTS idx_customer_ledger_party_id ON ${TableNames.customerLedger}(party_id);');
       await database.execute(
-        'CREATE INDEX IF NOT EXISTS idx_customer_ledger_transaction_id ON ${TableNames.customerLedger}(transaction_id);',
-      );
+          'CREATE INDEX IF NOT EXISTS idx_customer_ledger_transaction_id ON ${TableNames.customerLedger}(transaction_id);');
       await database.execute(
-        'CREATE INDEX IF NOT EXISTS idx_customer_ledger_created_at ON ${TableNames.customerLedger}(created_at);',
-      );
+          'CREATE INDEX IF NOT EXISTS idx_customer_ledger_created_at ON ${TableNames.customerLedger}(created_at);');
       await database.execute(
-        'CREATE INDEX IF NOT EXISTS idx_customer_ledger_type ON ${TableNames.customerLedger}(ledger_type);',
-      );
+          'CREATE INDEX IF NOT EXISTS idx_customer_ledger_type ON ${TableNames.customerLedger}(ledger_type);');
       await database.execute(
-        'CREATE INDEX IF NOT EXISTS idx_customer_ledger_reversal_of ON ${TableNames.customerLedger}(reversal_of);',
-      );
-
-      await _dropTableBestEffort(database, '${TableNames.customerLedger}_old');
+          'CREATE INDEX IF NOT EXISTS idx_customer_ledger_reversal_of ON ${TableNames.customerLedger}(reversal_of);');
+      // 5. Drop old table
+      await database.execute('DROP TABLE ${TableNames.customerLedger}_old;');
       return;
     }
     if (version == 7) {
@@ -2210,52 +2172,42 @@ class MigrationService {
   }
 
   Future<void> _applyMigrationV28(Database database) async {
-    // Guard each ADD COLUMN against partial-run re-entry (if a previous attempt
-    // added some columns but crashed before completion, the user_version stays
-    // at 27 and this migration runs again — duplicate column would abort it).
-    Future<bool> hasColumn(String table, String column) async {
-      final rows = await database.rawQuery('PRAGMA table_info($table);');
-      return rows.any((row) => row['name'] == column);
-    }
-
-    Future<void> addColumn(
-      String table,
-      String column,
-      String definition,
-    ) async {
-      if (!await hasColumn(table, column)) {
-        await database.execute(
-          'ALTER TABLE $table ADD COLUMN $column $definition;',
-        );
-      }
-    }
-
     // ── sales: add status + void metadata columns ───────────────────────────
-    await addColumn(
-      TableNames.sales,
-      'status',
-      "TEXT NOT NULL DEFAULT 'posted' CHECK(status IN ('posted','void'))",
+    await database.execute(
+      "ALTER TABLE ${TableNames.sales} ADD COLUMN status TEXT NOT NULL DEFAULT 'posted' CHECK(status IN ('posted','void'));",
     );
-    await addColumn(TableNames.sales, 'voided_at', 'TEXT');
-    await addColumn(TableNames.sales, 'voided_by', 'TEXT');
-    await addColumn(TableNames.sales, 'void_reason', 'TEXT');
-    await addColumn(TableNames.sales, 'correction_of', 'TEXT');
+    await database.execute(
+      'ALTER TABLE ${TableNames.sales} ADD COLUMN voided_at TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.sales} ADD COLUMN voided_by TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.sales} ADD COLUMN void_reason TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.sales} ADD COLUMN correction_of TEXT;',
+    );
 
     // ── purchases: add payment_method + status + void metadata columns ──────
-    await addColumn(
-      TableNames.purchases,
-      'payment_method',
-      "TEXT CHECK(payment_method IN ('cash','card','bank','credit'))",
+    await database.execute(
+      "ALTER TABLE ${TableNames.purchases} ADD COLUMN payment_method TEXT CHECK(payment_method IN ('cash','card','bank','credit'));",
     );
-    await addColumn(
-      TableNames.purchases,
-      'status',
-      "TEXT NOT NULL DEFAULT 'posted' CHECK(status IN ('posted','void'))",
+    await database.execute(
+      "ALTER TABLE ${TableNames.purchases} ADD COLUMN status TEXT NOT NULL DEFAULT 'posted' CHECK(status IN ('posted','void'));",
     );
-    await addColumn(TableNames.purchases, 'voided_at', 'TEXT');
-    await addColumn(TableNames.purchases, 'voided_by', 'TEXT');
-    await addColumn(TableNames.purchases, 'void_reason', 'TEXT');
-    await addColumn(TableNames.purchases, 'correction_of', 'TEXT');
+    await database.execute(
+      'ALTER TABLE ${TableNames.purchases} ADD COLUMN voided_at TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.purchases} ADD COLUMN voided_by TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.purchases} ADD COLUMN void_reason TEXT;',
+    );
+    await database.execute(
+      'ALTER TABLE ${TableNames.purchases} ADD COLUMN correction_of TEXT;',
+    );
 
     // ── indexes ─────────────────────────────────────────────────────────────
     await database.execute(
