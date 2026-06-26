@@ -17,5 +17,12 @@ class SupabaseConfig {
     defaultValue: 'sb_publishable_WVO0kDhNwEGGuqqAnZ4kEA_VAhx_ufD',
   );
 
+  /// Private Storage bucket that holds each shop's database backups, one folder
+  /// per account (named by the Supabase user id).
+  static const String backupsBucket = String.fromEnvironment(
+    'SUPABASE_BACKUPS_BUCKET',
+    defaultValue: 'shop-backups',
+  );
+
   static bool get isConfigured => url.isNotEmpty && publishableKey.isNotEmpty;
 }
