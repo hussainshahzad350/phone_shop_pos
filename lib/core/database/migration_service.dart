@@ -2172,42 +2172,52 @@ class MigrationService {
   }
 
   Future<void> _applyMigrationV28(Database database) async {
+    // Guard each ADD COLUMN against partial-run re-entry (if a previous attempt
+    // added some columns but crashed before completion, the user_version stays
+    // at 27 and this migration runs again — duplicate column would abort it).
+    Future<bool> hasColumn(String table, String column) async {
+      final rows = await database.rawQuery('PRAGMA table_info($table);');
+      return rows.any((row) => row['name'] == column);
+    }
+
+    Future<void> addColumn(
+      String table,
+      String column,
+      String definition,
+    ) async {
+      if (!await hasColumn(table, column)) {
+        await database.execute(
+          'ALTER TABLE $table ADD COLUMN $column $definition;',
+        );
+      }
+    }
+
     // ── sales: add status + void metadata columns ───────────────────────────
-    await database.execute(
-      "ALTER TABLE ${TableNames.sales} ADD COLUMN status TEXT NOT NULL DEFAULT 'posted' CHECK(status IN ('posted','void'));",
+    await addColumn(
+      TableNames.sales,
+      'status',
+      "TEXT NOT NULL DEFAULT 'posted' CHECK(status IN ('posted','void'))",
     );
-    await database.execute(
-      'ALTER TABLE ${TableNames.sales} ADD COLUMN voided_at TEXT;',
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.sales} ADD COLUMN voided_by TEXT;',
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.sales} ADD COLUMN void_reason TEXT;',
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.sales} ADD COLUMN correction_of TEXT;',
-    );
+    await addColumn(TableNames.sales, 'voided_at', 'TEXT');
+    await addColumn(TableNames.sales, 'voided_by', 'TEXT');
+    await addColumn(TableNames.sales, 'void_reason', 'TEXT');
+    await addColumn(TableNames.sales, 'correction_of', 'TEXT');
 
     // ── purchases: add payment_method + status + void metadata columns ──────
-    await database.execute(
-      "ALTER TABLE ${TableNames.purchases} ADD COLUMN payment_method TEXT CHECK(payment_method IN ('cash','card','bank','credit'));",
+    await addColumn(
+      TableNames.purchases,
+      'payment_method',
+      "TEXT CHECK(payment_method IN ('cash','card','bank','credit'))",
     );
-    await database.execute(
-      "ALTER TABLE ${TableNames.purchases} ADD COLUMN status TEXT NOT NULL DEFAULT 'posted' CHECK(status IN ('posted','void'));",
+    await addColumn(
+      TableNames.purchases,
+      'status',
+      "TEXT NOT NULL DEFAULT 'posted' CHECK(status IN ('posted','void'))",
     );
-    await database.execute(
-      'ALTER TABLE ${TableNames.purchases} ADD COLUMN voided_at TEXT;',
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.purchases} ADD COLUMN voided_by TEXT;',
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.purchases} ADD COLUMN void_reason TEXT;',
-    );
-    await database.execute(
-      'ALTER TABLE ${TableNames.purchases} ADD COLUMN correction_of TEXT;',
-    );
+    await addColumn(TableNames.purchases, 'voided_at', 'TEXT');
+    await addColumn(TableNames.purchases, 'voided_by', 'TEXT');
+    await addColumn(TableNames.purchases, 'void_reason', 'TEXT');
+    await addColumn(TableNames.purchases, 'correction_of', 'TEXT');
 
     // ── indexes ─────────────────────────────────────────────────────────────
     await database.execute(

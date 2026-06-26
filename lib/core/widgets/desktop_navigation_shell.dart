@@ -63,7 +63,7 @@ List<DesktopNavigationItem> desktopNavigationItemsForProfile(
       .toList(growable: false);
 }
 
-class DesktopNavigationShell extends ConsumerWidget {
+class DesktopNavigationShell extends ConsumerStatefulWidget {
   const DesktopNavigationShell({
     super.key,
     required this.child,
@@ -74,45 +74,73 @@ class DesktopNavigationShell extends ConsumerWidget {
   final String currentPath;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final activeOperations = ref.watch(activeCriticalOperationsProvider);
-    final pendingPrintJobs = ref.watch(pendingPrintJobCountProvider);
-    final profile = ref.watch(businessProfileProvider).valueOrNull ??
-        BusinessProfile.mobileOnly;
+  ConsumerState<DesktopNavigationShell> createState() =>
+      _DesktopNavigationShellState();
+}
+
+class _DesktopNavigationShellState
+    extends ConsumerState<DesktopNavigationShell> {
+  @override
+  void initState() {
+    super.initState();
+    _updateScannerMode(widget.currentPath);
+  }
+
+  @override
+  void didUpdateWidget(DesktopNavigationShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentPath != widget.currentPath) {
+      _updateScannerMode(widget.currentPath);
+    }
+  }
+
+  void _updateScannerMode(String path) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref
+          .read(scannerControllerProvider.notifier)
+          .setActiveMode(ScannerModePath.fromPath(path));
+    });
+  }
+
+  Future<void> _handleDestinationSelection(
+    int index,
+    List<DesktopNavigationItem> navItems,
+  ) async {
+    final targetPath = navItems[index].route;
+    final shouldProceed = await confirmAndHandleCartLeave(
+      context: context,
+      ref: ref,
+      currentPath: widget.currentPath,
+      targetPath: targetPath,
+    );
+    if (!shouldProceed || !mounted) return;
+    context.go(targetPath);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Only watch businessProfileProvider here — it rarely changes and drives
+    // the sidebar items. Print/operations watches are isolated to child widgets.
+    final profile =
+        ref.watch(businessProfileProvider.select((v) => v.valueOrNull)) ??
+            BusinessProfile.mobileOnly;
     final navItems = desktopNavigationItemsForProfile(profile);
     final selectedIndex = desktopNavigationSelectedIndexForPath(
-      currentPath,
+      widget.currentPath,
       profile: profile,
     );
     final currentLabel = desktopNavigationLabelForPath(
-      currentPath,
+      widget.currentPath,
       profile: profile,
     );
-    final scannerMode = ScannerModePath.fromPath(currentPath);
-    final scannerController = ref.read(scannerControllerProvider.notifier);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      scannerController.setActiveMode(scannerMode);
-    });
-
-    Future<void> handleDestinationSelection(int index) async {
-      final targetPath = navItems[index].route;
-      final shouldProceed = await confirmAndHandleCartLeave(
-        context: context,
-        ref: ref,
-        currentPath: currentPath,
-        targetPath: targetPath,
-      );
-      if (!shouldProceed || !context.mounted) {
-        return;
-      }
-      context.go(targetPath);
-    }
 
     return AppShortcutManager(
       child: AppDesktopScaffold(
         sidebar: AppSidebar(
           selectedIndex: selectedIndex,
-          onDestinationSelected: handleDestinationSelection,
+          onDestinationSelected: (i) =>
+              _handleDestinationSelection(i, navItems),
           destinations: navItems
               .map(
                 (item) => NavigationRailDestination(
@@ -124,57 +152,88 @@ class DesktopNavigationShell extends ConsumerWidget {
         ),
         topBar: AppTopBar(
           title: currentLabel,
-          trailing: Wrap(
+          trailing: const Wrap(
             spacing: 6,
             children: <Widget>[
-              const AppShortcutHint(label: 'Search', shortcut: 'F1 / Ctrl+F'),
-              const AppShortcutHint(label: 'Refresh', shortcut: 'F5'),
-              const AppShortcutHint(label: 'Save', shortcut: 'F10'),
-              if (pendingPrintJobs > 0)
-                Chip(
-                  avatar: const Icon(Icons.print_outlined, size: 16),
-                  label: Text(
-                    'Pending prints: $pendingPrintJobs',
-                    style: const TextStyle(fontSize: 11),
-                  ),
-                  visualDensity: VisualDensity.compact,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              if (activeOperations.isNotEmpty)
-                Chip(
-                  avatar: const SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  label: Text(
-                    activeOperations.length == 1
-                        ? (activeOperations.first.progressLabel ??
-                            activeOperations.first.label)
-                        : '${activeOperations.length} active operations',
-                    style: const TextStyle(fontSize: 11),
-                  ),
-                  visualDensity: VisualDensity.compact,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              Chip(
-                label: Text(
-                  'v${AppRuntimeConfig.fullVersion}',
-                  style: const TextStyle(fontSize: 11),
-                ),
-                visualDensity: VisualDensity.compact,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
+              AppShortcutHint(label: 'Search', shortcut: 'F1 / Ctrl+F'),
+              AppShortcutHint(label: 'Refresh', shortcut: 'F5'),
+              AppShortcutHint(label: 'Save', shortcut: 'F10'),
+              _PendingPrintJobChip(),
+              _ActiveOperationsChip(),
+              _VersionChip(),
             ],
           ),
         ),
         child: Stack(
           children: <Widget>[
-            Positioned.fill(child: child),
+            Positioned.fill(child: widget.child),
             const GlobalScannerInput(),
           ],
         ),
       ),
+    );
+  }
+}
+
+// Each chip watches its own provider independently — a print-job change only
+// rebuilds _PendingPrintJobChip, not the entire navigation shell.
+
+class _PendingPrintJobChip extends ConsumerWidget {
+  const _PendingPrintJobChip();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final count = ref.watch(pendingPrintJobCountProvider);
+    if (count == 0) return const SizedBox.shrink();
+    return Chip(
+      avatar: const Icon(Icons.print_outlined, size: 16),
+      label: Text(
+        'Pending prints: $count',
+        style: const TextStyle(fontSize: 11),
+      ),
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+}
+
+class _ActiveOperationsChip extends ConsumerWidget {
+  const _ActiveOperationsChip();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ops = ref.watch(activeCriticalOperationsProvider);
+    if (ops.isEmpty) return const SizedBox.shrink();
+    return Chip(
+      avatar: const SizedBox(
+        width: 14,
+        height: 14,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      label: Text(
+        ops.length == 1
+            ? (ops.first.progressLabel ?? ops.first.label)
+            : '${ops.length} active operations',
+        style: const TextStyle(fontSize: 11),
+      ),
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+}
+
+class _VersionChip extends StatelessWidget {
+  const _VersionChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(
+      label: Text(
+        'v${AppRuntimeConfig.fullVersion}',
+        style: const TextStyle(fontSize: 11),
+      ),
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 }
