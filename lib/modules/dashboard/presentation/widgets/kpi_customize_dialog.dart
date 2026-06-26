@@ -32,10 +32,11 @@ class _KpiCustomizeDialog extends ConsumerWidget {
       content: SizedBox(
         width: 380,
         child: prefsAsync.when(
-          loading: () =>
-              const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
-          error: (_, __) =>
-              const SizedBox(height: 200, child: Center(child: Text('Failed to load preferences.'))),
+          loading: () => const SizedBox(
+              height: 200, child: Center(child: CircularProgressIndicator())),
+          error: (_, __) => const SizedBox(
+              height: 200,
+              child: Center(child: Text('Failed to load preferences.'))),
           data: (configs) {
             final visibleCount = configs.where((c) => c.visible).length;
             return Column(
@@ -56,13 +57,12 @@ class _KpiCustomizeDialog extends ConsumerWidget {
                   child: ReorderableListView.builder(
                     shrinkWrap: true,
                     itemCount: configs.length,
-                    onReorderItem: (oldIndex, newIndex) {
+                    onReorder: (oldIndex, newIndex) {
                       notifier.reorder(oldIndex, newIndex);
                     },
                     itemBuilder: (context, index) {
                       final card = configs[index];
-                      final isLastVisible =
-                          card.visible && visibleCount <= 2;
+                      final isLastVisible = card.visible && visibleCount <= 2;
                       return _CardConfigTile(
                         key: ValueKey(card.id),
                         index: index,
@@ -167,5 +167,4 @@ class _CardConfigTile extends StatelessWidget {
         return Icons.dashboard_outlined;
     }
   }
-
 }
