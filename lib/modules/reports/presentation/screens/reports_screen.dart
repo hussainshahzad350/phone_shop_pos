@@ -24,7 +24,6 @@ import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_heade
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_pagination_bar.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_tab_chips.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
-import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_repository_provider.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 bool hasNextReportsPageCandidate({
@@ -49,76 +48,6 @@ class ReportsScreen extends ConsumerWidget {
       context: context,
       builder: (context) => SalesInvoiceDialog(saleId: saleId),
     );
-  }
-
-  Future<void> _cancelSale(
-    BuildContext context,
-    WidgetRef ref,
-    String saleId,
-    String status,
-  ) async {
-    if (status == 'void') {
-      AppNotifier.warning('This sale is already cancelled.');
-      return;
-    }
-    final reasonController = TextEditingController();
-    try {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Cancel Sale'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const Text(
-                'This will void the sale and restore stock. Enter a reason:',
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: reasonController,
-                decoration: const InputDecoration(
-                  labelText: 'Reason',
-                  border: OutlineInputBorder(),
-                ),
-                autofocus: true,
-                onSubmitted: (_) => Navigator.of(dialogContext).pop(true),
-              ),
-            ],
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Back'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Confirm Cancel'),
-            ),
-          ],
-        ),
-      );
-      if (confirmed != true || !context.mounted) return;
-      final reason = reasonController.text.trim();
-      if (reason.isEmpty) {
-        AppNotifier.warning('Please provide a reason for cancelling.');
-        return;
-      }
-      final service = await ref.read(salesServiceProvider.future);
-      final result = await service.voidSale(saleId: saleId, voidReason: reason);
-      if (!context.mounted) return;
-      result.fold(
-        onSuccess: (_) {
-          AppNotifier.success('Sale cancelled successfully.');
-          ref
-              .read(reportWorkflowCoordinatorProvider)
-              .refreshSalesAfterReturn(saleId: saleId);
-        },
-        onFailure: AppNotifier.errorFromAppError,
-      );
-    } finally {
-      reasonController.dispose();
-    }
   }
 
   Future<void> _reprint(WidgetRef ref, String jobId) async {
@@ -286,8 +215,6 @@ class ReportsScreen extends ConsumerWidget {
                     onOpenPurchaseDetail: (purchaseId) =>
                         _showPurchaseDetailDialog(context, purchaseId),
                     onReprint: (jobId) => _reprint(ref, jobId),
-                    onCancelSale: (saleId, status) =>
-                        _cancelSale(context, ref, saleId, status),
                     onOpenCustomerLedger: (summary) =>
                         _openCustomerLedger(context, ref, summary),
                     onOpenSupplierLedger: (summary) =>
@@ -373,7 +300,6 @@ class _ReportContent extends ConsumerWidget {
     required this.onOpenInvoice,
     required this.onOpenPurchaseDetail,
     required this.onReprint,
-    required this.onCancelSale,
     required this.onOpenCustomerLedger,
     required this.onOpenSupplierLedger,
   });
@@ -382,7 +308,6 @@ class _ReportContent extends ConsumerWidget {
   final Future<void> Function(String saleId) onOpenInvoice;
   final Future<void> Function(String purchaseId) onOpenPurchaseDetail;
   final Future<void> Function(String jobId) onReprint;
-  final Future<void> Function(String saleId, String status) onCancelSale;
   final Future<void> Function(PartySummaryCardEntity summary)
       onOpenCustomerLedger;
   final Future<void> Function(PartySummaryCardEntity summary)
@@ -395,7 +320,6 @@ class _ReportContent extends ConsumerWidget {
         return DailySalesTab(
           onOpenInvoice: onOpenInvoice,
           onReprint: onReprint,
-          onCancelSale: onCancelSale,
         );
       case ReportsTab.profit:
         return const ProfitTab();

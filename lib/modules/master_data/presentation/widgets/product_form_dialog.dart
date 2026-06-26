@@ -181,29 +181,27 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
               Row(
                 children: <Widget>[
                   Expanded(
-                    child: DropdownMenu<String?>(
-                      initialSelection: _selectedBrand,
-                      enableFilter: true,
-                      requestFocusOnTap: true,
-                      expandedInsets: EdgeInsets.zero,
-                      label: const Text('Brand'),
-                      inputDecorationTheme: const InputDecorationTheme(
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _selectedBrand,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Brand',
                         border: OutlineInputBorder(),
                         isDense: true,
                       ),
-                      dropdownMenuEntries: <DropdownMenuEntry<String?>>[
-                        const DropdownMenuEntry<String?>(
+                      items: <DropdownMenuItem<String>>[
+                        const DropdownMenuItem<String>(
                           value: null,
-                          label: '',
+                          child: Text('Select brand'),
                         ),
                         ...availableBrands.map(
-                          (brand) => DropdownMenuEntry<String?>(
+                          (brand) => DropdownMenuItem<String>(
                             value: brand,
-                            label: brand,
+                            child: Text(brand),
                           ),
                         ),
                       ],
-                      onSelected: (value) {
+                      onChanged: (value) {
                         setState(() {
                           _selectedBrand = value;
                         });
