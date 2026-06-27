@@ -19,56 +19,98 @@ class DealerIssueTableWidget extends ConsumerWidget {
   final bool isLoading;
   final String? selectedDealerId;
 
+  // Column widths kept consistent with the app's other AppDataTable screens.
+  static const double _wNum = 48;
+  static const double _wIssueId = 110;
+  static const double _wDate = 110;
+  static const double _wImeis = 280;
+  static const double _wStatus = 120;
+  static const double _wActions = 140;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (issues.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(Icons.inventory_2_outlined, size: 64, color: Theme.of(context).colorScheme.outline),
-            const SizedBox(height: 16),
-            Text(
-              selectedDealerId != null ? 'No issues for this dealer' : 'No dealer issues found',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            if (selectedDealerId == null) ...<Widget>[
-              const SizedBox(height: 8),
-              Text(
-                'Select a dealer to view issues',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.outline),
+    return AppDataTable(
+      showCheckboxColumn: false,
+      paginateThreshold: 40,
+      emptyIcon: Icons.inventory_2_outlined,
+      emptyMessage: selectedDealerId != null
+          ? 'No issues for this dealer.'
+          : 'No dealer issues found. Select a dealer to view issues.',
+      columns: <DataColumn>[
+        DataColumn(label: _headerCell(context, '#', width: _wNum)),
+        DataColumn(label: _headerCell(context, 'Issue ID', width: _wIssueId)),
+        DataColumn(label: _headerCell(context, 'Date', width: _wDate)),
+        DataColumn(label: _headerCell(context, 'IMEIs', width: _wImeis)),
+        DataColumn(label: _headerCell(context, 'Status', width: _wStatus)),
+        DataColumn(label: _headerCell(context, 'Actions', width: _wActions)),
+      ],
+      rows: issues.asMap().entries.map((entry) {
+        final issue = entry.value;
+        return DataRow(
+          cells: <DataCell>[
+            DataCell(_textCell('${entry.key + 1}', width: _wNum)),
+            DataCell(_textCell(issue.issueId.substring(0, 8), width: _wIssueId)),
+            DataCell(_textCell(
+              FormattingHelpers.dateYmd(issue.issueDate),
+              width: _wDate,
+            )),
+            DataCell(_textCell(
+              issue.imeiList.join(', '),
+              width: _wImeis,
+              maxLines: 2,
+            )),
+            DataCell(SizedBox(
+              width: _wStatus,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: _buildStatusChip(context, issue),
               ),
-            ],
+            )),
+            DataCell(SizedBox(
+              width: _wActions,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: _buildActions(context, ref, issue),
+                ),
+              ),
+            )),
           ],
-        ),
-      );
-    }
+        );
+      }).toList(growable: false),
+    );
+  }
 
-    return Scrollbar(
-      child: SingleChildScrollView(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columns: const <DataColumn>[
-              DataColumn(label: Text('Issue ID')),
-              DataColumn(label: Text('Date')),
-              DataColumn(label: Text('IMEIs')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('Actions')),
-            ],
-            rows: issues.map((issue) => DataRow(cells: <DataCell>[
-              DataCell(Text(issue.issueId.substring(0, 8))),
-              DataCell(Text(FormattingHelpers.dateYmd(issue.issueDate))),
-              DataCell(Text(issue.imeiList.join(', '))),
-              DataCell(_buildStatusChip(context, issue)),
-              DataCell(_buildActions(context, ref, issue)),
-            ])).toList(growable: false),
-          ),
+  Widget _headerCell(BuildContext context, String label, {required double width}) {
+    final theme = Theme.of(context);
+    return SizedBox(
+      width: width,
+      child: Text(
+        label,
+        maxLines: 2,
+        softWrap: true,
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
         ),
+      ),
+    );
+  }
+
+  Widget _textCell(String value, {required double width, int maxLines = 1}) {
+    return SizedBox(
+      width: width,
+      child: Text(
+        value,
+        maxLines: maxLines,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
