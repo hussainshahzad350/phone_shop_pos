@@ -16,10 +16,12 @@ class DailySalesTab extends ConsumerWidget {
     super.key,
     required this.onOpenInvoice,
     required this.onReprint,
+    required this.onCancelSale,
   });
 
   final Future<void> Function(String saleId) onOpenInvoice;
   final Future<void> Function(String jobId) onReprint;
+  final Future<void> Function(String saleId, String status) onCancelSale;
 
   static const double _actionIconSize = 18;
 
@@ -177,23 +179,63 @@ class DailySalesTab extends ConsumerWidget {
                               DataCell(
                                 SizedBox(
                                   width: 132,
-                                  child: Row(
-                                    children: <Widget>[
-                                      IconButton.filledTonal(
-                                        tooltip: 'Open',
-                                        onPressed: () => onOpenInvoice(row.saleId),
-                                        icon: const Icon(Icons.open_in_new, size: _actionIconSize),
-                                        visualDensity: VisualDensity.compact,
-                                      ),
-                                      if (row.printJobId != null) ...<Widget>[
-                                        const SizedBox(width: 6),
-                                        IconButton.filledTonal(
-                                          tooltip: 'Reprint',
-                                          onPressed: () => onReprint(row.printJobId!),
-                                          icon: const Icon(Icons.print_outlined, size: _actionIconSize),
-                                          visualDensity: VisualDensity.compact,
+                                  child: PopupMenuButton<String>(
+                                    tooltip: 'Actions',
+                                    icon: const Icon(Icons.more_vert, size: _actionIconSize),
+                                    onSelected: (value) {
+                                      switch (value) {
+                                        case 'view':
+                                          onOpenInvoice(row.saleId);
+                                        case 'reprint':
+                                          if (row.printJobId != null) {
+                                            onReprint(row.printJobId!);
+                                          }
+                                        case 'cancel':
+                                          onCancelSale(row.saleId, row.status);
+                                      }
+                                    },
+                                    itemBuilder: (context) => <PopupMenuEntry<String>>[
+                                      const PopupMenuItem<String>(
+                                        value: 'view',
+                                        child: Row(
+                                          children: <Widget>[
+                                            Icon(Icons.open_in_new, size: 16),
+                                            SizedBox(width: 8),
+                                            Text('View Invoice'),
+                                          ],
                                         ),
-                                      ],
+                                      ),
+                                      if (row.printJobId != null)
+                                        const PopupMenuItem<String>(
+                                          value: 'reprint',
+                                          child: Row(
+                                            children: <Widget>[
+                                              Icon(Icons.print_outlined, size: 16),
+                                              SizedBox(width: 8),
+                                              Text('Reprint Receipt'),
+                                            ],
+                                          ),
+                                        ),
+                                      if (row.status != 'void')
+                                        PopupMenuItem<String>(
+                                          value: 'cancel',
+                                          child: Row(
+                                            children: <Widget>[
+                                              Icon(
+                                                Icons.cancel_outlined,
+                                                size: 16,
+                                                color: Theme.of(context).colorScheme.error,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Cancel Sale',
+                                                style: TextStyle(
+                                                  color: Theme.of(context).colorScheme.error,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 ),
