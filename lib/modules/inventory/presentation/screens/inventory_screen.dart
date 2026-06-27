@@ -24,7 +24,7 @@ import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entiti
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
-const int _kReservePhoneFetchLimit = 5000;
+const int _kReservePhoneFetchLimit = 500;
 
 class InventoryScreen extends ConsumerStatefulWidget {
   const InventoryScreen({super.key});
