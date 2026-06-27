@@ -82,55 +82,94 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/login',
         builder: (context, state) => const LoginScreen(),
       ),
-      ShellRoute(
-        builder: (context, state, child) => DesktopNavigationShell(
+      // Redirect-only routes live at the top level (they render no screen).
+      GoRoute(
+        path: '/',
+        redirect: (context, state) => '/welcome',
+      ),
+      GoRoute(
+        path: '/customers',
+        redirect: (context, state) => '/sales',
+      ),
+      // Each navigable screen is its own branch so its widget/state is kept
+      // alive in an IndexedStack instead of being rebuilt on every tab switch.
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) => DesktopNavigationShell(
           currentPath: state.uri.path,
-          child: child,
+          child: navigationShell,
         ),
-        routes: <RouteBase>[
-          GoRoute(
-            path: '/',
-            redirect: (context, state) => '/welcome',
+        branches: <StatefulShellBranch>[
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: '/dashboard',
+                builder: (context, state) => const DashboardScreen(),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/dashboard',
-            builder: (context, state) => const DashboardScreen(),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: '/sales',
+                builder: (context, state) => const SalesBillingScreen(),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/sales',
-            builder: (context, state) => const SalesBillingScreen(),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: '/purchases',
+                builder: (context, state) => const PurchaseScreen(),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/purchases',
-            builder: (context, state) => const PurchaseScreen(),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: '/inventory',
+                builder: (context, state) => const InventoryScreen(),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/inventory',
-            builder: (context, state) => const InventoryScreen(),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: '/master-data',
+                builder: (context, state) => const MasterDataScreen(),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/master-data',
-            builder: (context, state) => const MasterDataScreen(),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: '/dealer-issues',
+                builder: (context, state) => const DealerIssueScreen(),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/customers',
-            redirect: (context, state) => '/sales',
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: '/repairing',
+                builder: (context, state) => const RepairingScreen(),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/dealer-issues',
-            builder: (context, state) => const DealerIssueScreen(),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: '/reports',
+                builder: (context, state) => const ReportsScreen(),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/repairing',
-            builder: (context, state) => const RepairingScreen(),
-          ),
-          GoRoute(
-            path: '/reports',
-            builder: (context, state) => const ReportsScreen(),
-          ),
-          GoRoute(
-            path: '/settings',
-            builder: (context, state) => const SettingsScreen(),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: '/settings',
+                builder: (context, state) => const SettingsScreen(),
+              ),
+            ],
           ),
         ],
       ),
