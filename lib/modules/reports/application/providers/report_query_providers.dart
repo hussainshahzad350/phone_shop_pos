@@ -420,7 +420,7 @@ final expenseAnalyticsSummaryProvider =
 final stockAdjustmentHistoryProvider =
     FutureProvider<List<StockAdjustmentHistoryRowEntity>>((ref) async {
   final service = await ref.watch(operationsWorkflowServiceProvider.future);
-  final result = await service.getStockAdjustments();
+  final result = await service.getStockAdjustments(limit: 50);
   return result.fold(
     onSuccess: (value) => value,
     onFailure: (error) => throw error,

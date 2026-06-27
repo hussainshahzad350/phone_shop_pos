@@ -42,23 +42,33 @@ class _GlobalScannerInputState extends ConsumerState<GlobalScannerInput>
 
   @override
   void didChangeMetrics() {
-    _restoreFocus();
+    _reclaimFocusAfterLifecycleEvent();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _restoreFocus();
+      _reclaimFocusAfterLifecycleEvent();
     }
   }
 
   void _restoreFocus() {
-    if (!mounted) {
-      return;
-    }
-    if (!_focusNode.hasFocus) {
+    if (!mounted) return;
+    // Reclaim only when nothing user-interactive holds focus. A FocusScopeNode
+    // as primaryFocus means focus was released (e.g. via unfocus()) but no
+    // leaf widget has it — treat that the same as null so the scanner reclaims.
+    final primary = FocusManager.instance.primaryFocus;
+    if (primary == null || primary == _focusNode || primary is FocusScopeNode) {
       _focusNode.requestFocus();
     }
+  }
+
+  // Force-reclaim focus regardless of what holds it. Used only for lifecycle
+  // events (app resume, screen metrics change) where the OS may have dropped
+  // focus from the scanner without any user input having taken it.
+  void _reclaimFocusAfterLifecycleEvent() {
+    if (!mounted) return;
+    _focusNode.requestFocus();
   }
 
   Future<void> _submit(String value) async {
