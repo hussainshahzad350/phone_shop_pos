@@ -295,6 +295,18 @@ class PurchaseFormStateNotifier extends StateNotifier<PurchaseFormState> {
   void resetForm() {
     state = const PurchaseFormState();
   }
+
+  /// Clears the typed amount inputs (discount, tax, paid, notes) while leaving
+  /// the cart, supplier, and invoice untouched. Used when the user navigates
+  /// away from the screen so stale amounts don't linger on return.
+  void clearPaymentInputs() {
+    state = state.copyWith(
+      discount: 0,
+      tax: 0,
+      paidAmount: 0,
+      clearNotes: true,
+    );
+  }
 }
 
 final purchaseFormStateProvider =

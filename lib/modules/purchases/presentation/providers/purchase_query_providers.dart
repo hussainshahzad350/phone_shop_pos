@@ -17,6 +17,17 @@ final supplierSearchResultsProvider = FutureProvider<List<SupplierOptionEntity>>
   );
 });
 
+/// The next systematic purchase invoice number to preview in the form when the
+/// user leaves the invoice field empty. Invalidate after a save to advance it.
+final nextPurchaseInvoiceNumberProvider = FutureProvider<String?>((ref) async {
+  final repository = await ref.watch(purchaseRepositoryProvider.future);
+  final result = await repository.peekNextInvoiceNumber();
+  return result.fold(
+    onSuccess: (value) => value,
+    onFailure: (error) => null,
+  );
+});
+
 final purchaseProductSearchResultsProvider = FutureProvider<List<ProductEntity>>((
   ref,
 ) async {

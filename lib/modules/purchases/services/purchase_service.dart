@@ -422,13 +422,28 @@ class PurchaseService {
     if (isUnderpaid) {
       final isCredit = paymentMethod == PaymentMethod.credit;
       final hasSupplier = supplierId != null && supplierId.trim().isNotEmpty;
-      if (!isCredit || !hasSupplier) {
+      // Same underlying rule (an unpaid balance is only allowed on a
+      // Credit/Udhar purchase tied to a supplier), surfaced as distinct,
+      // actionable messages for each way it can be violated.
+      if (!isCredit) {
+        final nothingPaid = paidAmount <= epsilon;
+        return Failure<PurchaseCompletionEntity>(
+          AppError(
+            code: 'full_payment_required',
+            message: nothingPaid
+                ? 'Enter the paid amount, or switch to Credit/Udhar with a '
+                    'supplier to record a balance.'
+                : 'This payment method must be paid in full. Switch to '
+                    'Credit/Udhar with a supplier to leave a balance.',
+          ),
+        );
+      }
+      if (!hasSupplier) {
         return const Failure<PurchaseCompletionEntity>(
           AppError(
-            code: 'partial_payment_requires_credit_supplier',
-            message: 'Partial payment is only allowed when the payment method '
-                'is Credit/Udhar and a supplier is selected. Otherwise pay the '
-                'full amount.',
+            code: 'credit_requires_supplier',
+            message: 'Select a supplier to record a Credit/Udhar purchase '
+                'with an outstanding balance.',
           ),
         );
       }

@@ -19,6 +19,11 @@ abstract class PurchaseRepository extends BaseRepository {
 
   Future<Result<bool>> isImeiUnique(String imei);
 
+  /// Returns the next systematic purchase invoice number that would be
+  /// generated for today (e.g. `PUR-YYYYMMDD-0001`) without reserving it.
+  /// Used to preview the number in the form before saving.
+  Future<Result<String>> peekNextInvoiceNumber();
+
   Future<Result<PurchaseCompletionEntity>> createPurchaseTransaction({
     required List<PurchaseFormItem> items,
     required double discount,

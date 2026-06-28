@@ -93,7 +93,11 @@ class _TotalsPanelWidgetState extends State<TotalsPanelWidget> {
             const SizedBox(height: 8),
             _line(label: 'Total', value: widget.totals.total, bold: true),
             const SizedBox(height: 8),
-            _line(label: 'Received', value: receivedAmount),
+            _line(
+              label: 'Remaining',
+              value: widget.totals.remaining,
+              bold: true,
+            ),
             const SizedBox(height: 8),
             _line(
               label: 'Change',
@@ -102,12 +106,6 @@ class _TotalsPanelWidgetState extends State<TotalsPanelWidget> {
               color: changeAmount > 0
                   ? Theme.of(context).colorScheme.primary
                   : null,
-            ),
-            const SizedBox(height: 8),
-            _line(
-              label: 'Remaining',
-              value: widget.totals.remaining,
-              bold: true,
             ),
           ],
         ),

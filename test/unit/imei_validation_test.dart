@@ -24,6 +24,10 @@ class _StubPurchaseRepository implements PurchaseRepository {
   Future<Result<bool>> isImeiUnique(String imei) async =>
       Success<bool>(!_existingImeis.contains(imei));
 
+  @override
+  Future<Result<String>> peekNextInvoiceNumber() async =>
+      const Success<String>('PUR-00000000-0001');
+
   // ── Unused stubs ─────────────────────────────────────────────────────────
   @override
   Future<Result<T>> guard<T>(

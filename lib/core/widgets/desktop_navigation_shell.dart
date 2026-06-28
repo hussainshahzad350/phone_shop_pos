@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:phone_shop_pos/core/config/business_configuration_providers.dart';
 import 'package:phone_shop_pos/core/config/business_profile.dart';
 import 'package:phone_shop_pos/core/config/feature_access.dart';
+import 'package:phone_shop_pos/core/routing/current_route_provider.dart';
 import 'package:phone_shop_pos/core/routing/navigation_leave_guard.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
@@ -83,23 +84,24 @@ class _DesktopNavigationShellState
   @override
   void initState() {
     super.initState();
-    _updateScannerMode(widget.currentPath);
+    _syncRouteState(widget.currentPath);
   }
 
   @override
   void didUpdateWidget(DesktopNavigationShell oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.currentPath != widget.currentPath) {
-      _updateScannerMode(widget.currentPath);
+      _syncRouteState(widget.currentPath);
     }
   }
 
-  void _updateScannerMode(String path) {
+  void _syncRouteState(String path) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref
           .read(scannerControllerProvider.notifier)
           .setActiveMode(ScannerModePath.fromPath(path));
+      ref.read(currentRoutePathProvider.notifier).state = path;
     });
   }
 

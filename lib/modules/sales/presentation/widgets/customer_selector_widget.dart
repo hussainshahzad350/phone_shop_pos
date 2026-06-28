@@ -1,12 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_entity.dart';
+import 'package:phone_shop_pos/modules/sales/presentation/providers/billing_state_provider.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_query_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
+/// Customer picker: a directly typeable field that runs a database search, a ✕
+/// to clear the selection, and close-on-outside-click. The results list is
+/// shown in a floating [OverlayPortal] anchored under the field, so opening it
+/// does not push the totals/payment panel below it down.
 class CustomerSelectorWidget extends ConsumerStatefulWidget {
   const CustomerSelectorWidget({
     super.key,
@@ -28,23 +35,40 @@ class _CustomerSelectorWidgetState
     extends ConsumerState<CustomerSelectorWidget> {
   static const int _defaultVisibleCustomerCount = 5;
   static final List<String> _recentCustomerIds = <String>[];
-  late final TextEditingController _displayController;
-  late final TextEditingController _searchController;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  final LayerLink _layerLink = LayerLink();
+  final OverlayPortalController _overlayController = OverlayPortalController();
+  final Object _tapGroupId = Object();
+  Timer? _searchDebounce;
+  CustomerOptionEntity? _selectedCustomer;
+  List<CustomerOptionEntity> _customers = const <CustomerOptionEntity>[];
+  bool _customersLoading = false;
+  bool _customersHasError = false;
+  Object? _customersError;
+  double _fieldWidth = 300;
   bool _isDropdownOpen = false;
   bool _showAllCustomers = false;
 
   @override
   void initState() {
     super.initState();
-    _displayController = TextEditingController();
-    _searchController = TextEditingController();
+    _searchFocusNode.addListener(_handleFocusChanged);
   }
 
   @override
   void dispose() {
-    _displayController.dispose();
+    _searchDebounce?.cancel();
+    _searchFocusNode.removeListener(_handleFocusChanged);
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  void _handleFocusChanged() {
+    if (_searchFocusNode.hasFocus) {
+      _openDropdown();
+    }
   }
 
   @override
@@ -52,114 +76,221 @@ class _CustomerSelectorWidgetState
     final customersAsync = widget.customers == null
         ? ref.watch(customerSearchResultsProvider)
         : null;
-    final customers = widget.customers ??
+    _customers = widget.customers ??
         customersAsync?.value ??
         const <CustomerOptionEntity>[];
-    final selectedLabel = _selectedLabel(customers);
+    _customersLoading = customersAsync?.isLoading == true;
+    _customersHasError = customersAsync?.hasError == true;
+    _customersError = customersAsync?.error;
 
-    if (_displayController.text != selectedLabel) {
-      _displayController.value = _displayController.value.copyWith(
-        text: selectedLabel,
-        selection: TextSelection.collapsed(offset: selectedLabel.length),
-        composing: TextRange.empty,
-      );
+    // Keep the resolved customer cached so the field label stays correct even
+    // when the active search filters the selected customer out of results.
+    if (widget.selectedCustomerId == null) {
+      _selectedCustomer = null;
+    } else {
+      final resolved = _customers
+          .where((customer) => customer.id == widget.selectedCustomerId)
+          .cast<CustomerOptionEntity?>()
+          .firstOrNull;
+      if (resolved != null) {
+        _selectedCustomer = resolved;
+      }
+    }
+
+    // While closed, the search bar mirrors the current selection (a customer or
+    // walk-in). While open it holds the live search query the user is typing.
+    if (!_isDropdownOpen) {
+      final label = _selectedLabel();
+      if (_searchController.text != label) {
+        _searchController.value = TextEditingValue(
+          text: label,
+          selection: TextSelection.collapsed(offset: label.length),
+        );
+      }
     }
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: SingleChildScrollView(
-          child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            TextField(
-              controller: _displayController,
-              readOnly: true,
-              onTap: _toggleDropdown,
-              decoration: appDesktopInputDecoration(
-                labelText: 'Customer',
-                hintText: 'Search customer',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: widget.selectedCustomerId != null
-                    ? const Icon(Icons.check_circle)
-                    : const Icon(Icons.arrow_drop_down),
-              ),
-            ),
-            if (customersAsync?.isLoading == true) ...<Widget>[
-              const SizedBox(height: 6),
-              const LinearProgressIndicator(minHeight: 2),
-            ],
-            if (customersAsync?.hasError == true) ...<Widget>[
-              const SizedBox(height: 8),
-              Text(
-                customersAsync!.error is AppError
-                    ? (customersAsync.error as AppError).message
-                    : 'Failed to load customers.',
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: _retryLoadCustomers,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-              ),
-            ],
-            if (customersAsync?.isLoading != true &&
-                customersAsync?.hasError != true &&
-                customers.isEmpty) ...<Widget>[
-              const SizedBox(height: 8),
-              const Text('No customers found.'),
-            ],
-            if (_isDropdownOpen) ...<Widget>[
-              const SizedBox(height: 8),
-              TextField(
-                controller: _searchController,
-                autofocus: true,
-                decoration:
-                    appDesktopInputDecoration(labelText: 'Search customer'),
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: 8),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Theme.of(context).dividerColor),
-                  borderRadius: AppRadii.smRadius,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxHeight: _showAllCustomers ? double.infinity : 240,
-                      ),
-                      child: ListView(
-                        shrinkWrap: true,
-                        children: <Widget>[
-                          _walkInTile(),
-                          ..._filteredCustomers(customers).map(_customerTile),
-                        ],
-                      ),
+        child: TapRegion(
+          groupId: _tapGroupId,
+          onTapOutside: (_) => _closeDropdown(),
+          child: OverlayPortal(
+            controller: _overlayController,
+            overlayChildBuilder: _buildOverlay,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                _fieldWidth = constraints.maxWidth;
+                return CompositedTransformTarget(
+                  link: _layerLink,
+                  child: TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    onTap: _openDropdown,
+                    onChanged: _onSearchChanged,
+                    decoration: appDesktopInputDecoration(
+                      labelText: 'Customer',
+                      hintText: 'Search customer by name or phone',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _buildSuffixIcon(),
                     ),
-                    if (_canShowMoreRow(customers)) _moreTile(),
-                  ],
-                ),
-              ),
-            ],
-          ],
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ),
     );
   }
 
-  void _toggleDropdown() {
+  Widget _buildOverlay(BuildContext context) {
+    final theme = Theme.of(context);
+    return CompositedTransformFollower(
+      link: _layerLink,
+      targetAnchor: Alignment.bottomLeft,
+      followerAnchor: Alignment.topLeft,
+      offset: const Offset(0, 4),
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: TapRegion(
+          groupId: _tapGroupId,
+          child: SizedBox(
+            width: _fieldWidth,
+            child: Material(
+              elevation: 4,
+              borderRadius: AppRadii.smRadius,
+              clipBehavior: Clip.antiAlias,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border.all(color: theme.dividerColor),
+                  borderRadius: AppRadii.smRadius,
+                ),
+                child: _buildOverlayContent(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOverlayContent() {
+    if (_customersLoading) {
+      return const Padding(
+        padding: EdgeInsets.all(12),
+        child: LinearProgressIndicator(minHeight: 2),
+      );
+    }
+    if (_customersHasError) {
+      final message = _customersError is AppError
+          ? (_customersError! as AppError).message
+          : 'Failed to load customers.';
+      return Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(message),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _retryLoadCustomers,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: _showAllCustomers ? 360 : 240,
+          ),
+          child: ListView(
+            shrinkWrap: true,
+            padding: EdgeInsets.zero,
+            children: <Widget>[
+              _walkInTile(),
+              ..._filteredCustomers(_customers).map(_customerTile),
+            ],
+          ),
+        ),
+        if (_canShowMoreRow(_customers)) _moreTile(),
+      ],
+    );
+  }
+
+  Widget _buildSuffixIcon() {
+    if (widget.selectedCustomerId != null) {
+      return IconButton(
+        tooltip: 'Clear customer',
+        icon: const Icon(Icons.close),
+        onPressed: _clearSelection,
+      );
+    }
+    return Icon(
+      _isDropdownOpen ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+    );
+  }
+
+  void _openDropdown() {
+    if (_isDropdownOpen) {
+      return;
+    }
+    // Start the search empty so the user can type a fresh query instead of
+    // editing the displayed selection label.
+    _searchController.clear();
+    _searchDebounce?.cancel();
+    if (widget.customers == null) {
+      ref.read(billingStateProvider.notifier).setCustomerSearchQuery('');
+    }
     setState(() {
-      if (_isDropdownOpen) {
-        _isDropdownOpen = false;
+      _isDropdownOpen = true;
+      _showAllCustomers = false;
+    });
+    _overlayController.show();
+    _searchFocusNode.requestFocus();
+  }
+
+  void _closeDropdown() {
+    if (!_isDropdownOpen) {
+      return;
+    }
+    _searchDebounce?.cancel();
+    setState(() {
+      _isDropdownOpen = false;
+      _showAllCustomers = false;
+    });
+    _overlayController.hide();
+    _searchFocusNode.unfocus();
+  }
+
+  void _onSearchChanged(String value) {
+    // Local filtering gives instant feedback over the loaded list; the
+    // debounced provider update runs the real database search so customers
+    // beyond the initially loaded page are also found.
+    setState(() {
+      _isDropdownOpen = true;
+      _showAllCustomers = false;
+    });
+    if (!_overlayController.isShowing) {
+      _overlayController.show();
+    }
+    if (widget.customers != null) {
+      return;
+    }
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) {
         return;
       }
-      _searchController.clear();
-      _showAllCustomers = false;
-      _isDropdownOpen = true;
+      ref
+          .read(billingStateProvider.notifier)
+          .setCustomerSearchQuery(value.trim());
     });
   }
 
@@ -167,16 +298,39 @@ class _CustomerSelectorWidgetState
     ref.invalidate(customerSearchResultsProvider);
   }
 
-  void _selectCustomer(String? selected) {
-    if (selected == widget.selectedCustomerId) {
-      setState(() => _isDropdownOpen = false);
-      return;
+  void _clearSelection() {
+    _searchDebounce?.cancel();
+    if (widget.customers == null) {
+      ref.read(billingStateProvider.notifier).setCustomerSearchQuery('');
     }
+    setState(() {
+      _isDropdownOpen = false;
+      _showAllCustomers = false;
+    });
+    _overlayController.hide();
+    _searchFocusNode.unfocus();
+    if (widget.selectedCustomerId != null) {
+      widget.onChanged(null);
+    }
+  }
+
+  void _selectCustomer(String? selected) {
+    _searchDebounce?.cancel();
+    if (widget.customers == null) {
+      ref.read(billingStateProvider.notifier).setCustomerSearchQuery('');
+    }
+    setState(() {
+      _isDropdownOpen = false;
+      _showAllCustomers = false;
+    });
+    _overlayController.hide();
+    _searchFocusNode.unfocus();
     if (selected != null) {
       _recordRecentCustomer(selected);
     }
-    setState(() => _isDropdownOpen = false);
-    widget.onChanged(selected);
+    if (selected != widget.selectedCustomerId) {
+      widget.onChanged(selected);
+    }
   }
 
   List<CustomerOptionEntity> _filteredCustomers(
@@ -232,11 +386,9 @@ class _CustomerSelectorWidgetState
     });
   }
 
-  String _selectedLabel(List<CustomerOptionEntity> customers) {
-    final selectedCustomer = customers
-        .where((customer) => customer.id == widget.selectedCustomerId)
-        .cast<CustomerOptionEntity?>()
-        .firstOrNull;
+  String _selectedLabel() {
+    final selectedCustomer =
+        widget.selectedCustomerId == null ? null : _selectedCustomer;
     return selectedCustomer == null
         ? 'Walk-in Customer'
         : selectedCustomer.phone == null
@@ -255,6 +407,7 @@ class _CustomerSelectorWidgetState
   Widget _customerTile(CustomerOptionEntity customer) {
     final isSelected = customer.id == widget.selectedCustomerId;
     return ListTile(
+      dense: true,
       selected: isSelected,
       selectedTileColor: Theme.of(context).colorScheme.primaryContainer,
       leading: CircleAvatar(
@@ -276,6 +429,7 @@ class _CustomerSelectorWidgetState
   Widget _walkInTile() {
     final isSelected = widget.selectedCustomerId == null;
     return ListTile(
+      dense: true,
       selected: isSelected,
       selectedTileColor: Theme.of(context).colorScheme.primaryContainer,
       leading: CircleAvatar(
@@ -295,6 +449,7 @@ class _CustomerSelectorWidgetState
 
   Widget _moreTile() {
     return ListTile(
+      dense: true,
       leading: const Icon(Icons.more_horiz),
       title: const Text('More...'),
       onTap: _showAll,

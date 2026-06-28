@@ -66,7 +66,7 @@ void main() {
     expect(find.text('Test note'), findsNothing);
   });
 
-  testWidgets('customer selector picks customer from inline dropdown search', (
+  testWidgets('customer selector picks a customer via the search field', (
     tester,
   ) async {
     String? selectedCustomerId;
@@ -94,27 +94,20 @@ void main() {
       ),
     );
 
+    // Open the floating results overlay and type directly into the field.
     await tester.tap(find.byIcon(Icons.arrow_drop_down));
     await tester.pumpAndSettle();
 
-    final inlineSearchField = find.byWidgetPredicate(
-      (widget) =>
-          widget is TextField &&
-          widget.readOnly == false &&
-          widget.decoration?.labelText == 'Search customer',
-    );
-    await tester.enterText(
-      inlineSearchField,
-      'Alice',
-    );
+    await tester.enterText(find.byType(TextField), 'Alice');
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Alice').last);
     await tester.pumpAndSettle();
 
     expect(selectedCustomerId, 'cus_1');
+    // Field now shows the selected customer and a ✕ to clear it.
     expect(find.textContaining('Alice'), findsOneWidget);
-    expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    expect(find.byIcon(Icons.close), findsOneWidget);
   });
 
   testWidgets(
@@ -165,6 +158,8 @@ void main() {
     await tester.tap(find.text('More...'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Customer 6'), findsOneWidget);
+    // After "More...", all customers are present in the (scrollable) overlay
+    // list; the last one may be scrolled offstage.
+    expect(find.text('Customer 6', skipOffstage: false), findsOneWidget);
   });
 }
