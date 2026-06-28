@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
@@ -8,6 +7,7 @@ import 'package:phone_shop_pos/modules/reports/presentation/providers/report_pro
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_export_action_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_card_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_row.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_tab_error_view.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_section_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
 
@@ -80,7 +80,7 @@ class ProfitTab extends ConsumerWidget {
             height: 72,
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (error, _) => _TabErrorView(
+          error: (error, _) => ReportTabErrorView(
             message: 'Failed to load profit summary.',
             error: error,
             onRetry: () => ref.invalidate(profitReportProvider),
@@ -104,6 +104,7 @@ class ProfitTab extends ConsumerWidget {
 
               return ReportTableSection(
                 title: 'Profit by Day',
+                subtitle: 'Daily revenue, cost and profit margin breakdown.',
                 trailing: ReportExportActionWidget(
                   title: 'Profit Report',
                   fileBaseName: 'profit_report',
@@ -128,34 +129,39 @@ class ProfitTab extends ConsumerWidget {
                                     context, 'Date',
                                     width: 110)),
                             DataColumn(
+                                numeric: true,
                                 label: reportStyledTableHeaderCell(
                                     context, 'Phones Sold',
-                                    width: 120)),
+                                    width: 120, textAlign: TextAlign.right)),
                             DataColumn(
+                                numeric: true,
                                 label: reportStyledTableHeaderCell(
                                     context, 'Accessories Sold',
-                                    width: 140)),
+                                    width: 140, textAlign: TextAlign.right)),
                             DataColumn(
+                                numeric: true,
                                 label: reportStyledTableHeaderCell(
                                     context, 'Revenue (PKR)',
-                                    width: 130)),
+                                    width: 130, textAlign: TextAlign.right)),
                             DataColumn(
+                                numeric: true,
                                 label: reportStyledTableHeaderCell(
                                     context, 'Cost (PKR)',
-                                    width: 120)),
+                                    width: 120, textAlign: TextAlign.right)),
                             DataColumn(
+                                numeric: true,
                                 label: reportStyledTableHeaderCell(
                                     context, 'Profit (PKR)',
-                                    width: 120)),
+                                    width: 120, textAlign: TextAlign.right)),
                             DataColumn(
+                                numeric: true,
                                 label: reportStyledTableHeaderCell(
                                     context, 'Margin %',
-                                    width: 90)),
+                                    width: 90, textAlign: TextAlign.right)),
                           ],
                           rows: rows.asMap().entries.map((entry) {
                             final r = entry.value;
                             final isNegative = r.totalProfit < 0;
-                            final colorScheme = Theme.of(context).colorScheme;
                             return DataRow(
                               cells: <DataCell>[
                                 DataCell(reportStyledTableCell(
@@ -164,38 +170,30 @@ class ProfitTab extends ConsumerWidget {
                                     reportStyledTableCell(r.day, width: 110)),
                                 DataCell(reportStyledTableCell(
                                     r.phonesSold.toString(),
-                                    width: 120)),
+                                    width: 120, textAlign: TextAlign.right)),
                                 DataCell(reportStyledTableCell(
                                     r.accessoriesSold.toString(),
-                                    width: 140)),
+                                    width: 140, textAlign: TextAlign.right)),
                                 DataCell(reportStyledTableCell(
                                     FormattingHelpers.decimal(r.totalRevenue),
-                                    width: 130)),
+                                    width: 130, textAlign: TextAlign.right)),
                                 DataCell(reportStyledTableCell(
                                     FormattingHelpers.decimal(r.totalCost),
-                                    width: 120)),
+                                    width: 120, textAlign: TextAlign.right)),
                                 DataCell(
-                                  SizedBox(
+                                  reportSemanticPill(
+                                    context,
+                                    FormattingHelpers.decimal(r.totalProfit),
+                                    isNegative
+                                        ? ReportPillIntent.danger
+                                        : ReportPillIntent.success,
                                     width: 120,
-                                    child: Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: reportStyledStatusCell(
-                                        context,
-                                        FormattingHelpers.decimal(
-                                            r.totalProfit),
-                                        isNegative
-                                            ? colorScheme.errorContainer
-                                            : colorScheme.primaryContainer,
-                                        isNegative
-                                            ? colorScheme.onErrorContainer
-                                            : colorScheme.onPrimaryContainer,
-                                      ),
-                                    ),
+                                    alignEnd: true,
                                   ),
                                 ),
                                 DataCell(reportStyledTableCell(
                                     '${r.marginPercent.toStringAsFixed(1)}%',
-                                    width: 90)),
+                                    width: 90, textAlign: TextAlign.right)),
                               ],
                             );
                           }).toList(growable: false),
@@ -203,7 +201,7 @@ class ProfitTab extends ConsumerWidget {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => _TabErrorView(
+            error: (error, _) => ReportTabErrorView(
               message: 'Failed to load profit breakdown.',
               error: error,
               onRetry: () => ref.invalidate(profitReportRowsProvider),
@@ -211,39 +209,6 @@ class ProfitTab extends ConsumerWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _TabErrorView extends StatelessWidget {
-  const _TabErrorView({
-    required this.message,
-    required this.error,
-    required this.onRetry,
-  });
-
-  final String message;
-  final Object error;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final details = error is AppError ? (error as AppError).message : '$error';
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Text(message),
-          const SizedBox(height: 6),
-          Text(details, style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
-          ),
-        ],
-      ),
     );
   }
 }

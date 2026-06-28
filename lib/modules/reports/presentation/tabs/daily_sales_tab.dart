@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
@@ -8,6 +7,7 @@ import 'package:phone_shop_pos/modules/reports/presentation/providers/report_pro
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_export_action_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_card_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_row.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_tab_error_view.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_section_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
 
@@ -32,7 +32,7 @@ class DailySalesTab extends ConsumerWidget {
     final printableService = ref.watch(printableReportServiceProvider);
 
     if (detailAsync.hasError) {
-      return _TabErrorView(
+      return ReportTabErrorView(
         message: 'Failed to load sales details report.',
         error: detailAsync.error!,
         onRetry: () => ref.invalidate(dateRangeSalesReportProvider),
@@ -107,6 +107,7 @@ class DailySalesTab extends ConsumerWidget {
         Expanded(
           child: ReportTableSection(
             title: 'Sales Details',
+            subtitle: 'Sales invoices with payment status for the selected range.',
             trailing: ReportExportActionWidget(
               title: 'Daily Sales Details Report',
               fileBaseName: 'daily_sales_details_report',
@@ -124,7 +125,19 @@ class DailySalesTab extends ConsumerWidget {
               csvExportService: csvService,
               printableReportService: printableService,
             ),
-            child: AppDataTable(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Flex the Customer column so the table fills the card width
+                // instead of floating. Other columns are fixed; the buffer
+                // covers table margins, spacing and the scrollbar.
+                const fixedColumnsWidth =
+                    48 + 130 + 110 + 120 + 120 + 130 + 100 + 100 + 132;
+                final buffer = 48 + (9 * layout.columnSpacing) + 80;
+                final double customerWidth =
+                    (constraints.maxWidth - fixedColumnsWidth - buffer)
+                        .clamp(200.0, 520.0)
+                        .toDouble();
+                return AppDataTable(
                       columnSpacing: layout.columnSpacing,
                       dataRowMinHeight: layout.dataRowMinHeight,
                       dataRowMaxHeight: layout.dataRowMaxHeight,
@@ -140,16 +153,19 @@ class DailySalesTab extends ConsumerWidget {
                           label: reportStyledTableHeaderCell(context, 'Date', width: 110),
                         ),
                         DataColumn(
-                          label: reportStyledTableHeaderCell(context, 'Customer', width: 220),
+                          label: reportStyledTableHeaderCell(context, 'Customer', width: customerWidth),
                         ),
                         DataColumn(
-                          label: reportStyledTableHeaderCell(context, 'Total (PKR)', width: 120),
+                          numeric: true,
+                          label: reportStyledTableHeaderCell(context, 'Total (PKR)', width: 120, textAlign: TextAlign.right),
                         ),
                         DataColumn(
-                          label: reportStyledTableHeaderCell(context, 'Paid (PKR)', width: 120),
+                          numeric: true,
+                          label: reportStyledTableHeaderCell(context, 'Paid (PKR)', width: 120, textAlign: TextAlign.right),
                         ),
                         DataColumn(
-                          label: reportStyledTableHeaderCell(context, 'Balance (PKR)', width: 130),
+                          numeric: true,
+                          label: reportStyledTableHeaderCell(context, 'Balance (PKR)', width: 130, textAlign: TextAlign.right),
                         ),
                         DataColumn(
                           label: reportStyledTableHeaderCell(context, 'Payment', width: 100),
@@ -170,12 +186,12 @@ class DailySalesTab extends ConsumerWidget {
                               DataCell(reportStyledTableCell('${entry.key + 1}', width: 48)),
                               DataCell(reportStyledTableCell(row.invoiceNumber, width: 130)),
                               DataCell(reportStyledTableCell(FormattingHelpers.dateYmd(row.saleDate), width: 110)),
-                              DataCell(reportStyledTableCell(row.customerName, width: 220)),
-                              DataCell(reportStyledTableCell(FormattingHelpers.decimal(row.total), width: 120)),
-                              DataCell(reportStyledTableCell(FormattingHelpers.decimal(row.paidAmount), width: 120)),
-                              DataCell(reportStyledTableCell(FormattingHelpers.decimal(row.balance), width: 130)),
+                              DataCell(reportStyledTableCell(row.customerName, width: customerWidth)),
+                              DataCell(reportStyledTableCell(FormattingHelpers.decimal(row.total), width: 120, textAlign: TextAlign.right)),
+                              DataCell(reportStyledTableCell(FormattingHelpers.decimal(row.paidAmount), width: 120, textAlign: TextAlign.right)),
+                              DataCell(reportStyledTableCell(FormattingHelpers.decimal(row.balance), width: 130, textAlign: TextAlign.right)),
                               DataCell(reportStyledTableCell(row.paymentMethod ?? '-', width: 100)),
-                              DataCell(reportStyledTableCell(row.status, width: 100)),
+                              DataCell(reportStatusPill(context, row.status, width: 100)),
                               DataCell(
                                 SizedBox(
                                   width: 132,
@@ -246,43 +262,12 @@ class DailySalesTab extends ConsumerWidget {
                         ),
                         if (detailRows.isNotEmpty) totalsRow(),
                       ],
-                    ),
+                    );
+              },
+            ),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _TabErrorView extends StatelessWidget {
-  const _TabErrorView({
-    required this.message,
-    required this.error,
-    required this.onRetry,
-  });
-
-  final String message;
-  final Object error;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final details = error is AppError ? (error as AppError).message : '$error';
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Text(message),
-          const SizedBox(height: 6),
-          Text(details, style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
-          ),
-        ],
-      ),
     );
   }
 }

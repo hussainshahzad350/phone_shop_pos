@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 import 'package:phone_shop_pos/core/widgets/responsive_table_layout.dart';
 
@@ -36,12 +37,14 @@ Widget reportStyledTableHeaderCell(
   BuildContext context,
   String label, {
   double? width,
+  TextAlign textAlign = TextAlign.left,
 }) {
   final theme = Theme.of(context);
   return SizedBox(
     width: width,
     child: Text(
       label,
+      textAlign: textAlign,
       style: theme.textTheme.labelLarge?.copyWith(
         color: theme.colorScheme.onSurfaceVariant,
         fontWeight: FontWeight.w700,
@@ -121,4 +124,101 @@ Widget reportStyledStatusCell(
       overflow: TextOverflow.ellipsis,
     ),
   );
+}
+
+/// Semantic intent for value/status pills shared across report tables.
+enum ReportPillIntent { neutral, success, warning, danger, info }
+
+/// A color-coded pill (Cash Flow "net cash" treatment) used to emphasize a
+/// status or key value uniformly across report tables. Pass [width] and
+/// [alignEnd] to align it inside a fixed-width numeric column.
+Widget reportSemanticPill(
+  BuildContext context,
+  String label,
+  ReportPillIntent intent, {
+  double? width,
+  bool alignEnd = false,
+}) {
+  final semantic = Theme.of(context).semantic;
+  final colorScheme = Theme.of(context).colorScheme;
+  late final Color bg;
+  late final Color fg;
+  switch (intent) {
+    case ReportPillIntent.success:
+      bg = semantic.successContainer;
+      fg = semantic.success;
+    case ReportPillIntent.warning:
+      bg = semantic.warningContainer;
+      fg = semantic.warning;
+    case ReportPillIntent.danger:
+      bg = semantic.dangerContainer;
+      fg = semantic.danger;
+    case ReportPillIntent.info:
+      bg = semantic.infoContainer;
+      fg = semantic.info;
+    case ReportPillIntent.neutral:
+      bg = colorScheme.surfaceContainerHighest;
+      fg = colorScheme.onSurfaceVariant;
+  }
+  final pill = reportStyledStatusCell(context, label, bg, fg);
+  if (width == null) {
+    return pill;
+  }
+  return SizedBox(
+    width: width,
+    child: Align(
+      alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+      child: pill,
+    ),
+  );
+}
+
+/// Maps a sale/purchase status string to its pill intent so status columns read
+/// the same everywhere (paid = success, pending = warning, etc.).
+ReportPillIntent reportStatusIntent(String status) {
+  switch (status.trim().toLowerCase()) {
+    case 'paid':
+    case 'completed':
+      return ReportPillIntent.success;
+    case 'pending':
+    case 'partial':
+      return ReportPillIntent.warning;
+    case 'void':
+    case 'cancelled':
+    case 'canceled':
+    case 'refunded':
+      return ReportPillIntent.danger;
+    default:
+      return ReportPillIntent.neutral;
+  }
+}
+
+/// Renders a status string as a uniformly colored status pill.
+Widget reportStatusPill(
+  BuildContext context,
+  String status, {
+  double? width,
+}) {
+  return reportSemanticPill(
+    context,
+    reportStatusLabel(status),
+    reportStatusIntent(status),
+    width: width,
+  );
+}
+
+/// Human-readable status label. Void is surfaced as "Cancelled" so cancelled
+/// sales/purchases read consistently across the reports tables.
+String reportStatusLabel(String status) {
+  final normalized = status.trim().toLowerCase();
+  switch (normalized) {
+    case 'void':
+    case 'cancelled':
+    case 'canceled':
+      return 'Cancelled';
+    case '':
+      return '-';
+    default:
+      return status[0].toUpperCase() + status.substring(1).toLowerCase();
+  }
 }

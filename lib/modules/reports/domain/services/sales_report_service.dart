@@ -136,6 +136,7 @@ class SalesReportService with BaseRepositoryGuard {
         filter,
         args: args,
         dateColumn: 's.sale_date',
+        includeVoided: true,
       );
 
       final rows = await QueryDiagnostics.trace(
@@ -150,7 +151,11 @@ class SalesReportService with BaseRepositoryGuard {
           s.total,
           s.paid_amount,
           s.payment_method,
-          CASE WHEN s.paid_amount >= s.total THEN 'paid' ELSE 'pending' END AS status,
+          CASE
+            WHEN s.status = 'void' THEN 'void'
+            WHEN s.paid_amount >= s.total THEN 'paid'
+            ELSE 'pending'
+          END AS status,
           pj.id AS print_job_id
         FROM ${TableNames.sales} s
         LEFT JOIN ${TableNames.customers} c ON c.id = s.customer_id
@@ -245,8 +250,17 @@ class SalesReportService with BaseRepositoryGuard {
     required List<Object?> args,
     required String dateColumn,
     String? productModelMatchColumn,
+    bool includeVoided = false,
   }) {
-    final clauses = <String>["s.status = 'posted'"];
+    // Aggregates/profit/cash must only count posted sales. The detail table
+    // passes includeVoided: true so cancelled sales stay visible (marked
+    // Cancelled) for audit, while still being excluded from monetary totals.
+    // Seed with '1 = 1' so the WHERE clause is never empty when no other
+    // filters are active and the posted-only clause is omitted.
+    final clauses = <String>[
+      '1 = 1',
+      if (!includeVoided) "s.status = 'posted'",
+    ];
 
     final start = filter.startDate;
     if (start != null) {
