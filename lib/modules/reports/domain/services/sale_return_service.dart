@@ -68,6 +68,7 @@ class SaleReturnService with BaseRepositoryGuard {
             'paid_amount',
             'payment_method',
             'customer_id',
+            'status',
           ],
           where: 'id = ?',
           whereArgs: <Object?>[saleId],
@@ -75,6 +76,12 @@ class SaleReturnService with BaseRepositoryGuard {
         );
         if (saleHeaderRows.isEmpty) {
           throw StateError('Sale not found for financial adjustment.');
+        }
+        // Block returns against a cancelled (voided) sale. Voiding already
+        // restored the sold stock and reversed the ledger, so a return would
+        // double-count stock and refund.
+        if ((saleHeaderRows.first['status'] as String?) == 'void') {
+          throw StateError('Cannot return items from a cancelled sale.');
         }
         final invoiceDiscount =
             (saleHeaderRows.first['discount'] as num?)?.toDouble() ?? 0;

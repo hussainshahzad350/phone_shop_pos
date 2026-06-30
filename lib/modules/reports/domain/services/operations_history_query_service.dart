@@ -130,6 +130,7 @@ class OperationsHistoryQueryService with BaseRepositoryGuard {
           s.total,
           s.paid_amount,
           s.payment_method,
+          s.status,
           pj.id AS print_job_id,
           s.notes
         FROM ${TableNames.sales} s
@@ -183,6 +184,7 @@ class OperationsHistoryQueryService with BaseRepositoryGuard {
           paymentMethod: PaymentMethod.normalizeNullable(
               header['payment_method'] as String?),
           printJobId: header['print_job_id'] as String?,
+          status: (header['status'] as String?) ?? 'posted',
         ),
         items: itemRows.map((row) {
           return SalesInvoiceItemEntity(

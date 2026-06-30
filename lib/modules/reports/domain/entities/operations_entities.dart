@@ -9,6 +9,7 @@ class SalesHistoryRowEntity {
     required this.paidAmount,
     required this.paymentMethod,
     required this.printJobId,
+    this.status = 'posted',
   });
 
   final String saleId;
@@ -21,8 +22,12 @@ class SalesHistoryRowEntity {
   final String? paymentMethod;
   final String? printJobId;
 
+  /// Lifecycle status from the sales table: 'posted' or 'void'.
+  final String status;
+
   double get remainingBalance => (total - paidAmount).clamp(0, double.infinity);
   bool get isPaid => remainingBalance <= 0;
+  bool get isVoid => status == 'void';
 }
 
 class SalesInvoiceItemEntity {
