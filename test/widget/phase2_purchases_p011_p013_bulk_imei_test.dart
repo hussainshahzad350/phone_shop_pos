@@ -142,6 +142,10 @@ class _StubPurchaseRepository implements PurchaseRepository {
   int get createPurchaseCallCount => _createPurchaseCallCount;
 
   @override
+  Future<Result<String>> peekNextInvoiceNumber() async =>
+      const Success<String>('PUR-00000000-0001');
+
+  @override
   Future<Result<bool>> isImeiUnique(String imei) async {
     return Success<bool>(!_existingImeis.contains(imei.trim()));
   }

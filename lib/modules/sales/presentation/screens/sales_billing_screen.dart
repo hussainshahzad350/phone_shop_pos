@@ -7,6 +7,7 @@ import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
+import 'package:phone_shop_pos/core/routing/current_route_provider.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
@@ -240,6 +241,9 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     ref.invalidate(customerSearchResultsProvider);
     AppNotifier.info('Sales screen refreshed.');
   }
+
+  bool _isSalesPath(String path) =>
+      path == '/sales' || path.startsWith('/sales/');
 
   bool _requiresRegisteredCustomerForCredit({
     required String? selectedCustomerId,
@@ -481,6 +485,14 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     ref.listen<AppShortcutEventState>(appShortcutEventBusProvider,
         (previous, next) {
       _handleGlobalShortcut(next);
+    });
+    ref.listen<String>(currentRoutePathProvider, (previous, next) {
+      final leftSales = previous != null &&
+          _isSalesPath(previous) &&
+          !_isSalesPath(next);
+      if (leftSales) {
+        ref.read(billingStateProvider.notifier).clearPaymentInputs();
+      }
     });
 
     final cartItems = ref.watch(cartStateProvider);

@@ -6,7 +6,13 @@ import 'package:phone_shop_pos/core/config/business_configuration_providers.dart
 import 'package:phone_shop_pos/core/config/business_profile.dart';
 import 'package:phone_shop_pos/core/config/feature_access.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_navigation_shell.dart';
+import 'package:phone_shop_pos/core/widgets/route_reset_boundary.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/providers/local_pin_auth_providers.dart';
+import 'package:phone_shop_pos/modules/inventory/presentation/providers/brand_providers.dart';
+import 'package:phone_shop_pos/modules/inventory/presentation/providers/product_management_providers.dart';
+import 'package:phone_shop_pos/modules/reports/application/providers/report_filter_providers.dart';
+import 'package:phone_shop_pos/modules/reports/application/providers/report_state_providers.dart';
+import 'package:phone_shop_pos/modules/repairing/presentation/providers/repairing_providers.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/screens/login_screen.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/screens/welcome_screen.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/screens/dashboard_screen.dart';
@@ -103,7 +109,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: <RouteBase>[
               GoRoute(
                 path: '/dashboard',
-                builder: (context, state) => const DashboardScreen(),
+                builder: (context, state) => const RouteResetBoundary(
+                  routePath: '/dashboard',
+                  child: DashboardScreen(),
+                ),
               ),
             ],
           ),
@@ -127,7 +136,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: <RouteBase>[
               GoRoute(
                 path: '/inventory',
-                builder: (context, state) => const InventoryScreen(),
+                builder: (context, state) => const RouteResetBoundary(
+                  routePath: '/inventory',
+                  child: InventoryScreen(),
+                ),
               ),
             ],
           ),
@@ -135,7 +147,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: <RouteBase>[
               GoRoute(
                 path: '/master-data',
-                builder: (context, state) => const MasterDataScreen(),
+                builder: (context, state) => RouteResetBoundary(
+                  routePath: '/master-data',
+                  onReset: (ref) {
+                    ref.invalidate(brandSearchQueryProvider);
+                    ref.invalidate(brandIncludeInactiveProvider);
+                    ref.invalidate(productManagementSearchQueryProvider);
+                    ref.invalidate(productManagementTypeFilterProvider);
+                  },
+                  child: const MasterDataScreen(),
+                ),
               ),
             ],
           ),
@@ -143,7 +164,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: <RouteBase>[
               GoRoute(
                 path: '/dealer-issues',
-                builder: (context, state) => const DealerIssueScreen(),
+                builder: (context, state) => const RouteResetBoundary(
+                  routePath: '/dealer-issues',
+                  child: DealerIssueScreen(),
+                ),
               ),
             ],
           ),
@@ -151,7 +175,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: <RouteBase>[
               GoRoute(
                 path: '/repairing',
-                builder: (context, state) => const RepairingScreen(),
+                builder: (context, state) => RouteResetBoundary(
+                  routePath: '/repairing',
+                  onReset: (ref) {
+                    ref.invalidate(repairJobsSearchQueryProvider);
+                    ref.invalidate(repairJobsStatusFilterProvider);
+                  },
+                  child: const RepairingScreen(),
+                ),
               ),
             ],
           ),
@@ -159,7 +190,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: <RouteBase>[
               GoRoute(
                 path: '/reports',
-                builder: (context, state) => const ReportsScreen(),
+                builder: (context, state) => RouteResetBoundary(
+                  routePath: '/reports',
+                  onReset: (ref) {
+                    ref.invalidate(selectedReportsTabProvider);
+                    ref.invalidate(reportFilterProvider);
+                  },
+                  child: const ReportsScreen(),
+                ),
               ),
             ],
           ),

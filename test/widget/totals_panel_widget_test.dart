@@ -63,7 +63,8 @@ void main() {
     expect(tax, 3);
   });
 
-  testWidgets('totals panel shows received and change when overpaid', (
+  testWidgets(
+      'totals panel shows total, remaining and change (no received line)', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -85,8 +86,10 @@ void main() {
       ),
     );
 
-    expect(find.text('Received'), findsOneWidget);
-    expect(find.text('Applied'), findsNothing);
+    // "Received" line was removed; order is Total, Remaining, Change.
+    expect(find.text('Received'), findsNothing);
+    expect(find.text('Total'), findsOneWidget);
+    expect(find.text('Remaining'), findsOneWidget);
     expect(find.text('Change'), findsOneWidget);
     expect(find.textContaining('PKR'), findsWidgets);
   });

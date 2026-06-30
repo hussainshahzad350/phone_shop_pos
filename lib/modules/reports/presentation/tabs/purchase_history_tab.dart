@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:phone_shop_pos/core/errors/app_error.dart';
+import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_date_filter_button.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_card_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_row.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_tab_error_view.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_section_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
@@ -15,9 +16,14 @@ class PurchaseHistoryTab extends ConsumerWidget {
   const PurchaseHistoryTab({
     super.key,
     required this.onOpenPurchaseDetail,
+    required this.onCancelPurchase,
   });
 
   final Future<void> Function(String purchaseId) onOpenPurchaseDetail;
+  final Future<void> Function(String purchaseId, String status)
+      onCancelPurchase;
+
+  static const double _actionIconSize = 18;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -113,7 +119,27 @@ class PurchaseHistoryTab extends ConsumerWidget {
                   Expanded(
                     child: ReportTableSection(
                       title: 'Purchase History',
-                      child: AppDataTable(
+                      subtitle:
+                          'Purchases received with supplier payment status.',
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          // Flex the Supplier column so the table fills the card
+                          // width instead of floating as a narrow block.
+                          const fixedColumnsWidth = 48 +
+                              130 +
+                              110 +
+                              120 +
+                              120 +
+                              130 +
+                              100 +
+                              110 +
+                              132;
+                          final buffer = 48 + (9 * layout.columnSpacing) + 80;
+                          final double supplierWidth =
+                              (constraints.maxWidth - fixedColumnsWidth - buffer)
+                                  .clamp(200.0, 520.0)
+                                  .toDouble();
+                          return AppDataTable(
                         columnSpacing: layout.columnSpacing,
                         dataRowMinHeight: layout.dataRowMinHeight,
                         dataRowMaxHeight: layout.dataRowMaxHeight,
@@ -129,6 +155,13 @@ class PurchaseHistoryTab extends ConsumerWidget {
                           DataColumn(
                             label: reportStyledTableHeaderCell(
                               context,
+                              'Invoice',
+                              width: 130,
+                            ),
+                          ),
+                          DataColumn(
+                            label: reportStyledTableHeaderCell(
+                              context,
                               'Date',
                               width: 110,
                             ),
@@ -137,42 +170,55 @@ class PurchaseHistoryTab extends ConsumerWidget {
                             label: reportStyledTableHeaderCell(
                               context,
                               'Supplier / Seller',
-                              width: 220,
+                              width: supplierWidth,
                             ),
                           ),
                           DataColumn(
-                            label: reportStyledTableHeaderCell(
-                              context,
-                              'Invoice',
-                              width: 130,
-                            ),
-                          ),
-                          DataColumn(
+                            numeric: true,
                             label: reportStyledTableHeaderCell(
                               context,
                               'Total (PKR)',
                               width: 120,
+                              textAlign: TextAlign.right,
                             ),
                           ),
                           DataColumn(
+                            numeric: true,
                             label: reportStyledTableHeaderCell(
                               context,
                               'Paid (PKR)',
                               width: 120,
+                              textAlign: TextAlign.right,
+                            ),
+                          ),
+                          DataColumn(
+                            numeric: true,
+                            label: reportStyledTableHeaderCell(
+                              context,
+                              'Balance (PKR)',
+                              width: 130,
+                              textAlign: TextAlign.right,
                             ),
                           ),
                           DataColumn(
                             label: reportStyledTableHeaderCell(
                               context,
-                              'Balance (PKR)',
-                              width: 130,
+                              'Payment',
+                              width: 100,
+                            ),
+                          ),
+                          DataColumn(
+                            label: reportStyledTableHeaderCell(
+                              context,
+                              'Status',
+                              width: 110,
                             ),
                           ),
                           DataColumn(
                             label: reportStyledTableHeaderCell(
                               context,
                               'Actions',
-                              width: 90,
+                              width: 132,
                             ),
                           ),
                         ],
@@ -188,6 +234,12 @@ class PurchaseHistoryTab extends ConsumerWidget {
                               ),
                               DataCell(
                                 reportStyledTableCell(
+                                  row.invoiceNumber ?? '-',
+                                  width: 130,
+                                ),
+                              ),
+                              DataCell(
+                                reportStyledTableCell(
                                   FormattingHelpers.dateYmd(row.purchaseDate),
                                   width: 110,
                                 ),
@@ -196,46 +248,109 @@ class PurchaseHistoryTab extends ConsumerWidget {
                                 reportStyledTableCell(
                                   row.supplierName,
                                   subtitle: row.sellerName,
-                                  width: 220,
-                                ),
-                              ),
-                              DataCell(
-                                reportStyledTableCell(
-                                  row.invoiceNumber ?? '-',
-                                  width: 130,
+                                  width: supplierWidth,
                                 ),
                               ),
                               DataCell(
                                 reportStyledTableCell(
                                   FormattingHelpers.decimal(row.total),
                                   width: 120,
+                                  textAlign: TextAlign.right,
                                 ),
                               ),
                               DataCell(
                                 reportStyledTableCell(
                                   FormattingHelpers.decimal(row.paidAmount),
                                   width: 120,
+                                  textAlign: TextAlign.right,
+                                ),
+                              ),
+                              DataCell(
+                                reportSemanticPill(
+                                  context,
+                                  FormattingHelpers.decimal(
+                                      row.remainingBalance),
+                                  row.remainingBalance > 0.009
+                                      ? ReportPillIntent.warning
+                                      : ReportPillIntent.success,
+                                  width: 130,
+                                  alignEnd: true,
                                 ),
                               ),
                               DataCell(
                                 reportStyledTableCell(
-                                  FormattingHelpers.decimal(row.remainingBalance),
-                                  width: 130,
+                                  _paymentMethodLabel(row.paymentMethod),
+                                  width: 100,
                                 ),
                               ),
                               DataCell(
-                                IconButton.filledTonal(
-                                  tooltip: 'Open',
-                                  onPressed: () => onOpenPurchaseDetail(
-                                    row.purchaseId,
+                                reportStatusPill(
+                                  context,
+                                  row.paymentStatus,
+                                  width: 110,
+                                ),
+                              ),
+                              DataCell(
+                                SizedBox(
+                                  width: 132,
+                                  child: PopupMenuButton<String>(
+                                    tooltip: 'Actions',
+                                    icon: const Icon(Icons.more_vert,
+                                        size: _actionIconSize),
+                                    onSelected: (value) {
+                                      switch (value) {
+                                        case 'view':
+                                          onOpenPurchaseDetail(row.purchaseId);
+                                        case 'cancel':
+                                          onCancelPurchase(
+                                              row.purchaseId, row.status);
+                                      }
+                                    },
+                                    itemBuilder: (context) =>
+                                        <PopupMenuEntry<String>>[
+                                      const PopupMenuItem<String>(
+                                        value: 'view',
+                                        child: Row(
+                                          children: <Widget>[
+                                            Icon(Icons.open_in_new, size: 16),
+                                            SizedBox(width: 8),
+                                            Text('View Purchase'),
+                                          ],
+                                        ),
+                                      ),
+                                      if (!row.isVoid)
+                                        PopupMenuItem<String>(
+                                          value: 'cancel',
+                                          child: Row(
+                                            children: <Widget>[
+                                              Icon(
+                                                Icons.cancel_outlined,
+                                                size: 16,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .error,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Cancel Purchase',
+                                                style: TextStyle(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .error,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
                                   ),
-                                  icon: const Icon(Icons.open_in_new, size: 18),
-                                  visualDensity: VisualDensity.compact,
                                 ),
                               ),
                             ],
                           );
                         }).toList(growable: false),
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -243,7 +358,7 @@ class PurchaseHistoryTab extends ConsumerWidget {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, __) => _TabErrorView(
+            error: (error, __) => ReportTabErrorView(
               message: 'Failed to load purchase history.',
               error: error,
               onRetry: () => ref.invalidate(purchaseHistoryRowsProvider),
@@ -255,53 +370,9 @@ class PurchaseHistoryTab extends ConsumerWidget {
   }
 }
 
-class _TabErrorView extends StatelessWidget {
-  const _TabErrorView({
-    required this.message,
-    required this.error,
-    required this.onRetry,
-  });
-
-  final String message;
-  final Object error;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final description = error is AppError
-        ? error.toString()
-        : 'Unexpected error: ${error.toString()}';
-
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  message,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                Text(description),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: OutlinedButton.icon(
-                    onPressed: onRetry,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+String _paymentMethodLabel(String? paymentMethod) {
+  final normalized = PaymentMethod.normalizeNullable(paymentMethod);
+  return normalized == null
+      ? '-'
+      : PaymentMethod.labels[normalized] ?? normalized;
 }
