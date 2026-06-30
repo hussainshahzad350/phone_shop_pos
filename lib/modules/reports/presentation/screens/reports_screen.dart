@@ -24,6 +24,8 @@ import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_heade
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_pagination_bar.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_tab_chips.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/providers/purchase_repository_provider.dart';
+import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_query_providers.dart';
+import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_repository_provider.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
@@ -114,6 +116,7 @@ class ReportsScreen extends ConsumerWidget {
           ref
               .read(reportWorkflowCoordinatorProvider)
               .refreshSalesAfterReturn(saleId: saleId);
+          _invalidateStockViews(ref);
         },
         onFailure: AppNotifier.errorFromAppError,
       );
@@ -200,12 +203,25 @@ class ReportsScreen extends ConsumerWidget {
           ref
               .read(reportWorkflowCoordinatorProvider)
               .refreshPurchaseAfterReturn(purchaseId);
+          _invalidateStockViews(ref);
         },
         onFailure: AppNotifier.errorFromAppError,
       );
     } finally {
       reasonController.dispose();
     }
+  }
+
+  /// Refresh the Inventory and Dashboard views after a void reverses stock.
+  /// The report workflow coordinator only refreshes report-scoped providers,
+  /// so without this the cancelled stock keeps showing on the Inventory screen
+  /// and Dashboard KPIs (which are kept alive by the navigation shell).
+  void _invalidateStockViews(WidgetRef ref) {
+    ref.invalidate(inventorySummaryProvider);
+    ref.invalidate(stockRowsProvider);
+    ref.invalidate(lowStockProvider);
+    ref.invalidate(dashboardKpisProvider);
+    ref.invalidate(dashboardLowStockProvider);
   }
 
   Future<void> _showPurchaseDetailDialog(

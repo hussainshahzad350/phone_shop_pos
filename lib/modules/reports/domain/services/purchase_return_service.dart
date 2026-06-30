@@ -41,6 +41,20 @@ class PurchaseReturnService with BaseRepositoryGuard {
       final now = DateTimeHelpers.nowUtc();
 
       await _appDatabase.runInTransaction<void>((transaction) async {
+        // Block returns against a cancelled (voided) purchase. Voiding already
+        // reversed the received stock, so a return would double-count it.
+        final purchaseStatusRows = await transaction.query(
+          TableNames.purchases,
+          columns: <String>['status'],
+          where: 'id = ?',
+          whereArgs: <Object?>[purchaseId],
+          limit: 1,
+        );
+        if (purchaseStatusRows.isNotEmpty &&
+            (purchaseStatusRows.first['status'] as String?) == 'void') {
+          throw StateError('Cannot return items from a cancelled purchase.');
+        }
+
         final purchaseItemRows = await transaction.query(
           TableNames.purchaseItems,
           columns: <String>['unit_cost'],
