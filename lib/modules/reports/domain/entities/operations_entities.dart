@@ -9,6 +9,7 @@ class SalesHistoryRowEntity {
     required this.paidAmount,
     required this.paymentMethod,
     required this.printJobId,
+    this.status = 'posted',
   });
 
   final String saleId;
@@ -21,8 +22,12 @@ class SalesHistoryRowEntity {
   final String? paymentMethod;
   final String? printJobId;
 
+  /// Lifecycle status from the sales table: 'posted' or 'void'.
+  final String status;
+
   double get remainingBalance => (total - paidAmount).clamp(0, double.infinity);
   bool get isPaid => remainingBalance <= 0;
+  bool get isVoid => status == 'void';
 }
 
 class SalesInvoiceItemEntity {
@@ -74,6 +79,8 @@ class PurchaseHistoryRowEntity {
     required this.invoiceNumber,
     required this.total,
     required this.paidAmount,
+    this.paymentMethod,
+    this.status = 'posted',
   });
 
   final String purchaseId;
@@ -84,7 +91,30 @@ class PurchaseHistoryRowEntity {
   final double total;
   final double paidAmount;
 
+  /// Stored purchase payment method (cash/card/bank/credit). Null when unset.
+  final String? paymentMethod;
+
+  /// Lifecycle status from the purchases table: 'posted' or 'void'.
+  final String status;
+
   double get remainingBalance => (total - paidAmount).clamp(0, double.infinity);
+
+  bool get isVoid => status == 'void';
+
+  /// Payment status derived from amounts, with void taking precedence. Mirrors
+  /// the Daily Sales status pill (paid / partial / pending / void).
+  String get paymentStatus {
+    if (isVoid) {
+      return 'void';
+    }
+    if (paidAmount >= total - 0.009) {
+      return 'paid';
+    }
+    if (paidAmount > 0.009) {
+      return 'partial';
+    }
+    return 'pending';
+  }
 }
 
 class PurchaseHistoryItemEntity {

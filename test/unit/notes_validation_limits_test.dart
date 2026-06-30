@@ -255,6 +255,10 @@ class _FakePurchaseRepository implements PurchaseRepository {
   }
 
   @override
+  Future<Result<String>> peekNextInvoiceNumber() async =>
+      const Success<String>('PUR-00000000-0001');
+
+  @override
   Future<Result<bool>> isImeiUnique(String imei) async {
     return const Success<bool>(true);
   }

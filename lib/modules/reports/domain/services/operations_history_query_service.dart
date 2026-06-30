@@ -130,6 +130,7 @@ class OperationsHistoryQueryService with BaseRepositoryGuard {
           s.total,
           s.paid_amount,
           s.payment_method,
+          s.status,
           pj.id AS print_job_id,
           s.notes
         FROM ${TableNames.sales} s
@@ -183,6 +184,7 @@ class OperationsHistoryQueryService with BaseRepositoryGuard {
           paymentMethod: PaymentMethod.normalizeNullable(
               header['payment_method'] as String?),
           printJobId: header['print_job_id'] as String?,
+          status: (header['status'] as String?) ?? 'posted',
         ),
         items: itemRows.map((row) {
           return SalesInvoiceItemEntity(
@@ -269,7 +271,9 @@ class OperationsHistoryQueryService with BaseRepositoryGuard {
             ) AS seller_name,
             p.invoice_number,
             p.total,
-            p.paid_amount
+            p.paid_amount,
+            p.payment_method,
+            p.status
           FROM ${TableNames.purchases} p
           LEFT JOIN ${TableNames.suppliers} sp ON sp.id = p.supplier_id
           WHERE ${whereClauses.join(' AND ')}
@@ -289,6 +293,8 @@ class OperationsHistoryQueryService with BaseRepositoryGuard {
           invoiceNumber: row['invoice_number'] as String?,
           total: (row['total'] as num?)?.toDouble() ?? 0,
           paidAmount: (row['paid_amount'] as num?)?.toDouble() ?? 0,
+          paymentMethod: row['payment_method'] as String?,
+          status: (row['status'] as String?) ?? 'posted',
         );
       }).toList(growable: false);
     }, operation: 'search_purchase_history');
@@ -318,6 +324,7 @@ class OperationsHistoryQueryService with BaseRepositoryGuard {
           p.invoice_number,
           p.total,
           p.paid_amount,
+          p.status,
           p.notes
         FROM ${TableNames.purchases} p
         LEFT JOIN ${TableNames.suppliers} sp ON sp.id = p.supplier_id
@@ -367,6 +374,7 @@ class OperationsHistoryQueryService with BaseRepositoryGuard {
           invoiceNumber: header['invoice_number'] as String?,
           total: (header['total'] as num?)?.toDouble() ?? 0,
           paidAmount: (header['paid_amount'] as num?)?.toDouble() ?? 0,
+          status: (header['status'] as String?) ?? 'posted',
         ),
         items: itemRows.map((row) {
           return PurchaseHistoryItemEntity(

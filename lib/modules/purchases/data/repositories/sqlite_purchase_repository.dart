@@ -122,6 +122,32 @@ class SqlitePurchaseRepository
   }
 
   @override
+  Future<Result<String>> peekNextInvoiceNumber() {
+    return guard<String>(() async {
+      final dateDigits = _invoiceDateDigits(DateTimeHelpers.nowUtc());
+      final dateKey = 'PUR-$dateDigits';
+      await _appDatabase.database.execute('''
+        CREATE TABLE IF NOT EXISTS ${TableNames.invoiceSequences} (
+          date_key TEXT PRIMARY KEY NOT NULL,
+          last_seq INTEGER NOT NULL DEFAULT 0
+        );
+      ''');
+      final rows = await _appDatabase.database.rawQuery(
+        'SELECT last_seq FROM ${TableNames.invoiceSequences} WHERE date_key = ?',
+        <Object?>[dateKey],
+      );
+      final lastSeq =
+          rows.isEmpty ? 0 : (rows.first['last_seq'] as num?)?.toInt() ?? 0;
+      return 'PUR-$dateDigits-${(lastSeq + 1).toString().padLeft(4, '0')}';
+    }, operation: 'peek_purchase_invoice');
+  }
+
+  String _invoiceDateDigits(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}'
+      '${date.month.toString().padLeft(2, '0')}'
+      '${date.day.toString().padLeft(2, '0')}';
+
+  @override
   Future<Result<bool>> isImeiUnique(String imei) {
     return guard<bool>(() async {
       final trimmedImei = ImeiHelpers.normalize(imei);
@@ -213,9 +239,50 @@ class SqlitePurchaseRepository
 
       int serializedCount = 0;
       int quantityCount = 0;
+      late String resolvedInvoiceNumber;
 
       await _appDatabase.runInTransaction<void>((transaction) async {
-        await transaction.insert(TableNames.purchases, purchaseModel.toMap());
+        // Resolve the invoice number: honor a user-supplied value, otherwise
+        // generate a systematic PUR-YYYYMMDD-#### number atomically via the
+        // invoice_sequences table (mirrors the sales invoice strategy).
+        final userInvoice = invoiceNumber?.trim();
+        if (userInvoice != null && userInvoice.isNotEmpty) {
+          resolvedInvoiceNumber = userInvoice;
+        } else {
+          await transaction.execute('''
+            CREATE TABLE IF NOT EXISTS ${TableNames.invoiceSequences} (
+              date_key TEXT PRIMARY KEY NOT NULL,
+              last_seq INTEGER NOT NULL DEFAULT 0
+            );
+          ''');
+          final dateDigits = _invoiceDateDigits(now);
+          final dateKey = 'PUR-$dateDigits';
+          await transaction.rawInsert(
+            'INSERT OR IGNORE INTO ${TableNames.invoiceSequences} '
+            '(date_key, last_seq) VALUES (?, 0)',
+            <Object?>[dateKey],
+          );
+          await transaction.rawUpdate(
+            'UPDATE ${TableNames.invoiceSequences} '
+            'SET last_seq = last_seq + 1 WHERE date_key = ?',
+            <Object?>[dateKey],
+          );
+          final seqRows = await transaction.rawQuery(
+            'SELECT last_seq FROM ${TableNames.invoiceSequences} '
+            'WHERE date_key = ?',
+            <Object?>[dateKey],
+          );
+          if (seqRows.isEmpty) {
+            throw StateError('Purchase invoice number could not be generated.');
+          }
+          final seq = (seqRows.first['last_seq'] as num).toInt();
+          resolvedInvoiceNumber =
+              'PUR-$dateDigits-${seq.toString().padLeft(4, '0')}';
+        }
+
+        final purchaseMap = purchaseModel.toMap();
+        purchaseMap['invoice_number'] = resolvedInvoiceNumber;
+        await transaction.insert(TableNames.purchases, purchaseMap);
         if (_ledgerPostingService != null &&
             supplierId != null &&
             supplierId.trim().isNotEmpty) {
@@ -412,7 +479,7 @@ class SqlitePurchaseRepository
 
       return PurchaseCompletionEntity(
         purchaseId: purchaseId,
-        invoiceNumber: invoiceNumber,
+        invoiceNumber: resolvedInvoiceNumber,
         total: total,
         serializedItemCount: serializedCount,
         quantityItemCount: quantityCount,

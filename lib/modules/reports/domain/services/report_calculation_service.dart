@@ -60,22 +60,26 @@ class ReportCalculationService {
   static DailySalesPageSummary buildDailySalesPageSummary(
     List<SalesReportRowEntity> rows,
   ) {
+    // Cancelled (void) sales remain visible in the table but must not count
+    // toward sales totals/invoice counts.
+    final active =
+        rows.where((row) => row.status != 'void').toList(growable: false);
     return DailySalesPageSummary(
-      totalInvoices: rows.length,
-      totalDays: rows
+      totalInvoices: active.length,
+      totalDays: active
           .map(
             (row) => '${row.saleDate.year}-${row.saleDate.month}-${row.saleDate.day}',
           )
           .toSet()
           .length,
-      totalCustomers: rows
+      totalCustomers: active
           .map((row) => row.customerName.trim())
           .where((name) => name.isNotEmpty)
           .toSet()
           .length,
-      sumTotal: rows.fold<double>(0, (sum, row) => sum + row.total),
-      sumPaid: rows.fold<double>(0, (sum, row) => sum + row.paidAmount),
-      sumBalance: rows.fold<double>(0, (sum, row) => sum + row.balance),
+      sumTotal: active.fold<double>(0, (sum, row) => sum + row.total),
+      sumPaid: active.fold<double>(0, (sum, row) => sum + row.paidAmount),
+      sumBalance: active.fold<double>(0, (sum, row) => sum + row.balance),
     );
   }
 
@@ -92,7 +96,7 @@ class ReportCalculationService {
             FormattingHelpers.decimal(row.paidAmount),
             FormattingHelpers.decimal(row.balance),
             row.paymentMethod ?? '-',
-            row.status,
+            row.status == 'void' ? 'Cancelled' : row.status,
           ],
         )
         .toList(growable: false);
@@ -101,10 +105,13 @@ class ReportCalculationService {
   static PurchaseHistoryPageSummary buildPurchaseHistoryPageSummary(
     List<PurchaseHistoryRowEntity> rows,
   ) {
+    // Cancelled (void) purchases stay visible but are no longer owed, so they
+    // are excluded from purchase totals.
+    final active = rows.where((row) => !row.isVoid).toList(growable: false);
     return PurchaseHistoryPageSummary(
-      totalPurchases: rows.length,
-      sumTotal: rows.fold<double>(0, (sum, row) => sum + row.total),
-      sumBalance: rows.fold<double>(
+      totalPurchases: active.length,
+      sumTotal: active.fold<double>(0, (sum, row) => sum + row.total),
+      sumBalance: active.fold<double>(
         0,
         (sum, row) => sum + row.remainingBalance,
       ),

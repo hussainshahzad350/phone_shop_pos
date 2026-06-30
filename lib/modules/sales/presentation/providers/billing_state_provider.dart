@@ -93,6 +93,18 @@ class BillingStateNotifier extends StateNotifier<BillingState> {
   void resetAfterSale() {
     state = BillingState();
   }
+
+  /// Clears the typed amount inputs (discount, tax, paid, notes) while leaving
+  /// the cart, customer, and payment method untouched. Used when the user
+  /// navigates away from the screen so stale amounts don't linger on return.
+  void clearPaymentInputs() {
+    state = state.copyWith(
+      discount: 0,
+      tax: 0,
+      paidAmount: 0,
+      notes: '',
+    );
+  }
 }
 
 final billingStateProvider = StateNotifierProvider<BillingStateNotifier, BillingState>(

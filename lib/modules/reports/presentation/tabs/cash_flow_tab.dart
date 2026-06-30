@@ -118,54 +118,62 @@ class CashFlowTab extends ConsumerWidget {
                                 width: 105),
                           ),
                           DataColumn(
+                            numeric: true,
                             label: reportStyledTableHeaderCell(
                                 context, 'Cash Sales In (PKR)',
-                                width: 140),
+                                width: 140, textAlign: TextAlign.right),
                           ),
                           DataColumn(
+                            numeric: true,
                             label: reportStyledTableHeaderCell(
                                 context, 'Collections In (PKR)',
-                                width: 145),
+                                width: 145, textAlign: TextAlign.right),
                           ),
                           DataColumn(
+                            numeric: true,
                             label: reportStyledTableHeaderCell(
                                 context, 'Total Cash In (PKR)',
-                                width: 140),
+                                width: 140, textAlign: TextAlign.right),
                           ),
                           DataColumn(
+                            numeric: true,
                             label: reportStyledTableHeaderCell(
                                 context, 'Purchase Refunds In (PKR)',
-                                width: 175),
+                                width: 175, textAlign: TextAlign.right),
                           ),
                           DataColumn(
+                            numeric: true,
                             label: reportStyledTableHeaderCell(
                                 context, 'Cash Refunds Out (PKR)',
-                                width: 160),
+                                width: 160, textAlign: TextAlign.right),
                           ),
                           DataColumn(
+                            numeric: true,
                             label: reportStyledTableHeaderCell(
                                 context, 'Purchases Paid Out (PKR)',
-                                width: 175),
+                                width: 175, textAlign: TextAlign.right),
                           ),
                           DataColumn(
+                            numeric: true,
                             label: reportStyledTableHeaderCell(
                                 context, 'Expenses Out (PKR)',
-                                width: 145),
+                                width: 145, textAlign: TextAlign.right),
                           ),
                           DataColumn(
+                            numeric: true,
                             label: reportStyledTableHeaderCell(
                                 context, 'Total Cash Out (PKR)',
-                                width: 145),
+                                width: 145, textAlign: TextAlign.right),
                           ),
                           DataColumn(
+                            numeric: true,
                             label: reportStyledTableHeaderCell(
                                 context, 'Net Cash (PKR)',
-                                width: 130),
+                                width: 130, textAlign: TextAlign.right),
                           ),
                         ],
                         rows: rows.asMap().entries.map((entry) {
                           final row = entry.value;
-                          final colorScheme = Theme.of(context).colorScheme;
                           final isNegative = row.netCash < 0;
                           return DataRow(
                             cells: <DataCell>[
@@ -175,47 +183,40 @@ class CashFlowTab extends ConsumerWidget {
                                   reportStyledTableCell(row.day, width: 105)),
                               DataCell(reportStyledTableCell(
                                   FormattingHelpers.decimal(row.cashSalesIn),
-                                  width: 140)),
+                                  width: 140, textAlign: TextAlign.right)),
                               DataCell(reportStyledTableCell(
                                   FormattingHelpers.decimal(
                                       row.cashCollectionsIn),
-                                  width: 145)),
+                                  width: 145, textAlign: TextAlign.right)),
                               DataCell(reportStyledTableCell(
                                   FormattingHelpers.decimal(row.totalCashIn),
-                                  width: 140)),
+                                  width: 140, textAlign: TextAlign.right)),
                               DataCell(reportStyledTableCell(
                                   FormattingHelpers.decimal(
                                       row.purchaseRefundsIn),
-                                  width: 175)),
+                                  width: 175, textAlign: TextAlign.right)),
                               DataCell(reportStyledTableCell(
                                   FormattingHelpers.decimal(row.cashRefundsOut),
-                                  width: 160)),
+                                  width: 160, textAlign: TextAlign.right)),
                               DataCell(reportStyledTableCell(
                                   FormattingHelpers.decimal(
                                       row.purchasePaymentsOut),
-                                  width: 175)),
+                                  width: 175, textAlign: TextAlign.right)),
                               DataCell(reportStyledTableCell(
                                   FormattingHelpers.decimal(row.expensesOut),
-                                  width: 145)),
+                                  width: 145, textAlign: TextAlign.right)),
                               DataCell(reportStyledTableCell(
                                   FormattingHelpers.decimal(row.totalCashOut),
-                                  width: 145)),
+                                  width: 145, textAlign: TextAlign.right)),
                               DataCell(
-                                SizedBox(
+                                reportSemanticPill(
+                                  context,
+                                  FormattingHelpers.decimal(row.netCash),
+                                  isNegative
+                                      ? ReportPillIntent.danger
+                                      : ReportPillIntent.success,
                                   width: 130,
-                                  child: Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: reportStyledStatusCell(
-                                      context,
-                                      FormattingHelpers.decimal(row.netCash),
-                                      isNegative
-                                          ? colorScheme.errorContainer
-                                          : colorScheme.primaryContainer,
-                                      isNegative
-                                          ? colorScheme.onErrorContainer
-                                          : colorScheme.onPrimaryContainer,
-                                    ),
-                                  ),
+                                  alignEnd: true,
                                 ),
                               ),
                             ],

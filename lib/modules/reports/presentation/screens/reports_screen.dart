@@ -23,6 +23,9 @@ import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_filte
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_header.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_pagination_bar.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_tab_chips.dart';
+import 'package:phone_shop_pos/modules/purchases/presentation/providers/purchase_repository_provider.dart';
+import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_query_providers.dart';
+import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_repository_provider.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
@@ -113,6 +116,7 @@ class ReportsScreen extends ConsumerWidget {
           ref
               .read(reportWorkflowCoordinatorProvider)
               .refreshSalesAfterReturn(saleId: saleId);
+          _invalidateStockViews(ref);
         },
         onFailure: AppNotifier.errorFromAppError,
       );
@@ -131,6 +135,93 @@ class ReportsScreen extends ConsumerWidget {
       return;
     }
     AppNotifier.errorFromAppError(result.asFailure!.error);
+  }
+
+  Future<void> _cancelPurchase(
+    BuildContext context,
+    WidgetRef ref,
+    String purchaseId,
+    String status,
+  ) async {
+    if (status == 'void') {
+      AppNotifier.warning('This purchase is already cancelled.');
+      return;
+    }
+    final reasonController = TextEditingController();
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Cancel Purchase'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text(
+                'This will void the purchase and reverse received stock and '
+                'supplier ledger. Enter a reason:',
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: reasonController,
+                decoration: const InputDecoration(
+                  labelText: 'Reason',
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
+                onSubmitted: (_) => Navigator.of(dialogContext).pop(true),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Back'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Confirm Cancel'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !context.mounted) return;
+      final reason = reasonController.text.trim();
+      if (reason.isEmpty) {
+        AppNotifier.warning('Please provide a reason for cancelling.');
+        return;
+      }
+      final service = await ref.read(purchaseServiceProvider.future);
+      final result = await service.voidPurchase(
+        purchaseId: purchaseId,
+        voidReason: reason,
+      );
+      if (!context.mounted) return;
+      result.fold(
+        onSuccess: (_) {
+          AppNotifier.success('Purchase cancelled successfully.');
+          ref
+              .read(reportWorkflowCoordinatorProvider)
+              .refreshPurchaseAfterReturn(purchaseId);
+          _invalidateStockViews(ref);
+        },
+        onFailure: AppNotifier.errorFromAppError,
+      );
+    } finally {
+      reasonController.dispose();
+    }
+  }
+
+  /// Refresh the Inventory and Dashboard views after a void reverses stock.
+  /// The report workflow coordinator only refreshes report-scoped providers,
+  /// so without this the cancelled stock keeps showing on the Inventory screen
+  /// and Dashboard KPIs (which are kept alive by the navigation shell).
+  void _invalidateStockViews(WidgetRef ref) {
+    ref.invalidate(inventorySummaryProvider);
+    ref.invalidate(stockRowsProvider);
+    ref.invalidate(lowStockProvider);
+    ref.invalidate(dashboardKpisProvider);
+    ref.invalidate(dashboardLowStockProvider);
   }
 
   Future<void> _showPurchaseDetailDialog(
@@ -285,6 +376,8 @@ class ReportsScreen extends ConsumerWidget {
                         _showInvoiceDialog(context, saleId),
                     onOpenPurchaseDetail: (purchaseId) =>
                         _showPurchaseDetailDialog(context, purchaseId),
+                    onCancelPurchase: (purchaseId, status) =>
+                        _cancelPurchase(context, ref, purchaseId, status),
                     onReprint: (jobId) => _reprint(ref, jobId),
                     onCancelSale: (saleId, status) =>
                         _cancelSale(context, ref, saleId, status),
@@ -372,6 +465,7 @@ class _ReportContent extends ConsumerWidget {
     required this.tab,
     required this.onOpenInvoice,
     required this.onOpenPurchaseDetail,
+    required this.onCancelPurchase,
     required this.onReprint,
     required this.onCancelSale,
     required this.onOpenCustomerLedger,
@@ -381,6 +475,8 @@ class _ReportContent extends ConsumerWidget {
   final ReportsTab tab;
   final Future<void> Function(String saleId) onOpenInvoice;
   final Future<void> Function(String purchaseId) onOpenPurchaseDetail;
+  final Future<void> Function(String purchaseId, String status)
+      onCancelPurchase;
   final Future<void> Function(String jobId) onReprint;
   final Future<void> Function(String saleId, String status) onCancelSale;
   final Future<void> Function(PartySummaryCardEntity summary)
@@ -404,6 +500,7 @@ class _ReportContent extends ConsumerWidget {
       case ReportsTab.dailyPurchase:
         return PurchaseHistoryTab(
           onOpenPurchaseDetail: onOpenPurchaseDetail,
+          onCancelPurchase: onCancelPurchase,
         );
       case ReportsTab.supplierLedger:
         return SupplierLedgerTab(onOpenLedger: onOpenSupplierLedger);

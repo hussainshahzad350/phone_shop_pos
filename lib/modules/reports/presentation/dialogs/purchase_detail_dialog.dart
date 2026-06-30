@@ -25,10 +25,32 @@ class PurchaseDetailDialog extends ConsumerWidget {
               return const Text('Purchase not found.');
             }
             final layout = reportTableLayoutFor(context);
+            final isVoided = detail.purchase.status == 'void';
             return Column(
               mainAxisSize: MainAxisSize.max,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
+                if (isVoided) ...<Widget>[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'This purchase has been cancelled. Stock was reversed and '
+                      'returns are disabled.',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onErrorContainer,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 Wrap(
                   spacing: 12,
                   runSpacing: 8,
@@ -82,7 +104,7 @@ class PurchaseDetailDialog extends ConsumerWidget {
                           ),
                           DataCell(Text(item.returnedQty.toString())),
                           DataCell(
-                            item.returnableQty > 0
+                            (!isVoided && item.returnableQty > 0)
                                 ? TextButton(
                                     onPressed: () {
                                       showDialog<void>(

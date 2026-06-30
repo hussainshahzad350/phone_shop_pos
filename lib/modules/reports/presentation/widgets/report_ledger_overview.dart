@@ -70,73 +70,126 @@ class ReportLedgerOverview extends StatelessWidget {
           child: ReportTableSection(
             title: tableTitle,
             subtitle: title,
-            child: AppDataTable(
-              showCheckboxColumn: false,
-              emptyMessage: 'No ledger records found.',
-              columnSpacing: layout.columnSpacing,
-              dataRowMinHeight: layout.dataRowMinHeight,
-              dataRowMaxHeight: layout.dataRowMaxHeight,
-              columns: <DataColumn>[
-                DataColumn(
-                  label: reportStyledTableHeaderCell(
-                    context,
-                    partyHeader,
-                    width: 320,
-                  ),
-                ),
-                DataColumn(
-                  label: reportStyledTableHeaderCell(
-                    context,
-                    'Outstanding (PKR)',
-                    width: 160,
-                  ),
-                ),
-                DataColumn(
-                  label: reportStyledTableHeaderCell(
-                    context,
-                    'Open',
-                    width: 96,
-                  ),
-                ),
-              ],
-              rows: sorted.map((summary) {
-                void openAccount() => onOpenLedger(summary);
-                return DataRow(
-                  onSelectChanged: (selected) {
-                    if (selected != true) {
-                      return;
-                    }
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      openAccount();
-                    });
-                  },
-                  cells: <DataCell>[
-                    DataCell(
-                      reportStyledTableCell(
-                        displayName(summary.partyName),
-                        width: 320,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Fixed columns: # (48) + Outstanding (160) + Last activity
+                // (150) + Open (96). Let the party name column flex to fill the
+                // remaining width so the table spans the card instead of
+                // floating as a narrow block. A safety buffer covers the table's
+                // horizontal margins, column spacing and scrollbar so we never
+                // overflow into a horizontal scrollbar.
+                const fixedColumnsWidth = 48 + 160 + 150 + 96;
+                final buffer = 48 + (4 * layout.columnSpacing) + 80;
+                final double partyWidth =
+                    (constraints.maxWidth - fixedColumnsWidth - buffer)
+                        .clamp(240.0, 640.0)
+                        .toDouble();
+                return AppDataTable(
+                  showCheckboxColumn: false,
+                  emptyMessage: 'No ledger records found.',
+                  columnSpacing: layout.columnSpacing,
+                  dataRowMinHeight: layout.dataRowMinHeight,
+                  dataRowMaxHeight: layout.dataRowMaxHeight,
+                  columns: <DataColumn>[
+                    DataColumn(
+                      label: reportStyledTableHeaderCell(
+                        context,
+                        '#',
+                        width: 48,
                       ),
                     ),
-                    DataCell(
-                      reportStyledTableCell(
-                        FormattingHelpers.decimal(summary.outstanding),
+                    DataColumn(
+                      label: reportStyledTableHeaderCell(
+                        context,
+                        partyHeader,
+                        width: partyWidth,
+                      ),
+                    ),
+                    DataColumn(
+                      numeric: true,
+                      label: reportStyledTableHeaderCell(
+                        context,
+                        'Outstanding (PKR)',
                         width: 160,
+                        textAlign: TextAlign.right,
                       ),
                     ),
-                    DataCell(
-                      SizedBox(
+                    DataColumn(
+                      label: reportStyledTableHeaderCell(
+                        context,
+                        'Last Activity',
+                        width: 150,
+                      ),
+                    ),
+                    DataColumn(
+                      label: reportStyledTableHeaderCell(
+                        context,
+                        'Open',
                         width: 96,
-                        child: IconButton.filledTonal(
-                          tooltip: openLabel,
-                          onPressed: openAccount,
-                          icon: const Icon(Icons.chevron_right, size: 18),
-                          visualDensity: VisualDensity.compact,
-                        ),
                       ),
                     ),
                   ],
+                  rows: sorted.asMap().entries.map((entry) {
+                    final summary = entry.value;
+                    void openAccount() => onOpenLedger(summary);
+                    final lastActivity = summary.lastActivityAt;
+                    return DataRow(
+                      onSelectChanged: (selected) {
+                        if (selected != true) {
+                          return;
+                        }
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          openAccount();
+                        });
+                      },
+                      cells: <DataCell>[
+                        DataCell(
+                          reportStyledTableCell(
+                            '${entry.key + 1}',
+                            width: 48,
+                          ),
+                        ),
+                        DataCell(
+                          reportStyledTableCell(
+                            displayName(summary.partyName),
+                            width: partyWidth,
+                          ),
+                        ),
+                        DataCell(
+                          reportSemanticPill(
+                            context,
+                            FormattingHelpers.decimal(summary.outstanding),
+                            summary.outstanding > 0.009
+                                ? ReportPillIntent.warning
+                                : ReportPillIntent.success,
+                            width: 160,
+                            alignEnd: true,
+                          ),
+                        ),
+                        DataCell(
+                          reportStyledTableCell(
+                            lastActivity == null
+                                ? '-'
+                                : FormattingHelpers.dateYmd(lastActivity),
+                            width: 150,
+                          ),
+                        ),
+                        DataCell(
+                          SizedBox(
+                            width: 96,
+                            child: IconButton.filledTonal(
+                              tooltip: openLabel,
+                              onPressed: openAccount,
+                              icon: const Icon(Icons.chevron_right, size: 18),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(growable: false),
                 );
-              }).toList(growable: false),
+              },
             ),
           ),
         ),

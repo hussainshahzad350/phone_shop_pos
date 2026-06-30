@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
+import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
+import 'package:phone_shop_pos/core/routing/current_route_provider.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
@@ -12,13 +14,14 @@ import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
-import 'package:phone_shop_pos/modules/purchases/domain/entities/supplier_option_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/providers/purchase_form_state_provider.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/providers/purchase_query_providers.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/providers/purchase_repository_provider.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/providers/purchase_totals_provider.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/widgets/imei_entry_widget.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/widgets/purchase_items_table.dart';
+import 'package:phone_shop_pos/modules/purchases/presentation/widgets/supplier_selector_widget.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/dialogs/purchase_detail_dialog.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_query_providers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
@@ -35,28 +38,24 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   final TextEditingController _productSearchController =
       TextEditingController();
   final FocusNode _productSearchFocus = FocusNode();
-  final TextEditingController _supplierSearchController =
-      TextEditingController();
   final TextEditingController _invoiceController = TextEditingController();
-  final TextEditingController _discountController =
-      TextEditingController(text: '0');
-  final TextEditingController _taxController = TextEditingController(text: '0');
-  final TextEditingController _paidController =
-      TextEditingController(text: '0');
+  final TextEditingController _discountController = TextEditingController();
+  final TextEditingController _taxController = TextEditingController();
+  final TextEditingController _paidController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   final ScrollController _productGridScrollController = ScrollController();
   final ScrollController _rightPanelScrollController = ScrollController();
   bool _isSubmitting = false;
   bool _isUsedPurchase = false;
   bool _paidAmountTouched = false;
-  bool _paidAmountFieldTapped = false;
+  bool _invoiceTouched = false;
+  bool _invoicePreviewApplied = false;
   int _handledShortcutToken = 0;
 
   @override
   void dispose() {
     _productSearchController.dispose();
     _productSearchFocus.dispose();
-    _supplierSearchController.dispose();
     _invoiceController.dispose();
     _discountController.dispose();
     _taxController.dispose();
@@ -111,7 +110,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                 entry: entry,
               );
       if (result.isFailure) {
-        _showSnack(result.asFailure!.error.message);
+        _notifyPurchaseError(result.asFailure!.error);
         break;
       }
     }
@@ -161,23 +160,48 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
       _invalidateReportsAfterPurchase();
       ref.read(purchaseFormStateProvider.notifier).resetForm();
       _productSearchController.clear();
-      _supplierSearchController.clear();
       _invoiceController.clear();
-      _discountController.text = '0';
-      _taxController.text = '0';
-      _paidController.text = '0';
+      _invoiceTouched = false;
+      _invoicePreviewApplied = false;
+      ref.invalidate(nextPurchaseInvoiceNumberProvider);
+      _discountController.clear();
+      _taxController.clear();
+      _paidController.clear();
       _notesController.clear();
       _paidAmountTouched = false;
-      _paidAmountFieldTapped = false;
-      _showSnack(
-        'Purchase saved. '
-        '${completion.serializedItemCount} IMEI(s), '
-        '${completion.quantityItemCount} qty line(s). '
-        'Total: ${FormattingHelpers.currencyPkr(completion.total)}',
+      final purchaseId = completion.purchaseId;
+      AppNotifier.success(
+        'Purchase saved — Invoice ${completion.invoiceNumber}',
+        action: SnackBarAction(
+          label: 'View Invoice',
+          onPressed: () => _openPurchaseDetail(purchaseId),
+        ),
       );
     } else {
-      _showSnack(result.asFailure!.error.message);
+      _notifyPurchaseError(result.asFailure!.error);
     }
+  }
+
+  bool _isPurchasesPath(String path) =>
+      path == '/purchases' || path.startsWith('/purchases/');
+
+  void _clearPaymentInputsOnLeave() {
+    ref.read(purchaseFormStateProvider.notifier).clearPaymentInputs();
+    _discountController.clear();
+    _taxController.clear();
+    _paidController.clear();
+    _notesController.clear();
+    _paidAmountTouched = false;
+  }
+
+  void _openPurchaseDetail(String purchaseId) {
+    if (!mounted) {
+      return;
+    }
+    showDialog<void>(
+      context: context,
+      builder: (context) => PurchaseDetailDialog(purchaseId: purchaseId),
+    );
   }
 
   void _invalidateReportsAfterPurchase() {
@@ -191,17 +215,37 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     ref.invalidate(dashboardLowStockProvider);
   }
 
-  void _showSnack(String message) {
-    final lowered = message.toLowerCase();
-    if (lowered.contains('duplicate imei')) {
-      AppNotifier.warning(message);
-      return;
+  /// Business-rule validations the user can correct (empty cart, missing
+  /// supplier for credit, payment shortfalls, IMEI issues). These surface as a
+  /// warning (amber). Anything else on failure is treated as a hard error
+  /// (red) — never as a green "success" snackbar.
+  static const Set<String> _validationErrorCodes = <String>{
+    'empty_items',
+    'missing_imeis',
+    'invalid_qty',
+    'invalid_cost',
+    'not_serialized',
+    'serialized_qty_locked',
+    'invalid_index',
+    'invalid_imei_index',
+    'duplicate_imei',
+    'duplicate_imei_form',
+    'duplicate_imei_pair',
+    'imei_exists',
+    'imei_existing_stock',
+    'invalid_imei_format',
+    'empty_imei',
+    'invalid_purchase_notes',
+    'full_payment_required',
+    'credit_requires_supplier',
+  };
+
+  void _notifyPurchaseError(AppError error) {
+    if (_validationErrorCodes.contains(error.code)) {
+      AppNotifier.warning(error.message);
+    } else {
+      AppNotifier.error(error.message);
     }
-    if (lowered.contains('failed') || lowered.contains('error')) {
-      AppNotifier.error(message);
-      return;
-    }
-    AppNotifier.success(message);
   }
 
   void _handleGlobalShortcut(AppShortcutEventState state) {
@@ -229,12 +273,14 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
         (previous, next) {
       _handleGlobalShortcut(next);
     });
-
-    final formState = ref.watch(purchaseFormStateProvider);
-    final productsAsync = ref.watch(purchaseProductSearchResultsProvider);
-    final suppliersAsync = ref.watch(supplierSearchResultsProvider);
-    final totals = ref.watch(purchaseTotalsProvider);
-    _syncDefaultPaidAmount(formState, totals.total);
+    ref.listen<String>(currentRoutePathProvider, (previous, next) {
+      final leftPurchases = previous != null &&
+          _isPurchasesPath(previous) &&
+          !_isPurchasesPath(next);
+      if (leftPurchases) {
+        _clearPaymentInputsOnLeave();
+      }
+    });
 
     return Shortcuts(
       shortcuts: const <ShortcutActivator, Intent>{
@@ -257,9 +303,17 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
               padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
                 children: <Widget>[
-                  _buildTopBar(formState, suppliersAsync),
-                  const SizedBox(height: 8),
-                  _buildProductSearch(formState, productsAsync),
+                  // Product search + grid + invoice/New-Used. Scoped to the
+                  // product results (and invoice preview) so it never rebuilds
+                  // when the money fields change.
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final productsAsync =
+                          ref.watch(purchaseProductSearchResultsProvider);
+                      _syncInvoicePreview(ref);
+                      return _buildProductSearch(productsAsync);
+                    },
+                  ),
                   const SizedBox(height: 8),
                   Expanded(
                     child: LayoutBuilder(
@@ -272,90 +326,51 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                         return Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
+                            // Items table. Scoped to the items list only, so
+                            // typing discount/tax/paid does not rebuild it.
                             Expanded(
-                              child: Card(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8),
-                                  child: PurchaseItemsTable(
-                                    items: formState.items,
-                                    onRemoveItem: (index) {
-                                      ref
-                                          .read(
-                                            purchaseFormStateProvider.notifier,
-                                          )
-                                          .removeItem(index);
-                                    },
-                                    onUpdateQuantity: (index, qty) {
-                                      ref
-                                          .read(
-                                            purchaseFormStateProvider.notifier,
-                                          )
-                                          .updateQuantity(
-                                            index: index,
-                                            quantity: qty,
-                                          );
-                                    },
-                                    onUpdateUnitCost: (index, cost) {
-                                      ref
-                                          .read(
-                                            purchaseFormStateProvider.notifier,
-                                          )
-                                          .updateUnitCost(
-                                            index: index,
-                                            cost: cost,
-                                          );
-                                    },
-                                    onUpdateImeiEntry:
-                                        (itemIdx, imeiIdx, entry) async {
-                                      final result = await ref
-                                          .read(
-                                            purchaseFormStateProvider.notifier,
-                                          )
-                                          .updateImeiEntry(
-                                            itemIndex: itemIdx,
-                                            imeiIndex: imeiIdx,
-                                            entry: entry,
-                                          );
-                                      if (result.isFailure) {
-                                        _showSnack(
-                                          result.asFailure!.error.message,
-                                        );
-                                      }
-                                    },
-                                    onAddImeiEntries: _handleAddImeiEntries,
-                                    onRemoveImeiEntry: (itemIdx, imeiIdx) {
-                                      ref
-                                          .read(
-                                            purchaseFormStateProvider.notifier,
-                                          )
-                                          .removeImeiEntry(
-                                            itemIndex: itemIdx,
-                                            imeiIndex: imeiIdx,
-                                          );
-                                    },
-                                  ),
-                                ),
+                              child: Consumer(
+                                builder: (context, ref, _) {
+                                  final items = ref.watch(
+                                    purchaseFormStateProvider
+                                        .select((state) => state.items),
+                                  );
+                                  return _buildItemsCard(items);
+                                },
                               ),
                             ),
                             const SizedBox(width: 8),
+                            // Right panel (supplier, totals, payment). Its
+                            // static parts stay put; only the small total rows
+                            // react to money keystrokes (see internal Consumers).
                             SizedBox(
                               width: rightPanelWidth,
-                              child: _buildRightPanel(formState, totals),
+                              child: _buildRightPanel(),
                             ),
                           ],
                         );
                       },
                     ),
                   ),
-                  if (formState.errorMessage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        formState.errorMessage!,
-                        style: TextStyle(
-                            color: Theme.of(context).colorScheme.error),
-                      ),
-                    ),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final errorMessage = ref.watch(
+                        purchaseFormStateProvider
+                            .select((state) => state.errorMessage),
+                      );
+                      if (errorMessage == null) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          errorMessage,
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.error),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -365,104 +380,157 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     );
   }
 
-  void _syncDefaultPaidAmount(PurchaseFormState formState, double total) {
-    if (_paidAmountTouched ||
-        _paidAmountFieldTapped ||
-        formState.items.isEmpty) {
+  /// Shows the next systematic invoice number in the field as a preview while
+  /// the user hasn't typed their own. The preview is display-only — the form
+  /// state's invoiceNumber stays null so the repository generates the real
+  /// (atomic) number at save time.
+  void _syncInvoicePreview(WidgetRef ref) {
+    if (_invoiceTouched || _invoicePreviewApplied) {
       return;
     }
-    final text = FormattingHelpers.decimal(total);
-    if (_paidController.text == text && formState.paidAmount == total) {
+    final preview = ref.watch(nextPurchaseInvoiceNumberProvider).valueOrNull;
+    if (preview == null) {
       return;
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _paidAmountTouched || _paidAmountFieldTapped) {
-        return;
-      }
-      _paidController.text = text;
-      ref.read(purchaseFormStateProvider.notifier).setPaidAmount(total);
-    });
+    _invoiceController.text = preview;
+    _invoicePreviewApplied = true;
   }
 
-  Widget _buildTopBar(
-    PurchaseFormState formState,
-    AsyncValue<List<SupplierOptionEntity>> suppliersAsync,
-  ) {
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: _SupplierSearchDropdown(
-            searchController: _supplierSearchController,
-            suppliers: suppliersAsync.value ?? const <SupplierOptionEntity>[],
-            selectedSupplierId: formState.selectedSupplierId,
-            onSearchChanged: (value) {
-              ref
-                  .read(purchaseFormStateProvider.notifier)
-                  .setSupplierSearchQuery(value);
-            },
-            onSelected: (supplierId) {
-              ref
-                  .read(purchaseFormStateProvider.notifier)
-                  .setSupplier(supplierId);
-            },
-          ),
+  void _useSystematicInvoice() {
+    final preview = ref.read(nextPurchaseInvoiceNumberProvider).valueOrNull;
+    setState(() {
+      _invoiceTouched = false;
+      _invoicePreviewApplied = true;
+    });
+    _invoiceController.text = preview ?? '';
+    ref.read(purchaseFormStateProvider.notifier).setInvoiceNumber(null);
+  }
+
+  Widget _buildInvoiceField() {
+    return TextField(
+      controller: _invoiceController,
+      decoration: appDesktopInputDecoration(
+        labelText: 'Invoice Number',
+        hintText: 'Auto-generated if left empty',
+        suffixIcon: _invoiceTouched
+            ? IconButton(
+                tooltip: 'Use systematic number',
+                icon: const Icon(Icons.auto_mode),
+                onPressed: _useSystematicInvoice,
+              )
+            : null,
+      ),
+      onChanged: (v) {
+        final trimmed = v.trim();
+        final touched = trimmed.isNotEmpty;
+        // Only rebuild on the empty↔filled transition (toggles the suffix
+        // button); typing within a non-empty value must not rebuild the screen.
+        if (touched != _invoiceTouched) {
+          setState(() => _invoiceTouched = touched);
+        }
+        ref
+            .read(purchaseFormStateProvider.notifier)
+            .setInvoiceNumber(trimmed.isEmpty ? null : v);
+      },
+    );
+  }
+
+  Widget _buildNewUsedToggle() {
+    return SegmentedButton<bool>(
+      segments: const <ButtonSegment<bool>>[
+        ButtonSegment<bool>(
+          value: false,
+          label: Text('New'),
+          icon: Icon(Icons.fiber_new),
         ),
-        const SizedBox(width: 12),
-        SizedBox(
-          width: 220,
-          child: TextField(
-            controller: _invoiceController,
-            decoration: appDesktopInputDecoration(
-                labelText: 'Invoice Number (optional)'),
-            onChanged: (v) {
-              ref
-                  .read(purchaseFormStateProvider.notifier)
-                  .setInvoiceNumber(v.isEmpty ? null : v);
-            },
-          ),
-        ),
-        const SizedBox(width: 12),
-        SegmentedButton<bool>(
-          segments: const <ButtonSegment<bool>>[
-            ButtonSegment<bool>(
-              value: false,
-              label: Text('New'),
-              icon: Icon(Icons.fiber_new),
-            ),
-            ButtonSegment<bool>(
-              value: true,
-              label: Text('Used'),
-              icon: Icon(Icons.recycling),
-            ),
-          ],
-          selected: <bool>{_isUsedPurchase},
-          onSelectionChanged: (Set<bool> selection) {
-            setState(() => _isUsedPurchase = selection.first);
-          },
+        ButtonSegment<bool>(
+          value: true,
+          label: Text('Used'),
+          icon: Icon(Icons.recycling),
         ),
       ],
+      selected: <bool>{_isUsedPurchase},
+      onSelectionChanged: (Set<bool> selection) {
+        setState(() => _isUsedPurchase = selection.first);
+      },
+    );
+  }
+
+  Widget _buildItemsCard(List<PurchaseFormItem> items) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: PurchaseItemsTable(
+          items: items,
+          onRemoveItem: (index) {
+            ref.read(purchaseFormStateProvider.notifier).removeItem(index);
+          },
+          onUpdateQuantity: (index, qty) {
+            ref
+                .read(purchaseFormStateProvider.notifier)
+                .updateQuantity(index: index, quantity: qty);
+          },
+          onUpdateUnitCost: (index, cost) {
+            ref
+                .read(purchaseFormStateProvider.notifier)
+                .updateUnitCost(index: index, cost: cost);
+          },
+          onUpdateImeiEntry: (itemIdx, imeiIdx, entry) async {
+            final result = await ref
+                .read(purchaseFormStateProvider.notifier)
+                .updateImeiEntry(
+                  itemIndex: itemIdx,
+                  imeiIndex: imeiIdx,
+                  entry: entry,
+                );
+            if (result.isFailure) {
+              _notifyPurchaseError(result.asFailure!.error);
+            }
+          },
+          onAddImeiEntries: _handleAddImeiEntries,
+          onRemoveImeiEntry: (itemIdx, imeiIdx) {
+            ref
+                .read(purchaseFormStateProvider.notifier)
+                .removeImeiEntry(itemIndex: itemIdx, imeiIndex: imeiIdx);
+          },
+        ),
+      ),
     );
   }
 
   Widget _buildProductSearch(
-    PurchaseFormState formState,
     AsyncValue<List<ProductEntity>> productsAsync,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        TextField(
-          controller: _productSearchController,
-          focusNode: _productSearchFocus,
-          decoration: appDesktopInputDecoration(
-            labelText: 'Search products to add',
-            prefixIcon: const Icon(Icons.search),
-          ),
-          onChanged: (value) {
-            ref
-                .read(purchaseFormStateProvider.notifier)
-                .setProductSearchQuery(value);
-          },
+        Row(
+          children: <Widget>[
+            // Left half: product search.
+            Expanded(
+              child: AppSearchField(
+                controller: _productSearchController,
+                focusNode: _productSearchFocus,
+                hintText: 'Search product / SKU / brand',
+                onChanged: (value) {
+                  ref
+                      .read(purchaseFormStateProvider.notifier)
+                      .setProductSearchQuery(value);
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Right half: invoice number + New/Used toggle.
+            Expanded(
+              child: Row(
+                children: <Widget>[
+                  Expanded(child: _buildInvoiceField()),
+                  const SizedBox(width: 12),
+                  _buildNewUsedToggle(),
+                ],
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 4),
         SizedBox(
@@ -579,16 +647,31 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     );
   }
 
-  Widget _buildRightPanel(
-    PurchaseFormState formState,
-    ({double subtotal, double total}) totals,
-  ) {
+  Widget _buildRightPanel() {
     return Scrollbar(
       controller: _rightPanelScrollController,
       thumbVisibility: true,
       child: ListView(
         controller: _rightPanelScrollController,
         children: <Widget>[
+          // Supplier — rebuilds only when the selected supplier changes.
+          Consumer(
+            builder: (context, ref, _) {
+              final selectedSupplierId = ref.watch(
+                purchaseFormStateProvider
+                    .select((state) => state.selectedSupplierId),
+              );
+              return SupplierSelectorWidget(
+                selectedSupplierId: selectedSupplierId,
+                onChanged: (supplierId) {
+                  ref
+                      .read(purchaseFormStateProvider.notifier)
+                      .setSupplier(supplierId);
+                },
+              );
+            },
+          ),
+          const SizedBox(height: 8),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -600,41 +683,32 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const SizedBox(height: 8),
-                  _TotalRow(
-                    label: 'Subtotal',
-                    value: totals.subtotal,
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _discountController,
-                    decoration:
-                        appDesktopInputDecoration(labelText: 'Discount'),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    onChanged: (v) {
-                      _paidAmountTouched = true;
-                      final val = FormattingHelpers.parseLocaleDecimal(v);
-                      ref
-                          .read(purchaseFormStateProvider.notifier)
-                          .setDiscount(val);
+                  // Each total row watches only its own value, so a keystroke
+                  // repaints a single line instead of the whole panel.
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final subtotal = ref.watch(
+                        purchaseTotalsProvider.select((t) => t.subtotal),
+                      );
+                      return _TotalRow(label: 'Subtotal', value: subtotal);
                     },
                   ),
                   const SizedBox(height: 8),
-                  TextField(
-                    controller: _taxController,
-                    decoration: appDesktopInputDecoration(labelText: 'Tax'),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    onChanged: (v) {
-                      final val = FormattingHelpers.parseLocaleDecimal(v);
-                      ref.read(purchaseFormStateProvider.notifier).setTax(val);
-                    },
-                  ),
+                  _buildDiscountField(),
                   const SizedBox(height: 8),
-                  _TotalRow(
-                    label: 'Total',
-                    value: totals.total,
-                    bold: true,
+                  _buildTaxField(),
+                  const SizedBox(height: 8),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final total = ref.watch(
+                        purchaseTotalsProvider.select((t) => t.total),
+                      );
+                      return _TotalRow(
+                        label: 'Total',
+                        value: total,
+                        bold: true,
+                      );
+                    },
                   ),
                   const Divider(),
                   const Text(
@@ -642,48 +716,54 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                   ),
                   const SizedBox(height: AppSpacing.xs),
-                  DropdownButtonFormField<String>(
-                    initialValue: formState.paymentMethod,
-                    items: PaymentMethod.values
-                        .map(
-                          (value) => DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(PaymentMethod.labels[value] ?? value),
-                          ),
-                        )
-                        .toList(growable: false),
-                    onChanged: (value) {
-                      if (value != null) {
-                        ref
-                            .read(purchaseFormStateProvider.notifier)
-                            .setPaymentMethod(value);
-                      }
-                    },
-                    decoration: appDesktopInputDecoration(),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _paidController,
-                    decoration:
-                        appDesktopInputDecoration(labelText: 'Paid Amount'),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    onTap: () {
-                      _paidAmountFieldTapped = true;
-                      _paidAmountTouched = true;
-                    },
-                    onChanged: (v) {
-                      _paidAmountTouched = true;
-                      final val = FormattingHelpers.parseLocaleDecimal(v);
-                      ref
-                          .read(purchaseFormStateProvider.notifier)
-                          .setPaidAmount(val);
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final paymentMethod = ref.watch(
+                        purchaseFormStateProvider
+                            .select((state) => state.paymentMethod),
+                      );
+                      return DropdownButtonFormField<String>(
+                        initialValue: paymentMethod,
+                        items: PaymentMethod.values
+                            .map(
+                              (value) => DropdownMenuItem<String>(
+                                value: value,
+                                child:
+                                    Text(PaymentMethod.labels[value] ?? value),
+                              ),
+                            )
+                            .toList(growable: false),
+                        onChanged: (value) {
+                          if (value != null) {
+                            ref
+                                .read(purchaseFormStateProvider.notifier)
+                                .setPaymentMethod(value);
+                          }
+                        },
+                        decoration: appDesktopInputDecoration(),
+                      );
                     },
                   ),
                   const SizedBox(height: 8),
-                  _TotalRow(
-                    label: 'Balance Due',
-                    value: totals.total - formState.paidAmount,
+                  _buildPaidField(),
+                  const SizedBox(height: 8),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final total = ref.watch(
+                        purchaseTotalsProvider.select((t) => t.total),
+                      );
+                      final paidAmount = ref.watch(
+                        purchaseFormStateProvider
+                            .select((state) => state.paidAmount),
+                      );
+                      // An untouched Paid field means "pay in full".
+                      final effectivePaid =
+                          _paidAmountTouched ? paidAmount : total;
+                      return _TotalRow(
+                        label: 'Balance Due',
+                        value: total - effectivePaid,
+                      );
+                    },
                   ),
                 ],
               ),
@@ -725,6 +805,63 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDiscountField() {
+    return TextField(
+      controller: _discountController,
+      decoration: appDesktopInputDecoration(
+        labelText: 'Discount',
+        hintText: '0.00',
+      ),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      onChanged: (v) {
+        final val = FormattingHelpers.parseLocaleDecimal(v);
+        ref.read(purchaseFormStateProvider.notifier).setDiscount(val);
+      },
+    );
+  }
+
+  Widget _buildTaxField() {
+    return TextField(
+      controller: _taxController,
+      decoration: appDesktopInputDecoration(
+        labelText: 'Tax',
+        hintText: '0.00',
+      ),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      onChanged: (v) {
+        final val = FormattingHelpers.parseLocaleDecimal(v);
+        ref.read(purchaseFormStateProvider.notifier).setTax(val);
+      },
+    );
+  }
+
+  Widget _buildPaidField() {
+    return Consumer(
+      builder: (context, ref, _) {
+        // Only the placeholder depends on the live total; typing in this field
+        // does not change the total, so the field is not rebuilt per keystroke.
+        final total =
+            ref.watch(purchaseTotalsProvider.select((t) => t.total));
+        return TextField(
+          controller: _paidController,
+          decoration: appDesktopInputDecoration(
+            labelText: 'Paid Amount',
+            hintText: FormattingHelpers.decimal(total),
+          ),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          onChanged: (v) {
+            // No setState here: the Balance Due row watches paidAmount and
+            // re-reads _paidAmountTouched on its own, so a keystroke repaints
+            // only that one row.
+            _paidAmountTouched = true;
+            final val = FormattingHelpers.parseLocaleDecimal(v);
+            ref.read(purchaseFormStateProvider.notifier).setPaidAmount(val);
+          },
+        );
+      },
     );
   }
 }
@@ -815,141 +952,6 @@ class _TotalRow extends StatelessWidget {
         Text(label, style: style),
         Text(FormattingHelpers.currencyPkr(value), style: style),
       ],
-    );
-  }
-}
-
-class _SupplierSearchDropdown extends StatefulWidget {
-  const _SupplierSearchDropdown({
-    required this.searchController,
-    required this.suppliers,
-    required this.onSearchChanged,
-    required this.onSelected,
-    this.selectedSupplierId,
-  });
-
-  final TextEditingController searchController;
-  final List<SupplierOptionEntity> suppliers;
-  final String? selectedSupplierId;
-  final void Function(String value) onSearchChanged;
-  final void Function(String? supplierId) onSelected;
-
-  @override
-  State<_SupplierSearchDropdown> createState() =>
-      _SupplierSearchDropdownState();
-}
-
-class _SupplierSearchDropdownState extends State<_SupplierSearchDropdown> {
-  OverlayEntry? _overlay;
-  final LayerLink _layerLink = LayerLink();
-
-  void _removeOverlay() {
-    _overlay?.remove();
-    _overlay = null;
-  }
-
-  void _showOverlay() {
-    _removeOverlay();
-
-    if (widget.suppliers.isEmpty) {
-      return;
-    }
-
-    _overlay = OverlayEntry(
-      builder: (context) => Positioned(
-        width: 320,
-        child: CompositedTransformFollower(
-          link: _layerLink,
-          showWhenUnlinked: false,
-          offset: const Offset(0, 44),
-          child: Material(
-            elevation: 4,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 220),
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: widget.suppliers.length,
-                itemBuilder: (context, index) {
-                  final supplier = widget.suppliers[index];
-                  return ListTile(
-                    dense: true,
-                    title: Text(supplier.name),
-                    subtitle:
-                        supplier.phone != null ? Text(supplier.phone!) : null,
-                    onTap: () {
-                      widget.searchController.text = supplier.name;
-                      widget.onSelected(supplier.id);
-                      _removeOverlay();
-                    },
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-    Overlay.of(context).insert(_overlay!);
-  }
-
-  @override
-  void dispose() {
-    _removeOverlay();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    SupplierOptionEntity? selected;
-    if (widget.selectedSupplierId != null) {
-      for (final s in widget.suppliers) {
-        if (s.id == widget.selectedSupplierId) {
-          selected = s;
-          break;
-        }
-      }
-    }
-
-    return CompositedTransformTarget(
-      link: _layerLink,
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: TextField(
-              controller: widget.searchController,
-              decoration: appDesktopInputDecoration(
-                labelText: selected != null
-                    ? 'Supplier: ${selected.name}'
-                    : 'Search supplier (optional)',
-                suffixIcon: widget.selectedSupplierId != null
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          widget.searchController.clear();
-                          widget.onSelected(null);
-                          widget.onSearchChanged('');
-                        },
-                      )
-                    : null,
-              ),
-              onChanged: (v) {
-                widget.onSearchChanged(v);
-                if (v.isNotEmpty) {
-                  _showOverlay();
-                } else {
-                  _removeOverlay();
-                }
-              },
-              onTap: () {
-                if (widget.searchController.text.isNotEmpty) {
-                  _showOverlay();
-                }
-              },
-              onEditingComplete: _removeOverlay,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
