@@ -5,7 +5,7 @@ import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stoc
 class InventoryFilterState {
   const InventoryFilterState({
     this.searchQuery = '',
-    this.statusFilter,
+    this.statusFilter = SerializedStockStatus.inStock,
     this.hasImeiFilter,
   });
 

@@ -297,6 +297,11 @@ LIMIT ?
       if (showQuantity) {
         final args = <Object?>[];
         final where = StringBuffer('pm.is_active = 1');
+        // When viewing available ("In Stock") stock, accessories with no units
+        // on hand are not available, so hide zero-quantity rows.
+        if (serializedStatusFilter == SerializedStockStatus.inStock) {
+          where.write(' AND ist.quantity > 0');
+        }
         if (searchLike != null) {
           where.write(' AND (pm.name LIKE ? OR pm.sku LIKE ? OR pm.brand LIKE ?)');
           args

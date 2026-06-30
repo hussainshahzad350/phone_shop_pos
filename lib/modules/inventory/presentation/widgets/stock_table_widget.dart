@@ -6,8 +6,12 @@ import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/core/widgets/responsive_table_layout.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/stock_row_entity.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
 
-const int _kStockPaginateThreshold = 120;
+// The stock query is capped at ~200 rows, so keep the table on the continuous
+// (sticky-header, single-scroll) path instead of PaginatedDataTable — that path
+// scrolls with the mouse wheel and matches the Reports tables.
+const int _kStockPaginateThreshold = 100000;
 
 class StockTableWidget extends StatelessWidget {
   const StockTableWidget({super.key, required this.rows});
@@ -27,14 +31,19 @@ class StockTableWidget extends StatelessWidget {
       builder: (context, constraints) {
         final layout = _StockTableLayout.fromWidth(constraints.maxWidth);
         final visibleColumns = _visibleColumns(layout);
+        // Flex the Product column so the table fills the card width instead of
+        // floating as a narrow block (matches the Reports tables).
+        final productWidth =
+            _productWidth(constraints.maxWidth, visibleColumns, layout);
         return AppDataTable(
           columnSpacing: layout.columnSpacing,
           dataRowMinHeight: layout.dataRowMinHeight,
           dataRowMaxHeight: layout.dataRowMaxHeight,
-          rowsPerPage: 50,
+          showCheckboxColumn: false,
           paginateThreshold: _kStockPaginateThreshold,
           columns: visibleColumns
-              .map((column) => _buildDataColumn(column, layout))
+              .map((column) =>
+                  _buildDataColumn(context, column, layout, productWidth))
               .toList(growable: false),
           rows: rows
               .asMap()
@@ -44,12 +53,44 @@ class StockTableWidget extends StatelessWidget {
                     e.value,
                     visibleColumns,
                     layout,
+                    productWidth,
                     e.key,
                   ))
               .toList(growable: false),
         );
       },
     );
+  }
+
+  /// Width for a column, substituting the flexed Product width.
+  double _colWidth(
+    _StockTableColumn column,
+    _StockTableLayout layout,
+    double productWidth,
+  ) {
+    return column == _StockTableColumn.product
+        ? productWidth
+        : layout.valueWidth(column);
+  }
+
+  /// Computes the Product column width so all columns together fill the
+  /// available width, with the other (fixed) columns keeping their widths.
+  double _productWidth(
+    double maxWidth,
+    List<_StockTableColumn> visibleColumns,
+    _StockTableLayout layout,
+  ) {
+    var fixedSum = 0.0;
+    for (final column in visibleColumns) {
+      if (column != _StockTableColumn.product) {
+        fixedSum += layout.valueWidth(column);
+      }
+    }
+    final spacing = layout.columnSpacing * (visibleColumns.length - 1);
+    const buffer = 28.0;
+    final remaining = maxWidth - fixedSum - spacing - buffer;
+    final minWidth = layout.valueWidth(_StockTableColumn.product);
+    return remaining > minWidth ? remaining : minWidth;
   }
 
   List<_StockTableColumn> _visibleColumns(_StockTableLayout layout) {
@@ -91,20 +132,20 @@ class StockTableWidget extends StatelessWidget {
   }
 
   DataColumn _buildDataColumn(
+    BuildContext context,
     _StockTableColumn column,
     _StockTableLayout layout,
+    double productWidth,
   ) {
-    final label = _columnLabel(column);
+    final isNumeric =
+        column == _StockTableColumn.cost || column == _StockTableColumn.price;
     return DataColumn(
-      numeric:
-          column == _StockTableColumn.cost || column == _StockTableColumn.price,
-      label: _labelCell(
-        label,
-        width: layout.labelWidth(column),
-        textAlign: (column == _StockTableColumn.cost ||
-                column == _StockTableColumn.price)
-            ? TextAlign.right
-            : TextAlign.left,
+      numeric: isNumeric,
+      label: reportStyledTableHeaderCell(
+        context,
+        _columnLabel(column),
+        width: _colWidth(column, layout, productWidth),
+        textAlign: isNumeric ? TextAlign.right : TextAlign.left,
       ),
     );
   }
@@ -114,11 +155,13 @@ class StockTableWidget extends StatelessWidget {
     StockRowEntity row,
     List<_StockTableColumn> columns,
     _StockTableLayout layout,
+    double productWidth,
     int rowIndex,
   ) {
     return DataRow(
       cells: columns
-          .map((column) => _buildDataCell(context, row, column, layout, rowIndex))
+          .map((column) =>
+              _buildDataCell(context, row, column, layout, productWidth, rowIndex))
           .toList(growable: false),
     );
   }
@@ -128,63 +171,61 @@ class StockTableWidget extends StatelessWidget {
     StockRowEntity row,
     _StockTableColumn column,
     _StockTableLayout layout,
+    double productWidth,
     int rowIndex,
   ) {
     final isSerialized = row.type == StockRowType.serialized;
     switch (column) {
       case _StockTableColumn.serial:
         return DataCell(
-          _textCell('${rowIndex + 1}', width: layout.valueWidth(column)),
+          _textCell('${rowIndex + 1}', width: _colWidth(column, layout, productWidth)),
         );
       case _StockTableColumn.type:
         return DataCell(
           _textCell(
             isSerialized ? 'Phone' : 'Accessory',
-            width: layout.valueWidth(column),
+            width: _colWidth(column, layout, productWidth),
           ),
         );
       case _StockTableColumn.condition:
         if (!isSerialized) {
-          return DataCell(_textCell('—', width: layout.valueWidth(column)));
+          return DataCell(_textCell('—', width: _colWidth(column, layout, productWidth)));
         }
         final isUsed = row.condition == SerializedStockCondition.used;
         return DataCell(
-          SizedBox(
-            width: layout.valueWidth(column),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: isUsed
-                  ? _chipLabel('Used', Theme.of(context).semantic.warning)
-                  : _chipLabel('New', Theme.of(context).colorScheme.primary),
-            ),
+          reportSemanticPill(
+            context,
+            isUsed ? 'Used' : 'New',
+            isUsed ? ReportPillIntent.warning : ReportPillIntent.info,
+            width: _colWidth(column, layout, productWidth),
           ),
         );
       case _StockTableColumn.product:
         return DataCell(
           _textCell(
             row.productName,
-            width: layout.valueWidth(column),
+            width: _colWidth(column, layout, productWidth),
             maxLines: 1,
           ),
         );
       case _StockTableColumn.brand:
         return DataCell(
-          _textCell(row.brand ?? '—', width: layout.valueWidth(column)),
+          _textCell(row.brand ?? '—', width: _colWidth(column, layout, productWidth)),
         );
       case _StockTableColumn.category:
         return DataCell(
-          _textCell(row.category ?? '—', width: layout.valueWidth(column)),
+          _textCell(row.category ?? '—', width: _colWidth(column, layout, productWidth)),
         );
       case _StockTableColumn.imeiOrQty:
         if (isSerialized) {
           return DataCell(
-            _textCell(_formatImei(row.imei1), width: layout.valueWidth(column)),
+            _textCell(_formatImei(row.imei1), width: _colWidth(column, layout, productWidth)),
           );
         }
         return DataCell(
           _textCell(
             row.quantity?.toString() ?? '—',
-            width: layout.valueWidth(column),
+            width: _colWidth(column, layout, productWidth),
             style: row.isLowStock
                 ? TextStyle(
                     color: Theme.of(context).semantic.danger,
@@ -195,25 +236,24 @@ class StockTableWidget extends StatelessWidget {
         );
       case _StockTableColumn.statusOrStock:
         if (isSerialized) {
+          final badge = _statusBadge(row.serializedStatus);
           return DataCell(
-            SizedBox(
-              width: layout.valueWidth(column),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: _statusBadge(context, row.serializedStatus),
-              ),
-            ),
+            badge == null
+                ? _textCell('—', width: _colWidth(column, layout, productWidth))
+                : reportSemanticPill(
+                    context,
+                    badge.label,
+                    badge.intent,
+                    width: _colWidth(column, layout, productWidth),
+                  ),
           );
         }
         return DataCell(
-          SizedBox(
-            width: layout.valueWidth(column),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: row.isLowStock
-                  ? _chipLabel('Low Stock', Theme.of(context).semantic.danger)
-                  : _chipLabel('In Stock', Theme.of(context).semantic.success),
-            ),
+          reportSemanticPill(
+            context,
+            row.isLowStock ? 'Low Stock' : 'In Stock',
+            row.isLowStock ? ReportPillIntent.danger : ReportPillIntent.success,
+            width: _colWidth(column, layout, productWidth),
           ),
         );
       case _StockTableColumn.cost:
@@ -228,7 +268,7 @@ class StockTableWidget extends StatelessWidget {
                     ? FormattingHelpers.decimal(row.unitCost!,
                         fractionDigits: 0)
                     : '—'),
-            width: layout.valueWidth(column),
+            width: _colWidth(column, layout, productWidth),
             textAlign: TextAlign.right,
           ),
         );
@@ -244,13 +284,13 @@ class StockTableWidget extends StatelessWidget {
                     ? FormattingHelpers.decimal(row.unitPrice!,
                         fractionDigits: 0)
                     : '—'),
-            width: layout.valueWidth(column),
+            width: _colWidth(column, layout, productWidth),
             textAlign: TextAlign.right,
           ),
         );
       case _StockTableColumn.location:
         return DataCell(
-          _textCell(row.location ?? '—', width: layout.valueWidth(column)),
+          _textCell(row.location ?? '—', width: _colWidth(column, layout, productWidth)),
         );
     }
   }
@@ -292,21 +332,6 @@ class StockTableWidget extends StatelessWidget {
     return '${imei.substring(0, 14)}…';
   }
 
-  Widget _labelCell(
-    String label, {
-    required double width,
-    TextAlign textAlign = TextAlign.left,
-  }) {
-    return SizedBox(
-      width: width,
-      child: Text(
-        label,
-        textAlign: textAlign,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-
   Widget _textCell(
     String value, {
     required double width,
@@ -326,48 +351,25 @@ class StockTableWidget extends StatelessWidget {
     );
   }
 
-  Widget _statusBadge(BuildContext context, SerializedStockStatus? status) {
-    if (status == null) {
-      return const Text('—');
-    }
-    final theme = Theme.of(context);
-    final semantic = theme.semantic;
-    Color color;
-    String label;
+  ({String label, ReportPillIntent intent})? _statusBadge(
+    SerializedStockStatus? status,
+  ) {
     switch (status) {
       case SerializedStockStatus.inStock:
-        color = semantic.success;
-        label = 'In Stock';
-        break;
+        return (label: 'In Stock', intent: ReportPillIntent.success);
       case SerializedStockStatus.sold:
-        color = theme.colorScheme.onSurfaceVariant;
-        label = 'Sold';
-        break;
+        return (label: 'Sold', intent: ReportPillIntent.neutral);
       case SerializedStockStatus.reserved:
-        color = semantic.warning;
-        label = 'Reserved';
-        break;
+        return (label: 'Reserved', intent: ReportPillIntent.warning);
       case SerializedStockStatus.returned:
-        color = semantic.info;
-        label = 'Returned';
-        break;
+        return (label: 'Returned', intent: ReportPillIntent.info);
       case SerializedStockStatus.damaged:
-        color = semantic.danger;
-        label = 'Damaged';
-        break;
+        return (label: 'Damaged', intent: ReportPillIntent.danger);
       case SerializedStockStatus.withDealer:
-        color = semantic.warning;
-        label = 'With Dealer';
-        break;
+        return (label: 'With Dealer', intent: ReportPillIntent.warning);
+      case null:
+        return null;
     }
-    return _chipLabel(label, color);
-  }
-
-  Widget _chipLabel(String label, Color color) {
-    return AppStatusBadge(
-      label: label,
-      color: color,
-    );
   }
 }
 
@@ -412,10 +414,6 @@ class _StockTableLayout {
       showCompactColumns: m.showCompactColumns,
       isWideDesktop: m.isWideDesktop,
     );
-  }
-
-  double labelWidth(_StockTableColumn column) {
-    return valueWidth(column);
   }
 
   double valueWidth(_StockTableColumn column) {

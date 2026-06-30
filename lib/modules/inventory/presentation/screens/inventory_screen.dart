@@ -22,6 +22,7 @@ import 'package:phone_shop_pos/modules/inventory/presentation/widgets/inventory_
 import 'package:phone_shop_pos/modules/inventory/presentation/widgets/stock_table_widget.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_section_widget.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 const int _kReservePhoneFetchLimit = 500;
@@ -222,27 +223,27 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 ),
                 const SizedBox(height: 8),
                 Expanded(
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: stockAsync.when(
-                        data: (rows) => StockTableWidget(rows: rows),
-                        loading: () => const Center(
-                          child: CircularProgressIndicator(),
-                        ),
-                        error: (error, _) => Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: <Widget>[
-                              Text('Error loading stock: $error'),
-                              const SizedBox(height: 8),
-                              FilledButton.icon(
-                                onPressed: _refresh,
-                                icon: const Icon(Icons.refresh),
-                                label: const Text('Retry'),
-                              ),
-                            ],
-                          ),
+                  child: ReportTableSection(
+                    title: 'Stock',
+                    subtitle:
+                        'Available phones (serialized) and accessories (quantity).',
+                    child: stockAsync.when(
+                      data: (rows) => StockTableWidget(rows: rows),
+                      loading: () => const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                      error: (error, _) => Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            Text('Error loading stock: $error'),
+                            const SizedBox(height: 8),
+                            FilledButton.icon(
+                              onPressed: _refresh,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Retry'),
+                            ),
+                          ],
                         ),
                       ),
                     ),
