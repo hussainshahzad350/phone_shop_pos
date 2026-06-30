@@ -322,6 +322,7 @@ class OperationsHistoryQueryService with BaseRepositoryGuard {
           p.invoice_number,
           p.total,
           p.paid_amount,
+          p.status,
           p.notes
         FROM ${TableNames.purchases} p
         LEFT JOIN ${TableNames.suppliers} sp ON sp.id = p.supplier_id
@@ -371,6 +372,7 @@ class OperationsHistoryQueryService with BaseRepositoryGuard {
           invoiceNumber: header['invoice_number'] as String?,
           total: (header['total'] as num?)?.toDouble() ?? 0,
           paidAmount: (header['paid_amount'] as num?)?.toDouble() ?? 0,
+          status: (header['status'] as String?) ?? 'posted',
         ),
         items: itemRows.map((row) {
           return PurchaseHistoryItemEntity(
