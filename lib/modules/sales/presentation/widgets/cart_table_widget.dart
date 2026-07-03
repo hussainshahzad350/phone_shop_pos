@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/theme/app_typography.dart';
 
 class CartTableWidget extends StatefulWidget {
   const CartTableWidget({
@@ -156,9 +157,7 @@ class _CartItemCardState extends State<_CartItemCard> {
                       children: <Widget>[
                         Text(
                           item.productName,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: theme.textTheme.titleSmall,
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -190,7 +189,7 @@ class _CartItemCardState extends State<_CartItemCard> {
                   Text(
                     FormattingHelpers.currencyPkr(item.lineTotal),
                     style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontFeatures: AppTypography.tabularFigures,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -229,7 +228,6 @@ class _CartItemCardState extends State<_CartItemCard> {
         style: const TextStyle(fontWeight: FontWeight.w700),
         decoration: const InputDecoration(
           isDense: true,
-          border: OutlineInputBorder(),
           labelText: 'Price',
         ),
         keyboardType: const TextInputType.numberWithOptions(decimal: true),

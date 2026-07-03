@@ -133,7 +133,7 @@ class _KpiCard extends StatelessWidget {
                   Text(
                     value,
                     style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontFeatures: AppTypography.tabularFigures,
                     ),
                   ),
                   Text(

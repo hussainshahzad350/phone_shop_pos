@@ -146,7 +146,6 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
                       initialValue: _defaultCost.toStringAsFixed(2),
                       decoration: const InputDecoration(
                         isDense: true,
-                        border: OutlineInputBorder(),
                         labelText: 'Cost',
                       ),
                       keyboardType:
@@ -169,7 +168,6 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
                 controller: _bulkController,
                 maxLines: 8,
                 decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
                   hintText:
                       '356789101234561\n356789101234562,356789101234570\n...',
                   labelText: 'Paste IMEIs here',
@@ -188,7 +186,7 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
                     children: <Widget>[
                       Text(
                         'Preview: ${preview.length} device(s)',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.titleSmall,
                       ),
                       const SizedBox(height: 4),
                       ConstrainedBox(
@@ -223,10 +221,7 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
                 const SizedBox(height: 4),
                 Text(
                   'Seller & Condition Details',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 8),
                 _buildField(
@@ -340,7 +335,6 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
       keyboardType: TextInputType.number,
       decoration: InputDecoration(
         isDense: true,
-        border: const OutlineInputBorder(),
         labelText: 'ID Card / CNIC *',
         hintText: 'XXXXX-XXXXXXX-X',
         errorText: errorText,
@@ -362,7 +356,6 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
       keyboardType: keyboardType,
       decoration: InputDecoration(
         isDense: true,
-        border: const OutlineInputBorder(),
         labelText: label,
         hintText: hint,
       ),

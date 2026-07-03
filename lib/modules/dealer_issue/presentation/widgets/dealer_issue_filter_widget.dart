@@ -22,9 +22,9 @@ class DealerIssueFilterWidget extends ConsumerWidget {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: <Widget>[
-            const Text(
+            Text(
               'Filter by Dealer:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -32,7 +32,6 @@ class DealerIssueFilterWidget extends ConsumerWidget {
                 data: (dealers) => DropdownButtonFormField<String?>(
                   initialValue: selectedDealerId,
                   decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
                     isDense: true,
                     contentPadding:
                         EdgeInsets.symmetric(horizontal: 12, vertical: 8),

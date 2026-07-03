@@ -163,7 +163,6 @@ class _ImeiPickerDialogState extends State<ImeiPickerDialog> {
                     hintText: 'Search IMEI / Serial',
                     helperText: 'Enter = select, Esc = cancel, ↑↓ = navigate',
                     prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
                     isDense: true,
                   ),
                   onChanged: _onSearchChanged,

@@ -47,9 +47,8 @@ class AlertsSection extends StatelessWidget {
                     ),
                     child: Text(
                       '$totalAlerts',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
                             color: Theme.of(context).semantic.danger,
-                            fontWeight: FontWeight.bold,
                           ),
                     ),
                   ),

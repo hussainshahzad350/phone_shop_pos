@@ -348,7 +348,7 @@ class _SummaryCard extends StatelessWidget {
                   style: Theme.of(context)
                       .textTheme
                       .headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.bold, color: color),
+                      ?.copyWith(color: color),
                 ),
                 Text(label, style: Theme.of(context).textTheme.bodySmall),
               ],
@@ -416,7 +416,6 @@ class _ReservePhoneDialogState extends ConsumerState<_ReservePhoneDialog> {
             DropdownButtonFormField<String>(
               initialValue: _selectedSerializedStockId,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
                 labelText: 'Select Phone (IMEI)',
               ),
@@ -582,7 +581,6 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
               DropdownButtonFormField<String>(
                 initialValue: _selectedProductModelId,
                 decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
                   isDense: true,
                   labelText: 'Accessory Product',
                 ),
@@ -599,7 +597,6 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
                 controller: _deltaController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
                   isDense: true,
                   labelText: 'Quantity Delta (+/-)',
                 ),
@@ -608,7 +605,6 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
               DropdownButtonFormField<String>(
                 initialValue: _selectedSerializedStockId,
                 decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
                   isDense: true,
                   labelText: 'In-stock IMEI',
                 ),
@@ -626,15 +622,14 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
               controller: _notesController,
               maxLines: 2,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
                 labelText: 'Notes (optional)',
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            const Text(
+            Text(
               'Adjustment History',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: AppSpacing.xs),
             Expanded(

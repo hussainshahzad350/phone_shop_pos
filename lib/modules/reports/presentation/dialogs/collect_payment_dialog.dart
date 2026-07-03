@@ -55,7 +55,6 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
             TextField(
               controller: _amountController,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 labelText: 'Amount',
                 isDense: true,
               ),
@@ -66,7 +65,6 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
             DropdownButtonFormField<String>(
               initialValue: _paymentMethod,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
               ),
               items: PaymentMethod.values
@@ -89,7 +87,6 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
               controller: _notesController,
               maxLines: 2,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 labelText: 'Notes (optional)',
                 isDense: true,
               ),

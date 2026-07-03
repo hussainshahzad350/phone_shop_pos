@@ -63,7 +63,6 @@ class _BrandFormDialogState extends State<BrandFormDialog> {
                 onFieldSubmitted: (_) => _submit(),
                 decoration: const InputDecoration(
                   labelText: 'Brand Name',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
                 validator: (value) => (value == null || value.trim().isEmpty)

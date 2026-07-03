@@ -25,7 +25,6 @@ class _FiltersRow extends ConsumerWidget {
                     width: 240,
                     child: TextField(
                       decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
                         isDense: true,
                         labelText: 'Search',
                         hintText: 'Name, model, IMEI, phone…',
@@ -41,7 +40,6 @@ class _FiltersRow extends ConsumerWidget {
                     child: DropdownButtonFormField<String>(
                       initialValue: statusFilter.isEmpty ? '' : statusFilter,
                       decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
                         isDense: true,
                         labelText: 'Status',
                       ),

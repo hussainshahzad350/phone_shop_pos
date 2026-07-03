@@ -72,7 +72,6 @@ class _DealerIssueDialogWidgetState extends ConsumerState<DealerIssueDialogWidge
               initialValue: _selectedDealerId,
               decoration: const InputDecoration(
                 labelText: 'Select Dealer',
-                border: OutlineInputBorder(),
                 isDense: true,
               ),
               hint: dealers.isEmpty
@@ -120,7 +119,6 @@ class _DealerIssueDialogWidgetState extends ConsumerState<DealerIssueDialogWidge
             decoration: const InputDecoration(
               labelText: 'Scan or enter IMEI',
               hintText: 'Scan barcode or type manually',
-              border: OutlineInputBorder(),
               isDense: true,
               prefixIcon: Icon(Icons.qr_code_scanner, size: 18),
             ),
@@ -163,7 +161,7 @@ class _DealerIssueDialogWidgetState extends ConsumerState<DealerIssueDialogWidge
           children: <Widget>[
             Text(
               'Selected IMEIs (${_selectedImeis.length}):',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -191,7 +189,6 @@ class _DealerIssueDialogWidgetState extends ConsumerState<DealerIssueDialogWidge
       controller: _notesController,
       decoration: const InputDecoration(
         labelText: 'Notes (optional)',
-        border: OutlineInputBorder(),
       ),
       maxLines: 3,
     );

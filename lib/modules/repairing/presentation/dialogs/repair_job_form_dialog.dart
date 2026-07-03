@@ -321,7 +321,6 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                     maxLines: 2,
                     style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                     decoration: InputDecoration(
-                      border: const OutlineInputBorder(),
                       isDense: true,
                       labelText: 'Problem Description *',
                       labelStyle: isReadOnly
@@ -338,7 +337,6 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                     initialValue: _issueType,
                     style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                     decoration: InputDecoration(
-                      border: const OutlineInputBorder(),
                       isDense: true,
                       labelText: 'Issue Type (optional)',
                       labelStyle: _isSubmitting || isReadOnly
@@ -446,7 +444,6 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                   if (isReadOnly)
                     InputDecorator(
                       decoration: InputDecoration(
-                        border: const OutlineInputBorder(),
                         isDense: true,
                         labelText: 'Status',
                         labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
@@ -461,7 +458,6 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                       initialValue: _status,
                       style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
                         isDense: true,
                         labelText: 'Status *',
                       ),
@@ -541,7 +537,6 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
           : TextInputType.text,
       style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
       decoration: InputDecoration(
-        border: const OutlineInputBorder(),
         isDense: true,
         labelText: label,
         labelStyle: enabled ? null : TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),

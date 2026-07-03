@@ -7,6 +7,9 @@ const int _kDefaultPaginateThreshold = 80;
 const double _kDesktopContentMaxWidth = 2200.0;
 const double _kDesktopCardRadius = 16.0;
 
+// Borders, fill and radius intentionally come from InputDecorationTheme so
+// the field adapts to light/dark mode — hardcoded colors here previously
+// rendered light-mode borders in dark mode.
 InputDecoration appDesktopInputDecoration({
   String? labelText,
   String? hintText,
@@ -20,17 +23,6 @@ InputDecoration appDesktopInputDecoration({
     prefixIcon: prefixIcon,
     suffixIcon: suffixIcon,
     isDense: isDense,
-    border: const OutlineInputBorder(
-      borderRadius: AppRadii.lgRadius,
-    ),
-    enabledBorder: const OutlineInputBorder(
-      borderRadius: AppRadii.lgRadius,
-      borderSide: BorderSide(color: Color(0xFFD7DBE7)),
-    ),
-    focusedBorder: const OutlineInputBorder(
-      borderRadius: AppRadii.lgRadius,
-      borderSide: BorderSide(color: Color(0xFF5167F6), width: 1.2),
-    ),
   );
 }
 

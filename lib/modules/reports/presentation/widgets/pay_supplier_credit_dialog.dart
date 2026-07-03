@@ -57,7 +57,6 @@ class _PaySupplierCreditDialogState
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 labelText: 'Amount',
                 isDense: true,
               ),
@@ -66,7 +65,6 @@ class _PaySupplierCreditDialogState
             DropdownButtonFormField<String>(
               initialValue: _paymentMethod,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
                 labelText: 'Payment Method',
               ),
@@ -90,7 +88,6 @@ class _PaySupplierCreditDialogState
               controller: _noteController,
               maxLines: 2,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 labelText: 'Note (optional)',
                 isDense: true,
               ),

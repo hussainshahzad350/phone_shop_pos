@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/dialogs/email_recovery_dialog.dart';
@@ -222,11 +223,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!context.mounted || resetSucceeded != true) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('PIN reset successful. Log in with new PIN.'),
-      ),
-    );
+    AppNotifier.success('PIN reset successful. Log in with your new PIN.');
   }
 
   Future<void> _showEmailRecoveryDialog(BuildContext context) async {
@@ -247,10 +244,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!context.mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('PIN reset successful. Log in with your new PIN.'),
-      ),
-    );
+    AppNotifier.success('PIN reset successful. Log in with your new PIN.');
   }
 }

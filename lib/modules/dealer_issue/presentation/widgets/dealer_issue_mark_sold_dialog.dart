@@ -81,7 +81,6 @@ class _DealerIssueMarkSoldDialogState
               ],
               decoration: const InputDecoration(
                 labelText: 'Sale Price (PKR)',
-                border: OutlineInputBorder(),
                 prefixText: 'Rs. ',
                 isDense: true,
               ),
@@ -101,7 +100,6 @@ class _DealerIssueMarkSoldDialogState
               initialValue: _paymentMethod,
               decoration: const InputDecoration(
                 labelText: 'Payment Method',
-                border: OutlineInputBorder(),
                 isDense: true,
               ),
               items: const <DropdownMenuItem<String>>[

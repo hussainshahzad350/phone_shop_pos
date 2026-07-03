@@ -86,8 +86,7 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text('Payment',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Payment', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               focusNode: widget.paymentMethodFocusNode,

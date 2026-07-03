@@ -108,7 +108,6 @@ class _CollectPaymentDialogState extends State<_CollectPaymentDialog> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
                 labelText: 'Amount to Collect',
               ),
@@ -119,7 +118,6 @@ class _CollectPaymentDialogState extends State<_CollectPaymentDialog> {
               controller: _notesController,
               maxLines: 2,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
                 labelText: 'Payment Notes (optional)',
                 hintText: 'Cash, bank transfer, partial settlement…',

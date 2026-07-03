@@ -104,7 +104,6 @@ class _SupplierFormDialogState extends State<SupplierFormDialog> {
                 autofocus: true,
                 decoration: const InputDecoration(
                   labelText: 'Supplier Name',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
                 validator: (value) => (value == null || value.trim().isEmpty)
@@ -116,7 +115,6 @@ class _SupplierFormDialogState extends State<SupplierFormDialog> {
                 controller: _contactController,
                 decoration: const InputDecoration(
                   labelText: 'Contact Person',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
               ),
@@ -128,7 +126,6 @@ class _SupplierFormDialogState extends State<SupplierFormDialog> {
                       controller: _phoneController,
                       decoration: const InputDecoration(
                         labelText: 'Phone',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                     ),
@@ -139,7 +136,6 @@ class _SupplierFormDialogState extends State<SupplierFormDialog> {
                       controller: _emailController,
                       decoration: const InputDecoration(
                         labelText: 'Email',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                     ),
@@ -152,7 +148,6 @@ class _SupplierFormDialogState extends State<SupplierFormDialog> {
                 maxLines: 2,
                 decoration: const InputDecoration(
                   labelText: 'Address',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
               ),
@@ -163,7 +158,6 @@ class _SupplierFormDialogState extends State<SupplierFormDialog> {
                 maxLength: NotesSafety.maxLength,
                 decoration: const InputDecoration(
                   labelText: 'Notes',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
                 validator: (value) =>

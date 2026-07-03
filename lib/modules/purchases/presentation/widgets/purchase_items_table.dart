@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/theme/app_typography.dart';
 
 class PurchaseItemsTable extends StatefulWidget {
   const PurchaseItemsTable({
@@ -166,9 +167,7 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
                     children: <Widget>[
                       Text(
                         item.productName,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: theme.textTheme.titleSmall,
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -190,7 +189,6 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
                       focusNode: _qtyFocus,
                       decoration: const InputDecoration(
                         isDense: true,
-                        border: OutlineInputBorder(),
                         labelText: 'Qty',
                       ),
                       keyboardType: TextInputType.number,
@@ -213,7 +211,6 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
                       focusNode: _costFocus,
                       decoration: const InputDecoration(
                         isDense: true,
-                        border: OutlineInputBorder(),
                         labelText: 'Unit Cost',
                       ),
                       keyboardType: const TextInputType.numberWithOptions(
@@ -240,7 +237,7 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
                 Text(
                   FormattingHelpers.currencyPkr(item.lineTotal),
                   style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontFeatures: AppTypography.tabularFigures,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -337,7 +334,7 @@ class _ImeiEntryRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 color: semantic.warning,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -445,7 +442,6 @@ class _EditImeiEntryDialogState extends State<_EditImeiEntryDialog> {
             TextField(
               controller: _imei1Controller,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
                 labelText: 'IMEI 1',
               ),
@@ -455,7 +451,6 @@ class _EditImeiEntryDialogState extends State<_EditImeiEntryDialog> {
             TextField(
               controller: _imei2Controller,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
                 labelText: 'IMEI 2',
               ),
@@ -465,7 +460,6 @@ class _EditImeiEntryDialogState extends State<_EditImeiEntryDialog> {
             TextField(
               controller: _serialController,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
                 labelText: 'Serial Number',
               ),
@@ -474,7 +468,6 @@ class _EditImeiEntryDialogState extends State<_EditImeiEntryDialog> {
             TextField(
               controller: _costController,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
                 labelText: 'Cost Price',
               ),
@@ -486,7 +479,6 @@ class _EditImeiEntryDialogState extends State<_EditImeiEntryDialog> {
             TextField(
               controller: _sellingController,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
                 labelText: 'Sale Price',
               ),

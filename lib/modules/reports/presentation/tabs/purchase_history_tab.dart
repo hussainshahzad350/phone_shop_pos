@@ -43,7 +43,6 @@ class PurchaseHistoryTab extends ConsumerWidget {
                   child: TextField(
                     decoration: const InputDecoration(
                       isDense: true,
-                      border: OutlineInputBorder(),
                       labelText: 'Supplier',
                     ),
                     onChanged: (value) => ref

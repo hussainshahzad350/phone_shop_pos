@@ -127,7 +127,6 @@ class _ScanReturnDialogState extends ConsumerState<ScanReturnDialog> {
               focusNode: _focusNode,
               decoration: InputDecoration(
                 labelText: 'Scan or enter IMEI',
-                border: const OutlineInputBorder(),
                 isDense: true,
                 prefixIcon: const Icon(Icons.qr_code_scanner, size: 18),
                 suffixIcon: _searching
@@ -225,7 +224,6 @@ class _FoundIssueCard extends StatelessWidget {
                   dealer?.name ?? 'Unknown Dealer',
                   style: theme.textTheme.titleSmall?.copyWith(
                     color: theme.colorScheme.onSecondaryContainer,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],

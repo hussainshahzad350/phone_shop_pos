@@ -317,7 +317,6 @@ class _SupplierLedgerFilters extends StatelessWidget {
                 controller: searchController,
                 decoration: const InputDecoration(
                   isDense: true,
-                  border: OutlineInputBorder(),
                   labelText: 'Search reference',
                   prefixIcon: Icon(Icons.search, size: 18),
                 ),

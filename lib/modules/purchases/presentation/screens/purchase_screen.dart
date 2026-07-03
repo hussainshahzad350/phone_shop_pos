@@ -26,6 +26,7 @@ import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboar
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_query_providers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/theme/app_typography.dart';
 
 class PurchaseScreen extends ConsumerStatefulWidget {
   const PurchaseScreen({super.key});
@@ -678,9 +679,9 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const Text(
+                  Text(
                     'Totals',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
                   // Each total row watches only its own value, so a keystroke
@@ -943,7 +944,11 @@ class _TotalRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = bold
-        ? const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)
+        ? const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+            fontFeatures: AppTypography.tabularFigures,
+          )
         : null;
 
     return Row(

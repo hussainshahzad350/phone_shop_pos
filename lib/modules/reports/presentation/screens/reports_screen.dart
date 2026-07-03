@@ -82,7 +82,6 @@ class ReportsScreen extends ConsumerWidget {
                 controller: reasonController,
                 decoration: const InputDecoration(
                   labelText: 'Reason',
-                  border: OutlineInputBorder(),
                 ),
                 autofocus: true,
                 onSubmitted: (_) => Navigator.of(dialogContext).pop(true),
@@ -166,7 +165,6 @@ class ReportsScreen extends ConsumerWidget {
                 controller: reasonController,
                 decoration: const InputDecoration(
                   labelText: 'Reason',
-                  border: OutlineInputBorder(),
                 ),
                 autofocus: true,
                 onSubmitted: (_) => Navigator.of(dialogContext).pop(true),

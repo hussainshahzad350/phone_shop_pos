@@ -10,6 +10,7 @@ import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summa
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_tab_error_view.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_section_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
+import 'package:phone_shop_pos/core/theme/app_typography.dart';
 
 class DailySalesTab extends ConsumerWidget {
   const DailySalesTab({
@@ -49,7 +50,10 @@ class DailySalesTab extends ConsumerWidget {
     final layout = reportTableLayoutFor(context);
 
     DataRow totalsRow() {
-      final style = const TextStyle(fontWeight: FontWeight.bold);
+      final style = const TextStyle(
+        fontWeight: FontWeight.w600,
+        fontFeatures: AppTypography.tabularFigures,
+      );
       return DataRow(
         color: WidgetStatePropertyAll(
           Theme.of(context).colorScheme.primaryContainer.withAlpha(76),

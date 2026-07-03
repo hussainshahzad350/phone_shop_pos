@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.dart';
+import 'package:phone_shop_pos/core/theme/app_typography.dart';
 
 class TotalsPanelWidget extends StatefulWidget {
   const TotalsPanelWidget({
@@ -69,7 +70,7 @@ class _TotalsPanelWidgetState extends State<TotalsPanelWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text('Totals', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Totals', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             _line(label: 'Subtotal', value: widget.totals.subtotal),
             const SizedBox(height: 8),
@@ -157,8 +158,9 @@ class _TotalsPanelWidgetState extends State<TotalsPanelWidget> {
         Text(
           FormattingHelpers.currencyPkr(value),
           style: TextStyle(
-            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+            fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
             color: color,
+            fontFeatures: AppTypography.tabularFigures,
           ),
         ),
       ],

@@ -348,7 +348,6 @@ class _ProfitRow extends StatelessWidget {
     final theme = Theme.of(context);
     final style = isBold
         ? theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
             color: valueColor,
           )
         : theme.textTheme.bodyMedium?.copyWith(color: valueColor);

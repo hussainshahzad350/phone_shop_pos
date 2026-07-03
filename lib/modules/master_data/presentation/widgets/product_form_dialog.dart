@@ -170,7 +170,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                 onFieldSubmitted: (_) => _categoryFocus.requestFocus(),
                 decoration: const InputDecoration(
                   labelText: 'Product Name',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
                 validator: (value) => (value == null || value.trim().isEmpty)
@@ -188,7 +187,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       expandedInsets: EdgeInsets.zero,
                       label: const Text('Brand'),
                       inputDecorationTheme: const InputDecorationTheme(
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                       dropdownMenuEntries: <DropdownMenuEntry<String?>>[
@@ -219,7 +217,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       onFieldSubmitted: (_) => _skuFocus.requestFocus(),
                       decoration: const InputDecoration(
                         labelText: 'Category',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                     ),
@@ -237,7 +234,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       onFieldSubmitted: (_) => _barcodeFocus.requestFocus(),
                       decoration: const InputDecoration(
                         labelText: 'SKU',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                     ),
@@ -251,7 +247,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       onFieldSubmitted: (_) => _purchaseFocus.requestFocus(),
                       decoration: const InputDecoration(
                         labelText: 'Barcode',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                     ),
@@ -272,7 +267,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       ),
                       decoration: const InputDecoration(
                         labelText: 'Purchase Price',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                       validator: (value) =>
@@ -295,7 +289,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       ),
                       decoration: const InputDecoration(
                         labelText: 'Sale Price',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                       validator: (value) =>
@@ -323,7 +316,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       ],
                       decoration: const InputDecoration(
                         labelText: 'Min Stock Alert',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                     ),

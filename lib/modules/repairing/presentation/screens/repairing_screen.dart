@@ -11,6 +11,7 @@ import 'package:phone_shop_pos/modules/repairing/domain/entities/repair_analytic
 import 'package:phone_shop_pos/modules/repairing/domain/entities/repair_job_entity.dart';
 import 'package:phone_shop_pos/modules/repairing/presentation/providers/repairing_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/theme/app_typography.dart';
 
 part '../dialogs/collect_payment_dialog.dart';
 part '../dialogs/repair_job_form_dialog.dart';

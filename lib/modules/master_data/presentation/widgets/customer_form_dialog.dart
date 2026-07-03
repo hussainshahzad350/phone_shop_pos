@@ -97,7 +97,6 @@ class _CustomerFormDialogState extends State<CustomerFormDialog> {
                 autofocus: true,
                 decoration: const InputDecoration(
                   labelText: 'Customer Name',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
                 validator: (value) => (value == null || value.trim().isEmpty)
@@ -112,7 +111,6 @@ class _CustomerFormDialogState extends State<CustomerFormDialog> {
                       controller: _phoneController,
                       decoration: const InputDecoration(
                         labelText: 'Phone',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                     ),
@@ -123,7 +121,6 @@ class _CustomerFormDialogState extends State<CustomerFormDialog> {
                       controller: _emailController,
                       decoration: const InputDecoration(
                         labelText: 'Email',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                     ),
@@ -136,7 +133,6 @@ class _CustomerFormDialogState extends State<CustomerFormDialog> {
                 maxLines: 2,
                 decoration: const InputDecoration(
                   labelText: 'Address',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
               ),
@@ -147,7 +143,6 @@ class _CustomerFormDialogState extends State<CustomerFormDialog> {
                 maxLength: NotesSafety.maxLength,
                 decoration: const InputDecoration(
                   labelText: 'Notes',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
                 validator: (value) =>

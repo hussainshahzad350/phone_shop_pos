@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/theme/app_typography.dart';
 
 class DashboardKpiCardWidget extends StatelessWidget {
   const DashboardKpiCardWidget({
@@ -35,8 +36,8 @@ class DashboardKpiCardWidget extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
                     color: color,
+                    fontFeatures: AppTypography.tabularFigures,
                   ),
                 ),
                 Text(label, style: Theme.of(context).textTheme.bodySmall),

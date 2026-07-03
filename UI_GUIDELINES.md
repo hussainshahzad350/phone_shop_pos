@@ -274,7 +274,7 @@ InputDecoration(
 // Only write it when you need to override something specific
 ```
 
-> ⚠️ **Known issue:** `appDesktopInputDecoration()` in `desktop_components.dart` hardcodes light-mode border colors and therefore renders wrong in dark mode. Prefer plain `InputDecoration` (theme-driven) for new code until that helper is fixed.
+> `appDesktopInputDecoration()` in `desktop_components.dart` is a thin theme-driven wrapper (label/hint/icons/isDense only) — borders and fill always come from the theme, so it is dark-mode safe.
 
 **Dropdown:**
 ```dart

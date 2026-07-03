@@ -131,7 +131,6 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                             selectedCategory.isEmpty ? null : selectedCategory,
                         isExpanded: true,
                         decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
                           labelText: 'Category',
                           isDense: true,
                         ),
@@ -160,7 +159,6 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                             ? null
                             : selectedPaymentMethod,
                         decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
                           labelText: 'Payment',
                           isDense: true,
                         ),
@@ -197,7 +195,6 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                             .read(expensesSearchRemarksProvider.notifier)
                             .state = value,
                         decoration: InputDecoration(
-                          border: const OutlineInputBorder(),
                           labelText: 'Search remarks',
                           isDense: true,
                           prefixIcon: const Icon(Icons.search),

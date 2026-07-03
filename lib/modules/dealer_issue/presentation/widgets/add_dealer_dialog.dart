@@ -84,7 +84,6 @@ class _AddDealerDialogState extends ConsumerState<AddDealerDialog> {
                 autofocus: true,
                 decoration: const InputDecoration(
                   labelText: 'Dealer Name *',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
                 validator: (v) =>
@@ -96,7 +95,6 @@ class _AddDealerDialogState extends ConsumerState<AddDealerDialog> {
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(
                   labelText: 'Phone (optional)',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
               ),
@@ -105,7 +103,6 @@ class _AddDealerDialogState extends ConsumerState<AddDealerDialog> {
                 controller: _addressController,
                 decoration: const InputDecoration(
                   labelText: 'Address (optional)',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
               ),

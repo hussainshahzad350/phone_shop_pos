@@ -49,7 +49,6 @@ class _ReturnSaleDialogState extends ConsumerState<ReturnSaleDialog> {
               controller: _qtyController,
               enabled: !widget.item.hasImei,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 labelText: 'Quantity',
                 isDense: true,
               ),
@@ -59,7 +58,6 @@ class _ReturnSaleDialogState extends ConsumerState<ReturnSaleDialog> {
             TextField(
               controller: _reasonController,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 labelText: 'Reason (mandatory)',
                 isDense: true,
               ),
@@ -69,7 +67,6 @@ class _ReturnSaleDialogState extends ConsumerState<ReturnSaleDialog> {
               controller: _notesController,
               maxLines: 2,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 labelText: 'Notes (optional)',
                 isDense: true,
               ),
