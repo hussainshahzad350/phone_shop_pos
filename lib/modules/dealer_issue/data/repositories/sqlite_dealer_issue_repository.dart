@@ -294,17 +294,29 @@ class SqliteDealerIssueRepository implements DealerIssueRepository {
           'updated_at': nowStr,
         });
 
+        // Split the sale price across the items. When it does not divide
+        // evenly (e.g. 1000 / 3), the last line absorbs the rounding remainder
+        // so that SUM(line_total) == subtotal and the financial-consistency
+        // invariant holds.
+        final roundedShare =
+            double.parse(pricePerItem.toStringAsFixed(2));
+        double allocatedSoFar = 0.0;
         for (int i = 0; i < stockSnapshots.length; i++) {
           final snap = stockSnapshots[i];
+          final isLast = i == stockSnapshots.length - 1;
+          final linePrice = isLast
+              ? double.parse((salePrice - allocatedSoFar).toStringAsFixed(2))
+              : roundedShare;
+          allocatedSoFar += linePrice;
           await txn.insert(TableNames.saleItems, {
             'id': '${saleId}_$i',
             'sale_id': saleId,
             'product_model_id': snap['product_model_id'] as String,
             'serialized_stock_id': snap['id'] as String,
             'quantity': 1,
-            'unit_price': pricePerItem,
+            'unit_price': linePrice,
             'discount': 0.0,
-            'line_total': pricePerItem,
+            'line_total': linePrice,
             'cost_price': (snap['cost_price'] as num?)?.toDouble() ?? 0.0,
             'created_at': nowStr,
             'updated_at': nowStr,
