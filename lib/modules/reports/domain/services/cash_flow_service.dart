@@ -49,8 +49,10 @@ class CashFlowService with BaseRepositoryGuard {
       final supplierSettlementWhere = StringBuffer('spt.payment_method = ?');
 
       if (startDate != null) {
+        // Local-day boundary → UTC instant, matching the localtime day buckets
+        // above so a range filter selects the same rows shown per day.
         final startUtc =
-            DateTime.utc(startDate.year, startDate.month, startDate.day);
+            DateTime(startDate.year, startDate.month, startDate.day).toUtc();
         final startSql = DateTimeHelpers.toSql(startUtc);
         salesWhere.write(' AND s.sale_date >= ?');
         salesArgs.add(startSql);
@@ -71,8 +73,8 @@ class CashFlowService with BaseRepositoryGuard {
       }
 
       if (endDate != null) {
-        final endUtc = DateTime.utc(endDate.year, endDate.month, endDate.day)
-            .add(const Duration(days: 1));
+        final endUtc =
+            DateTime(endDate.year, endDate.month, endDate.day + 1).toUtc();
         final endSql = DateTimeHelpers.toSql(endUtc);
         salesWhere.write(' AND s.sale_date < ?');
         salesArgs.add(endSql);
@@ -113,7 +115,7 @@ class CashFlowService with BaseRepositoryGuard {
           ),
           sales_cash AS (
             SELECT
-              date(s.sale_date) AS day,
+              date(s.sale_date, 'localtime') AS day,
               COALESCE(
                 SUM(
                   CASE
@@ -132,63 +134,63 @@ class CashFlowService with BaseRepositoryGuard {
             LEFT JOIN payments_by_sale pbs ON pbs.sale_id = s.id
             LEFT JOIN refunds_by_sale rbs ON rbs.sale_id = s.id
             WHERE ${salesWhere.toString()}
-            GROUP BY date(s.sale_date)
+            GROUP BY date(s.sale_date, 'localtime')
           ),
           collections_cash AS (
             SELECT
-              date(sp.created_at) AS day,
+              date(sp.created_at, 'localtime') AS day,
               COALESCE(SUM(sp.amount), 0) AS cash_collections_in
             FROM ${TableNames.salePayments} sp
             WHERE ${collectionsWhere.toString()}
-            GROUP BY date(sp.created_at)
+            GROUP BY date(sp.created_at, 'localtime')
           ),
           refunds_cash AS (
             SELECT
-              date(sr.created_at) AS day,
+              date(sr.created_at, 'localtime') AS day,
               COALESCE(SUM(sr.refunded_cash_amount), 0) AS cash_refunds_out
             FROM ${TableNames.saleReturns} sr
             WHERE ${returnsWhere.toString()}
-            GROUP BY date(sr.created_at)
+            GROUP BY date(sr.created_at, 'localtime')
           ),
           purchase_refunds_in AS (
             SELECT
-              date(pr.created_at) AS day,
+              date(pr.created_at, 'localtime') AS day,
               COALESCE(SUM(pr.refunded_cash_amount), 0) AS cash_refunds_in
             FROM ${TableNames.purchaseReturns} pr
             WHERE ${purchaseReturnsWhere.toString()}
-            GROUP BY date(pr.created_at)
+            GROUP BY date(pr.created_at, 'localtime')
           ),
           purchase_out AS (
             SELECT
-              date(p.purchase_date) AS day,
+              date(p.purchase_date, 'localtime') AS day,
               COALESCE(SUM(p.paid_amount), 0) AS purchase_payments_out
             FROM ${TableNames.purchases} p
             WHERE ${purchasesWhere.toString()}
-            GROUP BY date(p.purchase_date)
+            GROUP BY date(p.purchase_date, 'localtime')
           ),
           expense_out AS (
             SELECT
-              date(e.expense_date) AS day,
+              date(e.expense_date, 'localtime') AS day,
               COALESCE(SUM(e.amount), 0) AS expenses_out
             FROM ${TableNames.expenses} e
             WHERE ${expensesWhere.toString()}
-            GROUP BY date(e.expense_date)
+            GROUP BY date(e.expense_date, 'localtime')
           ),
           customer_settlement_in AS (
             SELECT
-              date(cpt.created_at) AS day,
+              date(cpt.created_at, 'localtime') AS day,
               COALESCE(SUM(cpt.amount), 0) AS customer_settlement_in
             FROM ${TableNames.customerPaymentTransactions} cpt
             WHERE ${customerSettlementWhere.toString()}
-            GROUP BY date(cpt.created_at)
+            GROUP BY date(cpt.created_at, 'localtime')
           ),
           supplier_settlement_out AS (
             SELECT
-              date(spt.created_at) AS day,
+              date(spt.created_at, 'localtime') AS day,
               COALESCE(SUM(spt.amount), 0) AS supplier_settlement_out
             FROM ${TableNames.supplierPaymentTransactions} spt
             WHERE ${supplierSettlementWhere.toString()}
-            GROUP BY date(spt.created_at)
+            GROUP BY date(spt.created_at, 'localtime')
           ),
           all_days AS (
             SELECT day FROM sales_cash

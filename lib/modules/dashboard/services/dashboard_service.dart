@@ -52,7 +52,11 @@ class DashboardService with BaseRepositoryGuard {
     }
 
     final request = guard<DashboardKpisEntity>(() async {
-      final start = DateTime.utc(now.year, now.month, now.day);
+      // "Today" is the shop's local calendar day. now is a UTC instant, so
+      // take its local date and convert that day's midnight back to UTC.
+      final localNow = now.toLocal();
+      final start =
+          DateTime(localNow.year, localNow.month, localNow.day).toUtc();
       final end = start.add(const Duration(days: 1));
 
       final salesRows = await QueryDiagnostics.trace(
@@ -316,7 +320,9 @@ class DashboardService with BaseRepositoryGuard {
   Future<Result<List<DashboardRecentSaleEntity>>> getTodaySalesDetails() {
     return guard<List<DashboardRecentSaleEntity>>(() async {
       final now = _nowProvider();
-      final start = DateTime.utc(now.year, now.month, now.day);
+      final localNow = now.toLocal();
+      final start =
+          DateTime(localNow.year, localNow.month, localNow.day).toUtc();
       final end = start.add(const Duration(days: 1));
 
       final rows = await _appDatabase.database.rawQuery(

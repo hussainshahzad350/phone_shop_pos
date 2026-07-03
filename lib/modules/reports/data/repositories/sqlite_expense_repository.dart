@@ -156,13 +156,13 @@ class SqliteExpenseRepository
 
       if (startDate != null) {
         final startUtc =
-            DateTime.utc(startDate.year, startDate.month, startDate.day);
+            DateTime(startDate.year, startDate.month, startDate.day).toUtc();
         where.add('expense_date >= ?');
         args.add(DateTimeHelpers.toSql(startUtc));
       }
       if (endDate != null) {
-        final endUtc = DateTime.utc(endDate.year, endDate.month, endDate.day)
-            .add(const Duration(days: 1));
+        final endUtc =
+            DateTime(endDate.year, endDate.month, endDate.day + 1).toUtc();
         where.add('expense_date < ?');
         args.add(DateTimeHelpers.toSql(endUtc));
       }
@@ -242,18 +242,21 @@ class SqliteExpenseRepository
       final where = <String>['is_deleted = 0'];
       final args = <Object?>[];
 
-      final nowUtc = DateTimeHelpers.nowUtc();
-      final todayStart = DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day);
-      final monthStart = DateTime.utc(nowUtc.year, nowUtc.month);
+      // "Today" and "this month" are local calendar periods for the shop, so
+      // anchor them to local now and convert the boundaries to UTC instants.
+      final nowLocal = DateTime.now();
+      final todayStart =
+          DateTime(nowLocal.year, nowLocal.month, nowLocal.day).toUtc();
+      final monthStart = DateTime(nowLocal.year, nowLocal.month).toUtc();
 
       if (startDate != null) {
         where.add('expense_date >= ?');
         args.add(DateTimeHelpers.toSql(
-            DateTime.utc(startDate.year, startDate.month, startDate.day)));
+            DateTime(startDate.year, startDate.month, startDate.day).toUtc()));
       }
       if (endDate != null) {
-        final endUtc = DateTime.utc(endDate.year, endDate.month, endDate.day)
-            .add(const Duration(days: 1));
+        final endUtc =
+            DateTime(endDate.year, endDate.month, endDate.day + 1).toUtc();
         where.add('expense_date < ?');
         args.add(DateTimeHelpers.toSql(endUtc));
       }

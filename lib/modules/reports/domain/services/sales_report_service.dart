@@ -46,7 +46,7 @@ class SalesReportService with BaseRepositoryGuard {
         ),
         sale_events AS (
           SELECT
-            date(s.sale_date) AS event_day,
+            date(s.sale_date, 'localtime') AS event_day,
             1 AS invoice_count,
             COALESCE(s.total + COALESCE(srt.returned_total, 0), 0) AS total_sales,
             COALESCE(SUM(
@@ -69,7 +69,7 @@ class SalesReportService with BaseRepositoryGuard {
         ),
         return_events AS (
           SELECT
-            date(sr.created_at) AS event_day,
+            date(sr.created_at, 'localtime') AS event_day,
             0 AS invoice_count,
             -COALESCE(SUM(sr.return_amount), 0) AS total_sales,
             COALESCE(SUM(
@@ -82,7 +82,7 @@ class SalesReportService with BaseRepositoryGuard {
           JOIN ${TableNames.sales} s ON s.id = sr.sale_id
           JOIN ${TableNames.saleItems} si ON si.id = sr.sale_item_id
           WHERE $returnWhere
-          GROUP BY date(sr.created_at)
+          GROUP BY date(sr.created_at, 'localtime')
         )
         SELECT
           event_day AS sale_day,
@@ -264,16 +264,17 @@ class SalesReportService with BaseRepositoryGuard {
 
     final start = filter.startDate;
     if (start != null) {
-      final startUtc = DateTime.utc(start.year, start.month, start.day);
+      // Interpret the picked calendar day as a *local* day and convert its
+      // midnight boundary to the UTC instant stored in the column, so early
+      // hours of a local day are not attributed to the previous UTC day.
+      final startUtc = DateTime(start.year, start.month, start.day).toUtc();
       clauses.add('$dateColumn >= ?');
       args.add(DateTimeHelpers.toSql(startUtc));
     }
 
     final end = filter.endDate;
     if (end != null) {
-      final endUtc = DateTime.utc(end.year, end.month, end.day).add(
-        const Duration(days: 1),
-      );
+      final endUtc = DateTime(end.year, end.month, end.day + 1).toUtc();
       clauses.add('$dateColumn < ?');
       args.add(DateTimeHelpers.toSql(endUtc));
     }
