@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/errors/app_error.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 /// Shared error/retry state for report tabs.
 ///
@@ -27,7 +28,7 @@ class ReportTabErrorView extends StatelessWidget {
           Text(message),
           const SizedBox(height: 6),
           Text(details, style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           OutlinedButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),

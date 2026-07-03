@@ -5,6 +5,7 @@ import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/dialogs/return_sale_dialog.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class SalesInvoiceDialog extends ConsumerWidget {
   const SalesInvoiceDialog({super.key, required this.saleId});
@@ -34,8 +35,8 @@ class SalesInvoiceDialog extends ConsumerWidget {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
                     ),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.errorContainer,
@@ -49,7 +50,7 @@ class SalesInvoiceDialog extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                 ],
                 Wrap(
                   spacing: 12,
@@ -71,10 +72,10 @@ class SalesInvoiceDialog extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 if ((detail.notes ?? '').isNotEmpty) ...<Widget>[
                   Text('Notes: ${detail.notes}'),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                 ],
                 Expanded(
                   child: AppDataTable(

@@ -10,6 +10,7 @@ import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summa
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_section_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class CashFlowTab extends ConsumerWidget {
   const CashFlowTab({super.key});
@@ -24,7 +25,7 @@ class CashFlowTab extends ConsumerWidget {
       children: <Widget>[
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(AppSpacing.sm),
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -62,7 +63,7 @@ class CashFlowTab extends ConsumerWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Expanded(
           child: rowsAsync.when(
             data: (rows) {
@@ -92,7 +93,7 @@ class CashFlowTab extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Expanded(
                     child: ReportTableSection(
                       title: 'Cash Flow',
@@ -237,13 +238,13 @@ class CashFlowTab extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     const Text('Failed to load cash flow.'),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       details,
                       style: Theme.of(context).textTheme.bodySmall,
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     OutlinedButton.icon(
                       onPressed: () => ref.invalidate(cashLedgerRowsProvider),
                       icon: const Icon(Icons.refresh),

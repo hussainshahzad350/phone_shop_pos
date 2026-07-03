@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/theme/app_typography.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class ReportSummaryCardWidget extends StatelessWidget {
   const ReportSummaryCardWidget({
@@ -17,7 +18,7 @@ class ReportSummaryCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -28,7 +29,7 @@ class ReportSummaryCardWidget extends StatelessWidget {
                 fontFeatures: AppTypography.tabularFigures,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xs),
             Text(label, style: Theme.of(context).textTheme.bodySmall),
           ],
         ),

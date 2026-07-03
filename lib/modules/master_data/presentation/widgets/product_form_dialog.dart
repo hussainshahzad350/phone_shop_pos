@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class ProductFormData {
   const ProductFormData({
@@ -176,7 +177,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                     ? 'Name is required'
                     : null,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 children: <Widget>[
                   Expanded(
@@ -208,7 +209,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       },
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: TextFormField(
                       controller: _categoryController,
@@ -223,7 +224,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 children: <Widget>[
                   Expanded(
@@ -238,7 +239,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: TextFormField(
                       controller: _barcodeController,
@@ -253,7 +254,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 children: <Widget>[
                   Expanded(
@@ -277,7 +278,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                               : null,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: TextFormField(
                       controller: _saleController,
@@ -301,7 +302,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 children: <Widget>[
                   Expanded(
@@ -320,7 +321,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: SwitchListTile(
                       value: _hasImei,

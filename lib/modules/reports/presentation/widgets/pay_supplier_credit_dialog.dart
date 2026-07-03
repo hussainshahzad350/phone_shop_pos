@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/ledger/domain/entities/settlement_request_payload.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class PaySupplierCreditDialog extends ConsumerStatefulWidget {
   const PaySupplierCreditDialog({
@@ -50,7 +51,7 @@ class _PaySupplierCreditDialogState
                 'Payable: ${FormattingHelpers.currencyPkr(widget.maxAmount!)}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
             ],
             TextField(
               controller: _amountController,
@@ -61,7 +62,7 @@ class _PaySupplierCreditDialogState
                 isDense: true,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             DropdownButtonFormField<String>(
               initialValue: _paymentMethod,
               decoration: const InputDecoration(
@@ -83,7 +84,7 @@ class _PaySupplierCreditDialogState
                 }
               },
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _noteController,
               maxLines: 2,

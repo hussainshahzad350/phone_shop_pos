@@ -8,6 +8,7 @@ import 'package:phone_shop_pos/modules/dashboard/presentation/providers/kpi_pref
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/dashboard_kpi_card_widget.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/kpi_customize_dialog.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/kpi_detail_sheet.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class DashboardKpiGrid extends ConsumerWidget {
   const DashboardKpiGrid({super.key, required this.kpis});
@@ -44,7 +45,7 @@ class DashboardKpiGrid extends ConsumerWidget {
               label: const Text('Customize'),
               style: TextButton.styleFrom(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: AppSpacing.xs),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 textStyle: theme.textTheme.labelSmall,

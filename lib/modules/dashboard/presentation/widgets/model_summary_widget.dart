@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/model_imei_stock_entity.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class ModelSummaryWidget extends StatelessWidget {
   const ModelSummaryWidget({
@@ -17,7 +18,7 @@ class ModelSummaryWidget extends StatelessWidget {
       child: InkWell(
         onTap: onModelTap,
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(
             children: <Widget>[
               Expanded(
@@ -30,7 +31,7 @@ class ModelSummaryWidget extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.md),
               Text(
                 '${modelStock.quantity} Phones',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -38,7 +39,7 @@ class ModelSummaryWidget extends StatelessWidget {
                       color: Theme.of(context).colorScheme.primary,
                     ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Icon(
                 Icons.chevron_right,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,

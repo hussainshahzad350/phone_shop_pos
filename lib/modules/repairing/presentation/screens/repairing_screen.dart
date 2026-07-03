@@ -33,11 +33,11 @@ class RepairingScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             const _KpiRow(),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             const _FiltersRow(),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Expanded(
               child: SingleChildScrollView(
                 child: const _RepairJobsTable(),

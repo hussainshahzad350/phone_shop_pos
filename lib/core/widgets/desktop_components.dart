@@ -110,7 +110,7 @@ class AppTopBar extends StatelessWidget {
     return SizedBox(
       height: 56,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         child: Row(
           children: <Widget>[
             Column(
@@ -632,8 +632,8 @@ class AppLoadingOverlay extends StatelessWidget {
                 child: Card(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.md,
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -643,7 +643,7 @@ class AppLoadingOverlay extends StatelessWidget {
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: AppSpacing.md),
                         Text(label),
                       ],
                     ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class InventoryFilterChips extends StatelessWidget {
   const InventoryFilterChips({
@@ -27,7 +28,7 @@ class InventoryFilterChips extends StatelessWidget {
         _statusChip(context, SerializedStockStatus.inStock, 'In Stock'),
         _statusChip(context, SerializedStockStatus.sold, 'Sold'),
         _statusChip(context, SerializedStockStatus.reserved, 'Reserved'),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppSpacing.sm),
         _buildLabel(context, 'Type:'),
         _typeChip(context, null, 'All'),
         _typeChip(context, true, 'Phones'),

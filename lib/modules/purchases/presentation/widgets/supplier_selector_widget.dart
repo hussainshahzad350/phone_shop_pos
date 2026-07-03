@@ -103,7 +103,7 @@ class _SupplierSelectorWidgetState
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: TapRegion(
           groupId: _tapGroupId,
           onTapOutside: (_) => _closeDropdown(),
@@ -164,7 +164,7 @@ class _SupplierSelectorWidgetState
                     if (_suppliersLoading) const LinearProgressIndicator(minHeight: 2),
                     if (!_suppliersLoading && _suppliers.isEmpty)
                       const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                         child: Text('No suppliers found.'),
                       )
                     else

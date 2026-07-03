@@ -62,7 +62,7 @@ class _InvoicePrintPreviewDialogState
             Row(
               children: <Widget>[
                 const Text('Layout'),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 DropdownButton<InvoicePaperSize>(
                   value: _paperSize,
                   onChanged: _isPrinting
@@ -93,7 +93,7 @@ class _InvoicePrintPreviewDialogState
                   ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -115,11 +115,11 @@ class _InvoicePrintPreviewDialogState
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Flexible(
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
                   border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                   borderRadius: AppRadii.xsRadius,

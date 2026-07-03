@@ -24,7 +24,7 @@ class AlertsSection extends StatelessWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -38,8 +38,8 @@ class AlertsSection extends StatelessWidget {
                 if (totalAlerts > 0)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: AppSpacing.sm,
+                      vertical: AppSpacing.xs,
                     ),
                     decoration: BoxDecoration(
                       color: Theme.of(context).semantic.dangerContainer,
@@ -54,13 +54,13 @@ class AlertsSection extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             if (lowStockCount > 0) ...<Widget>[
               Text(
                 'Low Stock Items',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               ...List.generate(
                 lowStockCount.clamp(0, 3),
                 (index) => _AlertItem(
@@ -75,14 +75,14 @@ class AlertsSection extends StatelessWidget {
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                 ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
             ],
             if (pendingReturns.isNotEmpty) ...<Widget>[
               Text(
                 'Pending Returns',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               ...pendingReturns.take(3).map(
                 (returnItem) => _AlertItem(
                   type: 'pending_return',
@@ -119,7 +119,7 @@ class _AlertItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
         children: <Widget>[
           Icon(
@@ -127,7 +127,7 @@ class _AlertItem extends StatelessWidget {
             size: 16,
             color: Theme.of(context).semantic.warning,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

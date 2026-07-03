@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/providers/local_pin_auth_providers.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/widgets/pin_input_field.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class ResetPinDialog extends ConsumerWidget {
   const ResetPinDialog({
@@ -46,7 +47,7 @@ class ResetPinDialog extends ConsumerWidget {
               labelText: 'Confirm New PIN',
             ),
             if (authState.errorMessage != null) ...<Widget>[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 authState.errorMessage!,
                 style: TextStyle(

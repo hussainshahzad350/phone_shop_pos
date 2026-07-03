@@ -32,7 +32,7 @@ class MasterDataScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 splashBorderRadius: BorderRadius.circular(999),
-                labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+                labelPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                 tabs: const <Tab>[
                   Tab(child: _MasterDataTabLabel(text: 'Products')),
                   Tab(child: _MasterDataTabLabel(text: 'Brands')),
@@ -40,7 +40,7 @@ class MasterDataScreen extends StatelessWidget {
                   Tab(child: _MasterDataTabLabel(text: 'Customers')),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               const Expanded(
                 child: TabBarView(
                   children: <Widget>[

@@ -405,7 +405,7 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
                 hintText: 'Search customers',
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             FilterChip(
               selected: includeInactive,
               label: const Text('Show inactive'),
@@ -414,7 +414,7 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
                     selected;
               },
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             FilledButton.icon(
               onPressed: _createCustomer,
               icon: const Icon(Icons.add),
@@ -422,7 +422,7 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Expanded(
           child: Card(
             child: Padding(

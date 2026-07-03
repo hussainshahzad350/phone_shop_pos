@@ -8,6 +8,7 @@ import 'package:phone_shop_pos/modules/dashboard/domain/entities/brand_stock_ent
 import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/brand_stock_card.dart';
 import 'package:phone_shop_pos/modules/dashboard/services/stock_report_export_service.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class BrandStockSection extends ConsumerStatefulWidget {
   const BrandStockSection({
@@ -82,7 +83,7 @@ class _BrandStockSectionState extends ConsumerState<BrandStockSection> {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -101,7 +102,7 @@ class _BrandStockSectionState extends ConsumerState<BrandStockSection> {
                         label: const Text('Export CSV'),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
+                              horizontal: AppSpacing.md, vertical: 6),
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           textStyle: theme.textTheme.labelSmall,

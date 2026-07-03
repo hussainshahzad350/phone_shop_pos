@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:phone_shop_pos/core/services/cloud/cloud_providers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 /// Signs the device into its cloud-backup account using an email one-time code.
 /// Pops `true` once a session has been stored.
@@ -107,7 +108,7 @@ class _CloudSignInDialogState extends ConsumerState<CloudSignInDialog> {
               ),
             ],
             if (_error != null) ...<Widget>[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 _error!,
                 style: TextStyle(color: Theme.of(context).colorScheme.error),

@@ -32,13 +32,13 @@ class _DealerIssueScreenState extends ConsumerState<DealerIssueScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             _buildHeader(),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             DealerIssueFilterWidget(
               onDealerSelected: (dealerId) {
                 ref.read(dealerIssueStateProvider.notifier).selectDealer(dealerId ?? '');
               },
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Expanded(
               child: DealerIssueTableWidget(
                 issues: state.issues,
@@ -69,7 +69,7 @@ class _DealerIssueScreenState extends ConsumerState<DealerIssueScreen> {
           icon: const Icon(Icons.qr_code_scanner, size: 18),
           label: const Text('Scan Return'),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppSpacing.sm),
         FilledButton.icon(
           onPressed: () async {
             final issued = await showDialog<bool>(

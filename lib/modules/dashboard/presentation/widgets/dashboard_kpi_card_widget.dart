@@ -25,7 +25,7 @@ class DashboardKpiCardWidget extends StatelessWidget {
       child: Row(
         children: <Widget>[
           Icon(icon, color: color, size: 30),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class ReportTabChips extends StatelessWidget {
   const ReportTabChips({
@@ -17,7 +18,7 @@ class ReportTabChips extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(AppSpacing.sm),
         child: Wrap(
           spacing: 8,
           runSpacing: 8,

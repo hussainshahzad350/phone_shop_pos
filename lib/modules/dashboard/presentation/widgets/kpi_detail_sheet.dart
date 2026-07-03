@@ -71,7 +71,7 @@ class _KpiDetailSheet extends ConsumerWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 8, 10),
+            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 6, AppSpacing.sm, 10),
             child: Row(
               children: <Widget>[
                 CircleAvatar(
@@ -79,7 +79,7 @@ class _KpiDetailSheet extends ConsumerWidget {
                   radius: 20,
                   child: Icon(_iconForCard(cardId), color: color, size: 20),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,7 +153,7 @@ class _KpiDetailSheet extends ConsumerWidget {
       default:
         return const Center(
           child: Padding(
-            padding: EdgeInsets.all(24),
+            padding: EdgeInsets.all(AppSpacing.xl),
             child: Text('No detail available.'),
           ),
         );
@@ -201,13 +201,13 @@ class _TodaySalesContent extends ConsumerWidget {
         if (sales.isEmpty) {
           return const Center(
             child: Padding(
-              padding: EdgeInsets.all(24),
+              padding: EdgeInsets.all(AppSpacing.xl),
               child: Text('No sales recorded today.'),
             ),
           );
         }
         return ListView.separated(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
           itemCount: sales.length,
           separatorBuilder: (_, __) => const Divider(height: 1, indent: 16),
           itemBuilder: (context, i) => _SaleTile(sale: sales[i]),
@@ -285,26 +285,26 @@ class _TodayProfitContent extends StatelessWidget {
             valueColor: profitColor,
             isBold: true,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           const Divider(),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           _ProfitRow(
             label: 'Phones Sold',
             value: '${kpis.phonesSoldToday} units',
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           _ProfitRow(
             label: 'Accessories Sold',
             value: '${kpis.accessoriesSoldToday} items',
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           _ProfitRow(
             label: 'Today Revenue',
             value: FormattingHelpers.currencyPkr(kpis.todaySales),
           ),
           const SizedBox(height: 20),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerHighest,
               borderRadius: AppRadii.smRadius,
@@ -313,7 +313,7 @@ class _TodayProfitContent extends StatelessWidget {
               children: <Widget>[
                 Icon(Icons.info_outline,
                     size: 16, color: theme.colorScheme.outline),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
                     'Profit is calculated as revenue minus cost price, adjusted for any returns processed today.',
@@ -383,13 +383,13 @@ class _LowStockContent extends ConsumerWidget {
         if (items.isEmpty) {
           return Center(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(AppSpacing.xl),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   Icon(Icons.check_circle_outline,
                       color: Theme.of(context).semantic.success),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   const Text('All accessories are sufficiently stocked.'),
                 ],
               ),
@@ -397,7 +397,7 @@ class _LowStockContent extends ConsumerWidget {
           );
         }
         return ListView.separated(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
           itemCount: items.length,
           separatorBuilder: (_, __) => const Divider(height: 1, indent: 16),
           itemBuilder: (context, i) => _LowStockTile(item: items[i]),
@@ -470,13 +470,13 @@ class _PendingBalancesContent extends ConsumerWidget {
         if (customers.isEmpty) {
           return Center(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(AppSpacing.xl),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   Icon(Icons.check_circle_outline,
                       color: Theme.of(context).semantic.success),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   const Text('No pending balances outstanding.'),
                 ],
               ),
@@ -484,7 +484,7 @@ class _PendingBalancesContent extends ConsumerWidget {
           );
         }
         return ListView.separated(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
           itemCount: customers.length,
           separatorBuilder: (_, __) => const Divider(height: 1, indent: 16),
           itemBuilder: (context, i) =>
@@ -542,13 +542,13 @@ class _DealerStockContent extends ConsumerWidget {
         if (dealers.isEmpty) {
           return Center(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(AppSpacing.xl),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   Icon(Icons.check_circle_outline,
                       color: Theme.of(context).semantic.success),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   const Text('No phones currently with dealers.'),
                 ],
               ),
@@ -556,7 +556,7 @@ class _DealerStockContent extends ConsumerWidget {
           );
         }
         return ListView.separated(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
           itemCount: dealers.length,
           separatorBuilder: (_, __) => const Divider(height: 1, indent: 16),
           itemBuilder: (context, i) => _DealerStockTile(item: dealers[i]),
@@ -616,14 +616,14 @@ class _SimpleInfoContent extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             Icon(icon, size: 48, color: theme.colorScheme.outline),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             Text(
               primary,
               style: theme.textTheme.titleMedium
                   ?.copyWith(fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               hint,
               style: theme.textTheme.bodySmall

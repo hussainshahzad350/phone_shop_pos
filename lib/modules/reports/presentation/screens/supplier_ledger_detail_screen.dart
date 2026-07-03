@@ -162,7 +162,7 @@ class _SupplierLedgerDetailScreenState
               icon: const Icon(Icons.north_east, size: 18),
               label: const Text('Pay Credit'),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
           ],
         ),
         body: Padding(
@@ -180,7 +180,7 @@ class _SupplierLedgerDetailScreenState
                           : Theme.of(context).semantic.success,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: ReportSummaryCardWidget(
                       label: 'Total purchases',
@@ -188,7 +188,7 @@ class _SupplierLedgerDetailScreenState
                       color: Theme.of(context).semantic.info,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: ReportSummaryCardWidget(
                       label: 'Total paid',
@@ -198,7 +198,7 @@ class _SupplierLedgerDetailScreenState
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Expanded(
                 child: ReportTableSection(
                   title: 'Account Timeline',
@@ -305,7 +305,7 @@ class _SupplierLedgerFilters extends StatelessWidget {
             );
           }).toList(growable: false),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Wrap(
           spacing: 8,
           runSpacing: 8,

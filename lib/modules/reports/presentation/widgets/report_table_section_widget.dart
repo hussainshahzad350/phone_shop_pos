@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 /// Card shell used on Daily Sales and aligned report tabs.
 class ReportTableSection extends StatelessWidget {
@@ -28,14 +29,14 @@ class ReportTableSection extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 10),
         child: LayoutBuilder(
           builder: (context, constraints) {
             final boundedHeight = _hasBoundedHeight(constraints);
             final header = <Widget>[
               if (filterBar != null) ...<Widget>[
                 filterBar!,
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
               ],
               Row(
                 children: <Widget>[
@@ -44,7 +45,7 @@ class ReportTableSection extends StatelessWidget {
                 ],
               ),
               if (subtitle != null) ...<Widget>[
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   subtitle!,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -52,9 +53,9 @@ class ReportTableSection extends StatelessWidget {
                       ),
                 ),
               ],
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               const Divider(height: 1),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
             ];
 
             if (boundedHeight) {

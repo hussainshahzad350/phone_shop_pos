@@ -315,7 +315,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                       return _buildProductSearch(productsAsync);
                     },
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
@@ -340,7 +340,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                                 },
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: AppSpacing.sm),
                             // Right panel (supplier, totals, payment). Its
                             // static parts stay put; only the small total rows
                             // react to money keystrokes (see internal Consumers).
@@ -363,7 +363,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                         return const SizedBox.shrink();
                       }
                       return Padding(
-                        padding: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.only(top: AppSpacing.xs),
                         child: Text(
                           errorMessage,
                           style: TextStyle(
@@ -460,7 +460,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   Widget _buildItemsCard(List<PurchaseFormItem> items) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(AppSpacing.sm),
         child: PurchaseItemsTable(
           items: items,
           onRemoveItem: (index) {
@@ -520,20 +520,20 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                 },
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.md),
             // Right half: invoice number + New/Used toggle.
             Expanded(
               child: Row(
                 children: <Widget>[
                   Expanded(child: _buildInvoiceField()),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacing.md),
                   _buildNewUsedToggle(),
                 ],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: AppSpacing.xs),
         SizedBox(
           // ~25% shorter so the items table / cart area gets more room.
           height: 118,
@@ -672,10 +672,10 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
               );
             },
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -683,7 +683,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                     'Totals',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   // Each total row watches only its own value, so a keystroke
                   // repaints a single line instead of the whole panel.
                   Consumer(
@@ -694,11 +694,11 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                       return _TotalRow(label: 'Subtotal', value: subtotal);
                     },
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   _buildDiscountField(),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   _buildTaxField(),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Consumer(
                     builder: (context, ref, _) {
                       final total = ref.watch(
@@ -745,9 +745,9 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                       );
                     },
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   _buildPaidField(),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Consumer(
                     builder: (context, ref, _) {
                       final total = ref.watch(
@@ -770,10 +770,10 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: TextField(
                 controller: _notesController,
                 maxLines: 3,
@@ -789,7 +789,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           FilledButton.icon(
             onPressed: _isSubmitting ? null : _savePurchase,
             icon: _isSubmitting

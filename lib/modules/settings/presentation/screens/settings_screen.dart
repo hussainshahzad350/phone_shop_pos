@@ -553,7 +553,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ],
                   ),
                   if (authState.errorMessage != null) ...<Widget>[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     Text(
                       authState.errorMessage!,
                       style: TextStyle(
@@ -738,10 +738,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
@@ -749,17 +749,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         'Deployment Metadata',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       Text('Version: ${AppRuntimeConfig.fullVersion}'),
                       const Text('Channel: ${AppRuntimeConfig.releaseChannel}'),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   child: businessConfigAsync.when(
                     data: (config) => Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -768,7 +768,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           'Business Configuration',
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: AppSpacing.sm),
                         Text('Profile: ${config.profile.displayName}'),
                         Text('Source: ${config.source.name}'),
                         Text('Schema Version: ${config.schemaVersion}'),
@@ -787,10 +787,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
@@ -809,7 +809,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       Text('Shop name: ${shopProfile.shopName}'),
                       Text(
                         'Phone: ${_orDash(shopProfile.phone)}',
@@ -823,7 +823,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       Text(
                         'Receipt footer: ${_orDash(shopProfile.footerNote ?? '')}',
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppSpacing.xs),
                       Text(
                         'These details appear on every printed and PDF receipt.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -836,10 +836,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
@@ -847,13 +847,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         'Security',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       Text(
                         authState.hasPinConfigured
                             ? 'Local PIN is required for login.'
                             : 'No PIN configured yet. Go to Login to set PIN.',
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       FilledButton.tonalIcon(
                         onPressed: authState.hasPinConfigured
                             ? _showChangePinDialog
@@ -861,7 +861,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         icon: const Icon(Icons.password),
                         label: const Text('Change PIN'),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       FilledButton.tonalIcon(
                         onPressed: authState.hasPinConfigured
                             ? _showRegenerateRecoveryCodeDialog
@@ -869,9 +869,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         icon: const Icon(Icons.key),
                         label: const Text('Regenerate Recovery Code'),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       Text('Recovery email: ${recoveryEmail ?? 'Not set'}'),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       FilledButton.tonalIcon(
                         onPressed: authState.hasPinConfigured
                             ? () => _showRecoveryEmailDialog(recoveryEmail)
@@ -883,7 +883,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               : 'Change Recovery Email',
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppSpacing.xs),
                       Text(
                         'Used to reset your PIN by email if you forget both '
                         'your PIN and recovery code.',
@@ -893,9 +893,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   .onSurfaceVariant,
                             ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: AppSpacing.md),
                       const Divider(),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       FilledButton.icon(
                         onPressed: authState.hasPinConfigured &&
                                 authState.isAuthenticated
@@ -915,7 +915,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               Theme.of(context).colorScheme.onError,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppSpacing.xs),
                       Text(
                         'Shortcut: Ctrl+L',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -928,10 +928,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   child: startupHealthAsync.when(
                     data: (status) => Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -940,14 +940,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           'Startup Health',
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: AppSpacing.sm),
                         AppStatusBadge(
                           label: status.summary,
                           color: status.isHealthy
                               ? Theme.of(context).semantic.success
                               : Theme.of(context).semantic.warning,
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: AppSpacing.sm),
                         Text('DB location: ${status.databasePath}'),
                         Text('Backup location: ${status.backupDirectoryPath}'),
                         Text(
@@ -973,10 +973,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
@@ -984,7 +984,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         'Backup & Restore',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
@@ -1019,7 +1019,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       Text(
                         'Backup folder: ${settings.backupDirectoryPath ?? 'Default app backup folder'}',
                       ),
@@ -1027,10 +1027,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
@@ -1038,14 +1038,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         'Cloud Backup',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       if (!cloudSignedIn) ...<Widget>[
                         const Text(
                           'Sign in to keep an off-site copy of your shop data, '
                           'so you can recover it on another computer if this one '
                           'is lost or damaged.',
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: AppSpacing.sm),
                         FilledButton.tonalIcon(
                           onPressed: _isProcessing ? null : _showCloudSignInDialog,
                           icon: const Icon(Icons.cloud_outlined),
@@ -1053,7 +1053,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                       ] else ...<Widget>[
                         Text('Signed in as: ${cloudEmail ?? '—'}'),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: AppSpacing.sm),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
@@ -1081,10 +1081,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   child: healthAsync.when(
                     data: (health) {
                       final lastBackup = health.lastBackup;
@@ -1095,7 +1095,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             'Database Health',
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: AppSpacing.sm),
                           Text('Database path: ${health.databasePath}'),
                           Text(
                               'Database size: ${_formatBytes(health.sizeBytes)}'),
@@ -1123,10 +1123,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
@@ -1144,7 +1144,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       if (printQueue.isEmpty)
                         const Text('No queued or failed receipts.')
                       else

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/widgets/auth_card_shell.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -20,7 +21,7 @@ class WelcomeScreen extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             'Developed by ${AppRuntimeConfig.developerName}',
             style: Theme.of(context).textTheme.bodyMedium,

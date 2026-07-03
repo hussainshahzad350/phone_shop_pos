@@ -11,6 +11,7 @@ import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_tab_e
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_section_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class PurchaseHistoryTab extends ConsumerWidget {
   const PurchaseHistoryTab({
@@ -33,7 +34,7 @@ class PurchaseHistoryTab extends ConsumerWidget {
       children: <Widget>[
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(AppSpacing.sm),
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -76,7 +77,7 @@ class PurchaseHistoryTab extends ConsumerWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Expanded(
           child: rowsAsync.when(
             data: (rows) {
@@ -114,7 +115,7 @@ class PurchaseHistoryTab extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Expanded(
                     child: ReportTableSection(
                       title: 'Purchase History',
@@ -312,7 +313,7 @@ class PurchaseHistoryTab extends ConsumerWidget {
                                         child: Row(
                                           children: <Widget>[
                                             Icon(Icons.open_in_new, size: 16),
-                                            SizedBox(width: 8),
+                                            SizedBox(width: AppSpacing.sm),
                                             Text('View Purchase'),
                                           ],
                                         ),
@@ -329,7 +330,7 @@ class PurchaseHistoryTab extends ConsumerWidget {
                                                     .colorScheme
                                                     .error,
                                               ),
-                                              const SizedBox(width: 8),
+                                              const SizedBox(width: AppSpacing.sm),
                                               Text(
                                                 'Cancel Purchase',
                                                 style: TextStyle(

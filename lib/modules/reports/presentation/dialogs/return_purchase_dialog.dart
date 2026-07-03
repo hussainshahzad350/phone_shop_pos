@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class ReturnPurchaseDialog extends ConsumerStatefulWidget {
   const ReturnPurchaseDialog({
@@ -51,7 +52,7 @@ class _ReturnPurchaseDialogState extends ConsumerState<ReturnPurchaseDialog> {
           children: <Widget>[
             Text('Returning: ${widget.item.productName}'),
             if (widget.item.hasImei) Text('IMEI: ${widget.item.imei}'),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             TextField(
               controller: _qtyController,
               decoration: InputDecoration(
@@ -60,12 +61,12 @@ class _ReturnPurchaseDialogState extends ConsumerState<ReturnPurchaseDialog> {
               keyboardType: TextInputType.number,
               readOnly: widget.item.hasImei,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _reasonController,
               decoration: const InputDecoration(labelText: 'Reason'),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _notesController,
               decoration: const InputDecoration(labelText: 'Notes (optional)'),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_recent_sale_entity.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class DashboardRecentSalesPanel extends StatelessWidget {
   const DashboardRecentSalesPanel({
@@ -18,7 +19,7 @@ class DashboardRecentSalesPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text('Recent Sales', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Expanded(
           child: rows.isEmpty
               ? const Center(child: Text('No sales found.'))

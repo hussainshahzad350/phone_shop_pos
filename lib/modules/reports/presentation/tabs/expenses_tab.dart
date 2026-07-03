@@ -82,7 +82,7 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                 onRetry: _invalidateExpenseProviders,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.sm),
@@ -226,7 +226,7 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Expanded(
               child: rowsAsync.when(
                 data: (rows) => _ExpensesTableSection(
@@ -337,7 +337,7 @@ class _ExpenseSummaryCards extends StatelessWidget {
         children: cards
             .map(
               (card) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                 child: SizedBox(width: double.infinity, child: card),
               ),
             )
@@ -349,7 +349,7 @@ class _ExpenseSummaryCards extends StatelessWidget {
       children: <Widget>[
         for (var index = 0; index < cards.length; index++) ...<Widget>[
           Expanded(child: cards[index]),
-          if (index != cards.length - 1) const SizedBox(width: 8),
+          if (index != cards.length - 1) const SizedBox(width: AppSpacing.sm),
         ],
       ],
     );
@@ -376,7 +376,7 @@ class _ExpenseErrorView extends StatelessWidget {
             : '$error';
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -391,7 +391,7 @@ class _ExpenseErrorView extends StatelessWidget {
               ],
             ),
             if (details != null) ...<Widget>[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(details, style: Theme.of(context).textTheme.bodySmall),
             ],
           ],
@@ -610,13 +610,13 @@ class _ExpenseCardList extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.separated(
       itemCount: rows.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
         final expense = rows[index];
         return Card(
           margin: EdgeInsets.zero,
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -641,16 +641,16 @@ class _ExpenseCardList extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   '${FormattingHelpers.dateYmd(expense.expenseDate)} | ${_paymentMethodLabel(expense.paymentMethod)}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 if (expense.remarks?.trim().isNotEmpty == true) ...<Widget>[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Text(expense.remarks!.trim()),
                 ],
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: <Widget>[

@@ -7,6 +7,7 @@ import 'package:phone_shop_pos/modules/dealer_issue/domain/entities/dealer_entit
 import 'package:phone_shop_pos/modules/dealer_issue/domain/entities/dealer_issue_entity.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_issue_state_provider.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class ScanReturnDialog extends ConsumerStatefulWidget {
   const ScanReturnDialog({super.key});
@@ -156,7 +157,7 @@ class _ScanReturnDialogState extends ConsumerState<ScanReturnDialog> {
               ),
             ],
             if (_found != null) ...<Widget>[
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.lg),
               _FoundIssueCard(found: _found!),
             ],
           ],
@@ -210,7 +211,7 @@ class _FoundIssueCard extends StatelessWidget {
     return Card(
       color: theme.colorScheme.secondaryContainer,
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -228,7 +229,7 @@ class _FoundIssueCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               'Issued: ${FormattingHelpers.dateYmd(issue.issueDate)}',
               style: theme.textTheme.bodySmall?.copyWith(
@@ -241,7 +242,7 @@ class _FoundIssueCard extends StatelessWidget {
                 color: theme.colorScheme.onSecondaryContainer,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               'Scanned: ${found.scannedImei}',
               style: theme.textTheme.bodySmall?.copyWith(

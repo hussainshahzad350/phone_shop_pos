@@ -90,7 +90,7 @@ class _CollectPaymentDialogState extends State<_CollectPaymentDialog> {
                     fontWeight: FontWeight.w600,
                   ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'Received so far: ${FormattingHelpers.currencyPkr(job.advanceReceived)}',
             ),
@@ -101,7 +101,7 @@ class _CollectPaymentDialogState extends State<_CollectPaymentDialog> {
               Text(
                 'Final cost: ${FormattingHelpers.currencyPkr(job.finalCost ?? 0)}',
               ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             TextField(
               controller: _amountController,
               autofocus: true,

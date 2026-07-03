@@ -124,7 +124,7 @@ class _FiltersRow extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.md),
             FilledButton.icon(
               onPressed: () async {
                 final saved = await showDialog<bool>(
@@ -140,7 +140,7 @@ class _FiltersRow extends ConsumerWidget {
               icon: const Icon(Icons.add, size: 16),
               label: const Text('Add Repair Job'),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             OutlinedButton.icon(
               onPressed: () {
                 ref.invalidate(repairJobsProvider);

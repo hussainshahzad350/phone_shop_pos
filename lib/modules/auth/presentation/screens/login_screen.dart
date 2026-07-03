@@ -10,6 +10,7 @@ import 'package:phone_shop_pos/modules/auth/presentation/dialogs/reset_pin_dialo
 import 'package:phone_shop_pos/modules/auth/presentation/providers/local_pin_auth_providers.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/widgets/auth_card_shell.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/widgets/pin_input_field.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -88,7 +89,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         fontWeight: FontWeight.w700,
                       ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 Text(
                   '${AppRuntimeConfig.appName} (Single-user mode)',
                   style: Theme.of(context).textTheme.bodyMedium,
@@ -102,7 +103,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     textInputAction: TextInputAction.done,
                     onSubmitted: (_) => _doLogin(),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   Row(
                     children: <Widget>[
                       Expanded(
@@ -114,7 +115,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   TextButton(
                     onPressed: authState.isBusy
                         ? null
@@ -160,7 +161,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     'both your PIN and recovery code.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   Row(
                     children: <Widget>[
                       Expanded(
@@ -174,7 +175,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ],
                 if (authState.errorMessage != null) ...<Widget>[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Text(
                     authState.errorMessage!,
                     style: TextStyle(

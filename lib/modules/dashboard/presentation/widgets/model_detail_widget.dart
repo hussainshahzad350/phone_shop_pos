@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/model_imei_stock_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/cart_state_provider.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class ModelDetailWidget extends ConsumerStatefulWidget {
   const ModelDetailWidget({
@@ -26,7 +27,7 @@ class _ModelDetailWidgetState extends ConsumerState<ModelDetailWidget> {
       child: Column(
         children: <Widget>[
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
@@ -48,7 +49,7 @@ class _ModelDetailWidgetState extends ConsumerState<ModelDetailWidget> {
           const Divider(),
           if (widget.modelStock.imeis.isEmpty)
             const Padding(
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.all(AppSpacing.lg),
               child: Text('No stock available'),
             )
           else
@@ -123,7 +124,7 @@ class _ImeiItemWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(AppSpacing.sm),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
@@ -163,7 +164,7 @@ class _ImeiItemWidget extends StatelessWidget {
             icon: const Icon(Icons.shopping_cart_outlined),
             label: const Text('SELL'),
             style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
             ),
           ),
         ],

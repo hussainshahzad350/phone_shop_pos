@@ -3,6 +3,7 @@ import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class PaymentSectionWidget extends StatefulWidget {
   const PaymentSectionWidget({
@@ -82,12 +83,12 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
     final isDisabled = widget.isProcessing || !widget.canCompleteSale;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text('Payment', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             DropdownButtonFormField<String>(
               focusNode: widget.paymentMethodFocusNode,
               initialValue: widget.paymentMethod,
@@ -106,7 +107,7 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
               },
               decoration: appDesktopInputDecoration(),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _paidAmountController,
               focusNode: widget.paidAmountFocusNode,
@@ -123,7 +124,7 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
                 (widget.onPaidAmountSubmitted ?? widget.onCompleteSale).call();
               },
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _notesController,
               focusNode: widget.notesFocusNode,
@@ -132,7 +133,7 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
               decoration: appDesktopInputDecoration(labelText: 'Notes'),
               onChanged: widget.onNotesChanged,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             if (!widget.canCompleteSale &&
                 widget.disabledReason != null &&
                 widget.disabledReason!.isNotEmpty) ...<Widget>[
@@ -142,7 +143,7 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
                   color: Theme.of(context).colorScheme.error,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
             ],
             SizedBox(
               width: double.infinity,
