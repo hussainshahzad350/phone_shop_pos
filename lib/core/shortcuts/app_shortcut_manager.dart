@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/routing/navigation_leave_guard.dart';
+import 'package:phone_shop_pos/core/shortcuts/keyboard_shortcuts_dialog.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/providers/local_pin_auth_providers.dart';
 
 enum AppShortcutEvent {
@@ -103,6 +104,10 @@ class AppShortcutManager extends ConsumerWidget {
             LogicalKeyboardKey.keyS,
             control: true,
           ): _SalesIntent(),
+          SingleActivator(
+            LogicalKeyboardKey.slash,
+            control: true,
+          ): _HelpIntent(),
         },
         child: Actions(
           actions: <Type, Action<Intent>>{
@@ -178,6 +183,14 @@ class AppShortcutManager extends ConsumerWidget {
                 return null;
               },
             ),
+            _HelpIntent: CallbackAction<_HelpIntent>(
+              onInvoke: (_) {
+                if (context.mounted) {
+                  KeyboardShortcutsDialog.show(context);
+                }
+                return null;
+              },
+            ),
           },
           child: child,
         ),
@@ -224,4 +237,8 @@ class _SalesIntent extends Intent {
 
 class _LockIntent extends Intent {
   const _LockIntent();
+}
+
+class _HelpIntent extends Intent {
+  const _HelpIntent();
 }

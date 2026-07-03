@@ -8,6 +8,7 @@ import 'package:phone_shop_pos/core/routing/navigation_leave_guard.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
+import 'package:phone_shop_pos/core/shortcuts/keyboard_shortcuts_dialog.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
 import 'package:phone_shop_pos/modules/scanner/domain/entities/scanner_mode.dart';
@@ -154,6 +155,7 @@ class _DesktopNavigationShellState
           title: currentLabel,
           trailing: const Wrap(
             spacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
               AppShortcutHint(label: 'Search', shortcut: 'F1 / Ctrl+F'),
               AppShortcutHint(label: 'Refresh', shortcut: 'F5'),
@@ -161,6 +163,7 @@ class _DesktopNavigationShellState
               _PendingPrintJobChip(),
               _ActiveOperationsChip(),
               _VersionChip(),
+              _ShortcutsHelpButton(),
             ],
           ),
         ),
@@ -218,6 +221,20 @@ class _ActiveOperationsChip extends ConsumerWidget {
       ),
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+}
+
+class _ShortcutsHelpButton extends StatelessWidget {
+  const _ShortcutsHelpButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.help_outline, size: 18),
+      tooltip: 'Keyboard shortcuts (Ctrl+/)',
+      visualDensity: VisualDensity.compact,
+      onPressed: () => KeyboardShortcutsDialog.show(context),
     );
   }
 }
