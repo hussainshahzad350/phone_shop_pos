@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/report_filter_entity.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class ReportFilterBarWidget extends StatelessWidget {
   const ReportFilterBarWidget({
@@ -136,10 +137,10 @@ class ReportFilterBarWidget extends StatelessWidget {
             ),
             if (customerOptionsError != null ||
                 productOptionsError != null) ...<Widget>[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               if (customerOptionsError != null)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.xs),
                   child: Row(
                     children: <Widget>[
                       Expanded(
@@ -150,7 +151,7 @@ class ReportFilterBarWidget extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.sm),
                       TextButton.icon(
                         onPressed: onRetryCustomerOptions,
                         icon: const Icon(Icons.refresh, size: 16),
@@ -161,7 +162,7 @@ class ReportFilterBarWidget extends StatelessWidget {
                 ),
               if (productOptionsError != null)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.xs),
                   child: Row(
                     children: <Widget>[
                       Expanded(
@@ -172,7 +173,7 @@ class ReportFilterBarWidget extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.sm),
                       TextButton.icon(
                         onPressed: onRetryProductOptions,
                         icon: const Icon(Icons.refresh, size: 16),

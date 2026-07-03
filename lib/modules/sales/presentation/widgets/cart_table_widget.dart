@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/theme/app_typography.dart';
 
 class CartTableWidget extends StatefulWidget {
   const CartTableWidget({
@@ -128,7 +129,7 @@ class _CartItemCardState extends State<_CartItemCard> {
     final item = widget.item;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       elevation: widget.selected ? 1 : 0,
       shape: RoundedRectangleBorder(
         borderRadius: AppRadii.lgRadius,
@@ -143,7 +144,7 @@ class _CartItemCardState extends State<_CartItemCard> {
         borderRadius: AppRadii.lgRadius,
         onTap: widget.onTap,
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -156,9 +157,7 @@ class _CartItemCardState extends State<_CartItemCard> {
                       children: <Widget>[
                         Text(
                           item.productName,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: theme.textTheme.titleSmall,
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -184,16 +183,16 @@ class _CartItemCardState extends State<_CartItemCard> {
                       value: '1',
                     ),
                   ],
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   _buildPriceField(),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacing.md),
                   Text(
                     FormattingHelpers.currencyPkr(item.lineTotal),
                     style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontFeatures: AppTypography.tabularFigures,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
                     color: colorScheme.error,
@@ -229,7 +228,6 @@ class _CartItemCardState extends State<_CartItemCard> {
         style: const TextStyle(fontWeight: FontWeight.w700),
         decoration: const InputDecoration(
           isDense: true,
-          border: OutlineInputBorder(),
           labelText: 'Price',
         ),
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -352,7 +350,7 @@ class _QtyStepper extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: AppSpacing.xs),
       decoration: BoxDecoration(
         color:
             theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),

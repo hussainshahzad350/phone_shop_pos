@@ -124,7 +124,6 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
                 initialValue: _category,
                 isExpanded: true,
                 decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
                   labelText: 'Expense Category',
                   isDense: true,
                 ),
@@ -150,7 +149,6 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
                   enabled: !_isSubmitting,
                   maxLength: 80,
                   decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
                     labelText: 'Custom Category',
                     isDense: true,
                     counterText: '',
@@ -164,7 +162,6 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
                   labelText: 'Amount',
                   prefixText: 'Rs ',
                   isDense: true,
@@ -174,7 +171,6 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
               DropdownButtonFormField<String>(
                 initialValue: _paymentMethod,
                 decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
                   labelText: 'Payment Method',
                   isDense: true,
                 ),
@@ -208,7 +204,6 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
                   LengthLimitingTextInputFormatter(300),
                 ],
                 decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
                   labelText: 'Remarks (optional)',
                   isDense: true,
                   alignLabelWithHint: true,

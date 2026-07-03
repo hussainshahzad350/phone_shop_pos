@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/modules/customers/domain/entities/customer_entity.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class CustomerFormData {
   const CustomerFormData({
@@ -97,14 +98,13 @@ class _CustomerFormDialogState extends State<CustomerFormDialog> {
                 autofocus: true,
                 decoration: const InputDecoration(
                   labelText: 'Customer Name',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
                 validator: (value) => (value == null || value.trim().isEmpty)
                     ? 'Customer name is required'
                     : null,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 children: <Widget>[
                   Expanded(
@@ -112,48 +112,44 @@ class _CustomerFormDialogState extends State<CustomerFormDialog> {
                       controller: _phoneController,
                       decoration: const InputDecoration(
                         labelText: 'Phone',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: TextFormField(
                       controller: _emailController,
                       decoration: const InputDecoration(
                         labelText: 'Email',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               TextFormField(
                 controller: _addressController,
                 maxLines: 2,
                 decoration: const InputDecoration(
                   labelText: 'Address',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               TextFormField(
                 controller: _notesController,
                 maxLines: 2,
                 maxLength: NotesSafety.maxLength,
                 decoration: const InputDecoration(
                   labelText: 'Notes',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
                 validator: (value) =>
                     NotesSafety.validate(value, fieldLabel: 'Customer notes'),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               SwitchListTile(
                 title: const Text('Active'),
                 value: _isActive,

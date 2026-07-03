@@ -5,6 +5,7 @@ import 'package:phone_shop_pos/core/services/recovery/email_recovery_service.dar
 import 'package:phone_shop_pos/core/services/recovery/recovery_providers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/auth/presentation/widgets/pin_input_field.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 /// Recovery flow for when the owner has forgotten both the PIN and the recovery
 /// code. A one-time code is emailed to the registered recovery address; once
@@ -126,7 +127,7 @@ class _EmailRecoveryDialogState extends ConsumerState<EmailRecoveryDialog> {
               ),
             ],
             if (_error != null) ...<Widget>[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 _error!,
                 style: TextStyle(color: Theme.of(context).colorScheme.error),

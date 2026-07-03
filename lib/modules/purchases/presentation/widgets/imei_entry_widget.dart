@@ -5,6 +5,7 @@ import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/utils/imei_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class ImeiEntryWidget extends StatefulWidget {
   const ImeiEntryWidget({
@@ -135,18 +136,17 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
                 '• IMEI1,IMEI2,SerialNumber',
                 style: TextStyle(fontSize: 12),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 children: <Widget>[
                   const Text('Default cost price: '),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   SizedBox(
                     width: 120,
                     child: TextFormField(
                       initialValue: _defaultCost.toStringAsFixed(2),
                       decoration: const InputDecoration(
                         isDense: true,
-                        border: OutlineInputBorder(),
                         labelText: 'Cost',
                       ),
                       keyboardType:
@@ -164,19 +164,18 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               TextField(
                 controller: _bulkController,
                 maxLines: 8,
                 decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
                   hintText:
                       '356789101234561\n356789101234562,356789101234570\n...',
                   labelText: 'Paste IMEIs here',
                 ),
                 onChanged: _parseInput,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               ValueListenableBuilder<List<_ParsedImeiLine>>(
                 valueListenable: _previewNotifier,
                 builder: (context, preview, _) {
@@ -188,9 +187,9 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
                     children: <Widget>[
                       Text(
                         'Preview: ${preview.length} device(s)',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.titleSmall,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppSpacing.xs),
                       ConstrainedBox(
                         constraints: const BoxConstraints(maxHeight: 120),
                         child: ListView.separated(
@@ -216,51 +215,48 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
                   );
                 },
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               if (widget.isUsed) ...<Widget>[
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 const Divider(),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Seller & Condition Details',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 _buildField(
                   controller: _sellerNameController,
                   label: 'Seller Name *',
                   required: true,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 _buildCnicField(),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 _buildField(
                   controller: _sellerPhoneController,
                   label: 'Seller Phone',
                   hint: 'e.g. 03001234567',
                   keyboardType: TextInputType.phone,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 _buildField(
                   controller: _sellerAddressController,
                   label: 'Address',
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 _buildField(
                   controller: _warrantyController,
                   label: 'Remaining Warranty',
                   hint: 'e.g. 3 months, none',
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 _buildField(
                   controller: _accessoriesController,
                   label: 'Accessories Included',
                   hint: 'e.g. box, charger, earphones',
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 _buildField(
                   controller: _conditionNotesController,
                   label: 'Phone Condition Notes *',
@@ -340,7 +336,6 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
       keyboardType: TextInputType.number,
       decoration: InputDecoration(
         isDense: true,
-        border: const OutlineInputBorder(),
         labelText: 'ID Card / CNIC *',
         hintText: 'XXXXX-XXXXXXX-X',
         errorText: errorText,
@@ -362,7 +357,6 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
       keyboardType: keyboardType,
       decoration: InputDecoration(
         isDense: true,
-        border: const OutlineInputBorder(),
         labelText: label,
         hintText: hint,
       ),

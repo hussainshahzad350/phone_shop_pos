@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/ledger/domain/entities/settlement_request_payload.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class ReceiveCustomerCreditDialog extends ConsumerStatefulWidget {
   const ReceiveCustomerCreditDialog({
@@ -50,23 +51,21 @@ class _ReceiveCustomerCreditDialogState
                 'Outstanding: ${FormattingHelpers.currencyPkr(widget.maxAmount!)}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
             ],
             TextField(
               controller: _amountController,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 labelText: 'Amount',
                 isDense: true,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             DropdownButtonFormField<String>(
               initialValue: _paymentMethod,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
                 labelText: 'Payment Method',
               ),
@@ -85,12 +84,11 @@ class _ReceiveCustomerCreditDialogState
                 }
               },
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _noteController,
               maxLines: 2,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 labelText: 'Note (optional)',
                 isDense: true,
               ),

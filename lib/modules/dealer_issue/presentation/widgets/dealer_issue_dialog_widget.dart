@@ -4,6 +4,7 @@ import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_issue_state_provider.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_providers.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/widgets/add_dealer_dialog.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class DealerIssueDialogWidget extends ConsumerStatefulWidget {
   const DealerIssueDialogWidget({super.key});
@@ -38,11 +39,11 @@ class _DealerIssueDialogWidgetState extends ConsumerState<DealerIssueDialogWidge
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             _buildDealerSelector(),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             _buildImeiInput(),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             _buildImeiList(),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             _buildNotes(),
           ],
         ),
@@ -72,7 +73,6 @@ class _DealerIssueDialogWidgetState extends ConsumerState<DealerIssueDialogWidge
               initialValue: _selectedDealerId,
               decoration: const InputDecoration(
                 labelText: 'Select Dealer',
-                border: OutlineInputBorder(),
                 isDense: true,
               ),
               hint: dealers.isEmpty
@@ -89,7 +89,7 @@ class _DealerIssueDialogWidgetState extends ConsumerState<DealerIssueDialogWidge
               },
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           IconButton.outlined(
             tooltip: 'Add new dealer',
             icon: const Icon(Icons.person_add_outlined, size: 18),
@@ -120,14 +120,13 @@ class _DealerIssueDialogWidgetState extends ConsumerState<DealerIssueDialogWidge
             decoration: const InputDecoration(
               labelText: 'Scan or enter IMEI',
               hintText: 'Scan barcode or type manually',
-              border: OutlineInputBorder(),
               isDense: true,
               prefixIcon: Icon(Icons.qr_code_scanner, size: 18),
             ),
             onSubmitted: (_) => _addImei(),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppSpacing.sm),
         IconButton(
           onPressed: _addImei,
           icon: const Icon(Icons.add),
@@ -157,15 +156,15 @@ class _DealerIssueDialogWidgetState extends ConsumerState<DealerIssueDialogWidge
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
               'Selected IMEIs (${_selectedImeis.length}):',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -191,7 +190,6 @@ class _DealerIssueDialogWidgetState extends ConsumerState<DealerIssueDialogWidge
       controller: _notesController,
       decoration: const InputDecoration(
         labelText: 'Notes (optional)',
-        border: OutlineInputBorder(),
       ),
       maxLines: 3,
     );

@@ -92,7 +92,7 @@ class RepairAnalyticsTab extends ConsumerWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Expanded(
           child: analyticsAsync.when(
             data: (analytics) => SingleChildScrollView(
@@ -107,21 +107,21 @@ class RepairAnalyticsTab extends ConsumerWidget {
                           value: analytics.totalRepairs.toString(),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: ReportSummaryCardWidget(
                           label: 'Delivered',
                           value: analytics.deliveredRepairs.toString(),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: ReportSummaryCardWidget(
                           label: 'Pending',
                           value: analytics.pendingRepairs.toString(),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: ReportSummaryCardWidget(
                           label: 'Total Earnings',
@@ -129,7 +129,7 @@ class RepairAnalyticsTab extends ConsumerWidget {
                               analytics.totalEarnings),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: ReportSummaryCardWidget(
                           label: 'Total Expenses',
@@ -139,7 +139,7 @@ class RepairAnalyticsTab extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   SizedBox(
                     height: 300,
                     child: Row(
@@ -177,7 +177,7 @@ class RepairAnalyticsTab extends ConsumerWidget {
                             emptyMessage: 'No issues recorded.',
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: AppSpacing.md),
                         Expanded(
                           child: _AnalyticsTable(
                             title: 'Top Phone Models',
@@ -213,7 +213,7 @@ class RepairAnalyticsTab extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   _AnalyticsTable(
                     title: 'Monthly Trend',
                     minHeight: 180,
@@ -259,7 +259,7 @@ class RepairAnalyticsTab extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   const Text('Failed to load repair analytics.'),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   OutlinedButton.icon(
                     onPressed: () =>
                         ref.invalidate(reportRepairAnalyticsProvider),

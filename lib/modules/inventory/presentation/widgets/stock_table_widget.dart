@@ -229,7 +229,7 @@ class StockTableWidget extends StatelessWidget {
             style: row.isLowStock
                 ? TextStyle(
                     color: Theme.of(context).semantic.danger,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                   )
                 : null,
           ),

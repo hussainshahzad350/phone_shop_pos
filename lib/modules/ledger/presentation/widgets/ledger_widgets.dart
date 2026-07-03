@@ -28,14 +28,14 @@ class LedgerSummaryCards extends StatelessWidget {
             value: FormattingHelpers.currencyPkr(summary.totalReceivable),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _SummaryCard(
             title: 'Payable',
             value: FormattingHelpers.currencyPkr(summary.totalPayable),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _SummaryCard(
             title: balanceLabel,
@@ -248,7 +248,7 @@ class LedgerTimelineCardList extends StatelessWidget {
     }
     return ListView.separated(
       itemCount: rows.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
         return LedgerTimelineEntryCard(
           row: rows[index],
@@ -284,7 +284,7 @@ class LedgerTimelineEntryCard extends StatelessWidget {
         side: BorderSide(color: colorScheme.outlineVariant),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -296,7 +296,7 @@ class LedgerTimelineEntryCard extends StatelessWidget {
                 borderRadius: AppRadii.xsRadius,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -320,7 +320,7 @@ class LedgerTimelineEntryCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     FormattingHelpers.dateYmdHm(row.createdAt),
                     style: theme.textTheme.bodySmall?.copyWith(
@@ -428,14 +428,14 @@ class LedgerDuesKpiCards extends StatelessWidget {
             value: FormattingHelpers.currencyPkr(outstandingAmount),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _SummaryCard(
             title: paymentsLabel,
             value: FormattingHelpers.currencyPkr(paymentsAmount),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _SummaryCard(
             title: remainingLabel,
@@ -475,7 +475,7 @@ class _SummaryCard extends StatelessWidget {
                 color: colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               value,
               style: theme.textTheme.titleMedium?.copyWith(

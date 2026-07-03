@@ -7,6 +7,9 @@ const int _kDefaultPaginateThreshold = 80;
 const double _kDesktopContentMaxWidth = 2200.0;
 const double _kDesktopCardRadius = 16.0;
 
+// Borders, fill and radius intentionally come from InputDecorationTheme so
+// the field adapts to light/dark mode — hardcoded colors here previously
+// rendered light-mode borders in dark mode.
 InputDecoration appDesktopInputDecoration({
   String? labelText,
   String? hintText,
@@ -20,17 +23,6 @@ InputDecoration appDesktopInputDecoration({
     prefixIcon: prefixIcon,
     suffixIcon: suffixIcon,
     isDense: isDense,
-    border: const OutlineInputBorder(
-      borderRadius: AppRadii.lgRadius,
-    ),
-    enabledBorder: const OutlineInputBorder(
-      borderRadius: AppRadii.lgRadius,
-      borderSide: BorderSide(color: Color(0xFFD7DBE7)),
-    ),
-    focusedBorder: const OutlineInputBorder(
-      borderRadius: AppRadii.lgRadius,
-      borderSide: BorderSide(color: Color(0xFF5167F6), width: 1.2),
-    ),
   );
 }
 
@@ -118,7 +110,7 @@ class AppTopBar extends StatelessWidget {
     return SizedBox(
       height: 56,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         child: Row(
           children: <Widget>[
             Column(
@@ -640,8 +632,8 @@ class AppLoadingOverlay extends StatelessWidget {
                 child: Card(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.md,
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -651,7 +643,7 @@ class AppLoadingOverlay extends StatelessWidget {
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: AppSpacing.md),
                         Text(label),
                       ],
                     ),

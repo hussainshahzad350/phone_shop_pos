@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class ProductFormData {
   const ProductFormData({
@@ -170,14 +171,13 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                 onFieldSubmitted: (_) => _categoryFocus.requestFocus(),
                 decoration: const InputDecoration(
                   labelText: 'Product Name',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
                 validator: (value) => (value == null || value.trim().isEmpty)
                     ? 'Name is required'
                     : null,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 children: <Widget>[
                   Expanded(
@@ -188,7 +188,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       expandedInsets: EdgeInsets.zero,
                       label: const Text('Brand'),
                       inputDecorationTheme: const InputDecorationTheme(
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                       dropdownMenuEntries: <DropdownMenuEntry<String?>>[
@@ -210,7 +209,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       },
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: TextFormField(
                       controller: _categoryController,
@@ -219,14 +218,13 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       onFieldSubmitted: (_) => _skuFocus.requestFocus(),
                       decoration: const InputDecoration(
                         labelText: 'Category',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 children: <Widget>[
                   Expanded(
@@ -237,12 +235,11 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       onFieldSubmitted: (_) => _barcodeFocus.requestFocus(),
                       decoration: const InputDecoration(
                         labelText: 'SKU',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: TextFormField(
                       controller: _barcodeController,
@@ -251,14 +248,13 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       onFieldSubmitted: (_) => _purchaseFocus.requestFocus(),
                       decoration: const InputDecoration(
                         labelText: 'Barcode',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 children: <Widget>[
                   Expanded(
@@ -272,7 +268,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       ),
                       decoration: const InputDecoration(
                         labelText: 'Purchase Price',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                       validator: (value) =>
@@ -283,7 +278,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                               : null,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: TextFormField(
                       controller: _saleController,
@@ -295,7 +290,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       ),
                       decoration: const InputDecoration(
                         labelText: 'Sale Price',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                       validator: (value) =>
@@ -308,7 +302,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 children: <Widget>[
                   Expanded(
@@ -323,12 +317,11 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       ],
                       decoration: const InputDecoration(
                         labelText: 'Min Stock Alert',
-                        border: OutlineInputBorder(),
                         isDense: true,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: SwitchListTile(
                       value: _hasImei,

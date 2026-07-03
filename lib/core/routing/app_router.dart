@@ -24,6 +24,7 @@ import 'package:phone_shop_pos/modules/repairing/presentation/screens/repairing_
 import 'package:phone_shop_pos/modules/reports/presentation/screens/reports_screen.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/screens/sales_billing_screen.dart';
 import 'package:phone_shop_pos/modules/settings/presentation/screens/settings_screen.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final navigatorKey = ref.watch(rootNavigatorKeyProvider);
@@ -70,7 +71,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             const Text('Navigation error. Returning to dashboard.'),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             FilledButton(
               onPressed: () => GoRouter.of(context).go('/dashboard'),
               child: const Text('Go to Dashboard'),

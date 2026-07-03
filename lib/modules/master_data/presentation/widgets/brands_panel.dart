@@ -438,7 +438,7 @@ class _BrandsPanelState extends ConsumerState<BrandsPanel> {
                 hintText: 'Search brands',
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             FilterChip(
               selected: includeInactive,
               label: const Text('Show inactive'),
@@ -447,7 +447,7 @@ class _BrandsPanelState extends ConsumerState<BrandsPanel> {
                     selected;
               },
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             FilledButton.icon(
               onPressed: _createBrand,
               icon: const Icon(Icons.add),
@@ -455,7 +455,7 @@ class _BrandsPanelState extends ConsumerState<BrandsPanel> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Expanded(
           child: Card(
             child: Padding(
@@ -471,7 +471,7 @@ class _BrandsPanelState extends ConsumerState<BrandsPanel> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
                       Text('Error loading brands: $error'),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       FilledButton.icon(
                         onPressed: () => ref.invalidate(brandListProvider),
                         icon: const Icon(Icons.refresh),

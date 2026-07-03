@@ -508,7 +508,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
                 hintText: 'Search by name, SKU, barcode, brand...',
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             FilterChip(
               selected: includeInactive,
               label: const Text('Show inactive'),
@@ -518,7 +518,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
                     .state = selected;
               },
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             FilledButton.icon(
               onPressed: _createProduct,
               icon: const Icon(Icons.add),
@@ -526,7 +526,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Row(
           children: <Widget>[
             FilterChip(
@@ -538,7 +538,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
                     selected ? true : null;
               },
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             FilterChip(
               selected: typeFilter == false,
               avatar: const Icon(Icons.cable, size: 18),
@@ -550,7 +550,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Expanded(
           child: Card(
             child: Padding(
@@ -563,7 +563,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
                       Text('Error loading products: $error'),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       FilledButton.icon(
                         onPressed: () =>
                             ref.invalidate(managedProductsProvider),

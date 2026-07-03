@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/domain/entities/dealer_entity.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class AddDealerDialog extends ConsumerStatefulWidget {
   const AddDealerDialog({super.key});
@@ -84,28 +85,25 @@ class _AddDealerDialogState extends ConsumerState<AddDealerDialog> {
                 autofocus: true,
                 decoration: const InputDecoration(
                   labelText: 'Dealer Name *',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
                 validator: (v) =>
                     v == null || v.trim().isEmpty ? 'Name required' : null,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(
                   labelText: 'Phone (optional)',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _addressController,
                 decoration: const InputDecoration(
                   labelText: 'Address (optional)',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
               ),

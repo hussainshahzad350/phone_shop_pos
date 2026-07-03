@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class ReturnSaleDialog extends ConsumerStatefulWidget {
   const ReturnSaleDialog({
@@ -44,32 +45,29 @@ class _ReturnSaleDialogState extends ConsumerState<ReturnSaleDialog> {
           children: <Widget>[
             Text('Item: ${widget.item.productName}'),
             Text('Returnable Qty: ${widget.item.returnableQty}'),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _qtyController,
               enabled: !widget.item.hasImei,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 labelText: 'Quantity',
                 isDense: true,
               ),
               keyboardType: TextInputType.number,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _reasonController,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 labelText: 'Reason (mandatory)',
                 isDense: true,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _notesController,
               maxLines: 2,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 labelText: 'Notes (optional)',
                 isDense: true,
               ),

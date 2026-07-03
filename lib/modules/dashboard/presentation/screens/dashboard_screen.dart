@@ -66,7 +66,7 @@ class DashboardScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(AppSpacing.sm),
                 children: <Widget>[
                   DashboardHeader(onRefresh: () => _refresh(ref)),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   kpisAsync.when(
                     data: (kpis) => DashboardKpiGrid(kpis: kpis),
                     loading: () => const _DashboardKpiSkeleton(),
@@ -92,7 +92,7 @@ class DashboardScreen extends ConsumerWidget {
                       child: Center(child: Text('Failed to load brand stock.')),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   alertsSection,
                 ],
               );

@@ -177,7 +177,7 @@ class _CustomerLedgerDetailScreenState
               },
               icon: const Icon(Icons.more_vert),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
           ],
         ),
         body: Padding(
@@ -195,7 +195,7 @@ class _CustomerLedgerDetailScreenState
                           : Theme.of(context).semantic.success,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: ReportSummaryCardWidget(
                       label: 'Lifetime purchases',
@@ -203,7 +203,7 @@ class _CustomerLedgerDetailScreenState
                       color: Theme.of(context).semantic.info,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: ReportSummaryCardWidget(
                       label: 'Total paid',
@@ -213,7 +213,7 @@ class _CustomerLedgerDetailScreenState
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Expanded(
                 child: ReportTableSection(
                   title: 'Account Timeline',
@@ -321,7 +321,7 @@ class _CustomerLedgerFilters extends StatelessWidget {
             );
           }).toList(growable: false),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -333,7 +333,6 @@ class _CustomerLedgerFilters extends StatelessWidget {
                 controller: searchController,
                 decoration: const InputDecoration(
                   isDense: true,
-                  border: OutlineInputBorder(),
                   labelText: 'Search reference',
                   prefixIcon: Icon(Icons.search, size: 18),
                 ),

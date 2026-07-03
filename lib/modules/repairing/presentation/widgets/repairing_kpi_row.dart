@@ -124,7 +124,7 @@ class _KpiCard extends StatelessWidget {
         child: Row(
           children: <Widget>[
             Icon(icon, size: 32, color: iconColor ?? theme.colorScheme.primary),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,7 +133,7 @@ class _KpiCard extends StatelessWidget {
                   Text(
                     value,
                     style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontFeatures: AppTypography.tabularFigures,
                     ),
                   ),
                   Text(

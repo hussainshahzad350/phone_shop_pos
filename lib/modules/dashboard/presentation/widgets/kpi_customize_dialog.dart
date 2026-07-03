@@ -24,7 +24,7 @@ class _KpiCustomizeDialog extends ConsumerWidget {
       title: const Row(
         children: <Widget>[
           Icon(Icons.tune, size: 20),
-          SizedBox(width: 8),
+          SizedBox(width: AppSpacing.sm),
           Text('Customize KPI Cards'),
         ],
       ),
@@ -51,7 +51,7 @@ class _KpiCustomizeDialog extends ConsumerWidget {
                         ?.copyWith(color: theme.colorScheme.outline),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 380),
                   child: ReorderableListView.builder(
@@ -135,7 +135,7 @@ class _CardConfigTile extends StatelessWidget {
               onChanged: toggleDisabled ? null : (_) => onToggle(),
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: AppSpacing.xs),
           ReorderableDragStartListener(
             index: index,
             child: Icon(Icons.drag_handle, color: muted),

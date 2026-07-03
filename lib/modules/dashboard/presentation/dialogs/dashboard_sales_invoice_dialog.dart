@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class DashboardSalesInvoiceDialog extends ConsumerWidget {
   const DashboardSalesInvoiceDialog({
@@ -48,10 +49,10 @@ class DashboardSalesInvoiceDialog extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 if ((detail.notes ?? '').isNotEmpty) ...<Widget>[
                   Text('Notes: ${detail.notes}'),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                 ],
                 Expanded(
                   child: AppDataTable(

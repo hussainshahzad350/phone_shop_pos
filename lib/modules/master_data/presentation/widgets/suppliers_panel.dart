@@ -405,7 +405,7 @@ class _SuppliersPanelState extends ConsumerState<SuppliersPanel> {
                 hintText: 'Search suppliers',
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             FilterChip(
               selected: includeInactive,
               label: const Text('Show inactive'),
@@ -414,7 +414,7 @@ class _SuppliersPanelState extends ConsumerState<SuppliersPanel> {
                     selected;
               },
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             FilledButton.icon(
               onPressed: _createSupplier,
               icon: const Icon(Icons.add),
@@ -422,7 +422,7 @@ class _SuppliersPanelState extends ConsumerState<SuppliersPanel> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Expanded(
           child: Card(
             child: Padding(

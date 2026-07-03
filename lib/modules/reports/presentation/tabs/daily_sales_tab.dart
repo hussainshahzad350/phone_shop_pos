@@ -10,6 +10,8 @@ import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summa
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_tab_error_view.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_section_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
+import 'package:phone_shop_pos/core/theme/app_typography.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class DailySalesTab extends ConsumerWidget {
   const DailySalesTab({
@@ -49,7 +51,10 @@ class DailySalesTab extends ConsumerWidget {
     final layout = reportTableLayoutFor(context);
 
     DataRow totalsRow() {
-      final style = const TextStyle(fontWeight: FontWeight.bold);
+      final style = const TextStyle(
+        fontWeight: FontWeight.w600,
+        fontFeatures: AppTypography.tabularFigures,
+      );
       return DataRow(
         color: WidgetStatePropertyAll(
           Theme.of(context).colorScheme.primaryContainer.withAlpha(76),
@@ -103,7 +108,7 @@ class DailySalesTab extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Expanded(
           child: ReportTableSection(
             title: 'Sales Details',
@@ -216,7 +221,7 @@ class DailySalesTab extends ConsumerWidget {
                                         child: Row(
                                           children: <Widget>[
                                             Icon(Icons.open_in_new, size: 16),
-                                            SizedBox(width: 8),
+                                            SizedBox(width: AppSpacing.sm),
                                             Text('View Invoice'),
                                           ],
                                         ),
@@ -227,7 +232,7 @@ class DailySalesTab extends ConsumerWidget {
                                           child: Row(
                                             children: <Widget>[
                                               Icon(Icons.print_outlined, size: 16),
-                                              SizedBox(width: 8),
+                                              SizedBox(width: AppSpacing.sm),
                                               Text('Reprint Receipt'),
                                             ],
                                           ),
@@ -242,7 +247,7 @@ class DailySalesTab extends ConsumerWidget {
                                                 size: 16,
                                                 color: Theme.of(context).colorScheme.error,
                                               ),
-                                              const SizedBox(width: 8),
+                                              const SizedBox(width: AppSpacing.sm),
                                               Text(
                                                 'Cancel Sale',
                                                 style: TextStyle(

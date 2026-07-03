@@ -77,12 +77,11 @@ class ReportsScreen extends ConsumerWidget {
               const Text(
                 'This will void the sale and restore stock. Enter a reason:',
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               TextField(
                 controller: reasonController,
                 decoration: const InputDecoration(
                   labelText: 'Reason',
-                  border: OutlineInputBorder(),
                 ),
                 autofocus: true,
                 onSubmitted: (_) => Navigator.of(dialogContext).pop(true),
@@ -161,12 +160,11 @@ class ReportsScreen extends ConsumerWidget {
                 'This will void the purchase and reverse received stock and '
                 'supplier ledger. Enter a reason:',
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               TextField(
                 controller: reasonController,
                 decoration: const InputDecoration(
                   labelText: 'Reason',
-                  border: OutlineInputBorder(),
                 ),
                 autofocus: true,
                 onSubmitted: (_) => Navigator.of(dialogContext).pop(true),
@@ -325,14 +323,14 @@ class ReportsScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 ReportHeader(onRefresh: () => _refreshAll(ref)),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 ReportTabChips(
                   selectedTab: tab,
                   labelFor: _tabLabel,
                   onSelectTab: (item) =>
                       ref.read(selectedReportsTabProvider.notifier).state = item,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 if (_usesLegacyFilters(tab)) ...<Widget>[
                   ReportFilterBarWidget(
                     filter: filter,
@@ -367,7 +365,7 @@ class ReportsScreen extends ConsumerWidget {
                     onClear: () =>
                         ref.read(reportFilterProvider.notifier).clearAll(),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                 ],
                 Expanded(
                   child: _ReportContent(
@@ -388,7 +386,7 @@ class ReportsScreen extends ConsumerWidget {
                   ),
                 ),
                 if (_usesLegacyFilters(tab)) ...<Widget>[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   ReportPaginationBar(
                     filter: filter,
                     canGoNextPage: canGoNextPage,

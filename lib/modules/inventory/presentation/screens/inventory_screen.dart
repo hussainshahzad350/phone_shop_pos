@@ -166,7 +166,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                       icon: const Icon(Icons.bookmark_outline),
                       label: const Text('Reserve Phone'),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     OutlinedButton.icon(
                       onPressed: () async {
                         final rows = stockAsync.valueOrNull ?? const <StockRowEntity>[];
@@ -179,7 +179,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                       icon: const Icon(Icons.tune),
                       label: const Text('Stock Adjustment'),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     OutlinedButton.icon(
                       onPressed: _refresh,
                       icon: const Icon(Icons.refresh),
@@ -187,7 +187,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 summaryAsync.when(
                   data: (summary) => _SummaryCards(summary: summary),
                   loading: () => const SizedBox(
@@ -199,14 +199,14 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                     child: Center(child: Text('Failed to load summary.')),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 InventorySearchBar(
                   controller: _searchController,
                   focusNode: _searchFocus,
                   autofocus: true,
                   onChanged: _debouncedSearch,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 InventoryFilterChips(
                   selectedStatus: filter.statusFilter,
                   selectedHasImei: filter.hasImeiFilter,
@@ -221,7 +221,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                         .setHasImeiFilter(value);
                   },
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 Expanded(
                   child: ReportTableSection(
                     title: 'Stock',
@@ -237,7 +237,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: <Widget>[
                             Text('Error loading stock: $error'),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: AppSpacing.sm),
                             FilledButton.icon(
                               onPressed: _refresh,
                               icon: const Icon(Icons.refresh),
@@ -335,11 +335,11 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
         child: Row(
           children: <Widget>[
             Icon(icon, color: color, size: 32),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.md),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -348,7 +348,7 @@ class _SummaryCard extends StatelessWidget {
                   style: Theme.of(context)
                       .textTheme
                       .headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.bold, color: color),
+                      ?.copyWith(color: color),
                 ),
                 Text(label, style: Theme.of(context).textTheme.bodySmall),
               ],
@@ -416,7 +416,6 @@ class _ReservePhoneDialogState extends ConsumerState<_ReservePhoneDialog> {
             DropdownButtonFormField<String>(
               initialValue: _selectedSerializedStockId,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
                 labelText: 'Select Phone (IMEI)',
               ),
@@ -577,12 +576,11 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             if (!_isWriteOff) ...<Widget>[
               DropdownButtonFormField<String>(
                 initialValue: _selectedProductModelId,
                 decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
                   isDense: true,
                   labelText: 'Accessory Product',
                 ),
@@ -594,12 +592,11 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
                 }).toList(growable: false),
                 onChanged: (value) => setState(() => _selectedProductModelId = value),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               TextField(
                 controller: _deltaController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
                   isDense: true,
                   labelText: 'Quantity Delta (+/-)',
                 ),
@@ -608,7 +605,6 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
               DropdownButtonFormField<String>(
                 initialValue: _selectedSerializedStockId,
                 decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
                   isDense: true,
                   labelText: 'In-stock IMEI',
                 ),
@@ -621,20 +617,19 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
                 onChanged: (value) => setState(() => _selectedSerializedStockId = value),
               ),
             ],
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _notesController,
               maxLines: 2,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
                 labelText: 'Notes (optional)',
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            const Text(
+            Text(
               'Adjustment History',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: AppSpacing.xs),
             Expanded(

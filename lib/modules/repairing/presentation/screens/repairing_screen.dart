@@ -11,6 +11,7 @@ import 'package:phone_shop_pos/modules/repairing/domain/entities/repair_analytic
 import 'package:phone_shop_pos/modules/repairing/domain/entities/repair_job_entity.dart';
 import 'package:phone_shop_pos/modules/repairing/presentation/providers/repairing_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/theme/app_typography.dart';
 
 part '../dialogs/collect_payment_dialog.dart';
 part '../dialogs/repair_job_form_dialog.dart';
@@ -32,11 +33,11 @@ class RepairingScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             const _KpiRow(),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             const _FiltersRow(),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Expanded(
               child: SingleChildScrollView(
                 child: const _RepairJobsTable(),

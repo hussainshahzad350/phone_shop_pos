@@ -227,7 +227,7 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                 ? 'Repair Job Details'
                 : (isEditing ? 'Edit Repair Job' : 'Add Repair Job'),
           ),
-          contentPadding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+          contentPadding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.md, AppSpacing.xl, 0),
           content: SizedBox(
             width: 640,
             height: 560,
@@ -260,7 +260,7 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: AppSpacing.md),
                       Expanded(
                         flex: 2,
                         child: _buildTextField(
@@ -272,7 +272,7 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Row(
                     children: <Widget>[
                       Expanded(
@@ -282,7 +282,7 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                           enabled: !isReadOnly,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: _buildTextField(
                           controller: _technicianController,
@@ -292,7 +292,7 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   _buildSectionHeader('Customer'),
                   Row(
                     children: <Widget>[
@@ -303,7 +303,7 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                           enabled: !isReadOnly,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: _buildTextField(
                           controller: _phoneNumberController,
@@ -313,7 +313,7 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   _buildSectionHeader('Problem'),
                   TextField(
                     controller: _problemController,
@@ -321,7 +321,6 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                     maxLines: 2,
                     style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                     decoration: InputDecoration(
-                      border: const OutlineInputBorder(),
                       isDense: true,
                       labelText: 'Problem Description *',
                       labelStyle: isReadOnly
@@ -333,12 +332,11 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                     ),
                     onChanged: (_) => setState(() {}),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   DropdownButtonFormField<String>(
                     initialValue: _issueType,
                     style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                     decoration: InputDecoration(
-                      border: const OutlineInputBorder(),
                       isDense: true,
                       labelText: 'Issue Type (optional)',
                       labelStyle: _isSubmitting || isReadOnly
@@ -366,7 +364,7 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                             ? null
                             : (v) => setState(() => _issueType = v),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   _buildSectionHeader('Accessories Received'),
                   Wrap(
                     spacing: 6,
@@ -389,14 +387,14 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                       );
                     }).toList(growable: false),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xs),
                   _buildTextField(
                     controller: _customAccessoryController,
                     label: 'Other accessories (optional)',
                     hint: 'e.g. original box, back cover',
                     enabled: !isReadOnly,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   _buildSectionHeader('Financials'),
                   Row(
                     children: <Widget>[
@@ -408,7 +406,7 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                           enabled: !isReadOnly,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: _buildTextField(
                           controller: _advanceController,
@@ -419,7 +417,7 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Row(
                     children: <Widget>[
                       Expanded(
@@ -430,7 +428,7 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                           enabled: !isReadOnly,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: _buildTextField(
                           controller: _repairExpenseController,
@@ -441,12 +439,11 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   _buildSectionHeader('Status'),
                   if (isReadOnly)
                     InputDecorator(
                       decoration: InputDecoration(
-                        border: const OutlineInputBorder(),
                         isDense: true,
                         labelText: 'Status',
                         labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
@@ -461,7 +458,6 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                       initialValue: _status,
                       style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
                         isDense: true,
                         labelText: 'Status *',
                       ),
@@ -477,14 +473,14 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                           ? null
                           : (v) => setState(() => _status = v ?? _status),
                     ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   _buildTextField(
                     controller: _notesController,
                     label: 'Notes (optional)',
                     maxLines: 2,
                     enabled: !isReadOnly,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                 ],
               ),
             ),
@@ -541,7 +537,6 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
           : TextInputType.text,
       style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
       decoration: InputDecoration(
-        border: const OutlineInputBorder(),
         isDense: true,
         labelText: label,
         labelStyle: enabled ? null : TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),

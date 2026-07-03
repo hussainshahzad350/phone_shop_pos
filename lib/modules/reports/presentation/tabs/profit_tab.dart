@@ -10,6 +10,7 @@ import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summa
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_tab_error_view.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_section_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class ProfitTab extends ConsumerWidget {
   const ProfitTab({super.key});
@@ -86,7 +87,7 @@ class ProfitTab extends ConsumerWidget {
             onRetry: () => ref.invalidate(profitReportProvider),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         Expanded(
           child: rowsAsync.when(
             data: (rows) {

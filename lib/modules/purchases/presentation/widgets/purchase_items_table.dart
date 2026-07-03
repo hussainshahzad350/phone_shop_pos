@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/theme/app_typography.dart';
 
 class PurchaseItemsTable extends StatefulWidget {
   const PurchaseItemsTable({
@@ -152,9 +153,9 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
     final item = widget.item;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -166,9 +167,7 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
                     children: <Widget>[
                       Text(
                         item.productName,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: theme.textTheme.titleSmall,
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -190,7 +189,6 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
                       focusNode: _qtyFocus,
                       decoration: const InputDecoration(
                         isDense: true,
-                        border: OutlineInputBorder(),
                         labelText: 'Qty',
                       ),
                       keyboardType: TextInputType.number,
@@ -205,7 +203,7 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
                       },
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   SizedBox(
                     width: 120,
                     child: TextFormField(
@@ -213,7 +211,6 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
                       focusNode: _costFocus,
                       decoration: const InputDecoration(
                         isDense: true,
-                        border: OutlineInputBorder(),
                         labelText: 'Unit Cost',
                       ),
                       keyboardType: const TextInputType.numberWithOptions(
@@ -236,14 +233,14 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
                     style: theme.textTheme.bodyMedium,
                   ),
                 ],
-                const SizedBox(width: 16),
+                const SizedBox(width: AppSpacing.lg),
                 Text(
                   FormattingHelpers.currencyPkr(item.lineTotal),
                   style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontFeatures: AppTypography.tabularFigures,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 IconButton(
                   icon: const Icon(Icons.delete_outline),
                   color: theme.colorScheme.error,
@@ -253,7 +250,7 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
               ],
             ),
             if (item.hasImei) ...<Widget>[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 children: <Widget>[
                   TextButton.icon(
@@ -261,7 +258,7 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
                     icon: const Icon(Icons.add),
                     label: const Text('Add IMEIs'),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   if (item.imeiEntries.isNotEmpty)
                     TextButton.icon(
                       onPressed: () => setState(() {
@@ -278,7 +275,7 @@ class _PurchaseItemRowState extends State<_PurchaseItemRow> {
               ),
               if (_imeiExpanded && item.imeiEntries.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: 4),
+                  padding: const EdgeInsets.only(top: AppSpacing.xs),
                   child: Column(
                     children: <Widget>[
                       for (int i = 0; i < item.imeiEntries.length; i++)
@@ -318,12 +315,12 @@ class _ImeiEntryRow extends StatelessWidget {
     final semantic = Theme.of(context).semantic;
     return Row(
       children: <Widget>[
-        const SizedBox(width: 16),
+        const SizedBox(width: AppSpacing.lg),
         Text(
           '${index + 1}.',
           style: const TextStyle(fontSize: 12),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: AppSpacing.xs),
         if (isUsed) ...<Widget>[
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
@@ -337,11 +334,11 @@ class _ImeiEntryRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 color: semantic.warning,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: AppSpacing.xs),
         ],
         Expanded(
           child: Text(
@@ -445,36 +442,32 @@ class _EditImeiEntryDialogState extends State<_EditImeiEntryDialog> {
             TextField(
               controller: _imei1Controller,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
                 labelText: 'IMEI 1',
               ),
               keyboardType: TextInputType.number,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _imei2Controller,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
                 labelText: 'IMEI 2',
               ),
               keyboardType: TextInputType.number,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _serialController,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
                 labelText: 'Serial Number',
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _costController,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
                 labelText: 'Cost Price',
               ),
@@ -482,11 +475,10 @@ class _EditImeiEntryDialogState extends State<_EditImeiEntryDialog> {
                 decimal: true,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _sellingController,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 isDense: true,
                 labelText: 'Sale Price',
               ),

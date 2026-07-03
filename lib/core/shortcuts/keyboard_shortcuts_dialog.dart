@@ -288,7 +288,7 @@ class _Keycap extends StatelessWidget {
     final theme = Theme.of(context);
     return Container(
       constraints: const BoxConstraints(minWidth: 26),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 3),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: AppRadii.smRadius,

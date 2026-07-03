@@ -4,6 +4,7 @@ import 'package:phone_shop_pos/modules/dashboard/domain/entities/brand_stock_ent
 import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/model_detail_widget.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/model_summary_widget.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class BrandStockPopup extends ConsumerStatefulWidget {
   const BrandStockPopup({
@@ -35,7 +36,7 @@ class _BrandStockPopupState extends ConsumerState<BrandStockPopup> {
             if (modelStocks.isEmpty) {
               return const Center(
                 child: Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: EdgeInsets.all(AppSpacing.lg),
                   child: Text('No stock available for this brand'),
                 ),
               );
@@ -45,7 +46,7 @@ class _BrandStockPopupState extends ConsumerState<BrandStockPopup> {
               shrinkWrap: true,
               physics: const ScrollPhysics(),
               itemCount: modelStocks.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
               itemBuilder: (_, index) {
                 final model = modelStocks[index];
                 final isSelected = _selectedModelIndex == index;
@@ -64,8 +65,8 @@ class _BrandStockPopupState extends ConsumerState<BrandStockPopup> {
                     if (isSelected)
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 8,
+                          horizontal: AppSpacing.sm,
+                          vertical: AppSpacing.sm,
                         ),
                         child: ModelDetailWidget(
                           modelStock: model,

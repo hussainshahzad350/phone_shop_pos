@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/brand_entity.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class BrandFormData {
   const BrandFormData({required this.name, required this.isActive});
@@ -63,14 +64,13 @@ class _BrandFormDialogState extends State<BrandFormDialog> {
                 onFieldSubmitted: (_) => _submit(),
                 decoration: const InputDecoration(
                   labelText: 'Brand Name',
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
                 validator: (value) => (value == null || value.trim().isEmpty)
                     ? 'Brand name is required'
                     : null,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               SwitchListTile(
                 title: const Text('Active'),
                 value: _isActive,

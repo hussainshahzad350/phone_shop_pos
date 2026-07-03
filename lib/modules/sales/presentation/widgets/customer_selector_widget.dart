@@ -111,7 +111,7 @@ class _CustomerSelectorWidgetState
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: TapRegion(
           groupId: _tapGroupId,
           onTapOutside: (_) => _closeDropdown(),
@@ -178,7 +178,7 @@ class _CustomerSelectorWidgetState
   Widget _buildOverlayContent() {
     if (_customersLoading) {
       return const Padding(
-        padding: EdgeInsets.all(12),
+        padding: EdgeInsets.all(AppSpacing.md),
         child: LinearProgressIndicator(minHeight: 2),
       );
     }
@@ -187,13 +187,13 @@ class _CustomerSelectorWidgetState
           ? (_customersError! as AppError).message
           : 'Failed to load customers.';
       return Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(message),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             OutlinedButton.icon(
               onPressed: _retryLoadCustomers,
               icon: const Icon(Icons.refresh),

@@ -544,13 +544,13 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                       onSubmitted: _handleSearchSubmitted,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   ProductGridWidget(
                     onAddProduct: _handleAddProduct,
                     onRetry: _refreshSales,
                     onViewAllInInventory: () => context.go('/inventory'),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
@@ -565,7 +565,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                             Expanded(
                               child: Card(
                                 child: Padding(
-                                  padding: const EdgeInsets.all(8),
+                                  padding: const EdgeInsets.all(AppSpacing.sm),
                                   child: CartTableWidget(
                                     items: cartItems,
                                     selectedIndex: _selectedCartIndex,
@@ -617,7 +617,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: AppSpacing.sm),
                             SizedBox(
                               width: rightPanelWidth,
                               child: Scrollbar(
@@ -647,7 +647,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                                           if (requiresRegisteredCustomerForCredit)
                                             Padding(
                                               padding:
-                                                  const EdgeInsets.only(top: 8),
+                                                  const EdgeInsets.only(top: AppSpacing.sm),
                                               child: Text(
                                                 'Registered customer is required for credit (udhar) sale.',
                                                 style: TextStyle(
@@ -660,7 +660,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                                         ],
                                       ),
                                     ),
-                                    const SizedBox(height: 8),
+                                    const SizedBox(height: AppSpacing.sm),
                                     FocusTraversalOrder(
                                       order: const NumericFocusOrder(3),
                                       child: TotalsPanelWidget(
@@ -682,7 +682,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                                         },
                                       ),
                                     ),
-                                    const SizedBox(height: 8),
+                                    const SizedBox(height: AppSpacing.sm),
                                     FocusTraversalOrder(
                                       order: const NumericFocusOrder(4),
                                       child: PaymentSectionWidget(

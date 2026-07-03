@@ -11,6 +11,7 @@ import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/routing/app_router.dart';
 import 'package:phone_shop_pos/core/theme/app_theme.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 void main() {
   runZonedGuarded(
@@ -151,7 +152,7 @@ class _StartupLoadingScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             CircularProgressIndicator(),
-            SizedBox(height: 12),
+            SizedBox(height: AppSpacing.md),
             Text('Starting ${AppRuntimeConfig.appName}...'),
           ],
         ),
@@ -177,7 +178,7 @@ class _StartupErrorScreen extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 640),
           child: Card(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,7 +194,7 @@ class _StartupErrorScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   SelectableText(message, style: const TextStyle(fontSize: 12)),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   Row(
                     children: <Widget>[
                       FilledButton.icon(

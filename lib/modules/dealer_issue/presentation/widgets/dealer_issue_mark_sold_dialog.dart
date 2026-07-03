@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/domain/entities/dealer_issue_entity.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_issue_state_provider.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class DealerIssueMarkSoldDialog extends ConsumerStatefulWidget {
   const DealerIssueMarkSoldDialog({
@@ -70,7 +71,7 @@ class _DealerIssueMarkSoldDialogState
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             TextFormField(
               controller: _priceController,
               autofocus: true,
@@ -81,7 +82,6 @@ class _DealerIssueMarkSoldDialogState
               ],
               decoration: const InputDecoration(
                 labelText: 'Sale Price (PKR)',
-                border: OutlineInputBorder(),
                 prefixText: 'Rs. ',
                 isDense: true,
               ),
@@ -96,12 +96,11 @@ class _DealerIssueMarkSoldDialogState
                 return null;
               },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             DropdownButtonFormField<String>(
               initialValue: _paymentMethod,
               decoration: const InputDecoration(
                 labelText: 'Payment Method',
-                border: OutlineInputBorder(),
                 isDense: true,
               ),
               items: const <DropdownMenuItem<String>>[

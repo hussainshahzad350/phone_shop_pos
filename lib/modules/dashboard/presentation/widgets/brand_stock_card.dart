@@ -21,7 +21,7 @@ class BrandStockCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: AppRadii.lgRadius,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 14),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
@@ -47,7 +47,7 @@ class BrandStockCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 'Model: ${brand.modelCount}',
                 style: theme.textTheme.bodySmall?.copyWith(color: muted),

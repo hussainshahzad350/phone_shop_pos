@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.dart';
+import 'package:phone_shop_pos/core/theme/app_typography.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class TotalsPanelWidget extends StatefulWidget {
   const TotalsPanelWidget({
@@ -65,14 +67,14 @@ class _TotalsPanelWidgetState extends State<TotalsPanelWidget> {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text('Totals', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
+            Text('Totals', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: AppSpacing.sm),
             _line(label: 'Subtotal', value: widget.totals.subtotal),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _discountController,
               keyboardType: TextInputType.number,
@@ -81,7 +83,7 @@ class _TotalsPanelWidgetState extends State<TotalsPanelWidget> {
                 FormattingHelpers.parseLocaleDecimal(value),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _taxController,
               keyboardType: TextInputType.number,
@@ -90,15 +92,15 @@ class _TotalsPanelWidgetState extends State<TotalsPanelWidget> {
                 FormattingHelpers.parseLocaleDecimal(value),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             _line(label: 'Total', value: widget.totals.total, bold: true),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             _line(
               label: 'Remaining',
               value: widget.totals.remaining,
               bold: true,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             _line(
               label: 'Change',
               value: changeAmount,
@@ -157,8 +159,9 @@ class _TotalsPanelWidgetState extends State<TotalsPanelWidget> {
         Text(
           FormattingHelpers.currencyPkr(value),
           style: TextStyle(
-            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+            fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
             color: color,
+            fontFeatures: AppTypography.tabularFigures,
           ),
         ),
       ],

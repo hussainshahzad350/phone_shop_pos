@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/repositories/sales_repository.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class ImeiPickerDialog extends StatefulWidget {
   const ImeiPickerDialog({
@@ -163,13 +164,12 @@ class _ImeiPickerDialogState extends State<ImeiPickerDialog> {
                     hintText: 'Search IMEI / Serial',
                     helperText: 'Enter = select, Esc = cancel, ↑↓ = navigate',
                     prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
                     isDense: true,
                   ),
                   onChanged: _onSearchChanged,
                   onSubmitted: (_) => _selectCurrent(),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 Expanded(
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
@@ -179,7 +179,7 @@ class _ImeiPickerDialogState extends State<ImeiPickerDialog> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: <Widget>[
                                   Text(_errorMessage!),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: AppSpacing.sm),
                                   OutlinedButton.icon(
                                     onPressed: () => _runSearch(
                                       query: _searchController.text.trim(),

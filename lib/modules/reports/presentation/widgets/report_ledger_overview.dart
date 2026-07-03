@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/modules/ledger/domain/entities/party_summary_card
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summary_card_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_section_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class ReportLedgerOverview extends StatelessWidget {
   const ReportLedgerOverview({
@@ -47,7 +48,7 @@ class ReportLedgerOverview extends StatelessWidget {
                 value: sorted.length.toString(),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: ReportSummaryCardWidget(
                 label: 'With balance',
@@ -55,7 +56,7 @@ class ReportLedgerOverview extends StatelessWidget {
                 color: semantic.warning,
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: ReportSummaryCardWidget(
                 label: 'Total outstanding',
@@ -65,7 +66,7 @@ class ReportLedgerOverview extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Expanded(
           child: ReportTableSection(
             title: tableTitle,

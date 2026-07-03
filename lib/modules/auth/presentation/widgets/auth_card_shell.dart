@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class AuthCardShell extends StatelessWidget {
   const AuthCardShell({
@@ -18,7 +19,7 @@ class AuthCardShell extends StatelessWidget {
           constraints: BoxConstraints(maxWidth: maxWidth),
           child: Card(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(AppSpacing.xl),
               child: child,
             ),
           ),

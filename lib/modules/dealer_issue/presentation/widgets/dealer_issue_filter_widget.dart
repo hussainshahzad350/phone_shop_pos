@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_issue_state_provider.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_providers.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/widgets/add_dealer_dialog.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class DealerIssueFilterWidget extends ConsumerWidget {
   const DealerIssueFilterWidget({
@@ -19,23 +20,22 @@ class DealerIssueFilterWidget extends ConsumerWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
           children: <Widget>[
-            const Text(
+            Text(
               'Filter by Dealer:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: dealersAsync.when(
                 data: (dealers) => DropdownButtonFormField<String?>(
                   initialValue: selectedDealerId,
                   decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
                     isDense: true,
                     contentPadding:
-                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                   ),
                   items: [
                     const DropdownMenuItem<String?>(
@@ -56,7 +56,7 @@ class DealerIssueFilterWidget extends ConsumerWidget {
                 error: (_, __) => const Text('Failed to load dealers'),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             OutlinedButton.icon(
               onPressed: () async {
                 final created = await AddDealerDialog.show(context);
@@ -68,7 +68,7 @@ class DealerIssueFilterWidget extends ConsumerWidget {
               label: const Text('Add Dealer'),
               style: OutlinedButton.styleFrom(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: AppSpacing.sm),
                 visualDensity: VisualDensity.compact,
               ),
             ),

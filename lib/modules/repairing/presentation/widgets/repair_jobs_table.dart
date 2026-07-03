@@ -65,7 +65,7 @@ class _RepairJobsTable extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             const Text('Failed to load repair jobs.'),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             OutlinedButton.icon(
               onPressed: () => ref.invalidate(repairJobsProvider),
               icon: const Icon(Icons.refresh),
