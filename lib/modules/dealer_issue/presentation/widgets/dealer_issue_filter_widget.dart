@@ -32,6 +32,8 @@ class DealerIssueFilterWidget extends ConsumerWidget {
               child: dealersAsync.when(
                 data: (dealers) => DropdownButtonFormField<String?>(
                   initialValue: selectedDealerId,
+                  borderRadius: kAppDropdownMenuRadius,
+                  menuMaxHeight: kAppDropdownMenuMaxHeight,
                   decoration: const InputDecoration(
                     isDense: true,
                     contentPadding:

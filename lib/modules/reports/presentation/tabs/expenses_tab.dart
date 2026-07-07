@@ -130,6 +130,8 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                         initialValue:
                             selectedCategory.isEmpty ? null : selectedCategory,
                         isExpanded: true,
+                        borderRadius: kAppDropdownMenuRadius,
+                        menuMaxHeight: kAppDropdownMenuMaxHeight,
                         decoration: const InputDecoration(
                           labelText: 'Category',
                           isDense: true,
@@ -158,6 +160,8 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                         initialValue: selectedPaymentMethod.isEmpty
                             ? null
                             : selectedPaymentMethod,
+                        borderRadius: kAppDropdownMenuRadius,
+                        menuMaxHeight: kAppDropdownMenuMaxHeight,
                         decoration: const InputDecoration(
                           labelText: 'Payment',
                           isDense: true,

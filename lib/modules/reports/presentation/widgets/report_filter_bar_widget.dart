@@ -218,6 +218,8 @@ class _SimpleDropdown extends StatelessWidget {
       child: DropdownButtonFormField<String?>(
         initialValue: value,
         isExpanded: true,
+        borderRadius: kAppDropdownMenuRadius,
+        menuMaxHeight: kAppDropdownMenuMaxHeight,
         decoration: appDesktopInputDecoration(labelText: label),
         onChanged: onChanged,
         items: <DropdownMenuItem<String?>>[
@@ -254,6 +256,8 @@ class _IdDropdown extends StatelessWidget {
       child: DropdownButtonFormField<String?>(
         initialValue: value,
         isExpanded: true,
+        borderRadius: kAppDropdownMenuRadius,
+        menuMaxHeight: kAppDropdownMenuMaxHeight,
         decoration: appDesktopInputDecoration(labelText: label),
         onChanged: onChanged,
         items: <DropdownMenuItem<String?>>[

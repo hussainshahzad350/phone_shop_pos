@@ -39,6 +39,8 @@ class _FiltersRow extends ConsumerWidget {
                     width: 180,
                     child: DropdownButtonFormField<String>(
                       initialValue: statusFilter.isEmpty ? '' : statusFilter,
+                      borderRadius: kAppDropdownMenuRadius,
+                      menuMaxHeight: kAppDropdownMenuMaxHeight,
                       decoration: const InputDecoration(
                         isDense: true,
                         labelText: 'Status',

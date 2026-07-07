@@ -415,6 +415,8 @@ class _ReservePhoneDialogState extends ConsumerState<_ReservePhoneDialog> {
           children: <Widget>[
             DropdownButtonFormField<String>(
               initialValue: _selectedSerializedStockId,
+              borderRadius: kAppDropdownMenuRadius,
+              menuMaxHeight: kAppDropdownMenuMaxHeight,
               decoration: const InputDecoration(
                 isDense: true,
                 labelText: 'Select Phone (IMEI)',
@@ -563,6 +565,8 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
                 ),
                 DropdownButton<String>(
                   value: _reason,
+                  borderRadius: kAppDropdownMenuRadius,
+                  menuMaxHeight: kAppDropdownMenuMaxHeight,
                   onChanged: (value) {
                     if (value != null) {
                       setState(() => _reason = value);
@@ -580,6 +584,8 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
             if (!_isWriteOff) ...<Widget>[
               DropdownButtonFormField<String>(
                 initialValue: _selectedProductModelId,
+                borderRadius: kAppDropdownMenuRadius,
+                menuMaxHeight: kAppDropdownMenuMaxHeight,
                 decoration: const InputDecoration(
                   isDense: true,
                   labelText: 'Accessory Product',
@@ -604,6 +610,8 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
             ] else ...<Widget>[
               DropdownButtonFormField<String>(
                 initialValue: _selectedSerializedStockId,
+                borderRadius: kAppDropdownMenuRadius,
+                menuMaxHeight: kAppDropdownMenuMaxHeight,
                 decoration: const InputDecoration(
                   isDense: true,
                   labelText: 'In-stock IMEI',

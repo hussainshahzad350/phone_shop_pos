@@ -71,6 +71,8 @@ class _DealerIssueDialogWidgetState extends ConsumerState<DealerIssueDialogWidge
           Expanded(
             child: DropdownButtonFormField<String>(
               initialValue: _selectedDealerId,
+              borderRadius: kAppDropdownMenuRadius,
+              menuMaxHeight: kAppDropdownMenuMaxHeight,
               decoration: const InputDecoration(
                 labelText: 'Select Dealer',
                 isDense: true,

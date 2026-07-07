@@ -279,13 +279,24 @@ InputDecoration(
 **Dropdown:**
 ```dart
 // ✅ Use initialValue (value is deprecated in Flutter 3.33+)
+// ✅ Always pass borderRadius + menuMaxHeight so the popup opens as a compact,
+//    rounded, scrollable panel instead of a full-height sheet with sharp corners
+//    that covers the field. Tokens live in core/theme/app_spacing.dart.
 DropdownButtonFormField<String>(
   initialValue: _selected,
+  borderRadius: kAppDropdownMenuRadius,      // rounds the menu to match the field
+  menuMaxHeight: kAppDropdownMenuMaxHeight,   // caps height → mouse/scrollbar scrolling
   decoration: const InputDecoration(labelText: 'Select'),
   items: [...],
   onChanged: (v) { if (v != null) setState(() => _selected = v); },
 )
 ```
+
+> The same two tokens apply to plain `DropdownButton<T>`. For a **typeable** search
+> that must open anchored directly under the field (never overlapping it), follow
+> the `CustomerSelectorWidget` / `SupplierSelectorWidget` pattern — an
+> `OverlayPortal` + `CompositedTransformFollower` anchored list — rather than a
+> `DropdownButton`.
 
 **Search fields:** use `AppSearchField` (`core/widgets/desktop_components.dart`) — it wires the clear (×) button and `TextInputAction.search` for you.
 

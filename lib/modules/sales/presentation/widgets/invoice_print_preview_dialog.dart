@@ -65,6 +65,8 @@ class _InvoicePrintPreviewDialogState
                 const SizedBox(width: AppSpacing.sm),
                 DropdownButton<InvoicePaperSize>(
                   value: _paperSize,
+                  borderRadius: kAppDropdownMenuRadius,
+                  menuMaxHeight: kAppDropdownMenuMaxHeight,
                   onChanged: _isPrinting
                       ? null
                       : (value) {
