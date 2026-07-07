@@ -60,14 +60,14 @@ class LedgerFacadeService with BaseRepositoryGuard {
 
       if (startDate != null) {
         final startUtc =
-            DateTime.utc(startDate.year, startDate.month, startDate.day);
+            DateTime(startDate.year, startDate.month, startDate.day).toUtc();
         whereClauses.add('p.purchase_date >= ?');
         args.add(DateTimeHelpers.toSql(startUtc));
       }
 
       if (endDate != null) {
-        final endUtc = DateTime.utc(endDate.year, endDate.month, endDate.day)
-            .add(const Duration(days: 1));
+        final endUtc =
+            DateTime(endDate.year, endDate.month, endDate.day + 1).toUtc();
         whereClauses.add('p.purchase_date < ?');
         args.add(DateTimeHelpers.toSql(endUtc));
       }

@@ -183,7 +183,7 @@ class ProfitReportService with BaseRepositoryGuard {
           COALESCE(SUM(accessories_delta), 0) AS accessories_sold
         FROM (
           SELECT
-            date(s.sale_date) AS event_day,
+            date(s.sale_date, 'localtime') AS event_day,
             si.line_total
               - COALESCE(s.discount * si.line_total / NULLIF(s.subtotal, 0), 0)
               AS revenue_delta,
@@ -198,7 +198,7 @@ class ProfitReportService with BaseRepositoryGuard {
           UNION ALL
 
           SELECT
-            date(sr.created_at) AS event_day,
+            date(sr.created_at, 'localtime') AS event_day,
             -sr.return_amount   AS revenue_delta,
             -(sr.cost_price * sr.return_qty) AS cost_delta,
             CASE WHEN pm.has_imei = 1 THEN -sr.return_qty ELSE 0 END AS phones_delta,
@@ -245,16 +245,14 @@ class ProfitReportService with BaseRepositoryGuard {
 
     final start = filter.startDate;
     if (start != null) {
-      final startUtc = DateTime.utc(start.year, start.month, start.day);
+      final startUtc = DateTime(start.year, start.month, start.day).toUtc();
       clauses.add('$dateColumn >= ?');
       args.add(DateTimeHelpers.toSql(startUtc));
     }
 
     final end = filter.endDate;
     if (end != null) {
-      final endUtc = DateTime.utc(end.year, end.month, end.day).add(
-        const Duration(days: 1),
-      );
+      final endUtc = DateTime(end.year, end.month, end.day + 1).toUtc();
       clauses.add('$dateColumn < ?');
       args.add(DateTimeHelpers.toSql(endUtc));
     }
@@ -272,16 +270,14 @@ class ProfitReportService with BaseRepositoryGuard {
 
     final start = filter.startDate;
     if (start != null) {
-      final startUtc = DateTime.utc(start.year, start.month, start.day);
+      final startUtc = DateTime(start.year, start.month, start.day).toUtc();
       clauses.add('$dateColumn >= ?');
       args.add(DateTimeHelpers.toSql(startUtc));
     }
 
     final end = filter.endDate;
     if (end != null) {
-      final endUtc = DateTime.utc(end.year, end.month, end.day).add(
-        const Duration(days: 1),
-      );
+      final endUtc = DateTime(end.year, end.month, end.day + 1).toUtc();
       clauses.add('$dateColumn < ?');
       args.add(DateTimeHelpers.toSql(endUtc));
     }

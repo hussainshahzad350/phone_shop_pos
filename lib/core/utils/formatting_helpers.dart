@@ -7,9 +7,18 @@ class FormattingHelpers {
     double value, {
     int fractionDigits = 2,
     bool useGrouping = true,
+    bool trimTrailingZeros = true,
   }) {
     final isNegative = value.isNegative;
-    final fixed = value.abs().toStringAsFixed(fractionDigits);
+    var fixed = value.abs().toStringAsFixed(fractionDigits);
+    // Pakistani retail rarely cares about paisa: display whole rupees as `100`
+    // rather than `100.00`, and `100.50` as `100.5`. The stored value keeps its
+    // full precision — this only affects presentation.
+    if (trimTrailingZeros && fixed.contains('.')) {
+      fixed = fixed
+          .replaceFirst(RegExp(r'0+$'), '')
+          .replaceFirst(RegExp(r'\.$'), '');
+    }
     final parts = fixed.split('.');
     final whole = useGrouping ? _groupDigits(parts.first) : parts.first;
     final fraction = parts.length > 1 ? '.${parts[1]}' : '';

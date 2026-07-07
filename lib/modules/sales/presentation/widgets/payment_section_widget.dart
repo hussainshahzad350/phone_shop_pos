@@ -61,9 +61,9 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
   @override
   void didUpdateWidget(covariant PaymentSectionWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _syncController(
+    _syncAmountController(
       controller: _paidAmountController,
-      nextText: _displayAmount(widget.paidAmount),
+      value: widget.paidAmount,
     );
     _syncController(
       controller: _notesController,
@@ -159,6 +159,27 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Keeps the paid-amount field aligned with provider state without fighting
+  /// an in-progress edit. Comparing the parsed numeric value (rather than the
+  /// raw text) means a half-typed decimal like `1250.` is not rewritten to
+  /// `1250` mid-entry, which previously made it impossible to type a fractional
+  /// amount. Matches the behaviour of [TotalsPanelWidget]'s discount/tax fields.
+  void _syncAmountController({
+    required TextEditingController controller,
+    required double value,
+  }) {
+    final parsed = FormattingHelpers.parseLocaleDecimal(controller.text);
+    if ((parsed - value).abs() < 0.0001) {
+      return;
+    }
+    final nextText = _displayAmount(value);
+    controller.value = controller.value.copyWith(
+      text: nextText,
+      selection: TextSelection.collapsed(offset: nextText.length),
+      composing: TextRange.empty,
     );
   }
 

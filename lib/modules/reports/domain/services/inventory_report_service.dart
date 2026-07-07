@@ -144,16 +144,14 @@ class InventoryReportService with BaseRepositoryGuard {
 
       final start = filter.startDate;
       if (start != null) {
-        final startUtc = DateTime.utc(start.year, start.month, start.day);
+        final startUtc = DateTime(start.year, start.month, start.day).toUtc();
         where.write(' AND s.sale_date >= ?');
         args.add(startUtc.toIso8601String());
       }
 
       final end = filter.endDate;
       if (end != null) {
-        final endUtc = DateTime.utc(end.year, end.month, end.day).add(
-          const Duration(days: 1),
-        );
+        final endUtc = DateTime(end.year, end.month, end.day + 1).toUtc();
         where.write(' AND s.sale_date < ?');
         args.add(endUtc.toIso8601String());
       }

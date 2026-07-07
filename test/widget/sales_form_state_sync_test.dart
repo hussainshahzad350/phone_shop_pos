@@ -66,6 +66,48 @@ void main() {
     expect(find.text('Test note'), findsNothing);
   });
 
+  testWidgets('paid amount field allows typing a fractional value', (
+    tester,
+  ) async {
+    double paidAmount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StatefulBuilder(
+            builder: (context, setState) {
+              return PaymentSectionWidget(
+                paymentMethod: 'cash',
+                paidAmount: paidAmount,
+                notes: '',
+                onPaymentMethodChanged: (_) {},
+                onPaidAmountChanged: (value) {
+                  setState(() => paidAmount = value);
+                },
+                onNotesChanged: (_) {},
+                onCompleteSale: () {},
+                isProcessing: false,
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    final field = find.widgetWithText(TextField, 'Paid Amount');
+
+    // Typing the decimal point must not be rewritten away by the controller
+    // sync — otherwise a fractional amount can never be entered.
+    await tester.enterText(field, '1250.');
+    await tester.pump();
+    expect(tester.widget<TextField>(field).controller!.text, '1250.');
+
+    await tester.enterText(field, '1250.5');
+    await tester.pump();
+    expect(paidAmount, 1250.5);
+    expect(tester.widget<TextField>(field).controller!.text, '1250.5');
+  });
+
   testWidgets('customer selector picks a customer via the search field', (
     tester,
   ) async {
