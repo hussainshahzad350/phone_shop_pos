@@ -5,7 +5,7 @@ import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 ///
 /// Each chord is a list of keycaps pressed together (e.g. `['Ctrl', 'F']`).
 /// When more than one chord is supplied they are shown as alternatives
-/// separated by "or" (e.g. `F1` **or** `Ctrl + F`).
+/// separated by "or" (e.g. `↑` **or** `↓`).
 class _ShortcutSpec {
   const _ShortcutSpec({
     required this.chords,
@@ -71,7 +71,6 @@ const List<_ShortcutGroup> _shortcutGroups = <_ShortcutGroup>[
     shortcuts: <_ShortcutSpec>[
       _ShortcutSpec(
         chords: <List<String>>[
-          <String>['F1'],
           <String>['Ctrl', 'F'],
         ],
         description: 'Focus the product search',
@@ -127,7 +126,7 @@ const List<_ShortcutGroup> _shortcutGroups = <_ShortcutGroup>[
       ),
       _ShortcutSpec(
         chords: <List<String>>[
-          <String>['Ctrl', '/']
+          <String>['F1']
         ],
         description: 'Show this shortcuts help',
       ),
@@ -136,11 +135,11 @@ const List<_ShortcutGroup> _shortcutGroups = <_ShortcutGroup>[
 ];
 
 /// A read-only reference sheet listing every keyboard shortcut, grouped by
-/// area. Opened on demand via `Ctrl + /` or the "?" button in the top bar.
+/// area. Opened on demand via `F1` or the "?" button in the top bar.
 class KeyboardShortcutsDialog extends StatelessWidget {
   const KeyboardShortcutsDialog({super.key});
 
-  // Guards against stacking multiple copies when the open shortcut (Ctrl+/) is
+  // Guards against stacking multiple copies when the open shortcut (F1) is
   // pressed repeatedly while the sheet is already visible.
   static bool _isOpen = false;
 

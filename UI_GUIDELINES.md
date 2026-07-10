@@ -507,7 +507,7 @@ The top bar (`AppTopBar`, 56px) shows app name + current section; status chips (
 This is a keyboard-first POS. Every new screen must be operable without a mouse.
 
 - Register screen-level shortcuts with `Shortcuts`/`Actions` (see `dashboard_screen.dart` F5 refresh) or via `AppShortcutManager` for global ones.
-- Conventions already in use: **F1/Ctrl+F** focus search · **F5** refresh · **F10** save/complete · **Ctrl+/** shortcuts help · **Enter/Esc** in confirmation dialogs.
+- Conventions already in use: **Ctrl+F** focus search · **F5** refresh · **F10** save/complete · **F1** shortcuts help · **Enter/Esc** in confirmation dialogs.
 - After a scan/add action, return focus to the input the operator uses next (see `_clearSearchAfterAdd` in the sales screen).
 - Set `autofocus: true` on the primary field of every dialog/form.
 - Use `FocusNode` + `textInputAction: TextInputAction.next` chains so Tab/Enter walk the form in order.

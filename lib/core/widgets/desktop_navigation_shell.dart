@@ -159,8 +159,8 @@ class _DesktopNavigationShellState
             spacing: 6,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
-              // Individual F1/F5/F10 hint chips were removed: the full list now
-              // lives behind the ? button (_ShortcutsHelpButton) / Ctrl+/.
+              // Individual F5/F10 hint chips were removed: the full list now
+              // lives behind the ? button (_ShortcutsHelpButton) / F1.
               _PendingPrintJobChip(),
               _ActiveOperationsChip(),
               _VersionChip(),
@@ -233,7 +233,7 @@ class _ShortcutsHelpButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       icon: const Icon(Icons.help_outline, size: 18),
-      tooltip: 'Keyboard shortcuts (Ctrl+/)',
+      tooltip: 'Keyboard shortcuts (F1)',
       visualDensity: VisualDensity.compact,
       onPressed: () => KeyboardShortcutsDialog.show(context),
     );

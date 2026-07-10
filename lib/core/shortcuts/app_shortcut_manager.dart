@@ -75,7 +75,7 @@ class AppShortcutManager extends ConsumerWidget {
       policy: OrderedTraversalPolicy(),
       child: Shortcuts(
         shortcuts: const <ShortcutActivator, Intent>{
-          SingleActivator(LogicalKeyboardKey.f1): _FocusSearchIntent(),
+          // Search is Ctrl+F; F1 is reserved for the shortcuts help panel.
           SingleActivator(
             LogicalKeyboardKey.keyF,
             control: true,
@@ -104,10 +104,7 @@ class AppShortcutManager extends ConsumerWidget {
             LogicalKeyboardKey.keyS,
             control: true,
           ): _SalesIntent(),
-          SingleActivator(
-            LogicalKeyboardKey.slash,
-            control: true,
-          ): _HelpIntent(),
+          SingleActivator(LogicalKeyboardKey.f1): _HelpIntent(),
         },
         child: Actions(
           actions: <Type, Action<Intent>>{
