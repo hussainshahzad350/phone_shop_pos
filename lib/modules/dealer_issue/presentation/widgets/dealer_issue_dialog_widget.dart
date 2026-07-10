@@ -5,6 +5,7 @@ import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/deale
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_providers.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/widgets/add_dealer_dialog.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/app_searchable_dropdown_field.dart';
 
 class DealerIssueDialogWidget extends ConsumerStatefulWidget {
   const DealerIssueDialogWidget({super.key});
@@ -69,20 +70,14 @@ class _DealerIssueDialogWidgetState extends ConsumerState<DealerIssueDialogWidge
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           Expanded(
-            child: DropdownButtonFormField<String>(
-              initialValue: _selectedDealerId,
-              decoration: const InputDecoration(
-                labelText: 'Select Dealer',
-                isDense: true,
-              ),
-              hint: dealers.isEmpty
-                  ? const Text('No dealers — add one →')
-                  : null,
-              items: dealers
-                  .map((d) => DropdownMenuItem<String>(
-                        value: d.id,
-                        child: Text(d.name),
-                      ))
+            child: AppSearchableDropdownField(
+              value: _selectedDealerId,
+              labelText: 'Select Dealer',
+              hintText: dealers.isEmpty
+                  ? 'No dealers — add one →'
+                  : 'Search dealer',
+              options: dealers
+                  .map((d) => AppSelectOption(id: d.id, label: d.name))
                   .toList(growable: false),
               onChanged: (value) {
                 if (value != null) setState(() => _selectedDealerId = value);

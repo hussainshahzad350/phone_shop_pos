@@ -79,7 +79,9 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
     _saleController = TextEditingController(
       text: FormattingHelpers.decimal(initial?.salePrice ?? 0),
     );
-    _hasImei = initial?.hasImei ?? false;
+    // New items default to a Phone (serialized / IMEI on); editing keeps the
+    // stored value.
+    _hasImei = initial?.hasImei ?? true;
     _selectedBrand = _normalizedBrandOrNull(initial?.brand);
   }
 
@@ -176,6 +178,41 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                 validator: (value) => (value == null || value.trim().isEmpty)
                     ? 'Name is required'
                     : null,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: DropdownButtonFormField<bool>(
+                      initialValue: _hasImei,
+                      borderRadius: kAppDropdownMenuRadius,
+                      menuMaxHeight: kAppDropdownMenuMaxHeight,
+                      decoration: const InputDecoration(
+                        labelText: 'Item Type',
+                        isDense: true,
+                        helperText:
+                            'Phones are tracked by IMEI; accessories by quantity.',
+                      ),
+                      items: const <DropdownMenuItem<bool>>[
+                        DropdownMenuItem<bool>(
+                          value: true,
+                          child: Text('Phone'),
+                        ),
+                        DropdownMenuItem<bool>(
+                          value: false,
+                          child: Text('Accessories'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          // Item Type is the single source of truth for whether
+                          // the product is serialized (IMEI) or quantity-based.
+                          setState(() => _hasImei = value);
+                        }
+                      },
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSpacing.sm),
               Row(
@@ -303,34 +340,19 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: TextFormField(
-                      controller: _minStockController,
-                      focusNode: _minStockFocus,
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _submit(),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: <TextInputFormatter>[
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: 'Min Stock Alert',
-                        isDense: true,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: SwitchListTile(
-                      value: _hasImei,
-                      title: const Text('Serialized (IMEI)'),
-                      contentPadding: EdgeInsets.zero,
-                      onChanged: (value) => setState(() => _hasImei = value),
-                    ),
-                  ),
+              TextFormField(
+                controller: _minStockController,
+                focusNode: _minStockFocus,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _submit(),
+                keyboardType: TextInputType.number,
+                inputFormatters: <TextInputFormatter>[
+                  FilteringTextInputFormatter.digitsOnly,
                 ],
+                decoration: const InputDecoration(
+                  labelText: 'Min Stock Alert',
+                  isDense: true,
+                ),
               ),
             ],
           ),

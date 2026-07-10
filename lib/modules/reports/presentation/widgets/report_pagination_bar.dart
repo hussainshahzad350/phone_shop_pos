@@ -36,6 +36,8 @@ class ReportPaginationBar extends StatelessWidget {
         const SizedBox(width: AppSpacing.md),
         DropdownButton<int>(
           value: filter.pageSize,
+          borderRadius: kAppDropdownMenuRadius,
+          menuMaxHeight: kAppDropdownMenuMaxHeight,
           onChanged: (value) {
             if (value == null) {
               return;

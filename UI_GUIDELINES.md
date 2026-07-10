@@ -279,13 +279,29 @@ InputDecoration(
 **Dropdown:**
 ```dart
 // ✅ Use initialValue (value is deprecated in Flutter 3.33+)
+// ✅ Always pass borderRadius + menuMaxHeight so the popup opens as a compact,
+//    rounded, scrollable panel instead of a full-height sheet with sharp corners
+//    that covers the field. Tokens live in core/theme/app_spacing.dart.
 DropdownButtonFormField<String>(
   initialValue: _selected,
+  borderRadius: kAppDropdownMenuRadius,      // rounds the menu to match the field
+  menuMaxHeight: kAppDropdownMenuMaxHeight,   // caps height → mouse/scrollbar scrolling
   decoration: const InputDecoration(labelText: 'Select'),
   items: [...],
   onChanged: (v) { if (v != null) setState(() => _selected = v); },
 )
 ```
+
+> The same two tokens apply to plain `DropdownButton<T>`. Use the styled classic
+> dropdown only for **short, fixed** option sets (status, payment method, etc.).
+>
+> For a picker backed by a **long / dynamic** list (customers, products, dealers,
+> IMEIs), use `AppSearchableDropdownField` (`core/widgets/app_searchable_dropdown_field.dart`)
+> instead — a typeable field whose list opens in an `OverlayPortal` anchored
+> directly under it: never overlapping the field, height-capped + scrollable, and
+> filterable by typing. It generalizes the `CustomerSelectorWidget` /
+> `SupplierSelectorWidget` pattern (those stay bespoke because they page results
+> from the database via Riverpod).
 
 **Search fields:** use `AppSearchField` (`core/widgets/desktop_components.dart`) — it wires the clear (×) button and `TextInputAction.search` for you.
 
@@ -491,7 +507,7 @@ The top bar (`AppTopBar`, 56px) shows app name + current section; status chips (
 This is a keyboard-first POS. Every new screen must be operable without a mouse.
 
 - Register screen-level shortcuts with `Shortcuts`/`Actions` (see `dashboard_screen.dart` F5 refresh) or via `AppShortcutManager` for global ones.
-- Conventions already in use: **F1/Ctrl+F** focus search · **F5** refresh · **F10** save/complete · **Ctrl+/** shortcuts help · **Enter/Esc** in confirmation dialogs.
+- Conventions already in use: **Ctrl+F** focus search · **F5** refresh · **F10** save/complete · **F1** shortcuts help · **Enter/Esc** in confirmation dialogs.
 - After a scan/add action, return focus to the input the operator uses next (see `_clearSearchAfterAdd` in the sales screen).
 - Set `autofocus: true` on the primary field of every dialog/form.
 - Use `FocusNode` + `textInputAction: TextInputAction.next` chains so Tab/Enter walk the form in order.

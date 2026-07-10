@@ -92,6 +92,8 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
             DropdownButtonFormField<String>(
               focusNode: widget.paymentMethodFocusNode,
               initialValue: widget.paymentMethod,
+              borderRadius: kAppDropdownMenuRadius,
+              menuMaxHeight: kAppDropdownMenuMaxHeight,
               items: PaymentMethod.values
                   .map(
                     (value) => DropdownMenuItem<String>(

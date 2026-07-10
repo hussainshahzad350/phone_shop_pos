@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
@@ -123,6 +124,8 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
               DropdownButtonFormField<String>(
                 initialValue: _category,
                 isExpanded: true,
+                borderRadius: kAppDropdownMenuRadius,
+                menuMaxHeight: kAppDropdownMenuMaxHeight,
                 decoration: const InputDecoration(
                   labelText: 'Expense Category',
                   isDense: true,
@@ -170,6 +173,8 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
                 initialValue: _paymentMethod,
+                borderRadius: kAppDropdownMenuRadius,
+                menuMaxHeight: kAppDropdownMenuMaxHeight,
                 decoration: const InputDecoration(
                   labelText: 'Payment Method',
                   isDense: true,

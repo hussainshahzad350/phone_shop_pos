@@ -53,3 +53,14 @@ abstract final class AppRadii {
   static const BorderRadius mdRadius = BorderRadius.all(Radius.circular(md));
   static const BorderRadius lgRadius = BorderRadius.all(Radius.circular(lg));
 }
+
+/// Shared caps for the classic Material dropdown menus
+/// ([DropdownButton] / [DropdownButtonFormField]).
+///
+/// By default those menus open as a full-height sheet that can cover most of
+/// the screen and have near-sharp corners. Applying these to every dropdown
+/// keeps the popup a compact, scrollable panel (mouse wheel + scrollbar) whose
+/// rounded corners match the input fields, so it reads as part of the field
+/// rather than a detached list floating over the screen.
+const double kAppDropdownMenuMaxHeight = 320;
+const BorderRadius kAppDropdownMenuRadius = AppRadii.mdRadius;

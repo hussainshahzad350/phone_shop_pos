@@ -725,6 +725,8 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                       );
                       return DropdownButtonFormField<String>(
                         initialValue: paymentMethod,
+                        borderRadius: kAppDropdownMenuRadius,
+                        menuMaxHeight: kAppDropdownMenuMaxHeight,
                         items: PaymentMethod.values
                             .map(
                               (value) => DropdownMenuItem<String>(

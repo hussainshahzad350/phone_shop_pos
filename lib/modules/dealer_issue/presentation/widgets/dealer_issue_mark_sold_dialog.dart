@@ -99,6 +99,8 @@ class _DealerIssueMarkSoldDialogState
             const SizedBox(height: AppSpacing.md),
             DropdownButtonFormField<String>(
               initialValue: _paymentMethod,
+              borderRadius: kAppDropdownMenuRadius,
+              menuMaxHeight: kAppDropdownMenuMaxHeight,
               decoration: const InputDecoration(
                 labelText: 'Payment Method',
                 isDense: true,

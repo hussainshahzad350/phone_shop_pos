@@ -458,29 +458,6 @@ class _StaticDataSource extends DataTableSource {
   int get selectedRowCount => 0;
 }
 
-class AppShortcutHint extends StatelessWidget {
-  const AppShortcutHint({
-    super.key,
-    required this.label,
-    required this.shortcut,
-  });
-
-  final String label;
-  final String shortcut;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: '$label ($shortcut)',
-      child: Chip(
-        visualDensity: VisualDensity.compact,
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        label: Text('$label: $shortcut', style: const TextStyle(fontSize: 11)),
-      ),
-    );
-  }
-}
-
 class AppConfirmationDialog extends StatelessWidget {
   const AppConfirmationDialog({
     super.key,

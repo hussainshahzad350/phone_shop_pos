@@ -335,6 +335,8 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                   const SizedBox(height: AppSpacing.sm),
                   DropdownButtonFormField<String>(
                     initialValue: _issueType,
+                    borderRadius: kAppDropdownMenuRadius,
+                    menuMaxHeight: kAppDropdownMenuMaxHeight,
                     style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                     decoration: InputDecoration(
                       isDense: true,
@@ -456,6 +458,8 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                   else
                     DropdownButtonFormField<String>(
                       initialValue: _status,
+                      borderRadius: kAppDropdownMenuRadius,
+                      menuMaxHeight: kAppDropdownMenuMaxHeight,
                       style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       decoration: const InputDecoration(
                         isDense: true,

@@ -65,6 +65,8 @@ class _PaySupplierCreditDialogState
             const SizedBox(height: AppSpacing.sm),
             DropdownButtonFormField<String>(
               initialValue: _paymentMethod,
+              borderRadius: kAppDropdownMenuRadius,
+              menuMaxHeight: kAppDropdownMenuMaxHeight,
               decoration: const InputDecoration(
                 isDense: true,
                 labelText: 'Payment Method',

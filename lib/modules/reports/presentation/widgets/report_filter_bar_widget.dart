@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
+import 'package:phone_shop_pos/core/widgets/app_searchable_dropdown_field.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/report_filter_entity.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
@@ -218,6 +219,8 @@ class _SimpleDropdown extends StatelessWidget {
       child: DropdownButtonFormField<String?>(
         initialValue: value,
         isExpanded: true,
+        borderRadius: kAppDropdownMenuRadius,
+        menuMaxHeight: kAppDropdownMenuMaxHeight,
         decoration: appDesktopInputDecoration(labelText: label),
         onChanged: onChanged,
         items: <DropdownMenuItem<String?>>[
@@ -249,22 +252,20 @@ class _IdDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Backed by a potentially long, dynamic list (every customer / product),
+    // so this uses the searchable anchored dropdown — the list opens below the
+    // field, never overlaps it, and can be filtered by typing.
     return SizedBox(
       width: 220,
-      child: DropdownButtonFormField<String?>(
-        initialValue: value,
-        isExpanded: true,
-        decoration: appDesktopInputDecoration(labelText: label),
+      child: AppSearchableDropdownField(
+        value: value,
+        labelText: label,
+        hintText: 'Search…',
+        noneLabel: 'All',
+        options: items
+            .map((item) => AppSelectOption(id: item.key, label: item.value))
+            .toList(growable: false),
         onChanged: onChanged,
-        items: <DropdownMenuItem<String?>>[
-          const DropdownMenuItem<String?>(value: null, child: Text('All')),
-          ...items.map(
-            (item) => DropdownMenuItem<String?>(
-              value: item.key,
-              child: SizedBox(width: 180, child: Text(item.value)),
-            ),
-          ),
-        ],
       ),
     );
   }

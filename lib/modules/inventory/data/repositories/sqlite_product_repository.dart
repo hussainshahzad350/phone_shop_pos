@@ -185,4 +185,25 @@ class SqliteProductRepository
       return rows.isEmpty;
     }, operation: 'is_sku_unique');
   }
+
+  @override
+  Future<Result<bool>> isNameUnique(String name, {String? excludeId}) {
+    return guard<bool>(() async {
+      final trimmed = name.trim();
+      if (trimmed.isEmpty) return true;
+      final where = excludeId != null
+          ? 'LOWER(name) = LOWER(?) AND id != ?'
+          : 'LOWER(name) = LOWER(?)';
+      final args = excludeId != null
+          ? <Object?>[trimmed, excludeId]
+          : <Object?>[trimmed];
+      final rows = await _appDatabase.queryTable(
+        TableNames.productModels,
+        where: where,
+        whereArgs: args,
+        limit: 1,
+      );
+      return rows.isEmpty;
+    }, operation: 'is_name_unique');
+  }
 }
