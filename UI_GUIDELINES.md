@@ -292,11 +292,16 @@ DropdownButtonFormField<String>(
 )
 ```
 
-> The same two tokens apply to plain `DropdownButton<T>`. For a **typeable** search
-> that must open anchored directly under the field (never overlapping it), follow
-> the `CustomerSelectorWidget` / `SupplierSelectorWidget` pattern — an
-> `OverlayPortal` + `CompositedTransformFollower` anchored list — rather than a
-> `DropdownButton`.
+> The same two tokens apply to plain `DropdownButton<T>`. Use the styled classic
+> dropdown only for **short, fixed** option sets (status, payment method, etc.).
+>
+> For a picker backed by a **long / dynamic** list (customers, products, dealers,
+> IMEIs), use `AppSearchableDropdownField` (`core/widgets/app_searchable_dropdown_field.dart`)
+> instead — a typeable field whose list opens in an `OverlayPortal` anchored
+> directly under it: never overlapping the field, height-capped + scrollable, and
+> filterable by typing. It generalizes the `CustomerSelectorWidget` /
+> `SupplierSelectorWidget` pattern (those stay bespoke because they page results
+> from the database via Riverpod).
 
 **Search fields:** use `AppSearchField` (`core/widgets/desktop_components.dart`) — it wires the clear (×) button and `TextInputAction.search` for you.
 
