@@ -184,16 +184,14 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                 children: <Widget>[
                   Expanded(
                     child: DropdownButtonFormField<bool>(
-                      // Re-seed from _hasImei so flipping the Serialized toggle
-                      // below keeps this dropdown in sync (FormField otherwise
-                      // ignores initialValue changes after first build).
-                      key: ValueKey<bool>(_hasImei),
                       initialValue: _hasImei,
                       borderRadius: kAppDropdownMenuRadius,
                       menuMaxHeight: kAppDropdownMenuMaxHeight,
                       decoration: const InputDecoration(
                         labelText: 'Item Type',
                         isDense: true,
+                        helperText:
+                            'Phones are tracked by IMEI; accessories by quantity.',
                       ),
                       items: const <DropdownMenuItem<bool>>[
                         DropdownMenuItem<bool>(
@@ -207,9 +205,8 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       ],
                       onChanged: (value) {
                         if (value != null) {
-                          // Phone ⇒ serialized/IMEI on; Accessories ⇒ off. This
-                          // dropdown and the Serialized toggle below are two
-                          // views of the same _hasImei flag.
+                          // Item Type is the single source of truth for whether
+                          // the product is serialized (IMEI) or quantity-based.
                           setState(() => _hasImei = value);
                         }
                       },
@@ -343,34 +340,19 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: TextFormField(
-                      controller: _minStockController,
-                      focusNode: _minStockFocus,
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _submit(),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: <TextInputFormatter>[
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: 'Min Stock Alert',
-                        isDense: true,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: SwitchListTile(
-                      value: _hasImei,
-                      title: const Text('Serialized (IMEI)'),
-                      contentPadding: EdgeInsets.zero,
-                      onChanged: (value) => setState(() => _hasImei = value),
-                    ),
-                  ),
+              TextFormField(
+                controller: _minStockController,
+                focusNode: _minStockFocus,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _submit(),
+                keyboardType: TextInputType.number,
+                inputFormatters: <TextInputFormatter>[
+                  FilteringTextInputFormatter.digitsOnly,
                 ],
+                decoration: const InputDecoration(
+                  labelText: 'Min Stock Alert',
+                  isDense: true,
+                ),
               ),
             ],
           ),
