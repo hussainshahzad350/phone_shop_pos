@@ -73,6 +73,11 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
       return;
     }
     final repository = await ref.read(productRepositoryProvider.future);
+    final nameCheck = await repository.isNameUnique(data.name);
+    if (nameCheck.isFailure || nameCheck.asSuccess!.value == false) {
+      AppNotifier.error('A product named "${data.name}" already exists.');
+      return;
+    }
     if (data.sku != null) {
       final skuCheck = await repository.isSkuUnique(data.sku!);
       if (skuCheck.isFailure || skuCheck.asSuccess!.value == false) {
@@ -125,6 +130,12 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
     }
 
     final repository = await ref.read(productRepositoryProvider.future);
+    final nameCheck =
+        await repository.isNameUnique(data.name, excludeId: product.id);
+    if (nameCheck.isFailure || nameCheck.asSuccess!.value == false) {
+      AppNotifier.error('A product named "${data.name}" already exists.');
+      return;
+    }
     if (data.sku != null) {
       final skuCheck = await repository.isSkuUnique(
         data.sku!,

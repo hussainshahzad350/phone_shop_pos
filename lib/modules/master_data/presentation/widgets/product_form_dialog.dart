@@ -79,7 +79,9 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
     _saleController = TextEditingController(
       text: FormattingHelpers.decimal(initial?.salePrice ?? 0),
     );
-    _hasImei = initial?.hasImei ?? false;
+    // New items default to a Phone (serialized / IMEI on); editing keeps the
+    // stored value.
+    _hasImei = initial?.hasImei ?? true;
     _selectedBrand = _normalizedBrandOrNull(initial?.brand);
   }
 
@@ -176,6 +178,44 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                 validator: (value) => (value == null || value.trim().isEmpty)
                     ? 'Name is required'
                     : null,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: DropdownButtonFormField<bool>(
+                      // Re-seed from _hasImei so flipping the Serialized toggle
+                      // below keeps this dropdown in sync (FormField otherwise
+                      // ignores initialValue changes after first build).
+                      key: ValueKey<bool>(_hasImei),
+                      initialValue: _hasImei,
+                      borderRadius: kAppDropdownMenuRadius,
+                      menuMaxHeight: kAppDropdownMenuMaxHeight,
+                      decoration: const InputDecoration(
+                        labelText: 'Item Type',
+                        isDense: true,
+                      ),
+                      items: const <DropdownMenuItem<bool>>[
+                        DropdownMenuItem<bool>(
+                          value: true,
+                          child: Text('Phone'),
+                        ),
+                        DropdownMenuItem<bool>(
+                          value: false,
+                          child: Text('Accessories'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          // Phone ⇒ serialized/IMEI on; Accessories ⇒ off. This
+                          // dropdown and the Serialized toggle below are two
+                          // views of the same _hasImei flag.
+                          setState(() => _hasImei = value);
+                        }
+                      },
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSpacing.sm),
               Row(

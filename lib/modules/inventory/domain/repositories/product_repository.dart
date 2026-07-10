@@ -21,4 +21,8 @@ abstract class ProductRepository extends BaseRepository {
   Future<Result<void>> activateProduct(String id);
 
   Future<Result<bool>> isSkuUnique(String sku, {String? excludeId});
+
+  /// Returns true when no other product shares [name] (case-insensitive).
+  /// Pass [excludeId] to ignore the product being edited.
+  Future<Result<bool>> isNameUnique(String name, {String? excludeId});
 }
