@@ -419,12 +419,14 @@ class _ReservePhoneDialogState extends ConsumerState<_ReservePhoneDialog> {
               labelText: 'Select Phone (IMEI)',
               hintText: 'Search by product or IMEI',
               enabled: !_isSubmitting,
-              options: stockRows.map((row) {
+              options: stockRows
+                  .where((row) => row.serializedStockId != null)
+                  .map((row) {
                 final isReserved =
                     row.serializedStatus == SerializedStockStatus.reserved;
                 final statusLabel = isReserved ? 'Reserved' : 'In Stock';
                 return AppSelectOption(
-                  id: row.serializedStockId,
+                  id: row.serializedStockId!,
                   label:
                       '${row.productName} • ${row.imei1 ?? '-'} • $statusLabel',
                 );
@@ -605,9 +607,11 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
                 value: _selectedSerializedStockId,
                 labelText: 'In-stock IMEI',
                 hintText: 'Search by product or IMEI',
-                options: serializedRows.map((row) {
+                options: serializedRows
+                    .where((row) => row.serializedStockId != null)
+                    .map((row) {
                   return AppSelectOption(
-                    id: row.serializedStockId,
+                    id: row.serializedStockId!,
                     label: '${row.productName} • ${row.imei1 ?? '-'}',
                   );
                 }).toList(growable: false),
