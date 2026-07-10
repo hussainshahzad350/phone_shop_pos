@@ -151,12 +151,60 @@ class SqliteInventoryRepository
   @override
   Future<Result<void>> updateSerializedStock(SerializedStockEntity stock) {
     return guard<void>(() async {
+      final imei1 = stock.imei1.trim();
+      final imei2 = _normalizeOptional(stock.imei2);
+      if (imei1.isEmpty || !_imeiPattern.hasMatch(imei1)) {
+        throw StateError('Primary IMEI must be 14–15 digits.');
+      }
+      if (imei2 != null) {
+        if (!_imeiPattern.hasMatch(imei2)) {
+          throw StateError('Secondary IMEI must be 14–15 digits.');
+        }
+        if (imei1 == imei2) {
+          throw StateError('Primary and secondary IMEI must be different.');
+        }
+      }
+
+      // IMEI is a unit's identity once it has been transacted, so it can only
+      // be corrected while the unit is still in stock.
+      final existingRows = await _appDatabase.queryTable(
+        TableNames.serializedStock,
+        where: 'id = ?',
+        whereArgs: <Object?>[stock.id],
+        limit: 1,
+      );
+      if (existingRows.isEmpty) {
+        throw StateError('This item no longer exists in stock.');
+      }
+      final existing =
+          SerializedStockModel.fromMap(existingRows.first).toEntity();
+      final imeiChanged = existing.imei1 != imei1 ||
+          _normalizeOptional(existing.imei2) != imei2;
+      if (imeiChanged &&
+          existing.stockStatus != SerializedStockStatus.inStock) {
+        throw StateError('IMEI can only be edited while the unit is in stock.');
+      }
+
+      // Reject an IMEI already used by a different unit.
+      final imeiValues = <String>{imei1, if (imei2 != null) imei2};
+      for (final value in imeiValues) {
+        final duplicate = await _appDatabase.queryTable(
+          TableNames.serializedStock,
+          where: '(imei1 = ? OR imei2 = ?) AND id != ?',
+          whereArgs: <Object?>[value, value, stock.id],
+          limit: 1,
+        );
+        if (duplicate.isNotEmpty) {
+          throw StateError('IMEI already exists in stock: $value');
+        }
+      }
+
       final model = SerializedStockModel.fromEntity(
         SerializedStockEntity(
           id: stock.id,
           productModelId: stock.productModelId,
-          imei1: stock.imei1,
-          imei2: stock.imei2,
+          imei1: imei1,
+          imei2: imei2,
           serialNumber: _normalizeOptional(stock.serialNumber),
           stockStatus: stock.stockStatus,
           costPrice: stock.costPrice,

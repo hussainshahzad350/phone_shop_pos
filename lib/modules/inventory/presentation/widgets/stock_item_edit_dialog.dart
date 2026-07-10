@@ -37,6 +37,7 @@ class _StockItemEditDialogState extends ConsumerState<StockItemEditDialog> {
   final _nameController = TextEditingController();
   final _brandController = TextEditingController();
   final _categoryController = TextEditingController();
+  final _imeiController = TextEditingController();
   final _costController = TextEditingController();
   final _priceController = TextEditingController();
   final _notesController = TextEditingController();
@@ -56,6 +57,11 @@ class _StockItemEditDialogState extends ConsumerState<StockItemEditDialog> {
 
   bool get _isSerialized => widget.row.type == StockRowType.serialized;
 
+  /// IMEI is a correctable typo only while the unit is still in stock; once it
+  /// has been sold/reserved/returned/etc. the IMEI is locked as identity.
+  bool get _canEditImei =>
+      _isSerialized && _unit?.stockStatus == SerializedStockStatus.inStock;
+
   @override
   void initState() {
     super.initState();
@@ -67,6 +73,7 @@ class _StockItemEditDialogState extends ConsumerState<StockItemEditDialog> {
     _nameController.dispose();
     _brandController.dispose();
     _categoryController.dispose();
+    _imeiController.dispose();
     _costController.dispose();
     _priceController.dispose();
     _notesController.dispose();
@@ -102,6 +109,7 @@ class _StockItemEditDialogState extends ConsumerState<StockItemEditDialog> {
         _unit = unitResult.asSuccess!.value;
         _condition = _unit!.condition;
         _buyDate = _unit!.createdAt.toLocal();
+        _imeiController.text = _unit!.imei1;
         _costController.text = _money(_unit!.costPrice);
         _priceController.text =
             _unit!.sellingPrice == null ? '' : _money(_unit!.sellingPrice!);
@@ -225,8 +233,9 @@ class _StockItemEditDialogState extends ConsumerState<StockItemEditDialog> {
       ),
     ];
     if (_isSerialized) {
-      final imei = widget.row.imei1;
-      if (imei != null && imei.isNotEmpty) {
+      // When editable, the IMEI shows as its own field below instead of a chip.
+      final imei = _unit?.imei1 ?? widget.row.imei1;
+      if (!_canEditImei && imei != null && imei.isNotEmpty) {
         chips.add(Chip(
           label: Text('IMEI $imei'),
           visualDensity: VisualDensity.compact,
@@ -245,6 +254,22 @@ class _StockItemEditDialogState extends ConsumerState<StockItemEditDialog> {
 
   List<Widget> _serializedFields(BuildContext context) {
     return <Widget>[
+      if (_canEditImei) ...<Widget>[
+        TextField(
+          controller: _imeiController,
+          keyboardType: TextInputType.number,
+          inputFormatters: <TextInputFormatter>[
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(15),
+          ],
+          decoration: const InputDecoration(
+            labelText: 'IMEI',
+            isDense: true,
+            helperText: 'Correct a mis-typed IMEI (14–15 digits)',
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+      ],
       Row(
         children: <Widget>[
           Expanded(child: _priceField(_costController, 'Cost Price')),
@@ -431,7 +456,7 @@ class _StockItemEditDialogState extends ConsumerState<StockItemEditDialog> {
         final updated = SerializedStockEntity(
           id: unit.id,
           productModelId: unit.productModelId,
-          imei1: unit.imei1,
+          imei1: _imeiController.text.trim(),
           imei2: unit.imei2,
           serialNumber: unit.serialNumber,
           stockStatus: unit.stockStatus,
