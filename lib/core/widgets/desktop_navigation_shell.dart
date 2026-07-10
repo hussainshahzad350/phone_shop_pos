@@ -10,6 +10,7 @@ import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
 import 'package:phone_shop_pos/core/shortcuts/keyboard_shortcuts_dialog.dart';
+import 'package:phone_shop_pos/modules/sales/presentation/widgets/print_queue_dialog.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
 import 'package:phone_shop_pos/modules/scanner/domain/entities/scanner_mode.dart';
@@ -189,14 +190,16 @@ class _PendingPrintJobChip extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final count = ref.watch(pendingPrintJobCountProvider);
     if (count == 0) return const SizedBox.shrink();
-    return Chip(
+    return ActionChip(
       avatar: const Icon(Icons.print_outlined, size: 16),
       label: Text(
         'Pending prints: $count',
         style: const TextStyle(fontSize: 11),
       ),
+      tooltip: 'Manage print queue',
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      onPressed: () => PrintQueueDialog.show(context),
     );
   }
 }

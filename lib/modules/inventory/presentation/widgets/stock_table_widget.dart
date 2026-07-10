@@ -14,9 +14,13 @@ import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table
 const int _kStockPaginateThreshold = 100000;
 
 class StockTableWidget extends StatelessWidget {
-  const StockTableWidget({super.key, required this.rows});
+  const StockTableWidget({super.key, required this.rows, this.onRowTap});
 
   final List<StockRowEntity> rows;
+
+  /// Called when a row is tapped (opens the edit dialog). When null, rows are
+  /// not interactive.
+  final ValueChanged<StockRowEntity>? onRowTap;
 
   @override
   Widget build(BuildContext context) {
@@ -159,6 +163,8 @@ class StockTableWidget extends StatelessWidget {
     int rowIndex,
   ) {
     return DataRow(
+      onSelectChanged:
+          onRowTap == null ? null : (_) => onRowTap!(row),
       cells: columns
           .map((column) =>
               _buildDataCell(context, row, column, layout, productWidth, rowIndex))
