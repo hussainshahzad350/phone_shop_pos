@@ -159,9 +159,8 @@ class _DesktopNavigationShellState
             spacing: 6,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
-              AppShortcutHint(label: 'Search', shortcut: 'F1 / Ctrl+F'),
-              AppShortcutHint(label: 'Refresh', shortcut: 'F5'),
-              AppShortcutHint(label: 'Save', shortcut: 'F10'),
+              // Individual F1/F5/F10 hint chips were removed: the full list now
+              // lives behind the ? button (_ShortcutsHelpButton) / Ctrl+/.
               _PendingPrintJobChip(),
               _ActiveOperationsChip(),
               _VersionChip(),
