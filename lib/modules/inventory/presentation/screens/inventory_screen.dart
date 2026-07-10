@@ -20,6 +20,7 @@ import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventor
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_state_provider.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/widgets/inventory_filter_chips.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/widgets/inventory_search_bar.dart';
+import 'package:phone_shop_pos/modules/inventory/presentation/widgets/stock_item_edit_dialog.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/widgets/stock_table_widget.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
@@ -55,6 +56,20 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     ref.invalidate(lowStockProvider);
     ref.invalidate(stockAdjustmentHistoryProvider);
     AppNotifier.info('Inventory refreshed.');
+  }
+
+  Future<void> _editStockItem(StockRowEntity row) async {
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) => StockItemEditDialog(row: row),
+    );
+    if (saved != true || !mounted) {
+      return;
+    }
+    ref.invalidate(stockRowsProvider);
+    ref.invalidate(inventorySummaryProvider);
+    ref.invalidate(lowStockProvider);
+    AppNotifier.success('Item updated.');
   }
 
   void _debouncedSearch(String value) {
@@ -229,7 +244,10 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                     subtitle:
                         'Available phones (serialized) and accessories (quantity).',
                     child: stockAsync.when(
-                      data: (rows) => StockTableWidget(rows: rows),
+                      data: (rows) => StockTableWidget(
+                        rows: rows,
+                        onRowTap: _editStockItem,
+                      ),
                       loading: () => const Center(
                         child: CircularProgressIndicator(),
                       ),

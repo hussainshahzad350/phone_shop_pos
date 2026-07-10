@@ -133,6 +133,58 @@ class SqliteInventoryRepository
   }
 
   @override
+  Future<Result<SerializedStockEntity?>> getSerializedStockById(String id) {
+    return guard<SerializedStockEntity?>(() async {
+      final rows = await _appDatabase.queryTable(
+        TableNames.serializedStock,
+        where: 'id = ?',
+        whereArgs: <Object?>[id],
+        limit: 1,
+      );
+      if (rows.isEmpty) {
+        return null;
+      }
+      return SerializedStockModel.fromMap(rows.first).toEntity();
+    }, operation: 'get_serialized_stock_by_id');
+  }
+
+  @override
+  Future<Result<void>> updateSerializedStock(SerializedStockEntity stock) {
+    return guard<void>(() async {
+      final model = SerializedStockModel.fromEntity(
+        SerializedStockEntity(
+          id: stock.id,
+          productModelId: stock.productModelId,
+          imei1: stock.imei1,
+          imei2: stock.imei2,
+          serialNumber: _normalizeOptional(stock.serialNumber),
+          stockStatus: stock.stockStatus,
+          costPrice: stock.costPrice,
+          createdAt: stock.createdAt,
+          updatedAt: DateTimeHelpers.nowUtc(),
+          sellingPrice: stock.sellingPrice,
+          supplierId: stock.supplierId,
+          notes: stock.notes,
+          condition: stock.condition,
+          sellerName: stock.sellerName,
+          sellerIdCard: stock.sellerIdCard,
+          sellerAddress: stock.sellerAddress,
+          remainingWarranty: stock.remainingWarranty,
+          accessories: stock.accessories,
+          phoneConditionNotes: stock.phoneConditionNotes,
+          sellerPhone: stock.sellerPhone,
+        ),
+      );
+      await _appDatabase.update(
+        TableNames.serializedStock,
+        model.toMap(),
+        where: 'id = ?',
+        whereArgs: <Object?>[stock.id],
+      );
+    }, operation: 'update_serialized_stock');
+  }
+
+  @override
   Future<Result<InventoryStockEntity?>> getInventoryStockByProduct(
     String productModelId,
   ) {

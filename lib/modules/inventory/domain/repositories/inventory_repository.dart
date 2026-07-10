@@ -20,6 +20,13 @@ abstract class InventoryRepository extends BaseRepository {
     required SerializedStockStatus status,
   });
 
+  /// Loads a single serialized unit by its id (for editing its details).
+  Future<Result<SerializedStockEntity?>> getSerializedStockById(String id);
+
+  /// Persists edits to a serialized unit's details (cost, selling price,
+  /// condition, status, buy date, notes). IMEI identity is not changed here.
+  Future<Result<void>> updateSerializedStock(SerializedStockEntity stock);
+
   Future<Result<InventoryStockEntity?>> getInventoryStockByProduct(
     String productModelId,
   );

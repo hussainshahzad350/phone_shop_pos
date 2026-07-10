@@ -317,6 +317,13 @@ class _AppDataTableState extends State<AppDataTable> {
                     .primary
                     .withValues(alpha: 0.10);
               }
+              // Pointer hover highlight — makes tappable rows feel interactive.
+              if (states.contains(WidgetState.hovered)) {
+                return Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.05);
+              }
               return index.isEven
                   ? Theme.of(context).colorScheme.surface
                   : Theme.of(context)
