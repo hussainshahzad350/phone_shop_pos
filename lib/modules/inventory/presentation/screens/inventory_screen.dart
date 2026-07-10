@@ -10,6 +10,7 @@ import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
+import 'package:phone_shop_pos/core/widgets/app_searchable_dropdown_field.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/inventory_summary_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
@@ -413,28 +414,23 @@ class _ReservePhoneDialogState extends ConsumerState<_ReservePhoneDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            DropdownButtonFormField<String>(
-              initialValue: _selectedSerializedStockId,
-              borderRadius: kAppDropdownMenuRadius,
-              menuMaxHeight: kAppDropdownMenuMaxHeight,
-              decoration: const InputDecoration(
-                isDense: true,
-                labelText: 'Select Phone (IMEI)',
-              ),
-              items: stockRows.map((row) {
+            AppSearchableDropdownField(
+              value: _selectedSerializedStockId,
+              labelText: 'Select Phone (IMEI)',
+              hintText: 'Search by product or IMEI',
+              enabled: !_isSubmitting,
+              options: stockRows.map((row) {
                 final isReserved =
                     row.serializedStatus == SerializedStockStatus.reserved;
                 final statusLabel = isReserved ? 'Reserved' : 'In Stock';
-                return DropdownMenuItem<String>(
-                  value: row.serializedStockId,
-                  child: Text(
-                    '${row.productName} • ${row.imei1 ?? '-'} • $statusLabel',
-                  ),
+                return AppSelectOption(
+                  id: row.serializedStockId,
+                  label:
+                      '${row.productName} • ${row.imei1 ?? '-'} • $statusLabel',
                 );
               }).toList(growable: false),
-              onChanged: _isSubmitting
-                  ? null
-                  : (value) => setState(() => _selectedSerializedStockId = value),
+              onChanged: (value) =>
+                  setState(() => _selectedSerializedStockId = value),
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
@@ -582,21 +578,18 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
             ),
             const SizedBox(height: AppSpacing.sm),
             if (!_isWriteOff) ...<Widget>[
-              DropdownButtonFormField<String>(
-                initialValue: _selectedProductModelId,
-                borderRadius: kAppDropdownMenuRadius,
-                menuMaxHeight: kAppDropdownMenuMaxHeight,
-                decoration: const InputDecoration(
-                  isDense: true,
-                  labelText: 'Accessory Product',
-                ),
-                items: quantityProducts.map((row) {
-                  return DropdownMenuItem<String>(
-                    value: row.productModelId,
-                    child: Text('${row.productName} (Qty: ${row.quantity ?? 0})'),
+              AppSearchableDropdownField(
+                value: _selectedProductModelId,
+                labelText: 'Accessory Product',
+                hintText: 'Search product',
+                options: quantityProducts.map((row) {
+                  return AppSelectOption(
+                    id: row.productModelId,
+                    label: '${row.productName} (Qty: ${row.quantity ?? 0})',
                   );
                 }).toList(growable: false),
-                onChanged: (value) => setState(() => _selectedProductModelId = value),
+                onChanged: (value) =>
+                    setState(() => _selectedProductModelId = value),
               ),
               const SizedBox(height: AppSpacing.sm),
               TextField(
@@ -608,21 +601,18 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
                 ),
               ),
             ] else ...<Widget>[
-              DropdownButtonFormField<String>(
-                initialValue: _selectedSerializedStockId,
-                borderRadius: kAppDropdownMenuRadius,
-                menuMaxHeight: kAppDropdownMenuMaxHeight,
-                decoration: const InputDecoration(
-                  isDense: true,
-                  labelText: 'In-stock IMEI',
-                ),
-                items: serializedRows.map((row) {
-                  return DropdownMenuItem<String>(
-                    value: row.serializedStockId,
-                    child: Text('${row.productName} • ${row.imei1 ?? '-'}'),
+              AppSearchableDropdownField(
+                value: _selectedSerializedStockId,
+                labelText: 'In-stock IMEI',
+                hintText: 'Search by product or IMEI',
+                options: serializedRows.map((row) {
+                  return AppSelectOption(
+                    id: row.serializedStockId,
+                    label: '${row.productName} • ${row.imei1 ?? '-'}',
                   );
                 }).toList(growable: false),
-                onChanged: (value) => setState(() => _selectedSerializedStockId = value),
+                onChanged: (value) =>
+                    setState(() => _selectedSerializedStockId = value),
               ),
             ],
             const SizedBox(height: AppSpacing.sm),

@@ -4,6 +4,7 @@ import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/deale
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_providers.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/widgets/add_dealer_dialog.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/app_searchable_dropdown_field.dart';
 
 class DealerIssueFilterWidget extends ConsumerWidget {
   const DealerIssueFilterWidget({
@@ -30,25 +31,13 @@ class DealerIssueFilterWidget extends ConsumerWidget {
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: dealersAsync.when(
-                data: (dealers) => DropdownButtonFormField<String?>(
-                  initialValue: selectedDealerId,
-                  borderRadius: kAppDropdownMenuRadius,
-                  menuMaxHeight: kAppDropdownMenuMaxHeight,
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-                  ),
-                  items: [
-                    const DropdownMenuItem<String?>(
-                      value: null,
-                      child: Text('All Dealers'),
-                    ),
-                    ...dealers.map((d) => DropdownMenuItem<String?>(
-                          value: d.id,
-                          child: Text(d.name),
-                        )),
-                  ],
+                data: (dealers) => AppSearchableDropdownField(
+                  value: selectedDealerId,
+                  hintText: 'Search dealer',
+                  noneLabel: 'All Dealers',
+                  options: dealers
+                      .map((d) => AppSelectOption(id: d.id, label: d.name))
+                      .toList(growable: false),
                   onChanged: onDealerSelected,
                 ),
                 loading: () => const SizedBox(
