@@ -289,7 +289,9 @@ class SqliteDealerIssueRepository implements DealerIssueRepository {
           'paid_amount': paidAmount,
           'payment_method': paymentMethod,
           'notes': 'Dealer sale – Issue #${issueId.substring(0, 8)}',
-          'status': 'completed',
+          // Sales.status is constrained to ('posted', 'void'); 'completed' is
+          // not a valid value and would violate the CHECK constraint.
+          'status': 'posted',
           'created_at': nowStr,
           'updated_at': nowStr,
         });
