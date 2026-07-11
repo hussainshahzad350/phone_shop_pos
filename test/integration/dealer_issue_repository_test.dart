@@ -206,26 +206,29 @@ void main() {
 
   group('SqliteDealerIssueRepository — markAsSoldViaDealer', () {
     const imei = '111111111111111';
+    // Real issue IDs are generated and always >= 8 chars; the service derives
+    // the sale note via issueId.substring(0, 8), so use a realistic length.
+    const issueId = 'issue-000001';
 
     test('creates an invoice, marks the issue sold, and consumes the IMEI',
         () async {
       await ctx.setupPhone(id: 'ph-1', imei: imei, cost: 40000, price: 50000);
       _ok(await ctx.dealers.createDealer(dealer('dlr-1', 'Dealer One')));
-      _ok(await ctx.issues.createIssue(issue('iss-1', 'dlr-1', <String>[imei])));
+      _ok(await ctx.issues.createIssue(issue(issueId, 'dlr-1', <String>[imei])));
 
       final invoice = _ok(await ctx.issues.markAsSoldViaDealer(
-        issueId: 'iss-1',
+        issueId: issueId,
         salePrice: 55000,
         paymentMethod: 'cash',
       ));
       expect(invoice, startsWith('INV-'));
 
-      final fetched = _ok(await ctx.issues.getIssueById('iss-1'));
+      final fetched = _ok(await ctx.issues.getIssueById(issueId));
       expect(fetched.soldStatus, isTrue);
       expect(fetched.saleInvoiceId, invoice);
       expect(
         _ok(await ctx.issues.getIssuesByStatus('Sold')).map((i) => i.issueId),
-        contains('iss-1'),
+        contains(issueId),
       );
       // The IMEI is consumed (sold), so it is not back in the available pool.
       expect(
@@ -237,11 +240,11 @@ void main() {
     test('rejects an issue that is not in a convertible state', () async {
       await ctx.setupPhone(id: 'ph-1', imei: imei, cost: 40000, price: 50000);
       _ok(await ctx.dealers.createDealer(dealer('dlr-1', 'Dealer One')));
-      _ok(await ctx.issues.createIssue(issue('iss-1', 'dlr-1', <String>[imei])));
-      _ok(await ctx.issues.markAsReturned('iss-1'));
+      _ok(await ctx.issues.createIssue(issue(issueId, 'dlr-1', <String>[imei])));
+      _ok(await ctx.issues.markAsReturned(issueId));
 
       final result = await ctx.issues.markAsSoldViaDealer(
-        issueId: 'iss-1',
+        issueId: issueId,
         salePrice: 55000,
         paymentMethod: 'cash',
       );
