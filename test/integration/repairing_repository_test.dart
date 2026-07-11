@@ -106,12 +106,12 @@ void main() {
       _ok(await repo.addRepairJob(job(id: 'rep-p', finalCost: 5000)));
 
       _ok(await repo.collectPayment('rep-p', 2000));
-      var fetched = _ok(await repo.getRepairJobById('rep-p'));
-      expect(fetched!.advanceReceived, closeTo(2000, 0.0001));
+      final afterFirst = _ok(await repo.getRepairJobById('rep-p'));
+      expect(afterFirst!.advanceReceived, closeTo(2000, 0.0001));
 
       _ok(await repo.collectPayment('rep-p', 1500));
-      fetched = _ok(await repo.getRepairJobById('rep-p'));
-      expect(fetched!.advanceReceived, closeTo(3500, 0.0001));
+      final afterSecond = _ok(await repo.getRepairJobById('rep-p'));
+      expect(afterSecond!.advanceReceived, closeTo(3500, 0.0001));
     });
 
     test('rejects a non-positive amount', () async {
