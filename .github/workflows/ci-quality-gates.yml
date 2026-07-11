@@ -27,5 +27,42 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
-      - name: Run tests
-        run: flutter test
+      - name: Run tests with coverage
+        run: flutter test --coverage
+
+      - name: Enforce coverage floor
+        env:
+          # Minimum acceptable line coverage. Start conservative and ratchet
+          # this upward as the suite grows so coverage can never regress.
+          COVERAGE_MIN: '30'
+        run: |
+          lcov_file="coverage/lcov.info"
+          if [ ! -f "$lcov_file" ]; then
+            echo "::error::Coverage report not found at $lcov_file"
+            exit 1
+          fi
+          read -r hit found < <(awk -F: '
+            /^LH:/ { hit += $2 }
+            /^LF:/ { found += $2 }
+            END { printf "%d %d", hit, found }
+          ' "$lcov_file")
+          if [ "$found" -eq 0 ]; then
+            echo "::error::No lines found in coverage report"
+            exit 1
+          fi
+          pct=$(awk -v h="$hit" -v f="$found" 'BEGIN { printf "%.2f", (h / f) * 100 }')
+          echo "Line coverage: ${pct}% (${hit}/${found} lines) — floor ${COVERAGE_MIN}%"
+          echo "### Coverage: ${pct}% (${hit}/${found} lines)" >> "$GITHUB_STEP_SUMMARY"
+          below=$(awk -v p="$pct" -v m="$COVERAGE_MIN" 'BEGIN { print (p < m) ? 1 : 0 }')
+          if [ "$below" -eq 1 ]; then
+            echo "::error::Line coverage ${pct}% is below the required floor of ${COVERAGE_MIN}%"
+            exit 1
+          fi
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: coverage/lcov.info
+          if-no-files-found: ignore
