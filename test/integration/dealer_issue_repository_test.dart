@@ -162,6 +162,33 @@ void main() {
       );
     });
 
+    test('isImeiUniqueForDealer reflects open issues and honours excludeIssueId',
+        () async {
+      await ctx.setupPhone(id: 'ph-1', imei: imei, cost: 40000, price: 50000);
+      _ok(await ctx.dealers.createDealer(dealer('dlr-1', 'Dealer One')));
+
+      // Not yet issued anywhere -> unique/available.
+      expect(_ok(await ctx.issues.isImeiUniqueForDealer(imei, 'dlr-1')), isTrue);
+
+      _ok(await ctx.issues.createIssue(issue('iss-1', 'dlr-1', <String>[imei])));
+
+      // Now part of an open issue -> no longer unique...
+      expect(
+        _ok(await ctx.issues.isImeiUniqueForDealer(imei, 'dlr-1')),
+        isFalse,
+      );
+      // ...unless we exclude that very issue (the edit case).
+      expect(
+        _ok(await ctx.issues
+            .isImeiUniqueForDealer(imei, 'dlr-1', excludeIssueId: 'iss-1')),
+        isTrue,
+      );
+
+      // Once the issue is closed (returned), the IMEI is free again.
+      _ok(await ctx.issues.markAsReturned('iss-1'));
+      expect(_ok(await ctx.issues.isImeiUniqueForDealer(imei, 'dlr-1')), isTrue);
+    });
+
     test('getIssuesByDealer filters to the requested dealer', () async {
       await ctx.setupPhone(id: 'ph-1', imei: imei, cost: 40000, price: 50000);
       await ctx.setupPhone(

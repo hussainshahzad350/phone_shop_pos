@@ -404,8 +404,16 @@ class SqliteDealerIssueRepository implements DealerIssueRepository {
   @override
   Future<Result<bool>> isImeiUniqueForDealer(String imei, String dealerId, {String? excludeIssueId}) async {
     return await guard(() async {
-      String whereClause = "(imei1 = ? OR imei2 = ?) AND stock_status = 'with_dealer'";
-      List<Object?> whereArgs = [imei, imei];
+      // An IMEI is "unique" (still available to issue) when it is not already
+      // part of an open dealer issue — one that has not been returned, sold, or
+      // converted to a sale. The issue currently being edited is excluded via
+      // [excludeIssueId]. imei_list is a comma-separated column, so match on
+      // exact CSV membership rather than a loose substring (which would let
+      // '123' spuriously match '1234').
+      String whereClause =
+          "(',' || imei_list || ',') LIKE ? AND return_status = 0 "
+          'AND sold_status = 0 AND converted_to_sale = 0';
+      final List<Object?> whereArgs = <Object?>['%,$imei,%'];
 
       if (excludeIssueId != null) {
         whereClause += ' AND issue_id != ?';
@@ -413,7 +421,7 @@ class SqliteDealerIssueRepository implements DealerIssueRepository {
       }
 
       final List<Map<String, dynamic>> maps = await _db.rawQuery(
-        'SELECT id FROM ${TableNames.serializedStock} WHERE $whereClause',
+        'SELECT issue_id FROM ${TableNames.dealerIssues} WHERE $whereClause LIMIT 1',
         whereArgs,
       );
 
