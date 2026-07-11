@@ -32,10 +32,10 @@ jobs:
 
       - name: Enforce coverage floor
         env:
-          # Minimum acceptable line coverage. Starts intentionally low so the
-          # gate lands green on first introduction; ratchet this upward toward
-          # the reported figure as the suite grows so coverage can never regress.
-          COVERAGE_MIN: '10'
+          # Minimum acceptable line coverage. Set just below the current
+          # measured coverage (44.06%) to lock in the present level; ratchet
+          # this upward as the suite grows so coverage can never regress.
+          COVERAGE_MIN: '43'
         run: |
           lcov_file="coverage/lcov.info"
           if [ ! -f "$lcov_file" ]; then
