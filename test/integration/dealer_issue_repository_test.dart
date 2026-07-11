@@ -203,6 +203,51 @@ void main() {
       expect(forDealerOne.map((i) => i.issueId), <String>['iss-1']);
     });
   });
+
+  group('SqliteDealerIssueRepository — markAsSoldViaDealer', () {
+    const imei = '111111111111111';
+
+    test('creates an invoice, marks the issue sold, and consumes the IMEI',
+        () async {
+      await ctx.setupPhone(id: 'ph-1', imei: imei, cost: 40000, price: 50000);
+      _ok(await ctx.dealers.createDealer(dealer('dlr-1', 'Dealer One')));
+      _ok(await ctx.issues.createIssue(issue('iss-1', 'dlr-1', <String>[imei])));
+
+      final invoice = _ok(await ctx.issues.markAsSoldViaDealer(
+        issueId: 'iss-1',
+        salePrice: 55000,
+        paymentMethod: 'cash',
+      ));
+      expect(invoice, startsWith('INV-'));
+
+      final fetched = _ok(await ctx.issues.getIssueById('iss-1'));
+      expect(fetched.soldStatus, isTrue);
+      expect(fetched.saleInvoiceId, invoice);
+      expect(
+        _ok(await ctx.issues.getIssuesByStatus('Sold')).map((i) => i.issueId),
+        contains('iss-1'),
+      );
+      // The IMEI is consumed (sold), so it is not back in the available pool.
+      expect(
+        _ok(await ctx.issues.getAvailableImeisForIssue('dlr-1')),
+        isNot(contains(imei)),
+      );
+    });
+
+    test('rejects an issue that is not in a convertible state', () async {
+      await ctx.setupPhone(id: 'ph-1', imei: imei, cost: 40000, price: 50000);
+      _ok(await ctx.dealers.createDealer(dealer('dlr-1', 'Dealer One')));
+      _ok(await ctx.issues.createIssue(issue('iss-1', 'dlr-1', <String>[imei])));
+      _ok(await ctx.issues.markAsReturned('iss-1'));
+
+      final result = await ctx.issues.markAsSoldViaDealer(
+        issueId: 'iss-1',
+        salePrice: 55000,
+        paymentMethod: 'cash',
+      );
+      expect(result.isFailure, isTrue);
+    });
+  });
 }
 
 class _Ctx {
