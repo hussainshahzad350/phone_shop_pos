@@ -33,9 +33,9 @@ jobs:
       - name: Enforce coverage floor
         env:
           # Minimum acceptable line coverage. Set just below the current
-          # measured coverage (46.97%) to lock in the present level; ratchet
+          # measured coverage (47.41%) to lock in the present level; ratchet
           # this upward as the suite grows so coverage can never regress.
-          COVERAGE_MIN: '46'
+          COVERAGE_MIN: '47'
         run: |
           lcov_file="coverage/lcov.info"
           if [ ! -f "$lcov_file" ]; then
