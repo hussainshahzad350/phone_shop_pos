@@ -71,7 +71,6 @@ void main() {
           id: id,
           name: 'Serialized Model $i',
           hasImei: true,
-          sku: 'SER-$i',
         );
         await context.insertSerializedStock(
           id: 'ser_$i',
@@ -86,7 +85,6 @@ void main() {
           id: id,
           name: i < 60 ? '999 Accessory $i' : 'Accessory $i',
           hasImei: false,
-          sku: 'ACC-$i',
         );
         await context.insertInventoryStock(
           id: 'stk_$i',
@@ -129,7 +127,6 @@ void main() {
           id: 'prd_opt_$i',
           name: 'Product $i',
           hasImei: false,
-          sku: 'SKU-$i',
         );
       }
 
@@ -195,13 +192,11 @@ class _PerfContext {
     required String id,
     required String name,
     required bool hasImei,
-    String? sku,
   }) async {
     final now = DateTimeHelpers.toSql(DateTime.utc(2026, 5, 16));
     await appDatabase.insert(TableNames.productModels, <String, Object?>{
       'id': id,
       'name': name,
-      'sku': sku,
       'purchase_price': 5000,
       'sale_price': 6500,
       'has_imei': hasImei ? 1 : 0,

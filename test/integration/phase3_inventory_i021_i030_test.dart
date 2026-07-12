@@ -321,7 +321,6 @@ void main() {
           ProductEntity(
             id: 'prd_i026_acc',
             name: 'I026 Accessory',
-            sku: 'I026-ACC',
             purchasePrice: 70,
             salePrice: 110,
             hasImei: false,
@@ -655,7 +654,6 @@ class _StressContext {
         ProductEntity(
           id: id,
           name: name,
-          sku: sku,
           purchasePrice: purchasePrice,
           salePrice: salePrice,
           hasImei: hasImei,

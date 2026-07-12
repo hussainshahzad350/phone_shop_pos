@@ -1,8 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
+import 'package:phone_shop_pos/core/utils/debouncer.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/core/widgets/responsive_table_layout.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/brand_entity.dart';
@@ -69,18 +68,17 @@ class BrandsPanel extends ConsumerStatefulWidget {
 
 class _BrandsPanelState extends ConsumerState<BrandsPanel> {
   final _searchController = TextEditingController();
-  Timer? _debounce;
+  final _debounce = Debouncer();
 
   @override
   void dispose() {
-    _debounce?.cancel();
+    _debounce.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
   void _onSearchChanged(String value) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 150), () {
+    _debounce.run(() {
       if (!mounted) {
         return;
       }
@@ -390,32 +388,19 @@ class _BrandsPanelState extends ConsumerState<BrandsPanel> {
   }
 
   Widget _statusCell(bool isActive, {required double width}) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final bgColor = isActive
-        ? colorScheme.primaryContainer
-        : colorScheme.surfaceContainerHighest;
-    final fgColor = isActive
-        ? colorScheme.onPrimaryContainer
-        : colorScheme.onSurfaceVariant;
-
+    final colorScheme = Theme.of(context).colorScheme;
     return SizedBox(
       width: width,
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            isActive ? 'Active' : 'Archived',
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: fgColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+        child: AppStatusBadge(
+          label: isActive ? 'Active' : 'Archived',
+          color: isActive
+              ? colorScheme.primaryContainer
+              : colorScheme.surfaceContainerHighest,
+          foreground: isActive
+              ? colorScheme.onPrimaryContainer
+              : colorScheme.onSurfaceVariant,
         ),
       ),
     );
@@ -466,19 +451,9 @@ class _BrandsPanelState extends ConsumerState<BrandsPanel> {
                   usageAsync.valueOrNull ?? const <String, _BrandUsageCounts>{},
                 ),
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      Text('Error loading brands: $error'),
-                      const SizedBox(height: 8),
-                      FilledButton.icon(
-                        onPressed: () => ref.invalidate(brandListProvider),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
-                      ),
-                    ],
-                  ),
+                error: (error, _) => AppErrorState(
+                  message: 'Error loading brands: $error',
+                  onRetry: () => ref.invalidate(brandListProvider),
                 ),
               ),
             ),

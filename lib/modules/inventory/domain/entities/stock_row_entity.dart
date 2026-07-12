@@ -9,7 +9,6 @@ class StockRowEntity {
     required this.productName,
     this.brand,
     this.category,
-    this.sku,
     this.serializedStockId,
     this.imei1,
     this.imei2,
@@ -31,7 +30,6 @@ class StockRowEntity {
   final String productName;
   final String? brand;
   final String? category;
-  final String? sku;
 
   final String? serializedStockId;
   final String? imei1;

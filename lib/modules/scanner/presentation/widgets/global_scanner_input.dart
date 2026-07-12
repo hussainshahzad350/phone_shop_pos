@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
+import 'package:phone_shop_pos/core/theme/app_motion.dart';
 import 'package:phone_shop_pos/modules/scanner/domain/entities/scanner_process_feedback.dart';
 import 'package:phone_shop_pos/modules/scanner/presentation/providers/scanner_providers.dart';
 
@@ -25,7 +26,7 @@ class _GlobalScannerInputState extends ConsumerState<GlobalScannerInput>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _focusTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+    _focusTimer = Timer.periodic(AppMotion.scannerIdlePoll, (_) {
       _restoreFocus();
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => _restoreFocus());

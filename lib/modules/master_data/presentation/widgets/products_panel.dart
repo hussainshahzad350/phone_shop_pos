@@ -1,16 +1,16 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
+import 'package:phone_shop_pos/core/utils/debouncer.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/core/widgets/responsive_table_layout.dart';
-import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_repository_provider.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/product_management_providers.dart';
 import 'package:phone_shop_pos/modules/master_data/presentation/widgets/product_form_dialog.dart';
+import 'package:phone_shop_pos/modules/purchases/presentation/providers/supplier_providers.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class ProductsPanel extends ConsumerStatefulWidget {
@@ -22,18 +22,17 @@ class ProductsPanel extends ConsumerStatefulWidget {
 
 class _ProductsPanelState extends ConsumerState<ProductsPanel> {
   final _searchController = TextEditingController();
-  Timer? _debounce;
+  final _debounce = Debouncer();
 
   @override
   void dispose() {
-    _debounce?.cancel();
+    _debounce.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
   void _onSearchChanged(String value) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 150), () {
+    _debounce.run(() {
       if (!mounted) {
         return;
       }
@@ -73,13 +72,6 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
       return;
     }
     final repository = await ref.read(productRepositoryProvider.future);
-    if (data.sku != null) {
-      final skuCheck = await repository.isSkuUnique(data.sku!);
-      if (skuCheck.isFailure || skuCheck.asSuccess!.value == false) {
-        AppNotifier.error('SKU must be unique.');
-        return;
-      }
-    }
 
     final now = DateTime.now().toUtc();
     final result = await repository.createProduct(
@@ -88,7 +80,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
         name: data.name,
         brand: data.brand,
         category: data.category,
-        sku: data.sku,
+        supplierId: data.supplierId,
         barcode: data.barcode,
         minStockAlert: data.minStockAlert,
         purchasePrice: data.purchasePrice,
@@ -102,8 +94,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
 
     if (result.isSuccess) {
       ref.invalidate(managedProductsProvider);
-      ref.invalidate(dashboardBrandStockProvider);
-      ref.invalidate(dashboardKpisProvider);
+      ref.read(reportWorkflowCoordinatorProvider).refreshDashboard();
       AppNotifier.success('Product created.');
     } else {
       AppNotifier.error(result.asFailure!.error.message);
@@ -125,23 +116,14 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
     }
 
     final repository = await ref.read(productRepositoryProvider.future);
-    if (data.sku != null) {
-      final skuCheck = await repository.isSkuUnique(
-        data.sku!,
-        excludeId: product.id,
-      );
-      if (skuCheck.isFailure || skuCheck.asSuccess!.value == false) {
-        AppNotifier.error('SKU must be unique.');
-        return;
-      }
-    }
 
     final result = await repository.updateProduct(
       product.copyWith(
         name: data.name,
         brand: data.brand,
         category: data.category,
-        sku: data.sku,
+        supplierId: data.supplierId,
+        clearSupplierId: data.supplierId == null,
         barcode: data.barcode,
         minStockAlert: data.minStockAlert,
         purchasePrice: data.purchasePrice,
@@ -152,8 +134,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
 
     if (result.isSuccess) {
       ref.invalidate(managedProductsProvider);
-      ref.invalidate(dashboardBrandStockProvider);
-      ref.invalidate(dashboardKpisProvider);
+      ref.read(reportWorkflowCoordinatorProvider).refreshDashboard();
       AppNotifier.success('Product updated.');
     } else {
       AppNotifier.error(result.asFailure!.error.message);
@@ -183,8 +164,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
 
     if (result.isSuccess) {
       ref.invalidate(managedProductsProvider);
-      ref.invalidate(dashboardBrandStockProvider);
-      ref.invalidate(dashboardKpisProvider);
+      ref.read(reportWorkflowCoordinatorProvider).refreshDashboard();
       AppNotifier.info(
         product.isActive ? 'Product archived.' : 'Product re-activated.',
       );
@@ -193,7 +173,10 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
     }
   }
 
-  Widget _buildProductsTable(List<ProductEntity> items) {
+  Widget _buildProductsTable(
+    List<ProductEntity> items,
+    Map<String, String> supplierNames,
+  ) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final layout = _ProductsTableLayout.fromWidth(constraints.maxWidth);
@@ -223,6 +206,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
                       rowNumber: rowIndex + 1,
                       column: column,
                       columnWidths: columnWidths,
+                      supplierNames: supplierNames,
                     ),
                   )
                   .toList(growable: false),
@@ -251,7 +235,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
       const weightedColumns = <_ProductsTableColumn, int>{
         _ProductsTableColumn.name: 6,
         _ProductsTableColumn.brand: 3,
-        _ProductsTableColumn.sku: 2,
+        _ProductsTableColumn.supplier: 2,
         _ProductsTableColumn.buyPrice: 2,
         _ProductsTableColumn.sellPrice: 2,
       };
@@ -301,7 +285,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
       _ProductsTableColumn.sr,
       _ProductsTableColumn.name,
       _ProductsTableColumn.brand,
-      _ProductsTableColumn.sku,
+      _ProductsTableColumn.supplier,
       _ProductsTableColumn.buyPrice,
       _ProductsTableColumn.sellPrice,
       _ProductsTableColumn.type,
@@ -325,6 +309,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
     required int rowNumber,
     required _ProductsTableColumn column,
     required Map<_ProductsTableColumn, double> columnWidths,
+    required Map<String, String> supplierNames,
   }) {
     switch (column) {
       case _ProductsTableColumn.sr:
@@ -341,9 +326,14 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
         return DataCell(
           _textCell(item.brand ?? '-', width: columnWidths[column]!),
         );
-      case _ProductsTableColumn.sku:
+      case _ProductsTableColumn.supplier:
         return DataCell(
-          _textCell(item.sku ?? '-', width: columnWidths[column]!),
+          _textCell(
+            item.supplierId == null
+                ? '-'
+                : (supplierNames[item.supplierId] ?? '-'),
+            width: columnWidths[column]!,
+          ),
         );
       case _ProductsTableColumn.buyPrice:
         return DataCell(
@@ -412,8 +402,8 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
         return 'Name';
       case _ProductsTableColumn.brand:
         return 'Brand';
-      case _ProductsTableColumn.sku:
-        return 'SKU';
+      case _ProductsTableColumn.supplier:
+        return 'Supplier';
       case _ProductsTableColumn.buyPrice:
         return 'Buy Price (PKR)';
       case _ProductsTableColumn.sellPrice:
@@ -460,32 +450,19 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
   }
 
   Widget _statusCell(bool isActive, {required double width}) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final bgColor = isActive
-        ? colorScheme.primaryContainer
-        : colorScheme.surfaceContainerHighest;
-    final fgColor = isActive
-        ? colorScheme.onPrimaryContainer
-        : colorScheme.onSurfaceVariant;
-
+    final colorScheme = Theme.of(context).colorScheme;
     return SizedBox(
       width: width,
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            isActive ? 'Active' : 'Archived',
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: fgColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+        child: AppStatusBadge(
+          label: isActive ? 'Active' : 'Archived',
+          color: isActive
+              ? colorScheme.primaryContainer
+              : colorScheme.surfaceContainerHighest,
+          foreground: isActive
+              ? colorScheme.onPrimaryContainer
+              : colorScheme.onSurfaceVariant,
         ),
       ),
     );
@@ -496,6 +473,11 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
     final includeInactive = ref.watch(productManagementIncludeInactiveProvider);
     final typeFilter = ref.watch(productManagementTypeFilterProvider);
     final productsAsync = ref.watch(managedProductsProvider);
+    final suppliersAsync = ref.watch(supplierListProvider);
+    final supplierNames = <String, String>{
+      for (final supplier in suppliersAsync.value ?? const [])
+        supplier.id: supplier.name,
+    };
 
     return Column(
       children: <Widget>[
@@ -505,7 +487,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
               child: AppSearchField(
                 controller: _searchController,
                 onChanged: _onSearchChanged,
-                hintText: 'Search by name, SKU, barcode, brand...',
+                hintText: 'Search by name, barcode, brand...',
               ),
             ),
             const SizedBox(width: 8),
@@ -556,22 +538,11 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
               child: productsAsync.when(
-                data: _buildProductsTable,
+                data: (items) => _buildProductsTable(items, supplierNames),
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      Text('Error loading products: $error'),
-                      const SizedBox(height: 8),
-                      FilledButton.icon(
-                        onPressed: () =>
-                            ref.invalidate(managedProductsProvider),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
-                      ),
-                    ],
-                  ),
+                error: (error, _) => AppErrorState(
+                  message: 'Error loading products: $error',
+                  onRetry: () => ref.invalidate(managedProductsProvider),
                 ),
               ),
             ),
@@ -586,7 +557,7 @@ enum _ProductsTableColumn {
   sr,
   name,
   brand,
-  sku,
+  supplier,
   buyPrice,
   sellPrice,
   type,
@@ -632,7 +603,7 @@ class _ProductsTableLayout {
           return 320;
         case _ProductsTableColumn.brand:
           return 170;
-        case _ProductsTableColumn.sku:
+        case _ProductsTableColumn.supplier:
           return 170;
         case _ProductsTableColumn.buyPrice:
           return 140;
@@ -654,7 +625,7 @@ class _ProductsTableLayout {
           return 250;
         case _ProductsTableColumn.brand:
           return 145;
-        case _ProductsTableColumn.sku:
+        case _ProductsTableColumn.supplier:
           return 140;
         case _ProductsTableColumn.buyPrice:
           return 130;
@@ -675,7 +646,7 @@ class _ProductsTableLayout {
         return 210;
       case _ProductsTableColumn.brand:
         return 120;
-      case _ProductsTableColumn.sku:
+      case _ProductsTableColumn.supplier:
         return 120;
       case _ProductsTableColumn.buyPrice:
       case _ProductsTableColumn.sellPrice:

@@ -9,6 +9,7 @@ import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/routing/current_route_provider.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
+import 'package:phone_shop_pos/core/utils/debouncer.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
@@ -25,6 +26,8 @@ import 'package:phone_shop_pos/modules/reports/presentation/dialogs/purchase_det
 import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_query_providers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_breakpoints.dart';
+import 'package:phone_shop_pos/core/theme/app_motion.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class PurchaseScreen extends ConsumerStatefulWidget {
@@ -45,6 +48,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   final TextEditingController _notesController = TextEditingController();
   final ScrollController _productGridScrollController = ScrollController();
   final ScrollController _rightPanelScrollController = ScrollController();
+  final _productSearchDebounce = Debouncer();
   bool _isSubmitting = false;
   bool _isUsedPurchase = false;
   bool _paidAmountTouched = false;
@@ -54,6 +58,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
 
   @override
   void dispose() {
+    _productSearchDebounce.dispose();
     _productSearchController.dispose();
     _productSearchFocus.dispose();
     _invoiceController.dispose();
@@ -79,8 +84,8 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
 
     await _productGridScrollController.animateTo(
       target.toDouble(),
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeOutCubic,
+      duration: AppMotion.standardTransition,
+      curve: AppMotion.standardTransitionCurve,
     );
   }
 
@@ -318,11 +323,8 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final rightPanelWidth = constraints.maxWidth >= 1500
-                            ? 360.0
-                            : constraints.maxWidth >= 1200
-                                ? 320.0
-                                : 300.0;
+                        final rightPanelWidth =
+                            AppBreakpoints.rightPanelWidth(constraints.maxWidth);
                         return Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
@@ -511,11 +513,16 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
               child: AppSearchField(
                 controller: _productSearchController,
                 focusNode: _productSearchFocus,
-                hintText: 'Search product / SKU / brand',
+                hintText: 'Search product / brand / barcode',
                 onChanged: (value) {
-                  ref
-                      .read(purchaseFormStateProvider.notifier)
-                      .setProductSearchQuery(value);
+                  _productSearchDebounce.run(() {
+                    if (!mounted) {
+                      return;
+                    }
+                    ref
+                        .read(purchaseFormStateProvider.notifier)
+                        .setProductSearchQuery(value);
+                  });
                 },
               ),
             ),
@@ -552,7 +559,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                 return LayoutBuilder(
                   builder: (context, constraints) {
                     final mainAxisExtent =
-                        constraints.maxWidth >= 1400 ? 168.0 : 180.0;
+                        AppBreakpoints.productTileExtent(constraints.maxWidth);
                     final scrollStep = constraints.maxWidth * 0.75;
                     return Stack(
                       children: <Widget>[

@@ -10,6 +10,7 @@ import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_summa
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_tab_error_view.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_section_widget.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_table_styling.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class PurchaseHistoryTab extends ConsumerWidget {
@@ -33,17 +34,15 @@ class PurchaseHistoryTab extends ConsumerWidget {
       children: <Widget>[
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(AppSpacing.sm),
             child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
               children: <Widget>[
                 SizedBox(
                   width: 280,
                   child: TextField(
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      border: OutlineInputBorder(),
+                    decoration: appDesktopInputDecoration(
                       labelText: 'Supplier',
                     ),
                     onChanged: (value) => ref

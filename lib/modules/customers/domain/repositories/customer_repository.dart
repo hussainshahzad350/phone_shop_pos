@@ -18,4 +18,9 @@ abstract class CustomerRepository extends BaseRepository {
   Future<Result<void>> setActive(String id, {required bool active});
 
   Future<Result<double>> getOutstandingBalance(String customerId);
+
+  /// Permanently deletes a customer. Fails with a descriptive message if any
+  /// sales/invoice record still references it — archive instead in that
+  /// case. Never leaves orphan references.
+  Future<Result<void>> deleteCustomer(String id);
 }

@@ -9,6 +9,7 @@ import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/brand_stoc
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/brand_stock_section.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/dashboard_header.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/dashboard_kpi_grid.dart';
+import 'package:phone_shop_pos/core/theme/app_breakpoints.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -156,13 +157,7 @@ class _DashboardKpiSkeleton extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final crossAxisCount = width >= 1500
-            ? 5
-            : width >= 1100
-                ? 4
-                : width >= 760
-                    ? 3
-                    : 2;
+        final crossAxisCount = AppBreakpoints.kpiGridColumns(width);
         return GridView.builder(
           shrinkWrap: true,
           itemCount: 8,
@@ -171,7 +166,7 @@ class _DashboardKpiSkeleton extends StatelessWidget {
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: 8,
             mainAxisSpacing: 8,
-            childAspectRatio: width >= 1500 ? 2.6 : 2.3,
+            childAspectRatio: width >= AppBreakpoints.kpiGridWide ? 2.6 : 2.3,
           ),
           itemBuilder: (_, __) => const AppSkeletonCard(),
         );

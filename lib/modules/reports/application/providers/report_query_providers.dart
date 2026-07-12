@@ -224,9 +224,8 @@ final reportProductOptionsProvider =
     final where = StringBuffer('is_active = 1');
     if (searchQuery.isNotEmpty) {
       final like = '%$searchQuery%';
-      where.write(' AND (name LIKE ? OR sku LIKE ? OR brand LIKE ?)');
+      where.write(' AND (name LIKE ? OR brand LIKE ?)');
       args
-        ..add(like)
         ..add(like)
         ..add(like);
     }

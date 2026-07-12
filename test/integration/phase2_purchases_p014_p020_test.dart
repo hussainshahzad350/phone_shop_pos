@@ -366,7 +366,6 @@ class _P2Context {
         ProductEntity(
           id: id,
           name: name,
-          sku: sku,
           purchasePrice: purchasePrice,
           salePrice: salePrice,
           hasImei: hasImei,

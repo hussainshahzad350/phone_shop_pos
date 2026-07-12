@@ -58,13 +58,7 @@ class _KpiRow extends ConsumerWidget {
               : MediaQuery.sizeOf(context).width - 20;
           final cards = _buildCards(context, kpis);
           final spacing = 8.0;
-          final crossAxisCount = width >= 1500
-              ? 5
-              : width >= 1100
-                  ? 4
-                  : width >= 760
-                      ? 3
-                      : 2;
+          final crossAxisCount = AppBreakpoints.kpiGridColumns(width);
           final cardWidth =
               ((width - ((crossAxisCount - 1) * spacing)) / crossAxisCount)
                   .clamp(180.0, double.infinity);

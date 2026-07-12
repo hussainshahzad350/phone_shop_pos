@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
@@ -13,6 +13,7 @@ import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_entity
 import 'package:phone_shop_pos/modules/purchases/domain/repositories/purchase_repository.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/providers/purchase_form_state_provider.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/providers/purchase_repository_provider.dart';
+import 'package:phone_shop_pos/modules/reports/domain/entities/imei_trace_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_completion_entity.dart';
@@ -103,6 +104,18 @@ ProductEntity _buildProduct({
 }
 
 class _FakeSalesRepository implements SalesRepository {
+
+  @override
+  Future<Result<Map<String, String>>> getSupplierNames(
+    List<String> supplierIds,
+  ) async {
+    return const Success<Map<String, String>>(<String, String>{});
+  }
+
+  @override
+  Future<Result<ImeiTraceEntity?>> getImeiTrace(String imei) async {
+    return const Success<ImeiTraceEntity?>(null);
+  }
   _FakeSalesRepository({required this.product});
 
   final ProductEntity product;

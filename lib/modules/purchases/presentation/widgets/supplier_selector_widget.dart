@@ -1,13 +1,26 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:phone_shop_pos/core/utils/debouncer.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/supplier_option_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/providers/purchase_form_state_provider.dart';
 import 'package:phone_shop_pos/modules/purchases/presentation/providers/purchase_query_providers.dart';
+import 'package:phone_shop_pos/modules/purchases/presentation/providers/supplier_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+
+/// A minimal, source-agnostic supplier option used internally by
+/// [SupplierSelectorWidget] so the same picker UI can be fed either by the
+/// purchase form's live search provider or, in [SupplierSelectorWidget.standalone]
+/// mode, by a direct repository query — without those two screens sharing any
+/// state (a standalone instance must never mutate the purchase form's search
+/// query).
+class _SupplierOption {
+  const _SupplierOption({required this.id, required this.name, this.phone});
+  final String id;
+  final String name;
+  final String? phone;
+}
 
 /// Supplier picker modeled on the Sales customer selector: a directly typeable
 /// field that runs a database search, a ✕ to clear the selection, and
@@ -16,15 +29,22 @@ import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 ///
 /// The results list is shown in a floating [OverlayPortal] anchored under the
 /// field, so opening it does not push the totals/payment panel below it down.
+///
+/// By default this reads/writes the Purchases screen's shared
+/// [purchaseFormStateProvider] search query. Pass [standalone] to use this
+/// picker from any other screen (e.g. Inventory's IMEI management) with its
+/// own local search state instead, so it never leaks into purchase-form state.
 class SupplierSelectorWidget extends ConsumerStatefulWidget {
   const SupplierSelectorWidget({
     super.key,
     required this.selectedSupplierId,
     required this.onChanged,
+    this.standalone = false,
   });
 
   final String? selectedSupplierId;
   final ValueChanged<String?> onChanged;
+  final bool standalone;
 
   @override
   ConsumerState<SupplierSelectorWidget> createState() =>
@@ -40,23 +60,29 @@ class _SupplierSelectorWidgetState
   final LayerLink _layerLink = LayerLink();
   final OverlayPortalController _overlayController = OverlayPortalController();
   final Object _tapGroupId = Object();
-  Timer? _searchDebounce;
-  SupplierOptionEntity? _selectedSupplier;
-  List<SupplierOptionEntity> _suppliers = const <SupplierOptionEntity>[];
+  final _searchDebounce = Debouncer();
+  _SupplierOption? _selectedSupplier;
+  List<_SupplierOption> _suppliers = const <_SupplierOption>[];
   bool _suppliersLoading = false;
   double _fieldWidth = 300;
   bool _isDropdownOpen = false;
   bool _showAllSuppliers = false;
 
+  // Standalone-mode search state (unused when widget.standalone is false).
+  int _standaloneRequestId = 0;
+
   @override
   void initState() {
     super.initState();
     _searchFocusNode.addListener(_handleFocusChanged);
+    if (widget.standalone) {
+      _runStandaloneSearch('');
+    }
   }
 
   @override
   void dispose() {
-    _searchDebounce?.cancel();
+    _searchDebounce.cancel();
     _searchFocusNode.removeListener(_handleFocusChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
@@ -69,11 +95,34 @@ class _SupplierSelectorWidgetState
     }
   }
 
+  Future<void> _runStandaloneSearch(String query) async {
+    final requestId = ++_standaloneRequestId;
+    setState(() => _suppliersLoading = true);
+    final repository = await ref.read(supplierRepositoryProvider.future);
+    final result = await repository.searchSuppliers(query, isActive: true, limit: 30);
+    if (!mounted || requestId != _standaloneRequestId) {
+      return;
+    }
+    setState(() {
+      _suppliersLoading = false;
+      _suppliers = result.fold(
+        onSuccess: (suppliers) => suppliers
+            .map((s) => _SupplierOption(id: s.id, name: s.name, phone: s.phone))
+            .toList(growable: false),
+        onFailure: (_) => const <_SupplierOption>[],
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final suppliersAsync = ref.watch(supplierSearchResultsProvider);
-    _suppliers = suppliersAsync.value ?? const <SupplierOptionEntity>[];
-    _suppliersLoading = suppliersAsync.isLoading;
+    if (!widget.standalone) {
+      final suppliersAsync = ref.watch(supplierSearchResultsProvider);
+      _suppliers = (suppliersAsync.value ?? const <SupplierOptionEntity>[])
+          .map((s) => _SupplierOption(id: s.id, name: s.name, phone: s.phone))
+          .toList(growable: false);
+      _suppliersLoading = suppliersAsync.isLoading;
+    }
 
     // Keep the resolved supplier cached so the field label stays correct even
     // when the active search filters the selected supplier out of results.
@@ -82,7 +131,7 @@ class _SupplierSelectorWidgetState
     } else {
       final resolved = _suppliers
           .where((supplier) => supplier.id == widget.selectedSupplierId)
-          .cast<SupplierOptionEntity?>()
+          .cast<_SupplierOption?>()
           .firstOrNull;
       if (resolved != null) {
         _selectedSupplier = resolved;
@@ -205,13 +254,21 @@ class _SupplierSelectorWidgetState
     );
   }
 
+  void _resetSearchQuery() {
+    if (widget.standalone) {
+      _runStandaloneSearch('');
+    } else {
+      ref.read(purchaseFormStateProvider.notifier).setSupplierSearchQuery('');
+    }
+  }
+
   void _openDropdown() {
     if (_isDropdownOpen) {
       return;
     }
     _searchController.clear();
-    _searchDebounce?.cancel();
-    ref.read(purchaseFormStateProvider.notifier).setSupplierSearchQuery('');
+    _searchDebounce.cancel();
+    _resetSearchQuery();
     setState(() {
       _isDropdownOpen = true;
       _showAllSuppliers = false;
@@ -224,7 +281,7 @@ class _SupplierSelectorWidgetState
     if (!_isDropdownOpen) {
       return;
     }
-    _searchDebounce?.cancel();
+    _searchDebounce.cancel();
     setState(() {
       _isDropdownOpen = false;
       _showAllSuppliers = false;
@@ -241,20 +298,23 @@ class _SupplierSelectorWidgetState
     if (!_overlayController.isShowing) {
       _overlayController.show();
     }
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+    _searchDebounce.run(() {
       if (!mounted) {
         return;
       }
-      ref
-          .read(purchaseFormStateProvider.notifier)
-          .setSupplierSearchQuery(value.trim());
+      if (widget.standalone) {
+        _runStandaloneSearch(value.trim());
+      } else {
+        ref
+            .read(purchaseFormStateProvider.notifier)
+            .setSupplierSearchQuery(value.trim());
+      }
     });
   }
 
   void _clearSelection() {
-    _searchDebounce?.cancel();
-    ref.read(purchaseFormStateProvider.notifier).setSupplierSearchQuery('');
+    _searchDebounce.cancel();
+    _resetSearchQuery();
     setState(() {
       _isDropdownOpen = false;
       _showAllSuppliers = false;
@@ -267,8 +327,8 @@ class _SupplierSelectorWidgetState
   }
 
   void _selectSupplier(String? selected) {
-    _searchDebounce?.cancel();
-    ref.read(purchaseFormStateProvider.notifier).setSupplierSearchQuery('');
+    _searchDebounce.cancel();
+    _resetSearchQuery();
     setState(() {
       _isDropdownOpen = false;
       _showAllSuppliers = false;
@@ -283,8 +343,7 @@ class _SupplierSelectorWidgetState
     }
   }
 
-  List<SupplierOptionEntity> _filteredSuppliers(
-      List<SupplierOptionEntity> suppliers) {
+  List<_SupplierOption> _filteredSuppliers(List<_SupplierOption> suppliers) {
     final search = _searchController.text.trim().toLowerCase();
     return search.isEmpty
         ? (_showAllSuppliers ? suppliers : _defaultSuppliers(suppliers))
@@ -295,19 +354,18 @@ class _SupplierSelectorWidgetState
           }).toList(growable: false);
   }
 
-  bool _canShowMoreRow(List<SupplierOptionEntity> suppliers) {
+  bool _canShowMoreRow(List<_SupplierOption> suppliers) {
     return _searchController.text.trim().isEmpty &&
         !_showAllSuppliers &&
         suppliers.length > _defaultVisibleSupplierCount;
   }
 
-  List<SupplierOptionEntity> _defaultSuppliers(
-      List<SupplierOptionEntity> suppliers) {
-    final byId = <String, SupplierOptionEntity>{
+  List<_SupplierOption> _defaultSuppliers(List<_SupplierOption> suppliers) {
+    final byId = <String, _SupplierOption>{
       for (final supplier in suppliers) supplier.id: supplier,
     };
 
-    final recent = <SupplierOptionEntity>[];
+    final recent = <_SupplierOption>[];
     for (final id in _recentSupplierIds) {
       final supplier = byId[id];
       if (supplier != null) {
@@ -354,7 +412,7 @@ class _SupplierSelectorWidgetState
     }
   }
 
-  Widget _supplierTile(SupplierOptionEntity supplier) {
+  Widget _supplierTile(_SupplierOption supplier) {
     final isSelected = supplier.id == widget.selectedSupplierId;
     return ListTile(
       dense: true,

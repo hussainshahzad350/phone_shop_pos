@@ -14,21 +14,21 @@ class ProductModel extends BaseDbModel {
     required this.isActive,
     this.brand,
     this.category,
-    this.sku,
     this.barcode,
     this.minStockAlert = 0,
+    this.supplierId,
   });
 
   final String name;
   final String? brand;
   final String? category;
-  final String? sku;
   final String? barcode;
   final int minStockAlert;
   final double purchasePrice;
   final double salePrice;
   final bool hasImei;
   final bool isActive;
+  final String? supplierId;
 
   factory ProductModel.fromMap(Map<String, Object?> map) {
     return ProductModel(
@@ -36,7 +36,6 @@ class ProductModel extends BaseDbModel {
       name: map['name'] as String,
       brand: map['brand'] as String?,
       category: map['category'] as String?,
-      sku: map['sku'] as String?,
       barcode: map['barcode'] as String?,
       minStockAlert: (map['min_stock_alert'] as num?)?.toInt() ?? 0,
       purchasePrice: (map['purchase_price'] as num).toDouble(),
@@ -45,6 +44,7 @@ class ProductModel extends BaseDbModel {
       isActive: (map['is_active'] as num) == 1,
       createdAt: DateTimeHelpers.fromSql(map['created_at'] as String),
       updatedAt: DateTimeHelpers.fromSql(map['updated_at'] as String),
+      supplierId: map['supplier_id'] as String?,
     );
   }
 
@@ -54,7 +54,6 @@ class ProductModel extends BaseDbModel {
       name: entity.name,
       brand: entity.brand,
       category: entity.category,
-      sku: entity.sku,
       barcode: entity.barcode,
       minStockAlert: entity.minStockAlert,
       purchasePrice: entity.purchasePrice,
@@ -63,6 +62,7 @@ class ProductModel extends BaseDbModel {
       isActive: entity.isActive,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
+      supplierId: entity.supplierId,
     );
   }
 
@@ -72,13 +72,13 @@ class ProductModel extends BaseDbModel {
       'name': name,
       'brand': brand,
       'category': category,
-      'sku': sku,
       'barcode': barcode,
       'min_stock_alert': minStockAlert,
       'purchase_price': purchasePrice,
       'sale_price': salePrice,
       'has_imei': hasImei ? 1 : 0,
       'is_active': isActive ? 1 : 0,
+      'supplier_id': supplierId,
     };
   }
 
@@ -88,7 +88,6 @@ class ProductModel extends BaseDbModel {
       name: name,
       brand: brand,
       category: category,
-      sku: sku,
       barcode: barcode,
       minStockAlert: minStockAlert,
       purchasePrice: purchasePrice,
@@ -97,6 +96,7 @@ class ProductModel extends BaseDbModel {
       isActive: isActive,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      supplierId: supplierId,
     );
   }
 }

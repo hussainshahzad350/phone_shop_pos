@@ -19,6 +19,4 @@ abstract class ProductRepository extends BaseRepository {
   Future<Result<void>> deactivateProduct(String id);
 
   Future<Result<void>> activateProduct(String id);
-
-  Future<Result<bool>> isSkuUnique(String sku, {String? excludeId});
 }

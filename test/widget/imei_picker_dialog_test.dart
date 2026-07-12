@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:phone_shop_pos/core/errors/app_error.dart';
@@ -10,6 +10,7 @@ import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_ent
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_completion_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_header_entity.dart';
+import 'package:phone_shop_pos/modules/reports/domain/entities/imei_trace_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/repositories/sales_repository.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/imei_picker_dialog.dart';
 
@@ -68,9 +69,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(find.text('Temporary IMEI lookup failure'), findsOneWidget);
-    expect(find.widgetWithText(OutlinedButton, 'Retry'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Retry'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Retry'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
 
@@ -126,6 +127,18 @@ Future<SerializedStockEntity?> _openDialogAndSelect({
 }
 
 class _FakeSalesRepository implements SalesRepository {
+
+  @override
+  Future<Result<Map<String, String>>> getSupplierNames(
+    List<String> supplierIds,
+  ) async {
+    return const Success<Map<String, String>>(<String, String>{});
+  }
+
+  @override
+  Future<Result<ImeiTraceEntity?>> getImeiTrace(String imei) async {
+    return const Success<ImeiTraceEntity?>(null);
+  }
   @override
   Future<Result<T>> guard<T>(
     Future<T> Function() action, {

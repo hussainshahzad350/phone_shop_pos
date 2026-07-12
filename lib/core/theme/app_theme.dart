@@ -104,6 +104,31 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
         ),
       ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: AppRadii.mdRadius,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: AppRadii.smRadius,
+          ),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        elevation: 4,
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: brightness == Brightness.light
+            ? Colors.white
+            : colorScheme.surfaceContainerHigh,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadii.lgRadius,
+        ),
+      ),
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: brightness == Brightness.light
             ? Colors.white.withValues(alpha: 0.82)

@@ -20,7 +20,7 @@ void main() {
       FlutterError.onError = (details) {
         FlutterError.presentError(details);
         Zone.current.handleUncaughtError(
-          details.exception,
+          details.exception, 
           details.stack ?? StackTrace.empty,
         );
       };
@@ -34,6 +34,19 @@ void main() {
       }
     },
   );
+}
+
+/// Allows scrolling via mouse-drag and trackpad gestures in addition to
+/// touch, so long lists/tables scroll naturally on laptops with a touchpad.
+class _DesktopScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => <PointerDeviceKind>{
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.unknown,
+      };
 }
 
 class PhoneShopPosApp extends ConsumerStatefulWidget {
@@ -136,6 +149,7 @@ class _PhoneShopPosAppState extends ConsumerState<PhoneShopPosApp>
       routerConfig: router,
       scaffoldMessengerKey: AppNotifier.messengerKey,
       debugShowCheckedModeBanner: false,
+      scrollBehavior: _DesktopScrollBehavior(),
     );
   }
 }

@@ -106,6 +106,16 @@ class SalesScannerHandler implements ScannerModeHandler {
       }
     }
 
+    String? supplierName;
+    final supplierId = selectedStock?.supplierId;
+    if (supplierId != null && supplierId.isNotEmpty) {
+      final namesResult = await repository.getSupplierNames(<String>[supplierId]);
+      supplierName = namesResult.fold(
+        onSuccess: (names) => names[supplierId],
+        onFailure: (_) => null,
+      );
+    }
+
     final addResult = await _ref.read(cartStateProvider.notifier).addToCart(
           product: product,
           quantity: 1,
@@ -114,6 +124,8 @@ class SalesScannerHandler implements ScannerModeHandler {
           imei2: selectedStock?.imei2,
           serialNumber: selectedStock?.serialNumber,
           price: selectedStock?.sellingPrice ?? product.salePrice,
+          purchaseDate: selectedStock?.purchaseDate ?? selectedStock?.createdAt,
+          supplierName: supplierName,
         );
 
     if (addResult.isFailure) {
@@ -138,8 +150,7 @@ class SalesScannerHandler implements ScannerModeHandler {
   }) {
     final lowerCode = code.toLowerCase();
     for (final product in products) {
-      if (product.barcode?.trim().toLowerCase() == lowerCode ||
-          product.sku?.trim().toLowerCase() == lowerCode) {
+      if (product.barcode?.trim().toLowerCase() == lowerCode) {
         return product;
       }
     }

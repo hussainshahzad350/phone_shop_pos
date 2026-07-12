@@ -1,8 +1,9 @@
-import 'package:flutter_test/flutter_test.dart';
+﻿import 'package:flutter_test/flutter_test.dart';
 import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
+import 'package:phone_shop_pos/modules/reports/domain/entities/imei_trace_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/sale_completion_entity.dart';
@@ -167,7 +168,6 @@ void main() {
         name: 'Editable Price Item',
         brand: null,
         category: 'Accessory',
-        sku: null,
         barcode: null,
         purchasePrice: 1000,
         salePrice: 1500,
@@ -988,6 +988,18 @@ void main() {
 }
 
 class _InMemorySalesRepository implements SalesRepository {
+
+  @override
+  Future<Result<Map<String, String>>> getSupplierNames(
+    List<String> supplierIds,
+  ) async {
+    return const Success<Map<String, String>>(<String, String>{});
+  }
+
+  @override
+  Future<Result<ImeiTraceEntity?>> getImeiTrace(String imei) async {
+    return const Success<ImeiTraceEntity?>(null);
+  }
   _InMemorySalesRepository({
     required Map<String, int> quantityByProductId,
     required Set<String> availableSerializedStockIds,

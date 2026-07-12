@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
+import 'package:phone_shop_pos/core/theme/app_motion.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 const int _kDefaultPaginateThreshold = 80;
@@ -34,6 +35,29 @@ InputDecoration appDesktopInputDecoration({
   );
 }
 
+/// Canonical zebra-striped/selected row color for desktop data tables —
+/// even rows plain surface, odd rows a faint tint, selected rows a primary
+/// tint. [AppDataTable] uses this by default; other hand-built `DataTable`s
+/// elsewhere in the app (report tables, repair jobs table) should call this
+/// too instead of reimplementing their own `WidgetStateProperty` so every
+/// table's hover/selection/zebra look is identical.
+WidgetStateProperty<Color?> appDataTableRowColor(
+  BuildContext context,
+  int index,
+) {
+  return WidgetStateProperty.resolveWith<Color?>((states) {
+    if (states.contains(WidgetState.selected)) {
+      return Theme.of(context).colorScheme.primary.withValues(alpha: 0.10);
+    }
+    return index.isEven
+        ? Theme.of(context).colorScheme.surface
+        : Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
+            .withValues(alpha: 0.35);
+  });
+}
+
 class AppDesktopScaffold extends StatelessWidget {
   const AppDesktopScaffold({
     super.key,
@@ -61,7 +85,7 @@ class AppDesktopScaffold extends StatelessWidget {
                 Expanded(
                   child: _DesktopContentArea(
                     child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 180),
+                      duration: AppMotion.contentSwitch,
                       child: child,
                     ),
                   ),
@@ -240,6 +264,41 @@ class AppEmptyState extends StatelessWidget {
   }
 }
 
+/// Shared error-state placeholder for failed loads — icon, message, and an
+/// optional Retry button, matching [AppEmptyState]'s layout so a screen's
+/// "still loading" / "empty" / "failed" states all look like one family.
+class AppErrorState extends StatelessWidget {
+  const AppErrorState({
+    super.key,
+    required this.message,
+    this.onRetry,
+    this.icon = Icons.error_outline,
+  });
+
+  final String message;
+  final VoidCallback? onRetry;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AppEmptyState(
+      message: message,
+      icon: icon,
+      action: onRetry == null
+          ? null
+          : FilledButton.tonalIcon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Retry'),
+              style: FilledButton.styleFrom(
+                foregroundColor: theme.colorScheme.error,
+              ),
+            ),
+    );
+  }
+}
+
 class AppDataTable extends StatefulWidget {
   const AppDataTable({
     super.key,
@@ -317,21 +376,7 @@ class _AppDataTableState extends State<AppDataTable> {
         selected: row.selected,
         onSelectChanged: row.onSelectChanged,
         onLongPress: row.onLongPress,
-        color: row.color ??
-            WidgetStateProperty.resolveWith<Color?>((states) {
-              if (states.contains(WidgetState.selected)) {
-                return Theme.of(context)
-                    .colorScheme
-                    .primary
-                    .withValues(alpha: 0.10);
-              }
-              return index.isEven
-                  ? Theme.of(context).colorScheme.surface
-                  : Theme.of(context)
-                      .colorScheme
-                      .surfaceContainerHighest
-                      .withValues(alpha: 0.35);
-            }),
+        color: row.color ?? appDataTableRowColor(context, index),
         cells: row.cells,
       );
     });
@@ -545,6 +590,45 @@ class AppConfirmationDialog extends StatelessWidget {
   }
 }
 
+/// Wires Esc-to-close for a custom dialog body, matching [AppConfirmationDialog]'s
+/// keyboard behavior. Deliberately Esc-only (no Enter-to-submit): most custom
+/// dialogs in this app contain multi-line text fields where Enter must stay
+/// available to insert a newline, so binding Enter globally here would be a
+/// silent behavior regression rather than a hardening. Wrap a dialog's content
+/// with this to get consistent Esc handling without touching per-dialog logic.
+class AppDialogEscToClose extends StatelessWidget {
+  const AppDialogEscToClose({
+    super.key,
+    required this.child,
+    this.onClose,
+  });
+
+  final Widget child;
+
+  /// Called on Esc. Defaults to `Navigator.of(context).pop()`.
+  final VoidCallback? onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Shortcuts(
+      shortcuts: const <ShortcutActivator, Intent>{
+        SingleActivator(LogicalKeyboardKey.escape): _DialogCancelIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          _DialogCancelIntent: CallbackAction<_DialogCancelIntent>(
+            onInvoke: (_) {
+              (onClose ?? () => Navigator.of(context).pop()).call();
+              return null;
+            },
+          ),
+        },
+        child: child,
+      ),
+    );
+  }
+}
+
 class _DesktopContentArea extends StatelessWidget {
   const _DesktopContentArea({required this.child});
 
@@ -663,4 +747,41 @@ class AppLoadingOverlay extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Shared confirmation dialog for permanently deleting a master-data entity
+/// (supplier, customer, ...). Returns `true` only if the user pressed
+/// Delete. [entityLabel] names the entity being deleted (e.g. `"Supplier"`);
+/// [entityName] is its display name; [blockedHint] explains what condition
+/// blocks the delete (shown so users know to archive instead).
+Future<bool> confirmHardDeleteDialog(
+  BuildContext context, {
+  required String entityLabel,
+  required String entityName,
+  required String blockedHint,
+}) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text('Delete $entityLabel?'),
+      content: Text(
+        'This permanently deletes "$entityName". This cannot be undone. '
+        '$blockedHint',
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(ctx).colorScheme.error,
+          ),
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Delete'),
+        ),
+      ],
+    ),
+  );
+  return confirmed == true;
 }

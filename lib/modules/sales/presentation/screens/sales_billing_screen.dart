@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,10 +8,10 @@ import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/routing/current_route_provider.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
+import 'package:phone_shop_pos/core/utils/debouncer.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
-import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/helpers/sale_completion_flow.dart';
@@ -31,7 +30,10 @@ import 'package:phone_shop_pos/modules/sales/presentation/widgets/payment_sectio
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/product_grid_widget.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/product_search_bar.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/totals_panel_widget.dart';
+import 'package:phone_shop_pos/core/theme/app_breakpoints.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/modules/sales/presentation/providers/pending_imei_provider.dart';
+import 'package:phone_shop_pos/modules/inventory/presentation/screens/imei_management_screen.dart';
 
 class SalesBillingScreen extends ConsumerStatefulWidget {
   const SalesBillingScreen({super.key});
@@ -51,7 +53,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
   bool _isCompleting = false;
   int _selectedCartIndex = 0;
   int _handledShortcutToken = 0;
-  Timer? _productSearchDebounce;
+  final _productSearchDebounce = Debouncer();
 
   @override
   void initState() {
@@ -74,7 +76,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     // Clear the quick-search filter so returning to Sales shows the full stock
     // bar instead of the last scanned/searched item.
     ref.read(billingStateProvider.notifier).setProductSearchQuery('');
-    _productSearchDebounce?.cancel();
+    _productSearchDebounce.dispose();
     _productSearchController.dispose();
     _productSearchFocus.dispose();
     _paymentMethodFocus.dispose();
@@ -82,6 +84,10 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     _notesFocus.dispose();
     _rightPanelScrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleModifyProduct(ProductEntity product) async {
+    await ImeiManagementScreen.open(context, product);
   }
 
   Future<void> _handleAddProduct(ProductEntity product) async {
@@ -102,6 +108,10 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
       return;
     }
 
+    final supplierName = await _resolveSupplierName(selected.supplierId);
+    if (!mounted) {
+      return;
+    }
     final result = await ref.read(cartStateProvider.notifier).addToCart(
           product: product,
           serializedStockId: selected.id,
@@ -109,11 +119,27 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
           imei2: selected.imei2,
           serialNumber: selected.serialNumber,
           price: selected.sellingPrice ?? product.salePrice,
+          purchaseDate: selected.purchaseDate ?? selected.createdAt,
+          supplierName: supplierName,
         );
     _showResultError(result);
     if (result.isSuccess) {
       _clearSearchAfterAdd();
     }
+  }
+
+  /// Resolves a single supplier's name for the cart snapshot. Reuses the
+  /// batch `getSupplierNames` lookup (Part 2) rather than a new query.
+  Future<String?> _resolveSupplierName(String? supplierId) async {
+    if (supplierId == null || supplierId.isEmpty) {
+      return null;
+    }
+    final repository = await ref.read(salesRepositoryProvider.future);
+    final result = await repository.getSupplierNames(<String>[supplierId]);
+    return result.fold(
+      onSuccess: (names) => names[supplierId],
+      onFailure: (_) => null,
+    );
   }
 
   /// After adding an item (scan or tap), clear the search so the stock bar
@@ -171,6 +197,10 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
         continue;
       }
       final stock = matches.first;
+      final supplierName = await _resolveSupplierName(stock.supplierId);
+      if (!mounted) {
+        return false;
+      }
       final addResult = await ref.read(cartStateProvider.notifier).addToCart(
             product: product,
             serializedStockId: stock.id,
@@ -178,6 +208,8 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
             imei2: stock.imei2,
             serialNumber: stock.serialNumber,
             price: stock.sellingPrice ?? product.salePrice,
+            purchaseDate: stock.purchaseDate ?? stock.createdAt,
+            supplierName: supplierName,
           );
       if (mounted) _showResultError(addResult);
       return addResult.isSuccess;
@@ -221,14 +253,14 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
   }
 
   void _debouncedProductSearch(String value) {
-    _productSearchDebounce?.cancel();
+    _productSearchDebounce.cancel();
     // Clearing should be instant (e.g. the ✕ button / Escape) so the stock bar
     // resets to full stock immediately instead of after the debounce window.
     if (value.isEmpty) {
       ref.read(billingStateProvider.notifier).setProductSearchQuery('');
       return;
     }
-    _productSearchDebounce = Timer(const Duration(milliseconds: 150), () {
+    _productSearchDebounce.run(() {
       if (!mounted) {
         return;
       }
@@ -435,8 +467,6 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
 
   void _invalidateFinancialReportsAfterSale() {
     ref.read(reportWorkflowCoordinatorProvider).refreshSalesAfterCompletion();
-    ref.invalidate(dashboardKpisProvider);
-    ref.invalidate(dashboardRecentSalesProvider);
   }
 
   void _handleFailedSale(AppError error) {
@@ -485,6 +515,22 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     ref.listen<AppShortcutEventState>(appShortcutEventBusProvider,
         (previous, next) {
       _handleGlobalShortcut(next);
+    });
+    // Auto-add a pending IMEI that was queued from the Reports IMEI-search tab.
+    ref.listen<String?>(pendingImeiAutoAddProvider, (previous, next) {
+      if (next == null || next.isEmpty) return;
+      ref.read(pendingImeiAutoAddProvider.notifier).state = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        final products =
+            ref.read(productSearchResultsProvider).value ?? const [];
+        final added = await _tryAddExactImei(next, products);
+        if (!added && mounted) {
+          _productSearchController.text = next;
+          ref.read(billingStateProvider.notifier).setProductSearchQuery(next);
+          AppNotifier.info('IMEI loaded — select the matching product.');
+        }
+      });
     });
     ref.listen<String>(currentRoutePathProvider, (previous, next) {
       final leftSales = previous != null &&
@@ -547,6 +593,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                   const SizedBox(height: 8),
                   ProductGridWidget(
                     onAddProduct: _handleAddProduct,
+                    onModifyProduct: _handleModifyProduct,
                     onRetry: _refreshSales,
                     onViewAllInInventory: () => context.go('/inventory'),
                   ),
@@ -554,11 +601,8 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final rightPanelWidth = constraints.maxWidth >= 1500
-                            ? 360.0
-                            : constraints.maxWidth >= 1200
-                                ? 320.0
-                                : 300.0;
+                        final rightPanelWidth =
+                            AppBreakpoints.rightPanelWidth(constraints.maxWidth);
                         return Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[

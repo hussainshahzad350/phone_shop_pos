@@ -643,7 +643,6 @@ class _Ctx {
         ProductEntity(
           id: id,
           name: 'Product $id',
-          sku: 'SKU-$id',
           purchasePrice: cost,
           salePrice: price,
           hasImei: false,
@@ -683,7 +682,6 @@ class _Ctx {
         ProductEntity(
           id: id,
           name: 'Phone $id',
-          sku: 'SKU-$id',
           purchasePrice: cost,
           salePrice: price,
           hasImei: true,

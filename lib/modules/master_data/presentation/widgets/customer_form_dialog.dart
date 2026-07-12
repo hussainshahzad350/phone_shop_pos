@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
+import 'package:phone_shop_pos/core/validation/field_validators.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/customers/domain/entities/customer_entity.dart';
 
 class CustomerFormData {
@@ -83,97 +86,90 @@ class _CustomerFormDialogState extends State<CustomerFormDialog> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.initial != null;
-    return AlertDialog(
-      title: Text(isEditing ? 'Edit Customer' : 'Add Customer'),
-      content: SizedBox(
-        width: 560,
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            shrinkWrap: true,
-            children: <Widget>[
-              TextFormField(
-                controller: _nameController,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Customer Name',
-                  border: OutlineInputBorder(),
-                  isDense: true,
+    return AppDialogEscToClose(
+      child: AlertDialog(
+        title: Text(isEditing ? 'Edit Customer' : 'Add Customer'),
+        content: SizedBox(
+          width: 560,
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              shrinkWrap: true,
+              children: <Widget>[
+                TextFormField(
+                  controller: _nameController,
+                  autofocus: true,
+                  decoration: appDesktopInputDecoration(
+                    labelText: 'Customer Name',
+                  ),
+                  validator: (value) => (value == null || value.trim().isEmpty)
+                      ? 'Customer name is required'
+                      : null,
                 ),
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Customer name is required'
-                    : null,
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: TextFormField(
-                      controller: _phoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'Phone',
-                        border: OutlineInputBorder(),
-                        isDense: true,
+                AppSpacing.gapSm,
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: TextFormField(
+                        controller: _phoneController,
+                        decoration: appDesktopInputDecoration(
+                          labelText: 'Phone',
+                        ),
+                        validator: FieldValidators.phone,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
-                        isDense: true,
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _emailController,
+                        decoration: appDesktopInputDecoration(
+                          labelText: 'Email',
+                        ),
                       ),
                     ),
+                  ],
+                ),
+                AppSpacing.gapSm,
+                TextFormField(
+                  controller: _addressController,
+                  maxLines: 2,
+                  decoration: appDesktopInputDecoration(
+                    labelText: 'Address',
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _addressController,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Address',
-                  border: OutlineInputBorder(),
-                  isDense: true,
                 ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _notesController,
-                maxLines: 2,
-                maxLength: NotesSafety.maxLength,
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  border: OutlineInputBorder(),
-                  isDense: true,
+                AppSpacing.gapSm,
+                TextFormField(
+                  controller: _notesController,
+                  maxLines: 2,
+                  maxLength: NotesSafety.maxLength,
+                  decoration: appDesktopInputDecoration(
+                    labelText: 'Notes',
+                  ),
+                  validator: (value) =>
+                      NotesSafety.validate(value, fieldLabel: 'Customer notes'),
                 ),
-                validator: (value) =>
-                    NotesSafety.validate(value, fieldLabel: 'Customer notes'),
-              ),
-              const SizedBox(height: 8),
-              SwitchListTile(
-                title: const Text('Active'),
-                value: _isActive,
-                contentPadding: EdgeInsets.zero,
-                onChanged: (value) => setState(() => _isActive = value),
-              ),
-            ],
+                AppSpacing.gapSm,
+                SwitchListTile(
+                  title: const Text('Active'),
+                  value: _isActive,
+                  contentPadding: EdgeInsets.zero,
+                  onChanged: (value) => setState(() => _isActive = value),
+                ),
+              ],
+            ),
           ),
         ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: _submit,
+            child: Text(isEditing ? 'Save' : 'Create'),
+          ),
+        ],
       ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _submit,
-          child: Text(isEditing ? 'Save' : 'Create'),
-        ),
-      ],
     );
   }
 }

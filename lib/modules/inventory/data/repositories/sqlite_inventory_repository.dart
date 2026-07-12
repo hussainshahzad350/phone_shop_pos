@@ -5,6 +5,7 @@ import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/core/utils/id_helpers.dart';
+import 'package:phone_shop_pos/core/validation/field_validators.dart';
 import 'package:phone_shop_pos/modules/inventory/data/models/inventory_stock_model.dart';
 import 'package:phone_shop_pos/modules/inventory/data/models/serialized_stock_model.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/inventory_stock_entity.dart';
@@ -21,7 +22,6 @@ class SqliteInventoryRepository
       : _appDatabase = appDatabase;
 
   static final RegExp _digitsOnlyPattern = RegExp(r'^\d+$');
-  static final RegExp _imeiPattern = RegExp(r'^\d{14,15}$');
 
   final AppDatabase _appDatabase;
 
@@ -32,11 +32,11 @@ class SqliteInventoryRepository
     return guard<SerializedStockEntity>(() async {
       final imei1 = stock.imei1.trim();
       final imei2 = _normalizeOptional(stock.imei2);
-      if (imei1.isEmpty || !_imeiPattern.hasMatch(imei1)) {
+      if (imei1.isEmpty || !FieldValidators.isValidImei(imei1)) {
         throw StateError('Primary IMEI must be 14–15 digits.');
       }
       if (imei2 != null) {
-        if (!_imeiPattern.hasMatch(imei2)) {
+        if (!FieldValidators.isValidImei(imei2)) {
           throw StateError('Secondary IMEI must be 14–15 digits.');
         }
         if (imei1 == imei2) {
@@ -242,11 +242,10 @@ class SqliteInventoryRepository
         final where = StringBuffer('pm.is_active = 1');
         if (searchLike != null) {
           where.write(
-            ' AND (pm.name LIKE ? OR pm.sku LIKE ? OR pm.brand LIKE ?'
+            ' AND (pm.name LIKE ? OR pm.brand LIKE ?'
             ' OR ss.imei1 LIKE ? OR ss.imei2 LIKE ? OR ss.serial_number LIKE ?)',
           );
           args
-            ..add(searchLike)
             ..add(searchLike)
             ..add(searchLike)
             ..add(searchLike)
@@ -267,7 +266,6 @@ SELECT
   pm.name,
   pm.brand,
   pm.category,
-  pm.sku,
   ss.id AS serialized_stock_id,
   ss.imei1,
   ss.imei2,
@@ -298,9 +296,8 @@ LIMIT ?
         final args = <Object?>[];
         final where = StringBuffer('pm.is_active = 1');
         if (searchLike != null) {
-          where.write(' AND (pm.name LIKE ? OR pm.sku LIKE ? OR pm.brand LIKE ?)');
+          where.write(' AND (pm.name LIKE ? OR pm.brand LIKE ?)');
           args
-            ..add(searchLike)
             ..add(searchLike)
             ..add(searchLike);
         }
@@ -314,7 +311,6 @@ SELECT
   pm.name,
   pm.brand,
   pm.category,
-  pm.sku,
   NULL AS serialized_stock_id,
   NULL AS imei1,
   NULL AS imei2,
@@ -405,7 +401,6 @@ LIMIT ?
           pm.name,
           pm.brand,
           pm.category,
-          pm.sku,
           NULL AS serialized_stock_id,
           NULL AS imei1,
           NULL AS imei2,
@@ -437,7 +432,6 @@ LIMIT ?
         productName: row['name'] as String,
         brand: row['brand'] as String?,
         category: row['category'] as String?,
-        sku: row['sku'] as String?,
         serializedStockId: row['serialized_stock_id'] as String?,
         imei1: row['imei1'] as String?,
         imei2: row['imei2'] as String?,
@@ -456,7 +450,6 @@ LIMIT ?
       productName: row['name'] as String,
       brand: row['brand'] as String?,
       category: row['category'] as String?,
-      sku: row['sku'] as String?,
       inventoryStockId: row['inventory_stock_id'] as String?,
       quantity: (row['quantity'] as num?)?.toInt(),
       minQuantity: (row['min_quantity'] as num?)?.toInt(),

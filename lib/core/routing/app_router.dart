@@ -24,6 +24,8 @@ import 'package:phone_shop_pos/modules/repairing/presentation/screens/repairing_
 import 'package:phone_shop_pos/modules/reports/presentation/screens/reports_screen.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/screens/sales_billing_screen.dart';
 import 'package:phone_shop_pos/modules/settings/presentation/screens/settings_screen.dart';
+import 'package:phone_shop_pos/modules/suppliers/presentation/screens/supplier_detail_screen.dart';
+import 'package:phone_shop_pos/modules/suppliers/presentation/screens/supplier_list_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final navigatorKey = ref.watch(rootNavigatorKeyProvider);
@@ -157,6 +159,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   },
                   child: const MasterDataScreen(),
                 ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: '/suppliers',
+                builder: (context, state) => const SupplierListScreen(),
+                routes: <RouteBase>[
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) => SupplierDetailScreen(
+                      supplierId: state.pathParameters['id']!,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

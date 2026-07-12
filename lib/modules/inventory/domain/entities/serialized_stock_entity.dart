@@ -48,6 +48,7 @@ class SerializedStockEntity {
     this.sellingPrice,
     this.supplierId,
     this.notes,
+    this.purchaseDate,
     this.condition = SerializedStockCondition.newPhone,
     this.sellerName,
     this.sellerIdCard,
@@ -68,6 +69,9 @@ class SerializedStockEntity {
   final double? sellingPrice;
   final String? supplierId;
   final String? notes;
+  /// Explicit purchase date set at stock entry time (or edited later).
+  /// Falls back to [createdAt] when null (pre-v32 records).
+  final DateTime? purchaseDate;
   final DateTime createdAt;
   final DateTime updatedAt;
 

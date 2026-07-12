@@ -10,6 +10,7 @@ enum ReportsTab {
   customerLedger,
   supplierLedger,
   dealerIssues,
+  imeiSearch,
 }
 
 final selectedReportsTabProvider = StateProvider<ReportsTab>(

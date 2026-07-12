@@ -4,12 +4,14 @@ import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
+import 'package:phone_shop_pos/core/services/audit_logger.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/core/utils/id_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/data/models/product_model.dart';
 import 'package:phone_shop_pos/modules/inventory/data/models/serialized_stock_model.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
+import 'package:phone_shop_pos/modules/reports/domain/entities/imei_trace_entity.dart';
 import 'package:phone_shop_pos/modules/sales/data/models/sale_item_model.dart';
 import 'package:phone_shop_pos/modules/sales/data/models/sale_model.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
@@ -50,7 +52,7 @@ class SqliteSalesRepository
 
       if (trimmedQuery.isNotEmpty) {
         whereBuffer.write(
-          ' AND (sku LIKE ? OR barcode LIKE ? OR name LIKE ? OR brand LIKE ? OR category LIKE ?'
+          ' AND (barcode LIKE ? OR name LIKE ? OR brand LIKE ? OR category LIKE ?'
           ' OR EXISTS ('
           'SELECT 1 FROM ${TableNames.serializedStock} ss '
           'WHERE ss.product_model_id = ${TableNames.productModels}.id '
@@ -61,7 +63,6 @@ class SqliteSalesRepository
         final prefixQuery = '$trimmedQuery%';
         final containsQuery = '%$trimmedQuery%';
         args
-          ..add(prefixQuery)
           ..add(prefixQuery)
           ..add(containsQuery)
           ..add(containsQuery)
@@ -554,19 +555,110 @@ class SqliteSalesRepository
         }
 
         // Audit log
-        await transaction.insert(
-          TableNames.auditLogs,
-          <String, Object?>{
-            'id': IdHelpers.newId(prefix: 'aud'),
-            'action': 'void_sale',
-            'actor_id': voidedBy,
-            'entity_id': saleId,
-            'details': 'Sale voided. Reason: $trimmedReason',
-            'created_at': DateTimeHelpers.toSql(now),
-          },
+        await AuditLogger.record(
+          transaction,
+          action: 'void_sale',
+          entityId: saleId,
+          actorId: voidedBy,
+          details: 'Sale voided. Reason: $trimmedReason',
         );
       });
     }, operation: 'void_sale');
+  }
+
+  @override
+  Future<Result<Map<String, String>>> getSupplierNames(
+    List<String> supplierIds,
+  ) {
+    return guard<Map<String, String>>(() async {
+      final unique = supplierIds.toSet().where((id) => id.isNotEmpty).toList();
+      if (unique.isEmpty) {
+        return const <String, String>{};
+      }
+      final placeholders = unique.map((_) => '?').join(',');
+      final rows = await _appDatabase.database.rawQuery(
+        'SELECT id, name FROM ${TableNames.suppliers} WHERE id IN ($placeholders)',
+        unique,
+      );
+      return <String, String>{
+        for (final row in rows)
+          row['id'] as String: row['name'] as String,
+      };
+    }, operation: 'get_supplier_names');
+  }
+
+  @override
+  Future<Result<ImeiTraceEntity?>> getImeiTrace(String imei) {
+    return guard<ImeiTraceEntity?>(() async {
+      final trimmed = imei.trim();
+      if (trimmed.isEmpty) return null;
+
+      final rows = await QueryDiagnostics.trace(
+        label: 'sales.get_imei_trace',
+        action: () => _appDatabase.database.rawQuery(
+          '''
+          SELECT
+            ss.id            AS ss_id,
+            ss.imei1,
+            ss.imei2,
+            ss.stock_status,
+            ss.cost_price,
+            ss.purchase_date,
+            ss.remaining_warranty,
+            ss.created_at    AS ss_created_at,
+            pm.name          AS product_name,
+            pm.brand         AS brand_name,
+            sup.name         AS supplier_name,
+            s.invoice_number,
+            s.sale_date,
+            si.unit_price    AS sale_price,
+            c.name           AS customer_name,
+            c.phone          AS customer_phone
+          FROM ${TableNames.serializedStock} ss
+          LEFT JOIN ${TableNames.productModels}  pm  ON pm.id  = ss.product_model_id
+          LEFT JOIN ${TableNames.suppliers}      sup ON sup.id = ss.supplier_id
+          LEFT JOIN ${TableNames.saleItems}      si  ON si.serialized_stock_id = ss.id
+          LEFT JOIN ${TableNames.sales}          s   ON s.id  = si.sale_id
+                                                    AND s.status != 'void'
+          LEFT JOIN ${TableNames.customers}      c   ON c.id  = s.customer_id
+          WHERE ss.imei1 = ? OR ss.imei2 = ?
+          LIMIT 1
+          ''',
+          <Object?>[trimmed, trimmed],
+        ),
+      );
+
+      if (rows.isEmpty) return null;
+
+      final row = rows.first;
+      final rawPurchaseDate = row['purchase_date'] as String?;
+      final rawCreatedAt = row['ss_created_at'] as String?;
+      final purchaseDate = rawPurchaseDate != null
+          ? DateTimeHelpers.fromSql(rawPurchaseDate)
+          : (rawCreatedAt != null ? DateTimeHelpers.fromSql(rawCreatedAt) : null);
+
+      final rawSaleDate = row['sale_date'] as String?;
+
+      return ImeiTraceEntity(
+        serializedStockId: row['ss_id'] as String,
+        imei1: row['imei1'] as String,
+        imei2: row['imei2'] as String?,
+        productName: (row['product_name'] as String?) ?? '-',
+        brandName: (row['brand_name'] as String?) ?? '-',
+        stockStatus: (row['stock_status'] as String?) ?? 'in_stock',
+        costPrice: (row['cost_price'] as num?)?.toDouble() ?? 0,
+        purchaseDate: purchaseDate,
+        supplierName: row['supplier_name'] as String?,
+        saleDate: rawSaleDate != null
+            ? DateTimeHelpers.fromSql(rawSaleDate)
+            : null,
+        salePrice: (row['sale_price'] as num?)?.toDouble(),
+        customerName: row['customer_name'] as String?,
+        customerPhone: row['customer_phone'] as String?,
+        invoiceNumber: row['invoice_number'] as String?,
+        remainingWarranty: row['remaining_warranty'] as String?,
+      );
+    }, operation: 'get_imei_trace');
   }
 
   void _validateSaleRequest({

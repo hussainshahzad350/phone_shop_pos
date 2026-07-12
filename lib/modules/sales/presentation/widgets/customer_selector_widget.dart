@@ -1,9 +1,8 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:phone_shop_pos/core/errors/app_error.dart';
+import 'package:phone_shop_pos/core/utils/debouncer.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/customer_option_entity.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/billing_state_provider.dart';
@@ -40,7 +39,7 @@ class _CustomerSelectorWidgetState
   final LayerLink _layerLink = LayerLink();
   final OverlayPortalController _overlayController = OverlayPortalController();
   final Object _tapGroupId = Object();
-  Timer? _searchDebounce;
+  final _searchDebounce = Debouncer();
   CustomerOptionEntity? _selectedCustomer;
   List<CustomerOptionEntity> _customers = const <CustomerOptionEntity>[];
   bool _customersLoading = false;
@@ -58,7 +57,7 @@ class _CustomerSelectorWidgetState
 
   @override
   void dispose() {
-    _searchDebounce?.cancel();
+    _searchDebounce.cancel();
     _searchFocusNode.removeListener(_handleFocusChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
@@ -244,7 +243,7 @@ class _CustomerSelectorWidgetState
     // Start the search empty so the user can type a fresh query instead of
     // editing the displayed selection label.
     _searchController.clear();
-    _searchDebounce?.cancel();
+    _searchDebounce.cancel();
     if (widget.customers == null) {
       ref.read(billingStateProvider.notifier).setCustomerSearchQuery('');
     }
@@ -260,7 +259,7 @@ class _CustomerSelectorWidgetState
     if (!_isDropdownOpen) {
       return;
     }
-    _searchDebounce?.cancel();
+    _searchDebounce.cancel();
     setState(() {
       _isDropdownOpen = false;
       _showAllCustomers = false;
@@ -283,8 +282,7 @@ class _CustomerSelectorWidgetState
     if (widget.customers != null) {
       return;
     }
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+    _searchDebounce.run(() {
       if (!mounted) {
         return;
       }
@@ -299,7 +297,7 @@ class _CustomerSelectorWidgetState
   }
 
   void _clearSelection() {
-    _searchDebounce?.cancel();
+    _searchDebounce.cancel();
     if (widget.customers == null) {
       ref.read(billingStateProvider.notifier).setCustomerSearchQuery('');
     }
@@ -315,7 +313,7 @@ class _CustomerSelectorWidgetState
   }
 
   void _selectCustomer(String? selected) {
-    _searchDebounce?.cancel();
+    _searchDebounce.cancel();
     if (widget.customers == null) {
       ref.read(billingStateProvider.notifier).setCustomerSearchQuery('');
     }

@@ -22,7 +22,7 @@ class InventorySearchBar extends StatelessWidget {
       focusNode: focusNode,
       autofocus: autofocus,
       onChanged: onChanged,
-      hintText: 'Search by name, IMEI, SKU, brand...',
+      hintText: 'Search by name, IMEI, brand...',
     );
   }
 }

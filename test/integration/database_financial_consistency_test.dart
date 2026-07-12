@@ -2447,7 +2447,6 @@ class _ConsistencyContext {
         ProductEntity(
           id: id,
           name: name,
-          sku: sku,
           purchasePrice: purchasePrice,
           salePrice: salePrice,
           hasImei: hasImei,

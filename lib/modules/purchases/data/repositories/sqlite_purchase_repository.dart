@@ -7,6 +7,7 @@ import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/core/utils/imei_helpers.dart';
 import 'package:phone_shop_pos/core/utils/id_helpers.dart';
+import 'package:phone_shop_pos/core/validation/field_validators.dart';
 import 'package:phone_shop_pos/modules/inventory/data/models/product_model.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
@@ -31,8 +32,6 @@ class SqlitePurchaseRepository
     required LedgerPostingService? ledgerPostingService,
   })  : _appDatabase = appDatabase,
         _ledgerPostingService = ledgerPostingService;
-
-  static final RegExp _imeiPattern = RegExp(r'^\d{14,15}$');
 
   final AppDatabase _appDatabase;
   final LedgerPostingService? _ledgerPostingService;
@@ -92,12 +91,11 @@ class SqlitePurchaseRepository
 
       if (trimmedQuery.isNotEmpty) {
         whereBuffer.write(
-          ' AND (name LIKE ? OR sku LIKE ? OR barcode LIKE ? OR brand LIKE ?)',
+          ' AND (name LIKE ? OR barcode LIKE ? OR brand LIKE ?)',
         );
         final prefixQuery = '$trimmedQuery%';
         final likeQuery = '%$trimmedQuery%';
         args
-          ..add(prefixQuery)
           ..add(prefixQuery)
           ..add(prefixQuery)
           ..add(likeQuery);
@@ -327,13 +325,13 @@ class SqlitePurchaseRepository
               final normalizedSerial =
                   (rawSerial == null || rawSerial.isEmpty) ? null : rawSerial;
               if (normalizedImei1.isEmpty ||
-                  !_imeiPattern.hasMatch(normalizedImei1)) {
+                  !FieldValidators.isValidImei(normalizedImei1)) {
                 throw StateError(
                   '${item.productName} contains an invalid IMEI format.',
                 );
               }
               if (normalizedImei2 != null) {
-                if (!_imeiPattern.hasMatch(normalizedImei2)) {
+                if (!FieldValidators.isValidImei(normalizedImei2)) {
                   throw StateError(
                     '${item.productName} contains an invalid IMEI format.',
                   );
@@ -378,6 +376,7 @@ class SqlitePurchaseRepository
                 'stock_status': SerializedStockStatus.inStock.value,
                 'supplier_id': item.supplierId ?? supplierId,
                 'notes': null,
+                'purchase_date': DateTimeHelpers.toSql(now),
                 'condition': entry.condition.value,
                 'seller_name': _normalizeOptional(entry.sellerName),
                 'seller_id_card': _normalizeOptional(entry.sellerIdCard),
@@ -691,7 +690,7 @@ class SqlitePurchaseRepository
           if (normalizedImei1.isEmpty) {
             throw StateError('${item.productName} contains an empty IMEI.');
           }
-          if (!_imeiPattern.hasMatch(normalizedImei1)) {
+          if (!FieldValidators.isValidImei(normalizedImei1)) {
             throw StateError(
               '${item.productName} contains an invalid IMEI format.',
             );
@@ -701,7 +700,7 @@ class SqlitePurchaseRepository
                 '${item.productName} contains a negative IMEI cost.');
           }
           if (normalizedImei2 != null && normalizedImei2.isNotEmpty) {
-            if (!_imeiPattern.hasMatch(normalizedImei2)) {
+            if (!FieldValidators.isValidImei(normalizedImei2)) {
               throw StateError(
                 '${item.productName} contains an invalid IMEI format.',
               );

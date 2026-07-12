@@ -3,6 +3,7 @@ import 'package:phone_shop_pos/core/database/base_repository.dart';
 import 'package:phone_shop_pos/core/database/query_diagnostics.dart';
 import 'package:phone_shop_pos/core/database/table_names.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
+import 'package:phone_shop_pos/core/services/audit_logger.dart';
 import 'package:phone_shop_pos/core/utils/date_time_helpers.dart';
 import 'package:phone_shop_pos/core/utils/id_helpers.dart';
 import 'package:phone_shop_pos/modules/customers/data/models/customer_model.dart';
@@ -138,5 +139,42 @@ class SqliteCustomerRepository
       );
       return (rows.first['balance'] as num?)?.toDouble() ?? 0.0;
     }, operation: 'get_outstanding_balance');
+  }
+
+  @override
+  Future<Result<void>> deleteCustomer(String id) {
+    return guard<void>(() async {
+      await _appDatabase.runInTransaction<void>((transaction) async {
+        final salesRows = await transaction.rawQuery(
+          'SELECT COUNT(*) AS cnt FROM ${TableNames.sales} WHERE customer_id = ?',
+          <Object?>[id],
+        );
+        final salesCount = (salesRows.first['cnt'] as num?)?.toInt() ?? 0;
+        final paymentRows = await transaction.rawQuery(
+          'SELECT COUNT(*) AS cnt FROM ${TableNames.customerPaymentTransactions} WHERE customer_id = ?',
+          <Object?>[id],
+        );
+        final paymentCount = (paymentRows.first['cnt'] as num?)?.toInt() ?? 0;
+        final linked = salesCount + paymentCount;
+        if (linked > 0) {
+          throw StateError(
+            'Cannot delete customer: $linked linked record(s) '
+            '($salesCount sale(s)/invoice(s), $paymentCount payment '
+            'transaction(s)). Archive it instead.',
+          );
+        }
+        await transaction.delete(
+          TableNames.customers,
+          where: 'id = ?',
+          whereArgs: <Object?>[id],
+        );
+        await AuditLogger.record(
+          transaction,
+          action: 'delete_customer',
+          entityId: id,
+          details: 'Hard-deleted customer with no linked records.',
+        );
+      });
+    }, operation: 'delete_customer');
   }
 }

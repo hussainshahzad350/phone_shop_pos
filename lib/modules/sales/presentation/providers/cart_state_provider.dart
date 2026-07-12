@@ -20,6 +20,8 @@ class CartStateNotifier extends StateNotifier<List<CartItemEntity>> {
     String? imei,
     String? imei2,
     String? serialNumber,
+    DateTime? purchaseDate,
+    String? supplierName,
   }) async {
     final service = await _ref.read(salesServiceProvider.future);
     final result = service.addToCart(
@@ -31,6 +33,8 @@ class CartStateNotifier extends StateNotifier<List<CartItemEntity>> {
       imei: imei,
       imei2: imei2,
       serialNumber: serialNumber,
+      purchaseDate: purchaseDate,
+      supplierName: supplierName,
     );
 
     if (result.isSuccess) {

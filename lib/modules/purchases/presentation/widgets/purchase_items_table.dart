@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class PurchaseItemsTable extends StatefulWidget {
   const PurchaseItemsTable({
@@ -44,8 +45,9 @@ class _PurchaseItemsTableState extends State<PurchaseItemsTable> {
   @override
   Widget build(BuildContext context) {
     if (widget.items.isEmpty) {
-      return const Center(
-        child: Text('No items added. Search for a product to begin.'),
+      return const AppEmptyState(
+        message: 'No items added. Search for a product to begin.',
+        icon: Icons.inventory_2_outlined,
       );
     }
 

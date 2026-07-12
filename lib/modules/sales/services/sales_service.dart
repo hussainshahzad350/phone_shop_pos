@@ -25,6 +25,8 @@ class SalesService {
     String? imei,
     String? imei2,
     String? serialNumber,
+    DateTime? purchaseDate,
+    String? supplierName,
   }) {
     if (product.hasImei) {
       if (serializedStockId == null || serializedStockId.isEmpty) {
@@ -61,6 +63,8 @@ class SalesService {
             imei: imei,
             imei2: imei2,
             serialNumber: serialNumber,
+            purchaseDate: purchaseDate,
+            supplierName: supplierName,
           ),
         ],
       );

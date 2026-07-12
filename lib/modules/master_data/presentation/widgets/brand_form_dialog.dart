@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/brand_entity.dart';
 
 class BrandFormData {
@@ -47,50 +49,50 @@ class _BrandFormDialogState extends State<BrandFormDialog> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.initial != null;
-    return AlertDialog(
-      title: Text(isEditing ? 'Edit Brand' : 'Add Brand'),
-      content: SizedBox(
-        width: 420,
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              TextFormField(
-                controller: _nameController,
-                autofocus: true,
-                textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) => _submit(),
-                decoration: const InputDecoration(
-                  labelText: 'Brand Name',
-                  border: OutlineInputBorder(),
-                  isDense: true,
+    return AppDialogEscToClose(
+      child: AlertDialog(
+        title: Text(isEditing ? 'Edit Brand' : 'Add Brand'),
+        content: SizedBox(
+          width: 420,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                TextFormField(
+                  controller: _nameController,
+                  autofocus: true,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _submit(),
+                  decoration: appDesktopInputDecoration(
+                    labelText: 'Brand Name',
+                  ),
+                  validator: (value) => (value == null || value.trim().isEmpty)
+                      ? 'Brand name is required'
+                      : null,
                 ),
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Brand name is required'
-                    : null,
-              ),
-              const SizedBox(height: 8),
-              SwitchListTile(
-                title: const Text('Active'),
-                value: _isActive,
-                contentPadding: EdgeInsets.zero,
-                onChanged: (value) => setState(() => _isActive = value),
-              ),
-            ],
+                AppSpacing.gapSm,
+                SwitchListTile(
+                  title: const Text('Active'),
+                  value: _isActive,
+                  contentPadding: EdgeInsets.zero,
+                  onChanged: (value) => setState(() => _isActive = value),
+                ),
+              ],
+            ),
           ),
         ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: _submit,
+            child: Text(isEditing ? 'Save' : 'Create'),
+          ),
+        ],
       ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _submit,
-          child: Text(isEditing ? 'Save' : 'Create'),
-        ),
-      ],
     );
   }
 }

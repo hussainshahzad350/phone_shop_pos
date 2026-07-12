@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_low_stock_entity.dart';
 
 class DashboardLowStockPanel extends StatelessWidget {
@@ -22,7 +23,10 @@ class DashboardLowStockPanel extends StatelessWidget {
         const SizedBox(height: 8),
         Expanded(
           child: rows.isEmpty
-              ? const Center(child: Text('No low stock alerts.'))
+              ? const AppEmptyState(
+                  message: 'No low stock alerts.',
+                  icon: Icons.check_circle_outline,
+                )
               : ListView.separated(
                   itemCount: rows.length,
                   separatorBuilder: (_, __) => const Divider(height: 1),

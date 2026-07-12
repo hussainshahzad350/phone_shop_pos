@@ -279,6 +279,11 @@ const List<DesktopNavigationItem> _desktopNavItems = <DesktopNavigationItem>[
     route: '/master-data',
   ),
   DesktopNavigationItem(
+    label: 'Suppliers',
+    icon: Icons.local_shipping_outlined,
+    route: '/suppliers',
+  ),
+  DesktopNavigationItem(
     label: 'Repairing',
     icon: Icons.build_outlined,
     route: '/repairing',

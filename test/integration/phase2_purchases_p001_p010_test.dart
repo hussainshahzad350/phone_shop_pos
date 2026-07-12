@@ -452,7 +452,6 @@ class _Phase2BatchContext {
         ProductEntity(
           id: id,
           name: name,
-          sku: sku,
           purchasePrice: purchasePrice,
           salePrice: salePrice,
           hasImei: hasImei,

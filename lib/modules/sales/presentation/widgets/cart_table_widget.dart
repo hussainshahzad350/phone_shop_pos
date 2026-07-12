@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class CartTableWidget extends StatefulWidget {
   const CartTableWidget({
@@ -41,7 +42,10 @@ class _CartTableWidgetState extends State<CartTableWidget> {
   @override
   Widget build(BuildContext context) {
     if (widget.items.isEmpty) {
-      return const Center(child: Text('Cart is empty'));
+      return const AppEmptyState(
+        message: 'Cart is empty',
+        icon: Icons.shopping_cart_outlined,
+      );
     }
 
     return Scrollbar(
@@ -207,10 +211,22 @@ class _CartItemCardState extends State<_CartItemCard> {
                 spacing: 10,
                 runSpacing: 8,
                 children: <Widget>[
-                  _InfoChip(
-                    label: 'IMEI',
-                    value: _serializedLabel(item),
-                  ),
+                  if (item.hasImei)
+                    _InfoChip(
+                      label: 'IMEI',
+                      value: _serializedLabel(item),
+                    ),
+                  if (item.purchaseDate != null)
+                    _InfoChip(
+                      label: 'Added On',
+                      value: FormattingHelpers.dateYmd(item.purchaseDate!),
+                    ),
+                  if (item.supplierName != null &&
+                      item.supplierName!.trim().isNotEmpty)
+                    _InfoChip(
+                      label: 'Supplier',
+                      value: item.supplierName!,
+                    ),
                 ],
               ),
             ],
@@ -363,6 +379,7 @@ class _QtyStepper extends StatelessWidget {
         children: <Widget>[
           IconButton(
             icon: const Icon(Icons.remove_circle_outline),
+            tooltip: 'Decrease quantity',
             onPressed: onDecrease,
             visualDensity: VisualDensity.compact,
           ),
@@ -377,6 +394,7 @@ class _QtyStepper extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
+            tooltip: 'Increase quantity',
             onPressed: onIncrease,
             visualDensity: VisualDensity.compact,
           ),

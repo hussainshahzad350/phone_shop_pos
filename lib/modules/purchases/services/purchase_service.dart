@@ -3,6 +3,7 @@ import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/utils/imei_helpers.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
+import 'package:phone_shop_pos/core/validation/field_validators.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_completion_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_entity.dart';
@@ -14,8 +15,6 @@ class PurchaseService {
   const PurchaseService({
     required PurchaseRepository repository,
   }) : _repository = repository;
-
-  static final RegExp _imeiPattern = RegExp(r'^\d{14,15}$');
 
   final PurchaseRepository _repository;
 
@@ -253,7 +252,7 @@ class PurchaseService {
     }
 
     // Phase 5: IMEI format validation — standard IMEIs are exactly 15 digits.
-    if (!_imeiPattern.hasMatch(trimmed)) {
+    if (!FieldValidators.isValidImei(trimmed)) {
       return const Failure<void>(
         AppError(
           code: 'invalid_imei_format',

@@ -47,7 +47,7 @@ class AppDatabase {
 
     for (var attempt = 1; attempt <= 3; attempt++) {
       try {
-        return await _localDatabaseService.factory.openDatabase(
+        final database = await _localDatabaseService.factory.openDatabase(
           databasePath,
           options: OpenDatabaseOptions(
             version: _migrationService.latestVersion,
@@ -57,6 +57,12 @@ class AppDatabase {
             onUpgrade: _migrationService.onUpgrade,
           ),
         );
+        // onConfigure leaves foreign_keys OFF for the duration of the
+        // onCreate/onUpgrade transaction (see its doc comment). Re-enable it
+        // now that openDatabase() has returned and that transaction has
+        // committed, so enforcement is actually active for the app session.
+        await database.execute(DatabaseConstants.sqliteForeignKeysOn);
+        return database;
       } on DatabaseException catch (error) {
         lastError = error;
         if (!_isRecoverableLockError(error)) {
@@ -269,7 +275,6 @@ class AppDatabase {
         'name': 'Samsung Galaxy A54 8/256',
         'brand': 'Samsung',
         'category': 'Phones',
-        'sku': 'SAM-A54-8256',
         'purchase_price': 98000,
         'sale_price': 105000,
         'has_imei': 1,
@@ -282,7 +287,6 @@ class AppDatabase {
         'name': 'Samsung Galaxy S23 8/128',
         'brand': 'Samsung',
         'category': 'Phones',
-        'sku': 'SAM-S23-8128',
         'purchase_price': 175000,
         'sale_price': 185000,
         'has_imei': 1,
@@ -295,7 +299,6 @@ class AppDatabase {
         'name': 'iPhone 14 128GB',
         'brand': 'Apple',
         'category': 'Phones',
-        'sku': 'APL-IP14-128',
         'purchase_price': 220000,
         'sale_price': 235000,
         'has_imei': 1,
@@ -308,7 +311,6 @@ class AppDatabase {
         'name': 'Redmi 12 4/128',
         'brand': 'Xiaomi',
         'category': 'Phones',
-        'sku': 'XMI-RD12-4128',
         'purchase_price': 38000,
         'sale_price': 42000,
         'has_imei': 1,
@@ -321,7 +323,6 @@ class AppDatabase {
         'name': 'Type-C Data Cable',
         'brand': 'Anker',
         'category': 'Accessories',
-        'sku': 'ACC-CABLE-001',
         'purchase_price': 300,
         'sale_price': 500,
         'has_imei': 0,
@@ -334,7 +335,6 @@ class AppDatabase {
         'name': 'Fast Charger 25W',
         'brand': 'Baseus',
         'category': 'Accessories',
-        'sku': 'ACC-CHARGER-025',
         'purchase_price': 1200,
         'sale_price': 1800,
         'has_imei': 0,
@@ -347,7 +347,6 @@ class AppDatabase {
         'name': 'Tempered Glass Screen Guard',
         'brand': 'Nillkin',
         'category': 'Accessories',
-        'sku': 'ACC-TG-UNI',
         'purchase_price': 150,
         'sale_price': 300,
         'has_imei': 0,
@@ -360,7 +359,6 @@ class AppDatabase {
         'name': 'Silicone Back Cover',
         'brand': 'Generic',
         'category': 'Accessories',
-        'sku': 'ACC-COVER-UNI',
         'purchase_price': 80,
         'sale_price': 150,
         'has_imei': 0,
@@ -373,7 +371,6 @@ class AppDatabase {
         'name': 'TWS Earbuds A6',
         'brand': 'Baseus',
         'category': 'Accessories',
-        'sku': 'ACC-TWS-A6',
         'purchase_price': 1800,
         'sale_price': 2500,
         'has_imei': 0,

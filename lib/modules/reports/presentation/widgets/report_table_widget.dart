@@ -27,7 +27,7 @@ class ReportTableWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (rows.isEmpty) {
-      return Center(child: Text(emptyMessage));
+      return AppEmptyState(message: emptyMessage);
     }
 
     final layout =

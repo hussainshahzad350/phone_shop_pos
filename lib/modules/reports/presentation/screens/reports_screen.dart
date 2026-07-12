@@ -17,6 +17,7 @@ import 'package:phone_shop_pos/modules/reports/presentation/tabs/expenses_tab.da
 import 'package:phone_shop_pos/modules/reports/presentation/tabs/profit_tab.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/tabs/purchase_history_tab.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/tabs/dealer_issues_tab.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/tabs/imei_search_tab.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/tabs/repair_analytics_tab.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/tabs/supplier_ledger_tab.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/widgets/report_filter_bar_widget.dart';
@@ -428,6 +429,7 @@ class ReportsScreen extends ConsumerWidget {
       case ReportsTab.expenses:
       case ReportsTab.repairAnalytics:
       case ReportsTab.dealerIssues:
+      case ReportsTab.imeiSearch:
         return false;
     }
   }
@@ -496,6 +498,8 @@ class _ReportContent extends ConsumerWidget {
         return const RepairAnalyticsTab();
       case ReportsTab.dealerIssues:
         return const DealerIssuesTab();
+      case ReportsTab.imeiSearch:
+        return const ImeiSearchTab();
     }
   }
 }
@@ -524,5 +528,7 @@ String _tabLabel(ReportsTab tab) {
       return 'Supplier Ledger';
     case ReportsTab.dealerIssues:
       return 'Dealer Issues';
+    case ReportsTab.imeiSearch:
+      return 'IMEI Search';
   }
 }

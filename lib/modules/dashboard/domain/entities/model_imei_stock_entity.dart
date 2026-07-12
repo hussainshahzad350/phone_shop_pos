@@ -23,6 +23,8 @@ class ImeiStockItemEntity {
     required this.costPrice,
     required this.salePrice,
     required this.stockStatus,
+    this.purchaseDate,
+    this.supplierName,
   });
 
   final String serializedStockId;
@@ -32,4 +34,6 @@ class ImeiStockItemEntity {
   final double costPrice;
   final double salePrice;
   final String stockStatus;
+  final DateTime? purchaseDate;
+  final String? supplierName;
 }

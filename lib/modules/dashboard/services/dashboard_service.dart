@@ -36,6 +36,11 @@ class DashboardService with BaseRepositoryGuard {
     _inFlightKpisRequest = null;
   }
 
+  DateTime? _rowDate(Map<String, Object?> row, String column) {
+    final raw = row[column] as String?;
+    return raw == null ? null : DateTimeHelpers.fromSql(raw);
+  }
+
   Future<Result<DashboardKpisEntity>> getDashboardKpis() async {
     final now = _nowProvider();
     final cached = _cachedKpis;
@@ -457,9 +462,13 @@ class DashboardService with BaseRepositoryGuard {
         ss.serial_number,
         ss.cost_price,
         ss.selling_price AS sale_price,
-        ss.stock_status
+        ss.stock_status,
+        ss.purchase_date,
+        ss.created_at,
+        sup.name AS supplier_name
       FROM ${TableNames.serializedStock} ss
       JOIN ${TableNames.productModels} pm ON pm.id = ss.product_model_id
+      LEFT JOIN ${TableNames.suppliers} sup ON sup.id = ss.supplier_id
       WHERE pm.is_active = 1
         AND ss.stock_status = 'in_stock'
         AND pm.brand = ?
@@ -496,6 +505,9 @@ class DashboardService with BaseRepositoryGuard {
               costPrice: (row['cost_price'] as num?)?.toDouble() ?? 0,
               salePrice: (row['sale_price'] as num?)?.toDouble() ?? 0,
               stockStatus: (row['stock_status'] as String?) ?? 'in_stock',
+              purchaseDate: _rowDate(row, 'purchase_date') ??
+                  _rowDate(row, 'created_at'),
+              supplierName: row['supplier_name'] as String?,
             ));
 
         modelMap[modelId]!.quantity = modelMap[modelId]!.imeis.length;
@@ -522,9 +534,13 @@ class DashboardService with BaseRepositoryGuard {
         ss.serial_number,
         ss.cost_price,
         ss.selling_price AS sale_price,
-        ss.stock_status
+        ss.stock_status,
+        ss.purchase_date,
+        ss.created_at,
+        sup.name AS supplier_name
       FROM ${TableNames.serializedStock} ss
       JOIN ${TableNames.productModels} pm ON pm.id = ss.product_model_id
+      LEFT JOIN ${TableNames.suppliers} sup ON sup.id = ss.supplier_id
       WHERE pm.is_active = 1
         AND ss.stock_status = 'in_stock'
         AND pm.brand IS NOT NULL AND pm.brand != ''
@@ -566,6 +582,9 @@ class DashboardService with BaseRepositoryGuard {
           costPrice: (row['cost_price'] as num?)?.toDouble() ?? 0,
           salePrice: (row['sale_price'] as num?)?.toDouble() ?? 0,
           stockStatus: (row['stock_status'] as String?) ?? 'in_stock',
+          purchaseDate: _rowDate(row, 'purchase_date') ??
+              _rowDate(row, 'created_at'),
+          supplierName: row['supplier_name'] as String?,
         ));
         modelMap[modelId]!.quantity = modelMap[modelId]!.imeis.length;
       }

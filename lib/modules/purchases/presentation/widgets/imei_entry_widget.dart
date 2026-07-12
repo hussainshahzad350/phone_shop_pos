@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:phone_shop_pos/core/utils/cnic_helpers.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
-import 'package:phone_shop_pos/core/utils/imei_helpers.dart';
+import 'package:phone_shop_pos/core/utils/imei_bulk_parser.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 
@@ -32,14 +32,14 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
       TextEditingController();
   final TextEditingController _sellerPhoneController = TextEditingController();
 
-  late final ValueNotifier<List<_ParsedImeiLine>> _previewNotifier;
+  late final ValueNotifier<List<ParsedImeiLine>> _previewNotifier;
   double _defaultCost = 0;
 
   @override
   void initState() {
     super.initState();
     _defaultCost = widget.defaultCostPrice;
-    _previewNotifier = ValueNotifier<List<_ParsedImeiLine>>(const []);
+    _previewNotifier = ValueNotifier<List<ParsedImeiLine>>(const []);
     _sellerNameController.addListener(_refreshConfirmState);
     _sellerIdCardController.addListener(_refreshConfirmState);
     _conditionNotesController.addListener(_refreshConfirmState);
@@ -63,30 +63,12 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
   }
 
   void _parseInput(String text) {
-    final lines = text
-        .split(RegExp(r'[\n\r]+'))
-        .map((l) => l.trim())
-        .where((l) => l.isNotEmpty)
-        .toList();
-
-    final parsed = <_ParsedImeiLine>[];
-    for (final line in lines) {
-      final parts = line.split(RegExp(r'[,;\t]+'));
-      final imei1 = parts.isNotEmpty ? ImeiHelpers.normalize(parts[0]) : '';
-      if (imei1.isEmpty) {
-        continue;
-      }
-      final imei2 =
-          parts.length > 1 ? ImeiHelpers.normalizeNullable(parts[1]) : null;
-      final serial = parts.length > 2 ? parts[2].trim() : null;
-      parsed.add(_ParsedImeiLine(
-        imei1: imei1,
-        imei2: imei2?.isNotEmpty == true ? imei2 : null,
-        serialNumber: serial?.isNotEmpty == true ? serial : null,
-      ));
-    }
-
-    _previewNotifier.value = parsed;
+    // Format validation happens later via addImeiEntry/validateImeiEntry, but
+    // those don't reject a blank IMEI1 outright, so filter it here to avoid
+    // silently queuing an unusable entry.
+    _previewNotifier.value = ImeiBulkParser.parse(text)
+        .where((line) => line.imei1.isNotEmpty)
+        .toList(growable: false);
     _refreshConfirmState();
   }
 
@@ -177,7 +159,7 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
                 onChanged: _parseInput,
               ),
               const SizedBox(height: 8),
-              ValueListenableBuilder<List<_ParsedImeiLine>>(
+              ValueListenableBuilder<List<ParsedImeiLine>>(
                 valueListenable: _previewNotifier,
                 builder: (context, preview, _) {
                   if (preview.isEmpty) {
@@ -373,16 +355,4 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
     final trimmed = value.trim();
     return trimmed.isEmpty ? null : trimmed;
   }
-}
-
-class _ParsedImeiLine {
-  const _ParsedImeiLine({
-    required this.imei1,
-    this.imei2,
-    this.serialNumber,
-  });
-
-  final String imei1;
-  final String? imei2;
-  final String? serialNumber;
 }

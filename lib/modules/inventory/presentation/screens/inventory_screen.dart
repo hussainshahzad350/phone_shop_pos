@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +6,7 @@ import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
+import 'package:phone_shop_pos/core/utils/debouncer.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
@@ -36,12 +35,12 @@ class InventoryScreen extends ConsumerStatefulWidget {
 class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
-  Timer? _searchDebounce;
+  final _searchDebounce = Debouncer();
   int _handledShortcutToken = 0;
 
   @override
   void dispose() {
-    _searchDebounce?.cancel();
+    _searchDebounce.dispose();
     _searchController.dispose();
     _searchFocus.dispose();
     super.dispose();
@@ -56,8 +55,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   }
 
   void _debouncedSearch(String value) {
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 150), () {
+    _searchDebounce.run(() {
       if (!mounted) {
         return;
       }
@@ -118,7 +116,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: <Widget>[
-                    OutlinedButton.icon(
+                    FilledButton.icon(
                       onPressed: () async {
                         final inventoryService =
                             await ref.read(inventoryServiceProvider.future);
@@ -165,8 +163,8 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                       icon: const Icon(Icons.bookmark_outline),
                       label: const Text('Reserve Phone'),
                     ),
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
+                    const SizedBox(width: AppSpacing.sm),
+                    FilledButton.icon(
                       onPressed: () async {
                         final rows = stockAsync.valueOrNull ?? const <StockRowEntity>[];
                         await showDialog<void>(
@@ -178,7 +176,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                       icon: const Icon(Icons.tune),
                       label: const Text('Stock Adjustment'),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     OutlinedButton.icon(
                       onPressed: _refresh,
                       icon: const Icon(Icons.refresh),
@@ -186,7 +184,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                AppSpacing.gapSm,
                 summaryAsync.when(
                   data: (summary) => _SummaryCards(summary: summary),
                   loading: () => const SizedBox(
@@ -195,10 +193,13 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                   ),
                   error: (_, __) => const SizedBox(
                     height: 80,
-                    child: Center(child: Text('Failed to load summary.')),
+                    child: AppEmptyState(
+                      message: 'Failed to load summary.',
+                      icon: Icons.error_outline,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                AppSpacing.gapMd,
                 InventorySearchBar(
                   controller: _searchController,
                   focusNode: _searchFocus,

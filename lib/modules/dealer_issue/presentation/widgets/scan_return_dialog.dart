@@ -8,6 +8,13 @@ import 'package:phone_shop_pos/modules/dealer_issue/domain/entities/dealer_issue
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_issue_state_provider.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_providers.dart';
 
+// NOTE: this dialog is shown via showDialog, outside the go_router shell that
+// drives ScannerController's mode-routing/session-dedup, same deliberate
+// scope boundary as ImeiManagementScreen (see rollout Part 3/Feature 19). It
+// does not apply an IMEI-format regex — a malformed/unknown IMEI simply won't
+// match any dealer-issue row and surfaces as "not currently issued", which is
+// the correct behavior for a lookup-by-scan flow rather than a data-entry
+// form, so there is no duplicated format check to consolidate here.
 class ScanReturnDialog extends ConsumerStatefulWidget {
   const ScanReturnDialog({super.key});
 
@@ -141,6 +148,7 @@ class _ScanReturnDialogState extends ConsumerState<ScanReturnDialog> {
                       )
                     : IconButton(
                         icon: const Icon(Icons.search, size: 18),
+                        tooltip: 'Search',
                         onPressed: _lookup,
                       ),
               ),

@@ -385,24 +385,22 @@ class _BatchEContext {
   }
 
   Future<void> insertQuantityProduct(String id, String name) {
-    return _insertProduct(id: id, name: name, hasImei: false, sku: '$id-SKU');
+    return _insertProduct(id: id, name: name, hasImei: false);
   }
 
   Future<void> insertSerializedProduct(String id, String name) {
-    return _insertProduct(id: id, name: name, hasImei: true, sku: '$id-SKU');
+    return _insertProduct(id: id, name: name, hasImei: true);
   }
 
   Future<void> _insertProduct({
     required String id,
     required String name,
     required bool hasImei,
-    required String sku,
   }) async {
     final now = DateTimeHelpers.toSql(DateTime.utc(2026, 5, 18, 11));
     await _appDatabase.insert(TableNames.productModels, <String, Object?>{
       'id': id,
       'name': name,
-      'sku': sku,
       'purchase_price': 5000,
       'sale_price': 6500,
       'has_imei': hasImei ? 1 : 0,
@@ -478,12 +476,12 @@ class _BatchEContext {
   Future<List<Map<String, Object?>>> getStockRows({String? search}) {
     return _appDatabase.database.rawQuery(
       '''
-      SELECT pm.id, pm.name, pm.sku
+      SELECT pm.id, pm.name
       FROM ${TableNames.productModels} pm
-      WHERE (? IS NULL OR pm.name LIKE '%' || ? || '%' OR pm.sku LIKE '%' || ? || '%')
+      WHERE (? IS NULL OR pm.name LIKE '%' || ? || '%')
       LIMIT 200
       ''',
-      <Object?>[search, search, search],
+      <Object?>[search, search],
     );
   }
 

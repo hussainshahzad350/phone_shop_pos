@@ -10,16 +10,15 @@ class ProductEntity {
     required this.updatedAt,
     this.brand,
     this.category,
-    this.sku,
     this.barcode,
     this.minStockAlert = 0,
+    this.supplierId,
   });
 
   final String id;
   final String name;
   final String? brand;
   final String? category;
-  final String? sku;
   final String? barcode;
   final int minStockAlert;
   final double purchasePrice;
@@ -28,13 +27,13 @@ class ProductEntity {
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? supplierId;
 
   ProductEntity copyWith({
     String? id,
     String? name,
     String? brand,
     String? category,
-    String? sku,
     String? barcode,
     int? minStockAlert,
     double? purchasePrice,
@@ -43,17 +42,17 @@ class ProductEntity {
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? supplierId,
     bool clearBrand = false,
     bool clearCategory = false,
-    bool clearSku = false,
     bool clearBarcode = false,
+    bool clearSupplierId = false,
   }) {
     return ProductEntity(
       id: id ?? this.id,
       name: name ?? this.name,
       brand: clearBrand ? null : brand ?? this.brand,
       category: clearCategory ? null : category ?? this.category,
-      sku: clearSku ? null : sku ?? this.sku,
       barcode: clearBarcode ? null : barcode ?? this.barcode,
       minStockAlert: minStockAlert ?? this.minStockAlert,
       purchasePrice: purchasePrice ?? this.purchasePrice,
@@ -62,6 +61,7 @@ class ProductEntity {
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      supplierId: clearSupplierId ? null : supplierId ?? this.supplierId,
     );
   }
 }

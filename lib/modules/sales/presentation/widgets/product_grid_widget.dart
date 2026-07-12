@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_query_providers.dart';
+import 'package:phone_shop_pos/core/theme/app_breakpoints.dart';
+import 'package:phone_shop_pos/core/theme/app_motion.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 /// Max product cards shown in the quick stock bar. Beyond this, the user is
@@ -14,11 +16,13 @@ class ProductGridWidget extends ConsumerStatefulWidget {
   const ProductGridWidget({
     super.key,
     required this.onAddProduct,
+    required this.onModifyProduct,
     required this.onRetry,
     required this.onViewAllInInventory,
   });
 
   final ValueChanged<ProductEntity> onAddProduct;
+  final ValueChanged<ProductEntity> onModifyProduct;
   final VoidCallback onRetry;
   final VoidCallback onViewAllInInventory;
 
@@ -38,10 +42,12 @@ class _ProductGridWidgetState extends ConsumerState<ProductGridWidget> {
   @override
   Widget build(BuildContext context) {
     final productsAsync = ref.watch(productSearchResultsProvider);
+    final stockInfoAsync = ref.watch(productStockInfoProvider);
+    final stockInfo = stockInfoAsync.value ?? const <String, ProductStockInfo>{};
 
     return SizedBox(
-      // ~25% shorter than before so the cart below gets more room.
-      height: 118,
+      // Taller than before to fit the purchase-info block under each card.
+      height: 168,
       child: Card(
         child: productsAsync.when(
           // Keep the current cards visible while a new search loads instead of
@@ -54,7 +60,7 @@ class _ProductGridWidgetState extends ConsumerState<ProductGridWidget> {
             return LayoutBuilder(
               builder: (context, constraints) {
                 final mainAxisExtent =
-                    constraints.maxWidth >= 1400 ? 168.0 : 180.0;
+                    AppBreakpoints.productTileExtent(constraints.maxWidth);
                 final scrollStep = constraints.maxWidth * 0.75;
                 return Stack(
                   children: <Widget>[
@@ -81,8 +87,10 @@ class _ProductGridWidgetState extends ConsumerState<ProductGridWidget> {
                           }
                           return _ProductCardButton(
                             product: shown[index],
-                            onPressed: () =>
-                                widget.onAddProduct(shown[index]),
+                            stockInfo: stockInfo[shown[index].id],
+                            onSell: () => widget.onAddProduct(shown[index]),
+                            onModify: () =>
+                                widget.onModifyProduct(shown[index]),
                           );
                         },
                       ),
@@ -139,8 +147,8 @@ class _ProductGridWidgetState extends ConsumerState<ProductGridWidget> {
 
     await _scrollController.animateTo(
       target.toDouble(),
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeOutCubic,
+      duration: AppMotion.standardTransition,
+      curve: AppMotion.standardTransitionCurve,
     );
   }
 }
@@ -148,18 +156,24 @@ class _ProductGridWidgetState extends ConsumerState<ProductGridWidget> {
 class _ProductCardButton extends StatelessWidget {
   const _ProductCardButton({
     required this.product,
-    required this.onPressed,
+    required this.stockInfo,
+    required this.onSell,
+    required this.onModify,
   });
 
   final ProductEntity product;
-  final VoidCallback onPressed;
+  final ProductStockInfo? stockInfo;
+  final VoidCallback onSell;
+  final VoidCallback onModify;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return OutlinedButton(
-      onPressed: onPressed,
+      onPressed: onSell,
       style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.sm, AppSpacing.xs, AppSpacing.xs, AppSpacing.xs),
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         alignment: Alignment.centerLeft,
@@ -173,20 +187,100 @@ class _ProductCardButton extends StatelessWidget {
             product.name,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12),
+            style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: 2),
           Text(
             FormattingHelpers.currencyPkr(product.salePrice),
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+            style: theme.textTheme.labelSmall
+                ?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 2),
           Text(
             product.hasImei ? 'Serialized • IMEI' : 'Qty product',
-            style: const TextStyle(fontSize: 10),
+            // Below the smallest defined type-scale step (labelSmall=11) —
+            // deliberately kept as a fixed micro-size for this ultra-dense
+            // stock-bar card rather than growing the card to fit the scale.
+            style: TextStyle(
+              fontSize: 10,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          if (product.hasImei) ...<Widget>[
+            const SizedBox(height: 2),
+            _PurchaseInfoLine(stockInfo: stockInfo),
+          ],
+          const SizedBox(height: 4),
+          // ── Action row ──────────────────────────────────────────────────
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: SizedBox(
+                  height: 22,
+                  child: FilledButton(
+                    onPressed: onSell,
+                    style: FilledButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      textStyle: const TextStyle(fontSize: 10),
+                    ),
+                    child: const Text('Sale'),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              SizedBox(
+                height: 22,
+                child: OutlinedButton(
+                  onPressed: onModify,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    textStyle: const TextStyle(fontSize: 10),
+                    foregroundColor: theme.colorScheme.secondary,
+                    side: BorderSide(
+                      color: theme.colorScheme.secondary.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  child: const Text('Modify'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Purchase Date / Purchase Price / Supplier of the oldest in-stock unit,
+/// shown directly under the product so it always reflects the exact unit
+/// that will be sold next — never a second click or page away. Falls back to
+/// "-" per field when the data isn't available.
+class _PurchaseInfoLine extends StatelessWidget {
+  const _PurchaseInfoLine({required this.stockInfo});
+
+  final ProductStockInfo? stockInfo;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextStyle(
+      fontSize: 9,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+      height: 1.3,
+    );
+    final purchaseDate = stockInfo?.purchaseDate;
+    final costPrice = stockInfo?.costPrice;
+    final supplierName = stockInfo?.supplierName;
+    return Text(
+      'Added: ${purchaseDate == null ? '-' : FormattingHelpers.dateYmd(purchaseDate)}\n'
+      'Cost: ${costPrice == null ? '-' : FormattingHelpers.currencyPkr(costPrice)}\n'
+      'Supplier: ${supplierName ?? '-'}',
+      maxLines: 3,
+      overflow: TextOverflow.ellipsis,
+      style: style,
     );
   }
 }

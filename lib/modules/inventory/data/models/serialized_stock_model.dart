@@ -16,6 +16,7 @@ class SerializedStockModel extends BaseDbModel {
     this.sellingPrice,
     this.supplierId,
     this.notes,
+    this.purchaseDate,
     this.condition = SerializedStockCondition.newPhone,
     this.sellerName,
     this.sellerIdCard,
@@ -35,6 +36,7 @@ class SerializedStockModel extends BaseDbModel {
   final double? sellingPrice;
   final String? supplierId;
   final String? notes;
+  final DateTime? purchaseDate;
 
   // Used-phone fields
   final SerializedStockCondition condition;
@@ -47,6 +49,7 @@ class SerializedStockModel extends BaseDbModel {
   final String? sellerPhone;
 
   factory SerializedStockModel.fromMap(Map<String, Object?> map) {
+    final rawPurchaseDate = map['purchase_date'] as String?;
     return SerializedStockModel(
       id: map['id'] as String,
       productModelId: map['product_model_id'] as String,
@@ -58,6 +61,9 @@ class SerializedStockModel extends BaseDbModel {
       sellingPrice: (map['selling_price'] as num?)?.toDouble(),
       supplierId: map['supplier_id'] as String?,
       notes: map['notes'] as String?,
+      purchaseDate: rawPurchaseDate != null
+          ? DateTimeHelpers.fromSql(rawPurchaseDate)
+          : null,
       createdAt: DateTimeHelpers.fromSql(map['created_at'] as String),
       updatedAt: DateTimeHelpers.fromSql(map['updated_at'] as String),
       condition: SerializedStockCondition.fromValue(map['condition'] as String?),
@@ -83,6 +89,7 @@ class SerializedStockModel extends BaseDbModel {
       sellingPrice: entity.sellingPrice,
       supplierId: entity.supplierId,
       notes: entity.notes,
+      purchaseDate: entity.purchaseDate,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       condition: entity.condition,
@@ -108,6 +115,8 @@ class SerializedStockModel extends BaseDbModel {
       'selling_price': sellingPrice,
       'supplier_id': supplierId,
       'notes': notes,
+      'purchase_date':
+          purchaseDate != null ? DateTimeHelpers.toSql(purchaseDate!) : null,
       'condition': condition.value,
       'seller_name': sellerName,
       'seller_id_card': sellerIdCard,
@@ -131,6 +140,7 @@ class SerializedStockModel extends BaseDbModel {
       sellingPrice: sellingPrice,
       supplierId: supplierId,
       notes: notes,
+      purchaseDate: purchaseDate,
       createdAt: createdAt,
       updatedAt: updatedAt,
       condition: condition,

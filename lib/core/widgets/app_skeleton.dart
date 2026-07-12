@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phone_shop_pos/core/theme/app_motion.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 /// A pulsing placeholder block used while real content loads.
@@ -32,10 +33,10 @@ class _AppSkeletonState extends State<AppSkeleton>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1100),
+      duration: AppMotion.skeletonShimmer,
     )..repeat(reverse: true);
     _opacity = Tween<double>(begin: 0.35, end: 0.75).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _controller, curve: AppMotion.skeletonShimmerCurve),
     );
   }
 

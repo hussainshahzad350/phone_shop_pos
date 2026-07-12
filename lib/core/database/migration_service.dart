@@ -9,8 +9,18 @@ class MigrationService {
 
   int get latestVersion => DatabaseConstants.databaseVersion;
 
+  /// Foreign keys are deliberately left OFF here rather than ON. sqflite
+  /// wraps the entire onCreate/onUpgrade sequence in one implicit
+  /// transaction, and SQLite treats `PRAGMA foreign_keys` as a no-op while a
+  /// transaction is open — so any `= OFF`/`= ON` toggle a migration executes
+  /// internally (several do, to rebuild a table without tripping referential
+  /// checks against live dependent rows) has no effect if enforcement was
+  /// already ON going in. Leaving it OFF here and re-enabling it once
+  /// `openDatabase()` returns (see `AppDatabase._openWithRecovery`, which
+  /// runs after the transaction has committed) is what actually lets those
+  /// in-migration toggles do something.
   Future<void> onConfigure(Database database) async {
-    await database.execute(DatabaseConstants.sqliteForeignKeysOn);
+    await database.execute(DatabaseConstants.sqliteForeignKeysOff);
     await database.execute(DatabaseConstants.sqliteJournalModeWal);
     await database.execute(
       'PRAGMA busy_timeout = ${DatabaseConstants.sqliteBusyTimeoutMs};',
@@ -170,6 +180,14 @@ class MigrationService {
     }
     if (version == 31) {
       await _applyMigrationV31(database);
+      return;
+    }
+    if (version == 32) {
+      await _applyMigrationV32(database);
+      return;
+    }
+    if (version == 33) {
+      await _applyMigrationV33(database);
       return;
     }
     final statements = _migrationStatements[version];
@@ -511,6 +529,7 @@ class MigrationService {
           accessories TEXT,
           phone_condition_notes TEXT,
           seller_phone TEXT,
+          purchase_date TEXT,
           FOREIGN KEY (product_model_id) REFERENCES ${TableNames.productModels}(id)
             ON UPDATE CASCADE ON DELETE RESTRICT,
           FOREIGN KEY (supplier_id) REFERENCES ${TableNames.suppliers}(id)
@@ -2810,5 +2829,105 @@ class MigrationService {
     await database.execute(
       'CREATE INDEX IF NOT EXISTS idx_dealers_name ON ${TableNames.dealers}(name);',
     );
+  }
+
+  /// Migration v32: add `purchase_date` column to `serialized_stock`.
+  ///
+  /// Stores the user-visible purchase date per IMEI independently of the
+  /// system-generated `created_at` timestamp.  Backfilled from `created_at`
+  /// so existing records are not affected.
+  Future<void> _applyMigrationV32(Database database) async {
+    final cols = await database.rawQuery(
+      'PRAGMA table_info(${TableNames.serializedStock});',
+    );
+    final hasColumn = cols.any((r) => r['name'] == 'purchase_date');
+    if (!hasColumn) {
+      await database.execute(
+        'ALTER TABLE ${TableNames.serializedStock} ADD COLUMN purchase_date TEXT;',
+      );
+      await database.execute(
+        'UPDATE ${TableNames.serializedStock} SET purchase_date = created_at WHERE purchase_date IS NULL;',
+      );
+    }
+  }
+
+  /// Migration v33: Product Master no longer uses SKU (unused elsewhere in
+  /// the app after this rollout); replaced with a `supplier_id` FK so a
+  /// product model can reference its supplier from Supplier Master instead
+  /// of a free-text/duplicated value.
+  ///
+  /// Uses a DROP+CREATE-new-then-rename-into-place pattern rather than
+  /// renaming `product_models` itself — several other tables
+  /// (serialized_stock, inventory_stock, sale_items, purchase_items, ...)
+  /// hold a `FOREIGN KEY (product_model_id) REFERENCES product_models(id)`
+  /// clause, and with `legacy_alter_table` semantics, renaming a table that
+  /// already has dependents/indexes attached is exactly the pattern that
+  /// caused `sqlite_master` FK corruption for `_applyMigrationV27`'s
+  /// serialized_stock rebuild (see `_applyFreshInstallSalesChecks`'s
+  /// comment). Building the replacement under a temporary name and renaming
+  /// *that* (index-free, dependent-free) table into place avoids the issue
+  /// entirely — no legacy_alter_table pragma needed.
+  Future<void> _applyMigrationV33(Database database) async {
+    await database.execute('PRAGMA foreign_keys = OFF;');
+    try {
+      await database.execute(
+        '''
+        CREATE TABLE ${TableNames.productModels}_new (
+          id TEXT PRIMARY KEY NOT NULL,
+          name TEXT NOT NULL,
+          brand TEXT,
+          category TEXT,
+          purchase_price REAL NOT NULL DEFAULT 0,
+          sale_price REAL NOT NULL DEFAULT 0,
+          has_imei INTEGER NOT NULL CHECK (has_imei IN (0, 1)),
+          is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          barcode TEXT,
+          min_stock_alert INTEGER NOT NULL DEFAULT 0,
+          supplier_id TEXT,
+          FOREIGN KEY (supplier_id) REFERENCES ${TableNames.suppliers}(id)
+            ON UPDATE CASCADE ON DELETE SET NULL
+        );
+        ''',
+      );
+      await database.execute(
+        '''
+        INSERT INTO ${TableNames.productModels}_new (
+          id, name, brand, category, purchase_price, sale_price, has_imei,
+          is_active, created_at, updated_at, barcode, min_stock_alert
+        )
+        SELECT
+          id, name, brand, category, purchase_price, sale_price, has_imei,
+          is_active, created_at, updated_at, barcode,
+          COALESCE(min_stock_alert, 0)
+        FROM ${TableNames.productModels};
+        ''',
+      );
+      await database.execute(
+        'DROP TABLE ${TableNames.productModels};',
+      );
+      await database.execute(
+        'ALTER TABLE ${TableNames.productModels}_new RENAME TO ${TableNames.productModels};',
+      );
+
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_product_models_name ON ${TableNames.productModels}(name);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_product_models_has_imei ON ${TableNames.productModels}(has_imei);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_product_models_brand ON ${TableNames.productModels}(brand);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_product_models_barcode ON ${TableNames.productModels}(barcode);',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_product_models_supplier_id ON ${TableNames.productModels}(supplier_id);',
+      );
+    } finally {
+      await database.execute('PRAGMA foreign_keys = ON;');
+    }
   }
 }

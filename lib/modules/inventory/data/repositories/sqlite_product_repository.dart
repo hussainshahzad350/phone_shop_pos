@@ -26,7 +26,6 @@ class SqliteProductRepository
         name: product.name,
         brand: product.brand,
         category: product.category,
-        sku: product.sku,
         barcode: product.barcode,
         minStockAlert: product.minStockAlert,
         purchasePrice: product.purchasePrice,
@@ -35,6 +34,7 @@ class SqliteProductRepository
         isActive: product.isActive,
         createdAt: now,
         updatedAt: now,
+        supplierId: product.supplierId,
       );
       await _appDatabase.insert(TableNames.productModels, model.toMap());
       return model.toEntity();
@@ -75,13 +75,11 @@ class SqliteProductRepository
           where.write(' AND ');
         }
         where.write(
-          '(name LIKE ? OR sku LIKE ? OR brand LIKE ? OR category LIKE ? OR barcode LIKE ?)',
+          '(name LIKE ? OR brand LIKE ? OR category LIKE ? OR barcode LIKE ?)',
         );
-        final pq = '$trimmed%';
         final lq = '%$trimmed%';
         args
-          ..add(pq)
-          ..add(pq)
+          ..add(lq)
           ..add(lq)
           ..add(lq)
           ..add(lq);
@@ -120,7 +118,6 @@ class SqliteProductRepository
           'name': product.name,
           'brand': product.brand,
           'category': product.category,
-          'sku': product.sku,
           'barcode': product.barcode,
           'min_stock_alert': product.minStockAlert,
           'purchase_price': product.purchasePrice,
@@ -128,6 +125,7 @@ class SqliteProductRepository
           'has_imei': product.hasImei ? 1 : 0,
           'is_active': product.isActive ? 1 : 0,
           'updated_at': DateTimeHelpers.toSql(now),
+          'supplier_id': product.supplierId,
         },
         where: 'id = ?',
         whereArgs: <Object?>[product.id],
@@ -165,24 +163,5 @@ class SqliteProductRepository
         whereArgs: <Object?>[id],
       );
     }, operation: 'activate_product');
-  }
-
-  @override
-  Future<Result<bool>> isSkuUnique(String sku, {String? excludeId}) {
-    return guard<bool>(() async {
-      final trimmed = sku.trim();
-      if (trimmed.isEmpty) return true;
-      final where = excludeId != null ? 'sku = ? AND id != ?' : 'sku = ?';
-      final args = excludeId != null
-          ? <Object?>[trimmed, excludeId]
-          : <Object?>[trimmed];
-      final rows = await _appDatabase.queryTable(
-        TableNames.productModels,
-        where: where,
-        whereArgs: args,
-        limit: 1,
-      );
-      return rows.isEmpty;
-    }, operation: 'is_sku_unique');
   }
 }

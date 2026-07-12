@@ -64,8 +64,7 @@ void main() {
       expect(
         rows.every((row) =>
             (row.imei1?.contains('VIP-SEARCH-IMEI') ?? false) ||
-            row.productName.contains('VIP-SEARCH-IMEI') ||
-            (row.sku?.contains('VIP-SEARCH-IMEI') ?? false)),
+            row.productName.contains('VIP-SEARCH-IMEI')),
         isTrue,
       );
       expect(stopwatch.elapsedMilliseconds, lessThan(2500));
@@ -309,7 +308,6 @@ class _BatchDContext {
         id: productId,
         name: i == 7 ? 'VIP-SEARCH-IMEI Phone' : 'D Serialized $i',
         hasImei: true,
-        sku: 'D-SER-$i',
       );
       await insertSerializedStock(
         id: 'ser_d_$i',
@@ -325,7 +323,6 @@ class _BatchDContext {
         id: productId,
         name: i == 5 ? 'VIP-SEARCH-IMEI Accessory' : 'D Quantity $i',
         hasImei: false,
-        sku: i == 5 ? 'VIP-SEARCH-IMEI-SKU' : 'D-QTY-$i',
       );
       await insertInventoryStock(
         id: 'stk_d_$i',
@@ -345,7 +342,6 @@ class _BatchDContext {
         id: productId,
         name: 'D Low Pattern $i',
         hasImei: false,
-        sku: 'D-LOW-$i',
       );
       await insertInventoryStock(
         id: 'stk_low_d_$i',
@@ -357,20 +353,18 @@ class _BatchDContext {
   }
 
   Future<void> insertQuantityProduct(String id, String name) {
-    return insertProduct(id: id, name: name, hasImei: false, sku: '$id-SKU');
+    return insertProduct(id: id, name: name, hasImei: false);
   }
 
   Future<void> insertProduct({
     required String id,
     required String name,
     required bool hasImei,
-    required String sku,
   }) async {
     final now = DateTimeHelpers.toSql(DateTime.utc(2026, 5, 18, 9));
     await appDatabase.insert(TableNames.productModels, <String, Object?>{
       'id': id,
       'name': name,
-      'sku': sku,
       'purchase_price': 5000,
       'sale_price': 6500,
       'has_imei': hasImei ? 1 : 0,

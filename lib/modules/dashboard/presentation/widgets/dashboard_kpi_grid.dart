@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phone_shop_pos/core/theme/app_breakpoints.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_kpis_entity.dart';
@@ -56,13 +57,7 @@ class DashboardKpiGrid extends ConsumerWidget {
         LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            final crossAxisCount = width >= 1500
-                ? 5
-                : width >= 1100
-                    ? 4
-                    : width >= 760
-                        ? 3
-                        : 2;
+            final crossAxisCount = AppBreakpoints.kpiGridColumns(width);
 
             return GridView.builder(
               shrinkWrap: true,
@@ -72,7 +67,7 @@ class DashboardKpiGrid extends ConsumerWidget {
                 crossAxisCount: crossAxisCount,
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
-                childAspectRatio: width >= 1500 ? 2.6 : 2.3,
+                childAspectRatio: width >= AppBreakpoints.kpiGridWide ? 2.6 : 2.3,
               ),
               itemBuilder: (_, index) => _buildCard(
                 context,

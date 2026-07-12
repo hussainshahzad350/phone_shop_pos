@@ -25,7 +25,7 @@ class ProductSearchBar extends StatelessWidget {
       autofocus: autofocus,
       onChanged: onChanged,
       onSubmitted: onSubmitted,
-      hintText: 'Search product / SKU / brand',
+      hintText: 'Search product / brand / IMEI',
     );
   }
 }

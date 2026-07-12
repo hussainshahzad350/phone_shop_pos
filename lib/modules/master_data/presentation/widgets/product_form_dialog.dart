@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
+import 'package:phone_shop_pos/core/validation/field_validators.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
+import 'package:phone_shop_pos/modules/purchases/presentation/widgets/supplier_selector_widget.dart';
 
 class ProductFormData {
   const ProductFormData({
     required this.name,
     required this.brand,
     required this.category,
-    required this.sku,
+    required this.supplierId,
     required this.barcode,
     required this.minStockAlert,
     required this.purchasePrice,
@@ -19,7 +23,7 @@ class ProductFormData {
   final String name;
   final String? brand;
   final String? category;
-  final String? sku;
+  final String? supplierId;
   final String? barcode;
   final int minStockAlert;
   final double purchasePrice;
@@ -45,7 +49,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _categoryController;
-  late final TextEditingController _skuController;
   late final TextEditingController _barcodeController;
   late final TextEditingController _minStockController;
   late final TextEditingController _purchaseController;
@@ -53,7 +56,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
 
   final _nameFocus = FocusNode();
   final _categoryFocus = FocusNode();
-  final _skuFocus = FocusNode();
   final _barcodeFocus = FocusNode();
   final _purchaseFocus = FocusNode();
   final _saleFocus = FocusNode();
@@ -61,14 +63,16 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
 
   late bool _hasImei;
   String? _selectedBrand;
+  String? _selectedSupplierId;
 
   @override
   void initState() {
     super.initState();
     final initial = widget.initial;
     _nameController = TextEditingController(text: initial?.name ?? '');
-    _categoryController = TextEditingController(text: initial?.category ?? '');
-    _skuController = TextEditingController(text: initial?.sku ?? '');
+    // Default category = 'Phone'; default inventory type = Serialised IMEI.
+    _categoryController =
+        TextEditingController(text: initial?.category ?? 'Phone');
     _barcodeController = TextEditingController(text: initial?.barcode ?? '');
     _minStockController =
         TextEditingController(text: (initial?.minStockAlert ?? 0).toString());
@@ -78,22 +82,21 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
     _saleController = TextEditingController(
       text: FormattingHelpers.decimal(initial?.salePrice ?? 0),
     );
-    _hasImei = initial?.hasImei ?? false;
+    _hasImei = initial?.hasImei ?? true;
     _selectedBrand = _normalizedBrandOrNull(initial?.brand);
+    _selectedSupplierId = initial?.supplierId;
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _categoryController.dispose();
-    _skuController.dispose();
     _barcodeController.dispose();
     _minStockController.dispose();
     _purchaseController.dispose();
     _saleController.dispose();
     _nameFocus.dispose();
     _categoryFocus.dispose();
-    _skuFocus.dispose();
     _barcodeFocus.dispose();
     _purchaseFocus.dispose();
     _saleFocus.dispose();
@@ -109,7 +112,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
       name: _nameController.text.trim(),
       brand: _selectedBrand,
       category: _nullIfBlank(_categoryController.text),
-      sku: _nullIfBlank(_skuController.text),
+      supplierId: _selectedSupplierId,
       barcode: _nullIfBlank(_barcodeController.text),
       minStockAlert:
           FormattingHelpers.parsePositiveInt(_minStockController.text) ?? 0,
@@ -153,206 +156,190 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
       availableBrands.add(_selectedBrand!);
     }
 
-    return AlertDialog(
-      title: Text(isEditing ? 'Edit Product' : 'Add Product'),
-      content: SizedBox(
-        width: 560,
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              TextFormField(
-                controller: _nameController,
-                focusNode: _nameFocus,
-                autofocus: true,
-                textInputAction: TextInputAction.next,
-                onFieldSubmitted: (_) => _categoryFocus.requestFocus(),
-                decoration: const InputDecoration(
-                  labelText: 'Product Name',
-                  border: OutlineInputBorder(),
-                  isDense: true,
+    return AppDialogEscToClose(
+      child: AlertDialog(
+        title: Text(isEditing ? 'Edit Product' : 'Add Product'),
+        content: SizedBox(
+          width: 560,
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              shrinkWrap: true,
+              children: <Widget>[
+                TextFormField(
+                  controller: _nameController,
+                  focusNode: _nameFocus,
+                  autofocus: true,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => _categoryFocus.requestFocus(),
+                  decoration: appDesktopInputDecoration(
+                    labelText: 'Product Name',
+                  ),
+                  validator: (value) => (value == null || value.trim().isEmpty)
+                      ? 'Name is required'
+                      : null,
                 ),
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Name is required'
-                    : null,
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: DropdownMenu<String?>(
-                      initialSelection: _selectedBrand,
-                      enableFilter: true,
-                      requestFocusOnTap: true,
-                      expandedInsets: EdgeInsets.zero,
-                      label: const Text('Brand'),
-                      inputDecorationTheme: const InputDecorationTheme(
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                      dropdownMenuEntries: <DropdownMenuEntry<String?>>[
-                        const DropdownMenuEntry<String?>(
-                          value: null,
-                          label: '',
-                        ),
-                        ...availableBrands.map(
-                          (brand) => DropdownMenuEntry<String?>(
-                            value: brand,
-                            label: brand,
+                AppSpacing.gapSm,
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: DropdownMenu<String?>(
+                        initialSelection: _selectedBrand,
+                        enableFilter: true,
+                        requestFocusOnTap: true,
+                        expandedInsets: EdgeInsets.zero,
+                        label: const Text('Brand'),
+                        inputDecorationTheme: const InputDecorationTheme(
+                          border: OutlineInputBorder(
+                            borderRadius: AppRadii.lgRadius,
                           ),
+                          isDense: true,
                         ),
-                      ],
-                      onSelected: (value) {
-                        setState(() {
-                          _selectedBrand = value;
-                        });
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _categoryController,
-                      focusNode: _categoryFocus,
-                      textInputAction: TextInputAction.next,
-                      onFieldSubmitted: (_) => _skuFocus.requestFocus(),
-                      decoration: const InputDecoration(
-                        labelText: 'Category',
-                        border: OutlineInputBorder(),
-                        isDense: true,
+                        dropdownMenuEntries: <DropdownMenuEntry<String?>>[
+                          const DropdownMenuEntry<String?>(
+                            value: null,
+                            label: '',
+                          ),
+                          ...availableBrands.map(
+                            (brand) => DropdownMenuEntry<String?>(
+                              value: brand,
+                              label: brand,
+                            ),
+                          ),
+                        ],
+                        onSelected: (value) {
+                          setState(() {
+                            _selectedBrand = value;
+                          });
+                        },
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: TextFormField(
-                      controller: _skuController,
-                      focusNode: _skuFocus,
-                      textInputAction: TextInputAction.next,
-                      onFieldSubmitted: (_) => _barcodeFocus.requestFocus(),
-                      decoration: const InputDecoration(
-                        labelText: 'SKU',
-                        border: OutlineInputBorder(),
-                        isDense: true,
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _categoryController,
+                        focusNode: _categoryFocus,
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: (_) => _barcodeFocus.requestFocus(),
+                        decoration: appDesktopInputDecoration(
+                          labelText: 'Category',
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _barcodeController,
-                      focusNode: _barcodeFocus,
-                      textInputAction: TextInputAction.next,
-                      onFieldSubmitted: (_) => _purchaseFocus.requestFocus(),
-                      decoration: const InputDecoration(
-                        labelText: 'Barcode',
-                        border: OutlineInputBorder(),
-                        isDense: true,
+                  ],
+                ),
+                AppSpacing.gapSm,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Expanded(
+                      child: SupplierSelectorWidget(
+                        standalone: true,
+                        selectedSupplierId: _selectedSupplierId,
+                        onChanged: (value) =>
+                            setState(() => _selectedSupplierId = value),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: TextFormField(
-                      controller: _purchaseController,
-                      focusNode: _purchaseFocus,
-                      textInputAction: TextInputAction.next,
-                      onFieldSubmitted: (_) => _saleFocus.requestFocus(),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: const InputDecoration(
-                        labelText: 'Purchase Price',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                      validator: (value) =>
-                          FormattingHelpers.parseLocaleDecimal(value ?? '',
-                                      fallback: -1) <
-                                  0
-                              ? 'Enter valid purchase price'
-                              : null,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _saleController,
-                      focusNode: _saleFocus,
-                      textInputAction: TextInputAction.next,
-                      onFieldSubmitted: (_) => _minStockFocus.requestFocus(),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: const InputDecoration(
-                        labelText: 'Sale Price',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                      validator: (value) =>
-                          FormattingHelpers.parseLocaleDecimal(value ?? '',
-                                      fallback: -1) <
-                                  0
-                              ? 'Enter valid sale price'
-                              : null,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: TextFormField(
-                      controller: _minStockController,
-                      focusNode: _minStockFocus,
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _submit(),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: <TextInputFormatter>[
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: 'Min Stock Alert',
-                        border: OutlineInputBorder(),
-                        isDense: true,
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _barcodeController,
+                        focusNode: _barcodeFocus,
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: (_) => _purchaseFocus.requestFocus(),
+                        decoration: appDesktopInputDecoration(
+                          labelText: 'Barcode',
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SwitchListTile(
-                      value: _hasImei,
-                      title: const Text('Serialized (IMEI)'),
-                      contentPadding: EdgeInsets.zero,
-                      onChanged: (value) => setState(() => _hasImei = value),
+                  ],
+                ),
+                AppSpacing.gapSm,
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: TextFormField(
+                        controller: _purchaseController,
+                        focusNode: _purchaseFocus,
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: (_) => _saleFocus.requestFocus(),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: appDesktopInputDecoration(
+                          labelText: 'Purchase Price',
+                        ),
+                        validator: (value) => FieldValidators.nonNegativePrice(
+                          value,
+                          label: 'purchase price',
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _saleController,
+                        focusNode: _saleFocus,
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: (_) => _minStockFocus.requestFocus(),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: appDesktopInputDecoration(
+                          labelText: 'Sale Price',
+                        ),
+                        validator: (value) => FieldValidators.nonNegativePrice(
+                          value,
+                          label: 'sale price',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                AppSpacing.gapSm,
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: TextFormField(
+                        controller: _minStockController,
+                        focusNode: _minStockFocus,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _submit(),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: <TextInputFormatter>[
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        decoration: appDesktopInputDecoration(
+                          labelText: 'Min Stock Alert',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: SwitchListTile(
+                        value: _hasImei,
+                        title: const Text('Serialized (IMEI)'),
+                        contentPadding: EdgeInsets.zero,
+                        onChanged: (value) => setState(() => _hasImei = value),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: _submit,
+            child: Text(isEditing ? 'Save' : 'Create'),
+          ),
+        ],
       ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _submit,
-          child: Text(isEditing ? 'Save' : 'Create'),
-        ),
-      ],
     );
   }
 }

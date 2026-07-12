@@ -1,15 +1,13 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
+import 'package:phone_shop_pos/core/utils/debouncer.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/core/widgets/responsive_table_layout.dart';
 import 'package:phone_shop_pos/modules/customers/domain/entities/customer_entity.dart';
 import 'package:phone_shop_pos/modules/customers/presentation/providers/customer_providers.dart';
 import 'package:phone_shop_pos/modules/master_data/presentation/widgets/customer_form_dialog.dart';
-import 'package:phone_shop_pos/modules/reports/application/providers/report_query_providers.dart';
-import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_query_providers.dart';
+import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class CustomersPanel extends ConsumerStatefulWidget {
@@ -21,18 +19,17 @@ class CustomersPanel extends ConsumerStatefulWidget {
 
 class _CustomersPanelState extends ConsumerState<CustomersPanel> {
   final _searchController = TextEditingController();
-  Timer? _debounce;
+  final _debounce = Debouncer();
 
   @override
   void dispose() {
-    _debounce?.cancel();
+    _debounce.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
   void _onSearchChanged(String value) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 150), () {
+    _debounce.run(() {
       if (!mounted) {
         return;
       }
@@ -66,10 +63,7 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
     );
 
     if (result.isSuccess) {
-      ref.invalidate(customerListProvider);
-      ref.invalidate(customerSearchResultsProvider);
-      ref.invalidate(reportCustomerOptionsProvider);
-      ref.invalidate(customerLedgerSummaryProvider);
+      ref.read(reportWorkflowCoordinatorProvider).refreshAfterCustomerChange();
       AppNotifier.success('Customer created.');
     } else {
       AppNotifier.error(result.asFailure!.error.message);
@@ -98,10 +92,7 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
     );
 
     if (result.isSuccess) {
-      ref.invalidate(customerListProvider);
-      ref.invalidate(customerSearchResultsProvider);
-      ref.invalidate(reportCustomerOptionsProvider);
-      ref.invalidate(customerLedgerSummaryProvider);
+      ref.read(reportWorkflowCoordinatorProvider).refreshAfterCustomerChange();
       AppNotifier.success('Customer updated.');
     } else {
       AppNotifier.error(result.asFailure!.error.message);
@@ -131,13 +122,33 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
     );
 
     if (result.isSuccess) {
-      ref.invalidate(customerListProvider);
-      ref.invalidate(customerSearchResultsProvider);
-      ref.invalidate(reportCustomerOptionsProvider);
-      ref.invalidate(customerLedgerSummaryProvider);
+      ref.read(reportWorkflowCoordinatorProvider).refreshAfterCustomerChange();
       AppNotifier.info(
         customer.isActive ? 'Customer archived.' : 'Customer re-activated.',
       );
+    } else {
+      AppNotifier.error(result.asFailure!.error.message);
+    }
+  }
+
+  Future<void> _deleteCustomer(CustomerEntity customer) async {
+    final confirmed = await confirmHardDeleteDialog(
+      context,
+      entityLabel: 'Customer',
+      entityName: customer.name,
+      blockedHint: 'Customers with sales/invoice history cannot be deleted '
+          '— archive them instead.',
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    final repository = await ref.read(customerRepositoryProvider.future);
+    final result = await repository.deleteCustomer(customer.id);
+
+    if (result.isSuccess) {
+      ref.read(reportWorkflowCoordinatorProvider).refreshAfterCustomerChange();
+      AppNotifier.success('Customer deleted.');
     } else {
       AppNotifier.error(result.asFailure!.error.message);
     }
@@ -306,6 +317,17 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
                   ),
                   visualDensity: VisualDensity.compact,
                 ),
+                const SizedBox(width: AppSpacing.xs),
+                IconButton.filledTonal(
+                  tooltip: 'Delete permanently',
+                  onPressed: () => _deleteCustomer(item),
+                  icon: Icon(
+                    Icons.delete_outline,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                ),
               ],
             ),
           ),
@@ -358,32 +380,19 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
   }
 
   Widget _statusCell(bool isActive, {required double width}) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final bgColor = isActive
-        ? colorScheme.primaryContainer
-        : colorScheme.surfaceContainerHighest;
-    final fgColor = isActive
-        ? colorScheme.onPrimaryContainer
-        : colorScheme.onSurfaceVariant;
-
+    final colorScheme = Theme.of(context).colorScheme;
     return SizedBox(
       width: width,
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            isActive ? 'Active' : 'Archived',
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: fgColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+        child: AppStatusBadge(
+          label: isActive ? 'Active' : 'Archived',
+          color: isActive
+              ? colorScheme.primaryContainer
+              : colorScheme.surfaceContainerHighest,
+          foreground: isActive
+              ? colorScheme.onPrimaryContainer
+              : colorScheme.onSurfaceVariant,
         ),
       ),
     );
@@ -430,7 +439,10 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
               child: customersAsync.when(
                 data: _buildCustomersTable,
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => Center(child: Text('Error: $error')),
+                error: (error, _) => AppErrorState(
+                  message: 'Error loading customers: $error',
+                  onRetry: () => ref.invalidate(customerListProvider),
+                ),
               ),
             ),
           ),
@@ -492,7 +504,7 @@ class _CustomersTableLayout {
         case _CustomersTableColumn.status:
           return 130;
         case _CustomersTableColumn.actions:
-          return 136;
+          return 176;
       }
     }
     if (showMediumColumns) {
@@ -508,7 +520,7 @@ class _CustomersTableLayout {
         case _CustomersTableColumn.status:
           return 120;
         case _CustomersTableColumn.actions:
-          return 132;
+          return 172;
       }
     }
     switch (column) {
@@ -523,7 +535,7 @@ class _CustomersTableLayout {
       case _CustomersTableColumn.status:
         return 112;
       case _CustomersTableColumn.actions:
-        return 128;
+        return 168;
     }
   }
 }
