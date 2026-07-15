@@ -23,6 +23,7 @@
 | M-01 Desktop-only table tiers | ✅ **Completed (step 1)** — below 900px `AppDataTable` renders a single aligned table in a width-preserving horizontal scroll; desktop sticky header unchanged. A card-list tier remains optional polish. | `feat(responsive)` |
 | M-02 Fixed side panels (Sales/Purchase) | ✅ **Completed** — below 900px both screens stack: full-width cart/items table + summary bar opening the checkout/supplier panel in a bottom sheet (keyboard-inset aware). Wide layouts unchanged. | `feat(responsive)` ×2 |
 | Portrait pass (filter/action rows) | ✅ **Completed** — Inventory actions wrap; Repairing filter actions stack below 700px; Reports/ledger filters and Master Data tabs verified already adaptive (audit Part 2 was pessimistic here). | `fix(responsive)` |
+| L-01 Product bar height / tiny fonts | ✅ **Completed** — touch mode grows the Sales/Purchases quick bar (118→142px) and bumps its 10-12px card fonts; the Purchase bar's shrink-wrapped cards now use the interaction tokens too. Keyboard-hint labels ("… (F10)") hide in touch mode. Desktop unchanged. | `feat(ux)` |
 | C-02, H-03, H-04, M-03, M-04 (Android platform work) | ⬜ Pending — Target 3 | — |
 
 ---

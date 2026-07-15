@@ -9,6 +9,7 @@ import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/routing/current_route_provider.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
+import 'package:phone_shop_pos/core/theme/app_interaction_tokens.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
@@ -557,8 +558,9 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
         ),
         const SizedBox(height: AppSpacing.xs),
         SizedBox(
-          // ~25% shorter so the items table / cart area gets more room.
-          height: 118,
+          // Desktop keeps the compact 118px bar; touch mode grows it so the
+          // primary purchase-entry targets gain height.
+          height: AppInteractionTokens.of(context).productBarHeight,
           child: Card(
             child: productsAsync.when(
               // Keep showing the current results while a new search loads, so
@@ -601,6 +603,9 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                                 );
                               }
                               final product = shown[index];
+                              final tokens =
+                                  AppInteractionTokens.of(context);
+                              final bump = tokens.quickBarFontBump;
                               return OutlinedButton(
                                 onPressed: () => _handleAddProduct(product),
                                 style: OutlinedButton.styleFrom(
@@ -608,9 +613,8 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                                     horizontal: AppSpacing.sm,
                                     vertical: AppSpacing.xs,
                                   ),
-                                  minimumSize: Size.zero,
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
+                                  minimumSize: tokens.minButtonSize,
+                                  tapTargetSize: tokens.tapTargetSize,
                                   alignment: Alignment.centerLeft,
                                 ),
                                 child: Column(
@@ -622,18 +626,18 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                                       product.name,
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontSize: 12),
+                                      style: TextStyle(fontSize: 12 + bump),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
                                       'Cost: ${FormattingHelpers.currencyPkr(product.purchasePrice)}',
-                                      style: const TextStyle(fontSize: 11),
+                                      style: TextStyle(fontSize: 11 + bump),
                                     ),
                                     Text(
                                       product.hasImei
                                           ? 'Serialized • IMEI'
                                           : 'Qty-based',
-                                      style: const TextStyle(fontSize: 10),
+                                      style: TextStyle(fontSize: 10 + bump),
                                     ),
                                   ],
                                 ),
@@ -866,7 +870,13 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.save),
-            label: const Text('Save Purchase (F10)'),
+            // The F10 hint documents a physical-keyboard shortcut; hide it
+            // when the operator has switched to touch mode.
+            label: Text(
+              AppInteractionTokens.of(context).isTouch
+                  ? 'Save Purchase'
+                  : 'Save Purchase (F10)',
+            ),
             style: FilledButton.styleFrom(
               minimumSize: const Size(double.infinity, 48),
             ),

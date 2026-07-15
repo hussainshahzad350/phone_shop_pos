@@ -20,6 +20,8 @@ class AppInteractionTokens extends ThemeExtension<AppInteractionTokens> {
     required this.tapTargetSize,
     required this.dataRowMinHeight,
     required this.dataRowMaxHeight,
+    required this.productBarHeight,
+    required this.quickBarFontBump,
   });
 
   /// Whether the touch profile is active. Lets widgets make behavioral
@@ -47,6 +49,14 @@ class AppInteractionTokens extends ThemeExtension<AppInteractionTokens> {
   final double dataRowMinHeight;
   final double dataRowMaxHeight;
 
+  /// Height of the quick product bar on Sales/Purchases — the primary
+  /// sale-entry touch targets live here, so touch mode gives them more room.
+  final double productBarHeight;
+
+  /// Added to the small hardcoded font sizes (10-12px) of the quick product
+  /// bar cards so their labels stay legible at arm's length on touch screens.
+  final double quickBarFontBump;
+
   /// Matches the literals used across the app before Touch mode existed.
   static const AppInteractionTokens desktop = AppInteractionTokens(
     isTouch: false,
@@ -57,6 +67,8 @@ class AppInteractionTokens extends ThemeExtension<AppInteractionTokens> {
     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
     dataRowMinHeight: 40,
     dataRowMaxHeight: 48,
+    productBarHeight: 118,
+    quickBarFontBump: 0,
   );
 
   static const AppInteractionTokens touch = AppInteractionTokens(
@@ -68,6 +80,8 @@ class AppInteractionTokens extends ThemeExtension<AppInteractionTokens> {
     tapTargetSize: MaterialTapTargetSize.padded,
     dataRowMinHeight: 48,
     dataRowMaxHeight: 64,
+    productBarHeight: 142,
+    quickBarFontBump: 1.5,
   );
 
   static AppInteractionTokens of(BuildContext context) {
@@ -85,6 +99,8 @@ class AppInteractionTokens extends ThemeExtension<AppInteractionTokens> {
     MaterialTapTargetSize? tapTargetSize,
     double? dataRowMinHeight,
     double? dataRowMaxHeight,
+    double? productBarHeight,
+    double? quickBarFontBump,
   }) {
     return AppInteractionTokens(
       isTouch: isTouch ?? this.isTouch,
@@ -95,6 +111,8 @@ class AppInteractionTokens extends ThemeExtension<AppInteractionTokens> {
       tapTargetSize: tapTargetSize ?? this.tapTargetSize,
       dataRowMinHeight: dataRowMinHeight ?? this.dataRowMinHeight,
       dataRowMaxHeight: dataRowMaxHeight ?? this.dataRowMaxHeight,
+      productBarHeight: productBarHeight ?? this.productBarHeight,
+      quickBarFontBump: quickBarFontBump ?? this.quickBarFontBump,
     );
   }
 
@@ -119,6 +137,8 @@ class AppInteractionTokens extends ThemeExtension<AppInteractionTokens> {
       tapTargetSize: target.tapTargetSize,
       dataRowMinHeight: lerpDouble(dataRowMinHeight, other.dataRowMinHeight, t),
       dataRowMaxHeight: lerpDouble(dataRowMaxHeight, other.dataRowMaxHeight, t),
+      productBarHeight: lerpDouble(productBarHeight, other.productBarHeight, t),
+      quickBarFontBump: lerpDouble(quickBarFontBump, other.quickBarFontBump, t),
     );
   }
 

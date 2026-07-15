@@ -41,8 +41,9 @@ class _ProductGridWidgetState extends ConsumerState<ProductGridWidget> {
     final productsAsync = ref.watch(productSearchResultsProvider);
 
     return SizedBox(
-      // ~25% shorter than before so the cart below gets more room.
-      height: 118,
+      // Desktop keeps the compact 118px bar so the cart gets more room;
+      // touch mode grows it so the primary sale-entry targets gain height.
+      height: AppInteractionTokens.of(context).productBarHeight,
       child: Card(
         child: productsAsync.when(
           // Keep the current cards visible while a new search loads instead of
@@ -158,6 +159,7 @@ class _ProductCardButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = AppInteractionTokens.of(context);
+    final bump = tokens.quickBarFontBump;
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
@@ -175,17 +177,17 @@ class _ProductCardButton extends StatelessWidget {
             product.name,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12),
+            style: TextStyle(fontSize: 12 + bump),
           ),
           const SizedBox(height: 2),
           Text(
             FormattingHelpers.currencyPkr(product.salePrice),
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: 11 + bump, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 2),
           Text(
             product.hasImei ? 'Serialized • IMEI' : 'Qty product',
-            style: const TextStyle(fontSize: 10),
+            style: TextStyle(fontSize: 10 + bump),
           ),
         ],
       ),
