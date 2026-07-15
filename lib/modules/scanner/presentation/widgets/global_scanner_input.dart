@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phone_shop_pos/core/config/interaction_mode_provider.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/modules/scanner/domain/entities/scanner_process_feedback.dart';
 import 'package:phone_shop_pos/modules/scanner/presentation/providers/scanner_providers.dart';
@@ -42,12 +43,24 @@ class _GlobalScannerInputState extends ConsumerState<GlobalScannerInput>
 
   @override
   void didChangeMetrics() {
+    // In touch mode, metrics change whenever the on-screen keyboard shows or
+    // hides — force-reclaiming here would yank focus from the field the
+    // operator is typing into. The periodic gentle reclaim still runs.
+    if (ref.read(isTouchModeProvider)) {
+      return;
+    }
     _reclaimFocusAfterLifecycleEvent();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      if (ref.read(isTouchModeProvider)) {
+        // Gentle: only take focus back if nothing user-interactive holds it,
+        // so resuming the app doesn't pop the on-screen keyboard's focus.
+        _restoreFocus();
+        return;
+      }
       _reclaimFocusAfterLifecycleEvent();
     }
   }
@@ -85,6 +98,7 @@ class _GlobalScannerInputState extends ConsumerState<GlobalScannerInput>
 
   @override
   Widget build(BuildContext context) {
+    final isTouchMode = ref.watch(isTouchModeProvider);
     ref.listen(scannerControllerProvider, (previous, next) {
       final feedback = next.lastFeedback;
       if (feedback == null || next.sequence == _lastFeedbackSequence) {
@@ -124,7 +138,12 @@ class _GlobalScannerInputState extends ConsumerState<GlobalScannerInput>
               enableInteractiveSelection: false,
               autocorrect: false,
               enableSuggestions: false,
-              keyboardType: TextInputType.number,
+              // TextInputType.none keeps hardware key events (USB/Bluetooth
+              // wedge scanners) flowing while never requesting an IME
+              // connection — otherwise the hidden field would summon the
+              // on-screen keyboard every time it reclaims focus.
+              keyboardType:
+                  isTouchMode ? TextInputType.none : TextInputType.number,
               textInputAction: TextInputAction.done,
               onTapOutside: (_) {
                 // Focus reclamation is handled by the periodic timer.
