@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:phone_shop_pos/core/theme/app_interaction_tokens.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/sales_query_providers.dart';
@@ -156,12 +157,13 @@ class _ProductCardButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = AppInteractionTokens.of(context);
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        minimumSize: tokens.minButtonSize,
+        tapTargetSize: tokens.tapTargetSize,
         alignment: Alignment.centerLeft,
       ),
       child: Column(
@@ -199,12 +201,13 @@ class _ViewAllInInventoryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokens = AppInteractionTokens.of(context);
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        minimumSize: tokens.minButtonSize,
+        tapTargetSize: tokens.tapTargetSize,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

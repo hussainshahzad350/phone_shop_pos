@@ -27,6 +27,7 @@ class _RepairJobsRowActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = AppInteractionTokens.of(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -35,48 +36,52 @@ class _RepairJobsRowActions extends StatelessWidget {
             isDelivered || isArchived
                 ? Icons.visibility_outlined
                 : Icons.edit_outlined,
-            size: 18,
+            size: tokens.rowActionIconSize,
           ),
           tooltip: (isDelivered || isArchived) ? 'View Details' : 'Edit',
-          visualDensity: VisualDensity.compact,
+          visualDensity: tokens.controlDensity,
           onPressed: onViewOrEdit,
         ),
         if (!isArchived && !isDelivered && hasPendingPayment) ...<Widget>[
-          const SizedBox(width: 6),
+          SizedBox(width: tokens.rowActionGap),
           IconButton.filledTonal(
-            icon: const Icon(Icons.payments_outlined, size: 18),
+            icon: Icon(Icons.payments_outlined, size: tokens.rowActionIconSize),
             tooltip: 'Collect Payment',
-            visualDensity: VisualDensity.compact,
+            visualDensity: tokens.controlDensity,
             onPressed: onCollectPayment,
           ),
         ],
         if (isArchived) ...<Widget>[
-          const SizedBox(width: 6),
+          SizedBox(width: tokens.rowActionGap),
           IconButton.filledTonal(
-            icon: const Icon(Icons.unarchive_outlined, size: 18),
+            icon:
+                Icon(Icons.unarchive_outlined, size: tokens.rowActionIconSize),
             tooltip: 'Unarchive',
-            visualDensity: VisualDensity.compact,
+            visualDensity: tokens.controlDensity,
             onPressed: onUnarchive,
           ),
         ] else if (!isDelivered) ...<Widget>[
-          const SizedBox(width: 6),
+          SizedBox(width: tokens.rowActionGap),
           IconButton.filledTonal(
-            icon: const Icon(Icons.local_shipping_outlined, size: 18),
+            icon: Icon(
+              Icons.local_shipping_outlined,
+              size: tokens.rowActionIconSize,
+            ),
             tooltip: canMarkDelivered
                 ? 'Mark Delivered'
                 : hasFinalPaymentAmount
                     ? 'Cannot deliver while payment is pending'
                     : 'Set final cost before delivery',
-            visualDensity: VisualDensity.compact,
+            visualDensity: tokens.controlDensity,
             onPressed: onMarkDelivered,
           ),
         ],
         if (!isArchived) ...<Widget>[
-          const SizedBox(width: 6),
+          SizedBox(width: tokens.rowActionGap),
           IconButton.filledTonal(
-            icon: const Icon(Icons.delete_outline, size: 18),
+            icon: Icon(Icons.delete_outline, size: tokens.rowActionIconSize),
             tooltip: 'Archive',
-            visualDensity: VisualDensity.compact,
+            visualDensity: tokens.controlDensity,
             onPressed: onArchive,
           ),
         ],

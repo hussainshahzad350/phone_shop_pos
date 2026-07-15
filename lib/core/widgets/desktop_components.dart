@@ -1,6 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
+import 'package:phone_shop_pos/core/theme/app_interaction_tokens.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 const int _kDefaultPaginateThreshold = 80;
@@ -302,6 +305,18 @@ class _AppDataTableState extends State<AppDataTable> {
       );
     }
 
+    // In touch mode, floor every table's row heights at the 48dp touch
+    // minimum without touching the ~15 call sites that pass desktop-tier
+    // heights. Max is raised together with min (the framework asserts
+    // min <= max).
+    final tokens = AppInteractionTokens.of(context);
+    final dataRowMinHeight = tokens.isTouch
+        ? math.max(widget.dataRowMinHeight, tokens.dataRowMinHeight)
+        : widget.dataRowMinHeight;
+    final dataRowMaxHeight = tokens.isTouch
+        ? math.max(widget.dataRowMaxHeight, tokens.dataRowMaxHeight)
+        : widget.dataRowMaxHeight;
+
     final effectiveRows = List<DataRow>.generate(widget.rows.length, (index) {
       final row = widget.rows[index];
       return DataRow(
@@ -361,8 +376,8 @@ class _AppDataTableState extends State<AppDataTable> {
           rowsPerPage: widget.rowsPerPage,
           availableRowsPerPage: const <int>[25, 50, 100],
           columnSpacing: widget.columnSpacing,
-          dataRowMinHeight: widget.dataRowMinHeight,
-          dataRowMaxHeight: widget.dataRowMaxHeight,
+          dataRowMinHeight: dataRowMinHeight,
+          dataRowMaxHeight: dataRowMaxHeight,
           headingRowHeight: 64,
           showCheckboxColumn: widget.showCheckboxColumn,
           showFirstLastButtons: true,
@@ -400,8 +415,8 @@ class _AppDataTableState extends State<AppDataTable> {
                         columns: _inertColumns(effectiveColumns),
                         rows: effectiveRows,
                         columnSpacing: widget.columnSpacing,
-                        dataRowMinHeight: widget.dataRowMinHeight,
-                        dataRowMaxHeight: widget.dataRowMaxHeight,
+                        dataRowMinHeight: dataRowMinHeight,
+                        dataRowMaxHeight: dataRowMaxHeight,
                         headingRowHeight: 0,
                         dividerThickness: 0.6,
                         showCheckboxColumn: widget.showCheckboxColumn,
@@ -428,8 +443,8 @@ class _AppDataTableState extends State<AppDataTable> {
                 columns: effectiveColumns,
                 rows: effectiveRows,
                 columnSpacing: widget.columnSpacing,
-                dataRowMinHeight: widget.dataRowMinHeight,
-                dataRowMaxHeight: widget.dataRowMaxHeight,
+                dataRowMinHeight: dataRowMinHeight,
+                dataRowMaxHeight: dataRowMaxHeight,
                 headingRowHeight: 64,
                 dividerThickness: 0.6,
                 showCheckboxColumn: widget.showCheckboxColumn,
