@@ -11,6 +11,13 @@ const int _kDefaultPaginateThreshold = 80;
 const double _kDesktopContentMaxWidth = 2200.0;
 const double _kDesktopCardRadius = 16.0;
 
+/// Below this width the sticky-header table switches to a single scrollable
+/// table with horizontal overflow scrolling — fixed-width columns designed
+/// for desktop tiers stop fitting around here (tablet portrait, split
+/// screen), and a dual-table sticky header cannot share one horizontal
+/// viewport without misaligning its columns.
+const double _kStickyHeaderMinWidth = 900.0;
+
 // Borders, fill and radius intentionally come from InputDecorationTheme so
 // the field adapts to light/dark mode — hardcoded colors here previously
 // rendered light-mode borders in dark mode.
@@ -272,16 +279,19 @@ class AppDataTable extends StatefulWidget {
 
 class _AppDataTableState extends State<AppDataTable> {
   late final ScrollController _verticalScrollController;
+  late final ScrollController _horizontalScrollController;
 
   @override
   void initState() {
     super.initState();
     _verticalScrollController = ScrollController();
+    _horizontalScrollController = ScrollController();
   }
 
   @override
   void dispose() {
     _verticalScrollController.dispose();
+    _horizontalScrollController.dispose();
     super.dispose();
   }
 
@@ -397,7 +407,19 @@ class _AppDataTableState extends State<AppDataTable> {
     // widths still align with the pinned header.
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.hasBoundedHeight) {
+        final fullTable = DataTable(
+          columns: effectiveColumns,
+          rows: effectiveRows,
+          columnSpacing: widget.columnSpacing,
+          dataRowMinHeight: dataRowMinHeight,
+          dataRowMaxHeight: dataRowMaxHeight,
+          headingRowHeight: 64,
+          dividerThickness: 0.6,
+          showCheckboxColumn: widget.showCheckboxColumn,
+        );
+
+        if (constraints.hasBoundedHeight &&
+            constraints.maxWidth >= _kStickyHeaderMinWidth) {
           return ClipRRect(
             borderRadius: BorderRadius.circular(_kDesktopCardRadius),
             child: Column(
@@ -434,6 +456,35 @@ class _AppDataTableState extends State<AppDataTable> {
           );
         }
 
+        if (constraints.hasBoundedHeight) {
+          // Narrow bounded viewport (tablet portrait, split screen): a single
+          // table keeps header and body columns aligned; the horizontal
+          // scroll only engages when the table's natural width exceeds the
+          // viewport (ConstrainedBox stretches it to full width otherwise).
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(_kDesktopCardRadius),
+            child: Scrollbar(
+              controller: _horizontalScrollController,
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                controller: _horizontalScrollController,
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                  child: Scrollbar(
+                    controller: _verticalScrollController,
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
+                      controller: _verticalScrollController,
+                      child: fullTable,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
         // Unbounded height (e.g. inside a scrolling analytics card): fall back
         // to the classic full-table scroll so the layout doesn't break.
         return Scrollbar(
@@ -444,15 +495,20 @@ class _AppDataTableState extends State<AppDataTable> {
             scrollDirection: Axis.vertical,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(_kDesktopCardRadius),
-              child: DataTable(
-                columns: effectiveColumns,
-                rows: effectiveRows,
-                columnSpacing: widget.columnSpacing,
-                dataRowMinHeight: dataRowMinHeight,
-                dataRowMaxHeight: dataRowMaxHeight,
-                headingRowHeight: 64,
-                dividerThickness: 0.6,
-                showCheckboxColumn: widget.showCheckboxColumn,
+              child: Scrollbar(
+                controller: _horizontalScrollController,
+                child: SingleChildScrollView(
+                  controller: _horizontalScrollController,
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minWidth: constraints.hasBoundedWidth
+                          ? constraints.maxWidth
+                          : 0,
+                    ),
+                    child: fullTable,
+                  ),
+                ),
               ),
             ),
           ),
