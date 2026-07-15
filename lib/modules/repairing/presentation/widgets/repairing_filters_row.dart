@@ -10,13 +10,93 @@ class _FiltersRow extends ConsumerWidget {
     final endDate = ref.watch(repairJobsEndDateProvider);
     final includeArchived = ref.watch(repairJobsIncludeArchivedProvider);
 
+    final actionButtons = <Widget>[
+      FilledButton.icon(
+        onPressed: () async {
+          final saved = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => const _RepairJobFormDialog(),
+          );
+          if (saved == true) {
+            ref.invalidate(repairJobsProvider);
+            ref.invalidate(repairKpisProvider);
+          }
+        },
+        icon: const Icon(Icons.add, size: 16),
+        label: const Text('Add Repair Job'),
+      ),
+      OutlinedButton.icon(
+        onPressed: () {
+          ref.invalidate(repairJobsProvider);
+          ref.invalidate(repairKpisProvider);
+        },
+        icon: const Icon(Icons.refresh),
+        label: const Text('Refresh'),
+      ),
+    ];
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: Wrap(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Narrow windows: actions drop below the filters instead of the
+            // fixed trailing buttons squeezing the filter wrap off-screen.
+            if (constraints.maxWidth < 700) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  _buildFilterWrap(
+                    context,
+                    ref,
+                    statusFilter: statusFilter,
+                    startDate: startDate,
+                    endDate: endDate,
+                    includeArchived: includeArchived,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: actionButtons,
+                  ),
+                ],
+              );
+            }
+            return Row(
+              children: <Widget>[
+                Expanded(
+                  child: _buildFilterWrap(
+                    context,
+                    ref,
+                    statusFilter: statusFilter,
+                    startDate: startDate,
+                    endDate: endDate,
+                    includeArchived: includeArchived,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                actionButtons[0],
+                const SizedBox(width: AppSpacing.sm),
+                actionButtons[1],
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterWrap(
+    BuildContext context,
+    WidgetRef ref, {
+    required String statusFilter,
+    required DateTime? startDate,
+    required DateTime? endDate,
+    required bool includeArchived,
+  }) {
+    return Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 crossAxisAlignment: WrapCrossAlignment.center,
@@ -124,36 +204,6 @@ class _FiltersRow extends ConsumerWidget {
                     label: const Text('Clear Filters'),
                   ),
                 ],
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            FilledButton.icon(
-              onPressed: () async {
-                final saved = await showDialog<bool>(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (_) => const _RepairJobFormDialog(),
-                );
-                if (saved == true) {
-                  ref.invalidate(repairJobsProvider);
-                  ref.invalidate(repairKpisProvider);
-                }
-              },
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text('Add Repair Job'),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            OutlinedButton.icon(
-              onPressed: () {
-                ref.invalidate(repairJobsProvider);
-                ref.invalidate(repairKpisProvider);
-              },
-              icon: const Icon(Icons.refresh),
-              label: const Text('Refresh'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -20,8 +20,9 @@
 | M-06 No SafeArea | ✅ **Completed** — shell body wrapped | `feat(ux)` |
 | L-04 Keyboard-help chrome | ✅ **Completed** — hidden in touch mode | `feat(ux)` |
 | L-05 Min window size | ✅ **Already implemented** — audit correction: `win32_window.cpp:28-29` + `WM_GETMINMAXINFO` enforce 1366×768; no change needed | verify-only |
-| M-01 Desktop-only table tiers | 🔨 **In progress (Target 2)** — horizontal-scroll fallback first, card-list tier next | — |
-| M-02 Fixed side panels (Sales/Purchase) | 🔨 **In progress (Target 2)** — compact stacked layout below 900px | — |
+| M-01 Desktop-only table tiers | ✅ **Completed (step 1)** — below 900px `AppDataTable` renders a single aligned table in a width-preserving horizontal scroll; desktop sticky header unchanged. A card-list tier remains optional polish. | `feat(responsive)` |
+| M-02 Fixed side panels (Sales/Purchase) | ✅ **Completed** — below 900px both screens stack: full-width cart/items table + summary bar opening the checkout/supplier panel in a bottom sheet (keyboard-inset aware). Wide layouts unchanged. | `feat(responsive)` ×2 |
+| Portrait pass (filter/action rows) | ✅ **Completed** — Inventory actions wrap; Repairing filter actions stack below 700px; Reports/ledger filters and Master Data tabs verified already adaptive (audit Part 2 was pessimistic here). | `fix(responsive)` |
 | C-02, H-03, H-04, M-03, M-04 (Android platform work) | ⬜ Pending — Target 3 | — |
 
 ---

@@ -132,8 +132,13 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                // Wrap instead of Row so the action buttons flow onto a
+                // second line on narrow windows instead of overflowing;
+                // when they fit they stay right-aligned exactly as before.
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
                   children: <Widget>[
                     OutlinedButton.icon(
                       onPressed: () async {
@@ -182,7 +187,6 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                       icon: const Icon(Icons.bookmark_outline),
                       label: const Text('Reserve Phone'),
                     ),
-                    const SizedBox(width: AppSpacing.sm),
                     OutlinedButton.icon(
                       onPressed: () async {
                         final rows = stockAsync.valueOrNull ?? const <StockRowEntity>[];
@@ -195,7 +199,6 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                       icon: const Icon(Icons.tune),
                       label: const Text('Stock Adjustment'),
                     ),
-                    const SizedBox(width: AppSpacing.sm),
                     OutlinedButton.icon(
                       onPressed: _refresh,
                       icon: const Icon(Icons.refresh),
