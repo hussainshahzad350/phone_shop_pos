@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/theme/app_interaction_tokens.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
@@ -44,27 +45,31 @@ class AppDesktopScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Row(
-        children: <Widget>[
-          sidebar,
-          const VerticalDivider(width: 1),
-          Expanded(
-            child: Column(
-              children: <Widget>[
-                topBar,
-                const Divider(height: 1),
-                Expanded(
-                  child: _DesktopContentArea(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 180),
-                      child: child,
+      // No-op on Windows (zero insets); keeps the shell clear of status bars
+      // and display cutouts on future touch/tablet targets.
+      body: SafeArea(
+        child: Row(
+          children: <Widget>[
+            sidebar,
+            const VerticalDivider(width: 1),
+            Expanded(
+              child: Column(
+                children: <Widget>[
+                  topBar,
+                  const Divider(height: 1),
+                  Expanded(
+                    child: _DesktopContentArea(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 180),
+                        child: child,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -478,6 +483,38 @@ class _StaticDataSource extends DataTableSource {
 
   @override
   int get selectedRowCount => 0;
+}
+
+/// Gives disabled controls a tap-visible explanation in touch mode.
+///
+/// On desktop a disabled button explains itself through its hover [Tooltip];
+/// touch users have no hover, so tapping a dead control gives no feedback.
+/// When [enabled] is false and the touch profile is active, taps on [child]
+/// surface [reason] via [AppNotifier.info]. Desktop (and enabled controls)
+/// render [child] unchanged.
+class AppDisabledReasonTap extends StatelessWidget {
+  const AppDisabledReasonTap({
+    super.key,
+    required this.enabled,
+    required this.reason,
+    required this.child,
+  });
+
+  final bool enabled;
+  final String reason;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (enabled || !AppInteractionTokens.of(context).isTouch) {
+      return child;
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => AppNotifier.info(reason),
+      child: child,
+    );
+  }
 }
 
 /// Sizes an [AlertDialog]'s content to a target design width, clamped to the

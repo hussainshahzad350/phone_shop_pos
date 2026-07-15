@@ -62,18 +62,24 @@ class _RepairJobsRowActions extends StatelessWidget {
           ),
         ] else if (!isDelivered) ...<Widget>[
           SizedBox(width: tokens.rowActionGap),
-          IconButton.filledTonal(
-            icon: Icon(
-              Icons.local_shipping_outlined,
-              size: tokens.rowActionIconSize,
+          AppDisabledReasonTap(
+            enabled: onMarkDelivered != null,
+            reason: hasFinalPaymentAmount
+                ? 'Cannot deliver while payment is pending.'
+                : 'Set final cost before delivery.',
+            child: IconButton.filledTonal(
+              icon: Icon(
+                Icons.local_shipping_outlined,
+                size: tokens.rowActionIconSize,
+              ),
+              tooltip: canMarkDelivered
+                  ? 'Mark Delivered'
+                  : hasFinalPaymentAmount
+                      ? 'Cannot deliver while payment is pending'
+                      : 'Set final cost before delivery',
+              visualDensity: tokens.controlDensity,
+              onPressed: onMarkDelivered,
             ),
-            tooltip: canMarkDelivered
-                ? 'Mark Delivered'
-                : hasFinalPaymentAmount
-                    ? 'Cannot deliver while payment is pending'
-                    : 'Set final cost before delivery',
-            visualDensity: tokens.controlDensity,
-            onPressed: onMarkDelivered,
           ),
         ],
         if (!isArchived) ...<Widget>[
