@@ -7,6 +7,25 @@
 
 ---
 
+## Implementation Progress
+
+> **Updated 2026-07-15 — Target 1 (Windows Touch Laptop) is COMPLETE** on this PR, behind a persisted **Settings → Display & Input → Touch mode** toggle (desktop behavior with the toggle off is unchanged and pinned by regression tests). CI green (`analyze-and-test`, 517 tests).
+
+| Audit item | Status | Delivered as |
+|---|---|---|
+| C-01 Scanner focus stealing / IME summoning | ✅ **Completed (partial scope as planned)** — touch mode uses `TextInputType.none`, skips metrics force-reclaim, softens resume reclaim; wedge scanners unaffected. Camera transport remains for the Android phase. | `feat(scanner)` |
+| H-01 Compact density / sub-48dp targets | ✅ **Completed** — touch theme profile + `AppInteractionTokens`; hotspots (repair row actions, cart stepper, product cards, all `AppDataTable` rows) inflate to ≥48dp | `feat(theme)`, `feat(ui)` |
+| H-02 Fixed-width dialogs | ✅ **Completed** — `AppDialogContentBox` clamps all 35 dialog sites to the screen (unconditional) | `fix(ui)` |
+| M-05 Tooltip-only disabled reasons | ✅ **Completed** — `AppDisabledReasonTap` snackbar on tap in touch mode (repair Mark Delivered; Complete Sale already showed inline text) | `feat(ux)` |
+| M-06 No SafeArea | ✅ **Completed** — shell body wrapped | `feat(ux)` |
+| L-04 Keyboard-help chrome | ✅ **Completed** — hidden in touch mode | `feat(ux)` |
+| L-05 Min window size | ✅ **Already implemented** — audit correction: `win32_window.cpp:28-29` + `WM_GETMINMAXINFO` enforce 1366×768; no change needed | verify-only |
+| M-01 Desktop-only table tiers | 🔨 **In progress (Target 2)** — horizontal-scroll fallback first, card-list tier next | — |
+| M-02 Fixed side panels (Sales/Purchase) | 🔨 **In progress (Target 2)** — compact stacked layout below 900px | — |
+| C-02, H-03, H-04, M-03, M-04 (Android platform work) | ⬜ Pending — Target 3 | — |
+
+---
+
 ## Executive Summary
 
 The application is **architecturally far more portable than a typical Windows-first Flutter POS** — but its **interaction layer is engineered around three desktop assumptions** that will actively break on touch devices:
@@ -332,7 +351,7 @@ From `pubspec.yaml` (10 direct dependencies — remarkably lean):
 
 Assumes one developer familiar with the codebase; test effort included. The clean module boundaries and existing widget/integration test suite (e.g. `test/widget/phase2_purchases_p038_p039_keyboard_focus_test.dart`, `test/integration/scanner_mode_handlers_integration_test.dart`) materially reduce regression risk.
 
-### Target 1 — Windows Touch Laptop (landscape, ≥1366 px, keyboard still present)
+### Target 1 — Windows Touch Laptop (landscape, ≥1366 px, keyboard still present) — ✅ COMPLETED (see Implementation Progress)
 
 | Area | Work | Estimate |
 |---|---|---|
@@ -343,7 +362,7 @@ Assumes one developer familiar with the codebase; test effort included. The clea
 | Testing | Widget tests for density profile; manual touch pass per screen | 1 week |
 | **Total** | | **~3–4 weeks · Complexity: LOW-MEDIUM** |
 
-### Target 2 — Windows Tablet (touch-primary, portrait possible, ~800–1280 px)
+### Target 2 — Windows Tablet (touch-primary, portrait possible, ~800–1280 px) — 🔨 IN PROGRESS
 
 Everything in Target 1, plus:
 
