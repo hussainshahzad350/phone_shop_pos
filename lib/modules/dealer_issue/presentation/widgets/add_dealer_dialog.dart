@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/domain/entities/dealer_entity.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class AddDealerDialog extends ConsumerStatefulWidget {
   const AddDealerDialog({super.key});
@@ -73,7 +74,7 @@ class _AddDealerDialogState extends ConsumerState<AddDealerDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Add Dealer'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 380,
         child: Form(
           key: _formKey,

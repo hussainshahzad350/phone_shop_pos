@@ -426,7 +426,7 @@ class _ReservePhoneDialogState extends ConsumerState<_ReservePhoneDialog> {
 
     return AlertDialog(
       title: const Text('Reserve / Release Phone'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 520,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -557,7 +557,7 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
 
     return AlertDialog(
       title: const Text('Stock Adjustment'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 860,
         height: 560,
         child: Column(

@@ -78,7 +78,7 @@ class _CollectPaymentDialogState extends State<_CollectPaymentDialog> {
 
     return AlertDialog(
       title: const Text('Collect Payment'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 420,
         child: Column(
           mainAxisSize: MainAxisSize.min,

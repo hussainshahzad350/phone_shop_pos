@@ -228,7 +228,7 @@ class _RepairJobFormDialogState extends State<_RepairJobFormDialog> {
                 : (isEditing ? 'Edit Repair Job' : 'Add Repair Job'),
           ),
           contentPadding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.md, AppSpacing.xl, 0),
-          content: SizedBox(
+          content: AppDialogContentBox(
             width: 640,
             height: 560,
             child: SingleChildScrollView(

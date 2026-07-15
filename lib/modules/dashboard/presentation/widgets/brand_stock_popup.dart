@@ -5,6 +5,7 @@ import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboar
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/model_detail_widget.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/model_summary_widget.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class BrandStockPopup extends ConsumerStatefulWidget {
   const BrandStockPopup({
@@ -29,7 +30,7 @@ class _BrandStockPopupState extends ConsumerState<BrandStockPopup> {
 
     return AlertDialog(
       title: Text(widget.brand.brandName),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 700,
         child: modelStockAsync.when(
           data: (modelStocks) {

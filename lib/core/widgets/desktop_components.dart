@@ -480,6 +480,49 @@ class _StaticDataSource extends DataTableSource {
   int get selectedRowCount => 0;
 }
 
+/// Sizes an [AlertDialog]'s content to a target design width, clamped to the
+/// screen so wide dialogs (invoice/detail views up to 980px) never overflow
+/// small windows, tablets or split screens.
+///
+/// On the enforced desktop minimum window (1366x768) every existing dialog
+/// width fits, so this is a rendering no-op there — it only engages below
+/// ~1100px of window width.
+class AppDialogContentBox extends StatelessWidget {
+  const AppDialogContentBox({
+    super.key,
+    required this.width,
+    this.height,
+    required this.child,
+  });
+
+  /// Design width the dialog was laid out for; used as the maximum.
+  final double width;
+
+  /// Optional fixed content height, clamped to the screen the same way.
+  final double? height;
+
+  final Widget child;
+
+  // AlertDialog defaults: insetPadding 40px per side + content padding
+  // ~24px per side. Leave that chrome out of the usable width.
+  static const double _horizontalChrome = 128;
+  static const double _verticalChrome = 160;
+  static const double _minWidth = 280;
+  static const double _minHeight = 200;
+
+  @override
+  Widget build(BuildContext context) {
+    final screen = MediaQuery.sizeOf(context);
+    final maxWidth = math.max(_minWidth, screen.width - _horizontalChrome);
+    final maxHeight = math.max(_minHeight, screen.height - _verticalChrome);
+    return SizedBox(
+      width: math.min(width, maxWidth),
+      height: height == null ? null : math.min(height!, maxHeight),
+      child: child,
+    );
+  }
+}
+
 class AppConfirmationDialog extends StatelessWidget {
   const AppConfirmationDialog({
     super.key,

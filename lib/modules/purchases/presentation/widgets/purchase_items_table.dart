@@ -7,6 +7,7 @@ import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stoc
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 import 'package:phone_shop_pos/core/theme/app_typography.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class PurchaseItemsTable extends StatefulWidget {
   const PurchaseItemsTable({
@@ -434,7 +435,7 @@ class _EditImeiEntryDialogState extends State<_EditImeiEntryDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Edit IMEI Entry'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 420,
         child: Column(
           mainAxisSize: MainAxisSize.min,

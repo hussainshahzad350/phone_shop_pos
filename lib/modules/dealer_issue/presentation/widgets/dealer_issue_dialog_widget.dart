@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/deale
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/widgets/add_dealer_dialog.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 import 'package:phone_shop_pos/core/widgets/app_searchable_dropdown_field.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class DealerIssueDialogWidget extends ConsumerStatefulWidget {
   const DealerIssueDialogWidget({super.key});
@@ -32,7 +33,7 @@ class _DealerIssueDialogWidgetState extends ConsumerState<DealerIssueDialogWidge
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Issue Device to Dealer'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 700,
         height: 500,
         child: Column(

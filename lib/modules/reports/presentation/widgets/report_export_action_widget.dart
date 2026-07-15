@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/services/export/csv_export_service.dart';
 import 'package:phone_shop_pos/core/services/export/printable_report_service.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class ReportExportActionWidget extends StatelessWidget {
   const ReportExportActionWidget({
@@ -67,7 +68,7 @@ class ReportExportActionWidget extends StatelessWidget {
                     context: context,
                     builder: (context) => AlertDialog(
                       title: const Text('Printable Layout Preview'),
-                      content: SizedBox(
+                      content: AppDialogContentBox(
                         width: 800,
                         child: SingleChildScrollView(
                           child: SelectableText(printable),

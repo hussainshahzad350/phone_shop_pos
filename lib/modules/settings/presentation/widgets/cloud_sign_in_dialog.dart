@@ -81,7 +81,7 @@ class _CloudSignInDialogState extends ConsumerState<CloudSignInDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Sign in to Cloud Backup'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 420,
         child: Column(
           mainAxisSize: MainAxisSize.min,

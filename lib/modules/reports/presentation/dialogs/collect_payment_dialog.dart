@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class CollectPaymentDialog extends ConsumerStatefulWidget {
   const CollectPaymentDialog({super.key, required this.sale});
@@ -43,7 +44,7 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text('Collect Payment - ${widget.sale.invoiceNumber}'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 420,
         child: Column(
           mainAxisSize: MainAxisSize.min,

@@ -283,7 +283,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return AlertDialog(
           scrollable: true,
           title: const Text('Edit Shop Information'),
-          content: SizedBox(
+          content: AppDialogContentBox(
             width: 460,
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -385,7 +385,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Recovery Email'),
-          content: SizedBox(
+          content: AppDialogContentBox(
             width: 420,
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -463,7 +463,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           final authState = dialogRef.watch(localPinAuthControllerProvider);
           return AlertDialog(
             title: const Text('Change PIN'),
-            content: SizedBox(
+            content: AppDialogContentBox(
               width: 420,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -591,7 +591,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return AlertDialog(
           scrollable: true,
           title: const Text('Regenerate Recovery Code'),
-          content: SizedBox(
+          content: AppDialogContentBox(
             width: 420,
             child: Column(
               mainAxisSize: MainAxisSize.min,

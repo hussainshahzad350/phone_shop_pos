@@ -92,7 +92,7 @@ class _EmailRecoveryDialogState extends ConsumerState<EmailRecoveryDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Reset PIN via email'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 420,
         child: Column(
           mainAxisSize: MainAxisSize.min,

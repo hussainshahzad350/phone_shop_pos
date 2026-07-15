@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/core/utils/imei_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/purchase_form_item_entity.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class ImeiEntryWidget extends StatefulWidget {
   const ImeiEntryWidget({
@@ -122,7 +123,7 @@ class _ImeiEntryWidgetState extends State<ImeiEntryWidget> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(widget.isUsed ? 'Add Used Device IMEIs' : 'Add IMEI Entries'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 560,
         child: SingleChildScrollView(
           child: Column(

@@ -18,7 +18,7 @@ class DashboardSalesInvoiceDialog extends ConsumerWidget {
     final detailAsync = ref.watch(salesInvoiceDetailProvider(saleId));
     return AlertDialog(
       title: const Text('Invoice Details'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 960,
         height: 500,
         child: detailAsync.when(

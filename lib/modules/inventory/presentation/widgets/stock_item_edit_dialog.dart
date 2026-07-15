@@ -10,6 +10,7 @@ import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/stock_row_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/presentation/providers/inventory_repository_provider.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 /// Editor opened by tapping a row in the inventory stock table.
 ///
@@ -156,7 +157,7 @@ class _StockItemEditDialogState extends ConsumerState<StockItemEditDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(_isSerialized ? 'Edit Phone' : 'Edit Accessory'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 520,
         child: _loading
             ? const SizedBox(

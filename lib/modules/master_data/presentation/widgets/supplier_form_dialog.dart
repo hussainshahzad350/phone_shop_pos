@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/modules/purchases/domain/entities/supplier_entity.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class SupplierFormData {
   const SupplierFormData({
@@ -93,7 +94,7 @@ class _SupplierFormDialogState extends State<SupplierFormDialog> {
     final isEditing = widget.initial != null;
     return AlertDialog(
       title: Text(isEditing ? 'Edit Supplier' : 'Add Supplier'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 560,
         child: Form(
           key: _formKey,
