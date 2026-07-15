@@ -28,6 +28,11 @@ import 'package:phone_shop_pos/modules/reports/presentation/providers/report_pro
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 import 'package:phone_shop_pos/core/theme/app_typography.dart';
 
+/// Below this width the fixed-width supplier/payment side panel starves the
+/// items table, so the layout stacks: full-width table plus a summary bar
+/// that opens the panel in a bottom sheet (tablet portrait / split screen).
+const double _kPurchaseCompactLayoutWidth = 900.0;
+
 class PurchaseScreen extends ConsumerStatefulWidget {
   const PurchaseScreen({super.key});
 
@@ -319,6 +324,35 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
+                        // Items table. Scoped to the items list only, so
+                        // typing discount/tax/paid does not rebuild it.
+                        final itemsCard = Consumer(
+                          builder: (context, ref, _) {
+                            final items = ref.watch(
+                              purchaseFormStateProvider
+                                  .select((state) => state.items),
+                            );
+                            return _buildItemsCard(items);
+                          },
+                        );
+
+                        if (constraints.maxWidth <
+                            _kPurchaseCompactLayoutWidth) {
+                          // Compact (tablet portrait / split screen): the
+                          // fixed side panel would starve the items table,
+                          // so supplier/totals/payment move to a bottom
+                          // sheet behind a summary bar.
+                          return Column(
+                            children: <Widget>[
+                              Expanded(child: itemsCard),
+                              const SizedBox(height: AppSpacing.sm),
+                              _CompactPurchaseBar(
+                                onOpenCheckout: _openPurchaseCheckoutSheet,
+                              ),
+                            ],
+                          );
+                        }
+
                         final rightPanelWidth = constraints.maxWidth >= 1500
                             ? 360.0
                             : constraints.maxWidth >= 1200
@@ -327,19 +361,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                         return Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            // Items table. Scoped to the items list only, so
-                            // typing discount/tax/paid does not rebuild it.
-                            Expanded(
-                              child: Consumer(
-                                builder: (context, ref, _) {
-                                  final items = ref.watch(
-                                    purchaseFormStateProvider
-                                        .select((state) => state.items),
-                                  );
-                                  return _buildItemsCard(items);
-                                },
-                              ),
-                            ),
+                            Expanded(child: itemsCard),
                             const SizedBox(width: AppSpacing.sm),
                             // Right panel (supplier, totals, payment). Its
                             // static parts stay put; only the small total rows
@@ -654,7 +676,50 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
       thumbVisibility: true,
       child: ListView(
         controller: _rightPanelScrollController,
-        children: <Widget>[
+        children: _buildRightPanelChildren(),
+      ),
+    );
+  }
+
+  Future<void> _openPurchaseCheckoutSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) {
+        return Padding(
+          // Keep the payment fields above the on-screen keyboard.
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.85,
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: _buildRightPanelChildren(
+                  onSave: () {
+                    Navigator.of(sheetContext).pop();
+                    _savePurchase();
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Supplier, totals, payment and save column shared by the wide side panel
+  /// and the compact bottom sheet. [onSave] overrides the save action (the
+  /// sheet closes itself first so the progress overlay is visible).
+  List<Widget> _buildRightPanelChildren({VoidCallback? onSave}) {
+    return <Widget>[
           // Supplier — rebuilds only when the selected supplier changes.
           Consumer(
             builder: (context, ref, _) {
@@ -793,7 +858,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
           ),
           const SizedBox(height: AppSpacing.sm),
           FilledButton.icon(
-            onPressed: _isSubmitting ? null : _savePurchase,
+            onPressed: _isSubmitting ? null : (onSave ?? _savePurchase),
             icon: _isSubmitting
                 ? const SizedBox(
                     width: 16,
@@ -806,9 +871,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
               minimumSize: const Size(double.infinity, 48),
             ),
           ),
-        ],
-      ),
-    );
+        ];
   }
 
   Widget _buildDiscountField() {
@@ -965,4 +1028,50 @@ class _TotalRow extends StatelessWidget {
 
 class _SavePurchaseIntent extends Intent {
   const _SavePurchaseIntent();
+}
+
+/// Compact-layout summary strip under the items table: shows the running
+/// purchase total and opens the supplier/payment bottom sheet.
+class _CompactPurchaseBar extends StatelessWidget {
+  const _CompactPurchaseBar({required this.onOpenCheckout});
+
+  final VoidCallback onOpenCheckout;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Consumer(
+                builder: (context, ref, _) {
+                  final total = ref.watch(
+                    purchaseTotalsProvider.select((t) => t.total),
+                  );
+                  return Text(
+                    'Total: ${FormattingHelpers.currencyPkr(total)}',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            FilledButton.icon(
+              onPressed: onOpenCheckout,
+              icon: const Icon(Icons.payments_outlined),
+              label: const Text('Supplier & Payment'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
