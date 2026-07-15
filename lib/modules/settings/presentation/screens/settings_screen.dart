@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
+import 'package:phone_shop_pos/core/config/interaction_mode.dart';
+import 'package:phone_shop_pos/core/config/interaction_mode_provider.dart';
 import 'package:phone_shop_pos/core/config/shop_profile.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
@@ -666,6 +668,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final startupHealthAsync = ref.watch(startupHealthFromSettingsProvider);
     final authState = ref.watch(localPinAuthControllerProvider);
     final businessConfigAsync = ref.watch(businessConfigurationProvider);
+    final interactionModeAsync = ref.watch(interactionModeProvider);
     final recoveryEmail = ref.watch(recoveryEmailProvider).asData?.value;
     final cloudSignedIn = ref.watch(cloudSignedInProvider).asData?.value ?? false;
     final cloudEmail = ref.watch(cloudAccountEmailProvider).asData?.value;
@@ -703,6 +706,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const SizedBox(height: AppSpacing.sm),
                       Text('Version: ${AppRuntimeConfig.fullVersion}'),
                       const Text('Channel: ${AppRuntimeConfig.releaseChannel}'),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Display & Input',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Touch mode'),
+                        subtitle: const Text(
+                          'Larger buttons, taller rows and touch-friendly '
+                          'input for touch screens and tablets.',
+                        ),
+                        value: interactionModeAsync.valueOrNull ==
+                            AppInteractionMode.touch,
+                        onChanged: interactionModeAsync.isLoading
+                            ? null
+                            : (enabled) {
+                                ref
+                                    .read(interactionModeProvider.notifier)
+                                    .setMode(
+                                      enabled
+                                          ? AppInteractionMode.touch
+                                          : AppInteractionMode.desktop,
+                                    );
+                              },
+                      ),
                     ],
                   ),
                 ),

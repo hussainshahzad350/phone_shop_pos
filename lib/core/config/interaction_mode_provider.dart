@@ -30,8 +30,10 @@ class InteractionModeNotifier extends AsyncNotifier<AppInteractionMode> {
     return AppInteractionMode.fromString(value);
   }
 
+  // Unlike NavigationModeNotifier this deliberately skips the intermediate
+  // AsyncLoading state: the theme watches this provider, and a valueless
+  // loading frame mid-toggle would flash the app back to the desktop density.
   Future<void> setMode(AppInteractionMode mode) async {
-    state = const AsyncLoading();
     final db = await ref.read(appDatabaseProvider.future);
     await db.database.insert(
       TableNames.appSettings,

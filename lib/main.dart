@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phone_shop_pos/core/config/interaction_mode_provider.dart';
 import 'package:phone_shop_pos/core/database/database_provider.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
@@ -106,8 +107,8 @@ class _PhoneShopPosAppState extends ConsumerState<PhoneShopPosApp>
     if (startup.isLoading) {
       return MaterialApp(
         title: AppRuntimeConfig.appName,
-        theme: AppTheme.light,
-        darkTheme: AppTheme.dark,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
         debugShowCheckedModeBanner: false,
         home: const _StartupLoadingScreen(),
       );
@@ -116,8 +117,8 @@ class _PhoneShopPosAppState extends ConsumerState<PhoneShopPosApp>
     if (startup.hasError) {
       return MaterialApp(
         title: AppRuntimeConfig.appName,
-        theme: AppTheme.light,
-        darkTheme: AppTheme.dark,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
         debugShowCheckedModeBanner: false,
         home: _StartupErrorScreen(
           message: startup.error.toString(),
@@ -129,11 +130,26 @@ class _PhoneShopPosAppState extends ConsumerState<PhoneShopPosApp>
       );
     }
 
+    // Keep showing the startup screen for the one async read between the
+    // database opening and the persisted interaction mode arriving, so a
+    // touch-mode operator never sees a desktop-density flash.
+    final interactionMode = ref.watch(interactionModeProvider);
+    if (interactionMode.isLoading && !interactionMode.hasValue) {
+      return MaterialApp(
+        title: AppRuntimeConfig.appName,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        debugShowCheckedModeBanner: false,
+        home: const _StartupLoadingScreen(),
+      );
+    }
+
+    final touch = ref.watch(isTouchModeProvider);
     final router = ref.watch(appRouterProvider);
     return MaterialApp.router(
       title: AppRuntimeConfig.appName,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      theme: AppTheme.light(touch: touch),
+      darkTheme: AppTheme.dark(touch: touch),
       routerConfig: router,
       scaffoldMessengerKey: AppNotifier.messengerKey,
       debugShowCheckedModeBanner: false,
