@@ -8,12 +8,29 @@ import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_return_
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/model_imei_stock_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dealer_stock_breakdown_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/pending_balance_customer_entity.dart';
+import 'package:phone_shop_pos/modules/dashboard/domain/entities/daily_sales_point_entity.dart';
+import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_range.dart';
+import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_transaction_entity.dart';
+import 'package:phone_shop_pos/modules/dashboard/domain/entities/range_sales_kpis_entity.dart';
+import 'package:phone_shop_pos/modules/dashboard/domain/entities/sidebar_insights_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/services/dashboard_service.dart';
 
 final dashboardServiceProvider = FutureProvider<DashboardService>((ref) async {
   final appDatabase = await ref.watch(appDatabaseProvider.future);
   return DashboardService(appDatabase: appDatabase);
 });
+
+/// Refreshes every dashboard and sidebar data provider after a data-changing
+/// event (sale, purchase, return, repair, stock or product edit).
+///
+/// All dashboard data providers watch [dashboardServiceProvider], so
+/// invalidating it cascades a recompute through every one of them — and
+/// recreating the service drops its short-lived KPI cache, guaranteeing the
+/// next read hits the database. Call this from any screen that just
+/// committed a mutation so KPIs, panels and sidebar badges stay live.
+void refreshDashboardData(WidgetRef ref) {
+  ref.invalidate(dashboardServiceProvider);
+}
 
 final dashboardKpisProvider = FutureProvider<DashboardKpisEntity>((ref) async {
   final service = await ref.watch(dashboardServiceProvider.future);
@@ -92,6 +109,64 @@ final dashboardAllLowStockProvider =
   return result.fold(
     onSuccess: (v) => v,
     onFailure: (_) => const <DashboardLowStockEntity>[],
+  );
+});
+
+/// Selected time range for the Key Metrics section (Today / Week / Month).
+final dashboardRangeProvider =
+    StateProvider<DashboardRange>((ref) => DashboardRange.today);
+
+/// Range-dependent KPIs (sales, profit, units) keyed by range so switching
+/// the toggle back and forth reuses cached results within the session.
+final dashboardRangeKpisProvider =
+    FutureProvider.family<RangeSalesKpisEntity, DashboardRange>(
+        (ref, range) async {
+  final service = await ref.watch(dashboardServiceProvider.future);
+  final result = await service.getRangeSalesKpis(range);
+  return result.fold(
+    onSuccess: (v) => v,
+    onFailure: (_) => RangeSalesKpisEntity.empty,
+  );
+});
+
+/// Net sales per day for the trailing week, for the dashboard bar chart.
+final dashboardDailySalesProvider =
+    FutureProvider<List<DailySalesPointEntity>>((ref) async {
+  final service = await ref.watch(dashboardServiceProvider.future);
+  final result = await service.getDailySalesTotals();
+  return result.fold(
+    onSuccess: (v) => v,
+    onFailure: (_) => const <DailySalesPointEntity>[],
+  );
+});
+
+/// Mixed recent-activity feed (sales, purchases, repairs, payments).
+final dashboardRecentTransactionsProvider =
+    FutureProvider<List<DashboardTransactionEntity>>((ref) async {
+  final service = await ref.watch(dashboardServiceProvider.future);
+  final result = await service.getRecentTransactions();
+  return result.fold(
+    onSuccess: (v) => v,
+    onFailure: (_) => const <DashboardTransactionEntity>[],
+  );
+});
+
+/// Brand stock enriched with per-brand worth and low-stock counts, for the
+/// Brand Stock table view.
+final dashboardBrandStockDetailsProvider =
+    FutureProvider<List<BrandStockEntity>>((ref) async {
+  final service = await ref.watch(dashboardServiceProvider.future);
+  return service.getBrandStockDetails();
+});
+
+/// Month-to-date top performers + today's activity counts for the sidebar.
+final sidebarInsightsProvider =
+    FutureProvider<SidebarInsightsEntity>((ref) async {
+  final service = await ref.watch(dashboardServiceProvider.future);
+  final result = await service.getSidebarInsights();
+  return result.fold(
+    onSuccess: (v) => v,
+    onFailure: (_) => SidebarInsightsEntity.empty,
   );
 });
 

@@ -26,11 +26,16 @@ class DashboardHeader extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: <Widget>[
-            _QuickActionButton(
-              label: 'Sale',
-              icon: Icons.point_of_sale_outlined,
-              color: semantic.success,
-              onTap: () => context.go('/sales'),
+            // Sale is the shop's primary action — solid success button; the
+            // rest are tonal, matching the v2 dashboard design.
+            FilledButton.icon(
+              onPressed: () => context.go('/sales'),
+              icon: const Icon(Icons.point_of_sale_outlined),
+              label: const Text('Sale'),
+              style: FilledButton.styleFrom(
+                backgroundColor: semantic.success,
+                foregroundColor: semantic.onSuccess,
+              ),
             ),
             _QuickActionButton(
               label: 'Purchase',
@@ -39,22 +44,16 @@ class DashboardHeader extends StatelessWidget {
               onTap: () => context.go('/purchases'),
             ),
             _QuickActionButton(
-              label: 'Inventory',
-              icon: Icons.inventory_2_outlined,
-              color: semantic.info,
-              onTap: () => context.go('/inventory'),
+              label: 'Repair',
+              icon: Icons.build_outlined,
+              color: semantic.danger,
+              onTap: () => context.go('/repairing'),
             ),
             _QuickActionButton(
               label: 'Audit',
               icon: Icons.search,
               color: semantic.warning,
               onTap: () => context.go('/inventory/audit'),
-            ),
-            _QuickActionButton(
-              label: 'Repair',
-              icon: Icons.build_outlined,
-              color: semantic.danger,
-              onTap: () => context.go('/repairing'),
             ),
             OutlinedButton.icon(
               onPressed: onRefresh,

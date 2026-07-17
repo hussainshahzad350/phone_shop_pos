@@ -107,8 +107,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
 
     if (result.isSuccess) {
       ref.invalidate(managedProductsProvider);
-      ref.invalidate(dashboardBrandStockProvider);
-      ref.invalidate(dashboardKpisProvider);
+      refreshDashboardData(ref);
       AppNotifier.success('Product created.');
     } else {
       AppNotifier.error(result.asFailure!.error.message);
@@ -163,8 +162,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
 
     if (result.isSuccess) {
       ref.invalidate(managedProductsProvider);
-      ref.invalidate(dashboardBrandStockProvider);
-      ref.invalidate(dashboardKpisProvider);
+      refreshDashboardData(ref);
       AppNotifier.success('Product updated.');
     } else {
       AppNotifier.error(result.asFailure!.error.message);
@@ -194,8 +192,7 @@ class _ProductsPanelState extends ConsumerState<ProductsPanel> {
 
     if (result.isSuccess) {
       ref.invalidate(managedProductsProvider);
-      ref.invalidate(dashboardBrandStockProvider);
-      ref.invalidate(dashboardKpisProvider);
+      refreshDashboardData(ref);
       AppNotifier.info(
         product.isActive ? 'Product archived.' : 'Product re-activated.',
       );

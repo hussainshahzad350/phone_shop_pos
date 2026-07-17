@@ -218,8 +218,7 @@ class ReportsScreen extends ConsumerWidget {
     ref.invalidate(inventorySummaryProvider);
     ref.invalidate(stockRowsProvider);
     ref.invalidate(lowStockProvider);
-    ref.invalidate(dashboardKpisProvider);
-    ref.invalidate(dashboardLowStockProvider);
+    refreshDashboardData(ref);
   }
 
   Future<void> _showPurchaseDetailDialog(

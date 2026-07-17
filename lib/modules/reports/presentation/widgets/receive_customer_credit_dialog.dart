@@ -4,6 +4,7 @@ import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/errors/user_facing_errors.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
+import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/ledger/domain/entities/settlement_request_payload.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
@@ -140,6 +141,7 @@ class _ReceiveCustomerCreditDialogState
       AppNotifier.errorFromAppError(result.asFailure!.error);
       return;
     }
+    refreshDashboardData(ref);
     AppNotifier.success('Customer credit received.');
     Navigator.of(context).pop(true);
   }

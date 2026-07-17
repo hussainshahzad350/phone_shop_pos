@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
+import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
@@ -113,6 +114,7 @@ class _ReturnSaleDialogState extends ConsumerState<ReturnSaleDialog> {
     ref
         .read(reportWorkflowCoordinatorProvider)
         .refreshSalesAfterReturn(saleId: widget.saleId);
+    refreshDashboardData(ref);
     Navigator.of(context).pop();
   }
 }

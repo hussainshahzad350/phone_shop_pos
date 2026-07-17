@@ -7,6 +7,7 @@ import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/utils/id_helpers.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/core/widgets/responsive_table_layout.dart';
+import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/repairing/domain/entities/repair_analytics_entity.dart';
 import 'package:phone_shop_pos/modules/repairing/domain/entities/repair_job_entity.dart';
 import 'package:phone_shop_pos/modules/repairing/presentation/providers/repairing_providers.dart';

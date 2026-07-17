@@ -212,8 +212,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     ref.invalidate(inventorySummaryProvider);
     ref.invalidate(stockRowsProvider);
     ref.invalidate(lowStockProvider);
-    ref.invalidate(dashboardKpisProvider);
-    ref.invalidate(dashboardLowStockProvider);
+    refreshDashboardData(ref);
   }
 
   /// Business-rule validations the user can correct (empty cart, missing

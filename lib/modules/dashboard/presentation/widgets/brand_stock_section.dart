@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/services/export/csv_export_service.dart';
+import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
+import 'package:phone_shop_pos/core/theme/app_typography.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/brand_stock_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/brand_stock_card.dart';
+import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/dashboard_compact_dropdown.dart';
 import 'package:phone_shop_pos/modules/dashboard/services/stock_report_export_service.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
@@ -24,11 +27,23 @@ class BrandStockSection extends ConsumerStatefulWidget {
   ConsumerState<BrandStockSection> createState() => _BrandStockSectionState();
 }
 
+enum _BrandStockView { table, cards }
+
 class _BrandStockSectionState extends ConsumerState<BrandStockSection> {
   bool _exporting = false;
+  _BrandStockView _view = _BrandStockView.table;
+  String _query = '';
 
   static const _exportService = StockReportExportService();
   static const _csvService = FileCsvExportService();
+
+  List<BrandStockEntity> get _filteredBrands {
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return widget.brands;
+    return widget.brands
+        .where((b) => b.brandName.toLowerCase().contains(q))
+        .toList(growable: false);
+  }
 
   int _columnsForWidth(double width) {
     if (width >= 1500) return 8;
@@ -80,16 +95,71 @@ class _BrandStockSectionState extends ConsumerState<BrandStockSection> {
     if (widget.brands.isEmpty) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
+    final brands = _filteredBrands;
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.md),
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Row(
               children: <Widget>[
-                const Spacer(),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      text: 'Brand Stock',
+                      style: theme.textTheme.titleSmall,
+                      children: <InlineSpan>[
+                        TextSpan(
+                          text: ' · ${widget.brands.length} brands',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.outline,
+                          ),
+                        ),
+                      ],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                SizedBox(
+                  width: 200,
+                  height: 34,
+                  child: TextField(
+                    onChanged: (value) => setState(() => _query = value),
+                    style: theme.textTheme.bodySmall,
+                    decoration: InputDecoration(
+                      hintText: 'Search brand…',
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.sm,
+                      ),
+                      prefixIcon: const Icon(Icons.search, size: 16),
+                      prefixIconConstraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 16,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: AppRadii.smRadius,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                DashboardCompactDropdown<_BrandStockView>(
+                  value: _view,
+                  items: _BrandStockView.values,
+                  labelOf: (v) =>
+                      v == _BrandStockView.table ? 'Table' : 'Cards',
+                  leadingIcon: _view == _BrandStockView.table
+                      ? Icons.table_rows_outlined
+                      : Icons.grid_view_outlined,
+                  onChanged: (selected) => setState(() => _view = selected),
+                ),
+                const SizedBox(width: AppSpacing.sm),
                 _exporting
                     ? const SizedBox(
                         width: 16,
@@ -110,25 +180,214 @@ class _BrandStockSectionState extends ConsumerState<BrandStockSection> {
                       ),
               ],
             ),
-            const SizedBox(height: 6),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                return GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: widget.brands.length,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: _columnsForWidth(constraints.maxWidth),
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    mainAxisExtent: 188,
+            const SizedBox(height: AppSpacing.md),
+            if (brands.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Center(
+                  child: Text(
+                    'No brands match "${_query.trim()}"',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                  itemBuilder: (_, index) => BrandStockCard(
-                    brand: widget.brands[index],
-                    onTap: () => widget.onBrandTap(widget.brands[index]),
+                ),
+              )
+            else if (_view == _BrandStockView.table)
+              _BrandStockTable(
+                brands: brands,
+                onBrandTap: widget.onBrandTap,
+              )
+            else
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: brands.length,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: _columnsForWidth(constraints.maxWidth),
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      // Phone-silhouette cards are taller than wide.
+                      mainAxisExtent: 216,
+                    ),
+                    itemBuilder: (_, index) => BrandStockCard(
+                      brand: brands[index],
+                      onTap: () => widget.onBrandTap(brands[index]),
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact table view of the brand stock: Brand / Models / Units / Stock
+/// Worth / Low Stock. Rows open the same brand popup as the cards.
+class _BrandStockTable extends StatelessWidget {
+  const _BrandStockTable({
+    required this.brands,
+    required this.onBrandTap,
+  });
+
+  final List<BrandStockEntity> brands;
+  final ValueChanged<BrandStockEntity> onBrandTap;
+
+  static const double _maxHeight = 320;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final headerStyle = theme.textTheme.labelSmall?.copyWith(
+      color: theme.colorScheme.outline,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.4,
+    );
+
+    return Container(
+      constraints: const BoxConstraints(maxHeight: _maxHeight),
+      decoration: BoxDecoration(
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+        borderRadius: AppRadii.smRadius,
+      ),
+      child: ClipRRect(
+        borderRadius: AppRadii.smRadius,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Container(
+              color: theme.colorScheme.surfaceContainerHighest,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.sm,
+              ),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                      flex: 12, child: Text('BRAND', style: headerStyle)),
+                  Expanded(
+                    flex: 8,
+                    child: Text('MODELS',
+                        textAlign: TextAlign.right, style: headerStyle),
                   ),
-                );
-              },
+                  Expanded(
+                    flex: 8,
+                    child: Text('UNITS',
+                        textAlign: TextAlign.right, style: headerStyle),
+                  ),
+                  Expanded(
+                    flex: 10,
+                    child: Text('STOCK WORTH',
+                        textAlign: TextAlign.right, style: headerStyle),
+                  ),
+                  Expanded(
+                    flex: 9,
+                    child: Text('LOW STOCK',
+                        textAlign: TextAlign.right, style: headerStyle),
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: brands.length,
+                separatorBuilder: (_, __) => Divider(
+                  height: 1,
+                  color:
+                      theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+                itemBuilder: (context, index) =>
+                    _BrandStockTableRow(brand: brands[index], onTap: onBrandTap),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BrandStockTableRow extends StatelessWidget {
+  const _BrandStockTableRow({
+    required this.brand,
+    required this.onTap,
+  });
+
+  final BrandStockEntity brand;
+  final ValueChanged<BrandStockEntity> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final semantic = theme.semantic;
+    final valueStyle = theme.textTheme.bodySmall?.copyWith(
+      fontFeatures: AppTypography.tabularFigures,
+    );
+    final mutedStyle = valueStyle?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+
+    return InkWell(
+      onTap: () => onTap(brand),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.sm,
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              flex: 12,
+              child: Text(
+                brand.brandName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 8,
+              child: Text(
+                '${brand.modelCount}',
+                textAlign: TextAlign.right,
+                style: mutedStyle,
+              ),
+            ),
+            Expanded(
+              flex: 8,
+              child: Text(
+                '${brand.stockCount}',
+                textAlign: TextAlign.right,
+                style: valueStyle?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+            Expanded(
+              flex: 10,
+              child: Text(
+                FormattingHelpers.currencyPkr(brand.stockWorth),
+                textAlign: TextAlign.right,
+                style: mutedStyle,
+              ),
+            ),
+            Expanded(
+              flex: 9,
+              child: Text(
+                brand.lowStockCount > 0 ? '${brand.lowStockCount}' : '—',
+                textAlign: TextAlign.right,
+                style: valueStyle?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: brand.lowStockCount > 0
+                      ? semantic.warning
+                      : theme.colorScheme.outlineVariant,
+                ),
+              ),
             ),
           ],
         ),

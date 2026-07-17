@@ -163,11 +163,10 @@ class StockTableWidget extends StatelessWidget {
     int rowIndex,
   ) {
     return DataRow(
-      onSelectChanged:
-          onRowTap == null ? null : (_) => onRowTap!(row),
+      onSelectChanged: onRowTap == null ? null : (_) => onRowTap!(row),
       cells: columns
-          .map((column) =>
-              _buildDataCell(context, row, column, layout, productWidth, rowIndex))
+          .map((column) => _buildDataCell(
+              context, row, column, layout, productWidth, rowIndex))
           .toList(growable: false),
     );
   }
@@ -184,7 +183,8 @@ class StockTableWidget extends StatelessWidget {
     switch (column) {
       case _StockTableColumn.serial:
         return DataCell(
-          _textCell('${rowIndex + 1}', width: _colWidth(column, layout, productWidth)),
+          _textCell('${rowIndex + 1}',
+              width: _colWidth(column, layout, productWidth)),
         );
       case _StockTableColumn.type:
         return DataCell(
@@ -195,7 +195,8 @@ class StockTableWidget extends StatelessWidget {
         );
       case _StockTableColumn.condition:
         if (!isSerialized) {
-          return DataCell(_textCell('—', width: _colWidth(column, layout, productWidth)));
+          return DataCell(
+              _textCell('—', width: _colWidth(column, layout, productWidth)));
         }
         final isUsed = row.condition == SerializedStockCondition.used;
         return DataCell(
@@ -216,16 +217,19 @@ class StockTableWidget extends StatelessWidget {
         );
       case _StockTableColumn.brand:
         return DataCell(
-          _textCell(row.brand ?? '—', width: _colWidth(column, layout, productWidth)),
+          _textCell(row.brand ?? '—',
+              width: _colWidth(column, layout, productWidth)),
         );
       case _StockTableColumn.category:
         return DataCell(
-          _textCell(row.category ?? '—', width: _colWidth(column, layout, productWidth)),
+          _textCell(row.category ?? '—',
+              width: _colWidth(column, layout, productWidth)),
         );
       case _StockTableColumn.imeiOrQty:
         if (isSerialized) {
           return DataCell(
-            _textCell(_formatImei(row.imei1), width: _colWidth(column, layout, productWidth)),
+            _textCell(_formatImei(row.imei1),
+                width: _colWidth(column, layout, productWidth)),
           );
         }
         return DataCell(
@@ -296,7 +300,8 @@ class StockTableWidget extends StatelessWidget {
         );
       case _StockTableColumn.location:
         return DataCell(
-          _textCell(row.location ?? '—', width: _colWidth(column, layout, productWidth)),
+          _textCell(row.location ?? '—',
+              width: _colWidth(column, layout, productWidth)),
         );
     }
   }

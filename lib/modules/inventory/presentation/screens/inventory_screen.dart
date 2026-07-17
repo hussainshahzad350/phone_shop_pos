@@ -12,6 +12,7 @@ import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/widgets/app_searchable_dropdown_field.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
+import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/inventory_summary_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/stock_row_entity.dart';
@@ -69,6 +70,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     ref.invalidate(stockRowsProvider);
     ref.invalidate(inventorySummaryProvider);
     ref.invalidate(lowStockProvider);
+    refreshDashboardData(ref);
     AppNotifier.success('Item updated.');
   }
 
@@ -185,10 +187,12 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                     const SizedBox(width: AppSpacing.sm),
                     OutlinedButton.icon(
                       onPressed: () async {
-                        final rows = stockAsync.valueOrNull ?? const <StockRowEntity>[];
+                        final rows =
+                            stockAsync.valueOrNull ?? const <StockRowEntity>[];
                         await showDialog<void>(
                           context: context,
-                          builder: (context) => _StockAdjustmentDialog(stockRows: rows),
+                          builder: (context) =>
+                              _StockAdjustmentDialog(stockRows: rows),
                         );
                         _refresh();
                       },
@@ -317,7 +321,8 @@ class _SummaryCards extends StatelessWidget {
             label: 'Low Stock Alerts',
             value: summary.lowStockCount.toString(),
             icon: Icons.warning_amber,
-            color: summary.lowStockCount > 0 ? semantic.danger : semantic.success,
+            color:
+                summary.lowStockCount > 0 ? semantic.danger : semantic.success,
           ),
         ];
         return Wrap(
@@ -354,7 +359,8 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg, vertical: AppSpacing.md),
         child: Row(
           children: <Widget>[
             Icon(icon, color: color, size: 32),
@@ -389,7 +395,8 @@ class _ReservePhoneDialog extends ConsumerStatefulWidget {
   final List<StockRowEntity> stockRows;
 
   @override
-  ConsumerState<_ReservePhoneDialog> createState() => _ReservePhoneDialogState();
+  ConsumerState<_ReservePhoneDialog> createState() =>
+      _ReservePhoneDialogState();
 }
 
 class _ReservePhoneDialogState extends ConsumerState<_ReservePhoneDialog> {
@@ -463,7 +470,8 @@ class _ReservePhoneDialogState extends ConsumerState<_ReservePhoneDialog> {
       ),
       actions: <Widget>[
         TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(false),
+          onPressed:
+              _isSubmitting ? null : () => Navigator.of(context).pop(false),
           child: const Text('Cancel'),
         ),
         FilledButton(
@@ -519,7 +527,8 @@ class _StockAdjustmentDialog extends ConsumerStatefulWidget {
       _StockAdjustmentDialogState();
 }
 
-class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> {
+class _StockAdjustmentDialogState
+    extends ConsumerState<_StockAdjustmentDialog> {
   final TextEditingController _deltaController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   String? _selectedProductModelId;
@@ -550,10 +559,12 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
         )
         .toList(growable: false);
 
-    _selectedProductModelId ??=
-        quantityProducts.isNotEmpty ? quantityProducts.first.productModelId : null;
-    _selectedSerializedStockId ??=
-        serializedRows.isNotEmpty ? serializedRows.first.serializedStockId : null;
+    _selectedProductModelId ??= quantityProducts.isNotEmpty
+        ? quantityProducts.first.productModelId
+        : null;
+    _selectedSerializedStockId ??= serializedRows.isNotEmpty
+        ? serializedRows.first.serializedStockId
+        : null;
 
     return AlertDialog(
       title: const Text('Stock Adjustment'),
@@ -589,9 +600,12 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
                     }
                   },
                   items: const <DropdownMenuItem<String>>[
-                    DropdownMenuItem<String>(value: 'damage', child: Text('Damage')),
-                    DropdownMenuItem<String>(value: 'theft', child: Text('Theft')),
-                    DropdownMenuItem<String>(value: 'correction', child: Text('Correction')),
+                    DropdownMenuItem<String>(
+                        value: 'damage', child: Text('Damage')),
+                    DropdownMenuItem<String>(
+                        value: 'theft', child: Text('Theft')),
+                    DropdownMenuItem<String>(
+                        value: 'correction', child: Text('Correction')),
                   ],
                 ),
               ],
@@ -760,5 +774,6 @@ class _StockAdjustmentDialogState extends ConsumerState<_StockAdjustmentDialog> 
     ref.invalidate(stockAdjustmentHistoryProvider);
     ref.invalidate(stockRowsProvider);
     ref.invalidate(inventorySummaryProvider);
+    refreshDashboardData(ref);
   }
 }

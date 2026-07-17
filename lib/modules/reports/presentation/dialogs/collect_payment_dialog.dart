@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
+import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
@@ -129,6 +130,7 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
       return;
     }
     ref.read(reportWorkflowCoordinatorProvider).refreshAfterPaymentCollection();
+    refreshDashboardData(ref);
     AppNotifier.success('Payment collected successfully.');
     Navigator.of(context).pop();
   }

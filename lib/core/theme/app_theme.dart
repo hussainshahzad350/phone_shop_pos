@@ -11,8 +11,9 @@ class AppTheme {
   static ThemeData get dark => _buildTheme(Brightness.dark);
 
   static ThemeData _buildTheme(Brightness brightness) {
+    // Corporate navy from the POS Dashboard v2 design mockup.
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF5167F6),
+      seedColor: const Color(0xFF2455A4),
       brightness: brightness,
     );
 
@@ -34,20 +35,17 @@ class AppTheme {
           ? const Color(0xFFF6F8FC)
           : colorScheme.surface,
       cardTheme: CardThemeData(
-        // Subtle elevation + soft shadow lifts cards off the canvas instead of
-        // the previous flat, paper-thin look. surfaceTintColor is cleared so
-        // the card keeps its configured color rather than picking up M3's
-        // elevation tint.
-        elevation: 1.5,
-        shadowColor: brightness == Brightness.light
-            ? const Color(0x14101828)
-            : Colors.black.withValues(alpha: 0.45),
+        // Flat, hairline-bordered cards per the POS Dashboard v2 mockup:
+        // solid surface, no shadow, medium radius. surfaceTintColor is
+        // cleared so the card keeps its configured color rather than picking
+        // up M3's elevation tint.
+        elevation: 0,
         surfaceTintColor: Colors.transparent,
         color: brightness == Brightness.light
-            ? Colors.white.withValues(alpha: 0.82)
+            ? Colors.white
             : Colors.white.withValues(alpha: 0.07),
         shape: RoundedRectangleBorder(
-          borderRadius: AppRadii.lgRadius,
+          borderRadius: AppRadii.mdRadius,
           side: BorderSide(
             color: brightness == Brightness.light
                 ? const Color(0xFFE3E8F2)
@@ -109,7 +107,7 @@ class AppTheme {
             ? Colors.white.withValues(alpha: 0.82)
             : colorScheme.surfaceContainer,
         indicatorShape: RoundedRectangleBorder(
-          borderRadius: AppRadii.lgRadius,
+          borderRadius: AppRadii.smRadius,
         ),
         minWidth: 76,
       ),
