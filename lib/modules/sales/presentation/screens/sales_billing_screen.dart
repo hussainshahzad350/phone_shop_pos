@@ -8,6 +8,7 @@ import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/routing/current_route_provider.dart';
+import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
@@ -15,6 +16,7 @@ import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stoc
 import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
+import 'package:phone_shop_pos/modules/sales/domain/entities/sale_totals_entity.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/helpers/sale_completion_flow.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/helpers/sales_shortcut_helpers.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/billing_state_provider.dart';
@@ -32,6 +34,25 @@ import 'package:phone_shop_pos/modules/sales/presentation/widgets/product_grid_w
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/product_search_bar.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/totals_panel_widget.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+
+/// Below this width the fixed-width checkout side panel starves the cart, so
+/// the layout stacks: full-width cart plus a summary bar that opens the
+/// checkout panel in a bottom sheet (tablet portrait / split screen).
+const double _kSalesCompactLayoutWidth = 900.0;
+
+bool _creditSaleRequiresRegisteredCustomer({
+  required String? selectedCustomerId,
+  required String paymentMethod,
+  required double remaining,
+}) {
+  final normalizedCustomerId = selectedCustomerId?.trim();
+  final isWalkInCustomer = normalizedCustomerId == null ||
+      normalizedCustomerId.isEmpty ||
+      normalizedCustomerId.toLowerCase() == 'walk_in';
+  final isCreditMode =
+      paymentMethod.trim().toLowerCase() == PaymentMethod.credit;
+  return isCreditMode && remaining > 0 && isWalkInCustomer;
+}
 
 class SalesBillingScreen extends ConsumerStatefulWidget {
   const SalesBillingScreen({super.key});
@@ -250,13 +271,11 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     required String paymentMethod,
     required double remaining,
   }) {
-    final normalizedCustomerId = selectedCustomerId?.trim();
-    final isWalkInCustomer = normalizedCustomerId == null ||
-        normalizedCustomerId.isEmpty ||
-        normalizedCustomerId.toLowerCase() == 'walk_in';
-    final isCreditMode =
-        paymentMethod.trim().toLowerCase() == PaymentMethod.credit;
-    return isCreditMode && remaining > 0 && isWalkInCustomer;
+    return _creditSaleRequiresRegisteredCustomer(
+      selectedCustomerId: selectedCustomerId,
+      paymentMethod: paymentMethod,
+      remaining: remaining,
+    );
   }
 
   void _handleEscape() {
@@ -400,6 +419,40 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
     _handleFailedSale(result.asFailure!.error);
   }
 
+  Future<void> _openCheckoutSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) {
+        return Padding(
+          // Keep the payment fields above the on-screen keyboard.
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.85,
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: _SalesCheckoutPanel(
+                paymentMethodFocusNode: _paymentMethodFocus,
+                paidAmountFocusNode: _paidAmountFocus,
+                notesFocusNode: _notesFocus,
+                isCompleting: _isCompleting,
+                onCompleteSale: () {
+                  Navigator.of(sheetContext).pop();
+                  _completeSale();
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _openPrintPreview(String jobId) async {
     final notifier = ref.read(invoicePrintQueueProvider.notifier);
     final job = notifier.findById(jobId);
@@ -498,24 +551,6 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
 
     final cartItems = ref.watch(cartStateProvider);
     final totals = ref.watch(totalsProvider);
-    final selectedCustomerId = ref.watch(
-      billingStateProvider.select((state) => state.selectedCustomerId),
-    );
-    final paymentMethod = ref.watch(
-      billingStateProvider.select((state) => state.paymentMethod),
-    );
-    final paidAmount = ref.watch(
-      billingStateProvider.select((state) => state.paidAmount),
-    );
-    final notes = ref.watch(
-      billingStateProvider.select((state) => state.notes),
-    );
-    final requiresRegisteredCustomerForCredit =
-        _requiresRegisteredCustomerForCredit(
-      selectedCustomerId: selectedCustomerId,
-      paymentMethod: paymentMethod,
-      remaining: totals.remaining,
-    );
 
     return Shortcuts(
       shortcuts: salesScreenShortcuts,
@@ -555,6 +590,73 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
+                        final cartCard = Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.sm),
+                            child: CartTableWidget(
+                              items: cartItems,
+                              selectedIndex: _selectedCartIndex,
+                              onSelectRow: (index) {
+                                setState(() {
+                                  _selectedCartIndex = index;
+                                });
+                              },
+                              onIncreaseQty: (index) {
+                                final item = cartItems[index];
+                                if (item.hasImei) {
+                                  return;
+                                }
+                                ref.read(cartStateProvider.notifier).updateQty(
+                                      index: index,
+                                      quantity: item.quantity + 1,
+                                    );
+                              },
+                              onDecreaseQty: (index) {
+                                final item = cartItems[index];
+                                if (item.hasImei || item.quantity <= 1) {
+                                  return;
+                                }
+                                ref.read(cartStateProvider.notifier).updateQty(
+                                      index: index,
+                                      quantity: item.quantity - 1,
+                                    );
+                              },
+                              onUpdateUnitPrice: (index, price) {
+                                ref
+                                    .read(cartStateProvider.notifier)
+                                    .updateUnitPrice(
+                                      index: index,
+                                      price: price,
+                                    );
+                              },
+                              onRemove: (index) {
+                                ref
+                                    .read(cartStateProvider.notifier)
+                                    .removeFromCart(
+                                      index,
+                                    );
+                              },
+                            ),
+                          ),
+                        );
+
+                        if (constraints.maxWidth < _kSalesCompactLayoutWidth) {
+                          // Compact (tablet portrait / split screen): the
+                          // fixed side panel would starve the cart, so the
+                          // checkout moves to a bottom sheet behind a
+                          // summary bar.
+                          return Column(
+                            children: <Widget>[
+                              Expanded(child: cartCard),
+                              const SizedBox(height: AppSpacing.sm),
+                              _CompactCheckoutBar(
+                                totals: totals,
+                                onOpenCheckout: _openCheckoutSheet,
+                              ),
+                            ],
+                          );
+                        }
+
                         final rightPanelWidth = constraints.maxWidth >= 1500
                             ? 360.0
                             : constraints.maxWidth >= 1200
@@ -563,61 +665,7 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                         return Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            Expanded(
-                              child: Card(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(AppSpacing.sm),
-                                  child: CartTableWidget(
-                                    items: cartItems,
-                                    selectedIndex: _selectedCartIndex,
-                                    onSelectRow: (index) {
-                                      setState(() {
-                                        _selectedCartIndex = index;
-                                      });
-                                    },
-                                    onIncreaseQty: (index) {
-                                      final item = cartItems[index];
-                                      if (item.hasImei) {
-                                        return;
-                                      }
-                                      ref
-                                          .read(cartStateProvider.notifier)
-                                          .updateQty(
-                                            index: index,
-                                            quantity: item.quantity + 1,
-                                          );
-                                    },
-                                    onDecreaseQty: (index) {
-                                      final item = cartItems[index];
-                                      if (item.hasImei || item.quantity <= 1) {
-                                        return;
-                                      }
-                                      ref
-                                          .read(cartStateProvider.notifier)
-                                          .updateQty(
-                                            index: index,
-                                            quantity: item.quantity - 1,
-                                          );
-                                    },
-                                    onUpdateUnitPrice: (index, price) {
-                                      ref
-                                          .read(cartStateProvider.notifier)
-                                          .updateUnitPrice(
-                                            index: index,
-                                            price: price,
-                                          );
-                                    },
-                                    onRemove: (index) {
-                                      ref
-                                          .read(cartStateProvider.notifier)
-                                          .removeFromCart(
-                                            index,
-                                          );
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ),
+                            Expanded(child: cartCard),
                             const SizedBox(width: AppSpacing.sm),
                             SizedBox(
                               width: rightPanelWidth,
@@ -627,102 +675,13 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
                                 child: ListView(
                                   controller: _rightPanelScrollController,
                                   children: <Widget>[
-                                    FocusTraversalOrder(
-                                      order: const NumericFocusOrder(2),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: <Widget>[
-                                          CustomerSelectorWidget(
-                                            selectedCustomerId:
-                                                selectedCustomerId,
-                                            onChanged: (value) {
-                                              ref
-                                                  .read(
-                                                    billingStateProvider
-                                                        .notifier,
-                                                  )
-                                                  .setSelectedCustomerId(value);
-                                            },
-                                          ),
-                                          if (requiresRegisteredCustomerForCredit)
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.only(top: AppSpacing.sm),
-                                              child: Text(
-                                                'Registered customer is required for credit (udhar) sale.',
-                                                style: TextStyle(
-                                                  color: Theme.of(
-                                                    context,
-                                                  ).colorScheme.error,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: AppSpacing.sm),
-                                    FocusTraversalOrder(
-                                      order: const NumericFocusOrder(3),
-                                      child: TotalsPanelWidget(
-                                        totals: totals,
-                                        enteredPaidAmount: paidAmount,
-                                        onDiscountChanged: (value) {
-                                          ref
-                                              .read(
-                                                billingStateProvider.notifier,
-                                              )
-                                              .setDiscount(value);
-                                        },
-                                        onTaxChanged: (value) {
-                                          ref
-                                              .read(
-                                                billingStateProvider.notifier,
-                                              )
-                                              .setTax(value);
-                                        },
-                                      ),
-                                    ),
-                                    const SizedBox(height: AppSpacing.sm),
-                                    FocusTraversalOrder(
-                                      order: const NumericFocusOrder(4),
-                                      child: PaymentSectionWidget(
-                                        paymentMethod: paymentMethod,
-                                        paidAmount: paidAmount,
-                                        notes: notes,
-                                        paymentMethodFocusNode:
-                                            _paymentMethodFocus,
-                                        paidAmountFocusNode: _paidAmountFocus,
-                                        notesFocusNode: _notesFocus,
-                                        onPaymentMethodChanged: (value) {
-                                          ref
-                                              .read(
-                                                billingStateProvider.notifier,
-                                              )
-                                              .setPaymentMethod(value);
-                                        },
-                                        onPaidAmountChanged: (value) {
-                                          ref
-                                              .read(
-                                                billingStateProvider.notifier,
-                                              )
-                                              .setPaidAmount(value);
-                                        },
-                                        onNotesChanged: (value) {
-                                          ref
-                                              .read(
-                                                billingStateProvider.notifier,
-                                              )
-                                              .setNotes(value);
-                                        },
-                                        onPaidAmountSubmitted: _completeSale,
-                                        onCompleteSale: _completeSale,
-                                        isProcessing: _isCompleting,
-                                        canCompleteSale:
-                                            !requiresRegisteredCustomerForCredit,
-                                        disabledReason:
-                                            'Credit sale requires a registered customer.',
-                                      ),
+                                    _SalesCheckoutPanel(
+                                      paymentMethodFocusNode:
+                                          _paymentMethodFocus,
+                                      paidAmountFocusNode: _paidAmountFocus,
+                                      notesFocusNode: _notesFocus,
+                                      isCompleting: _isCompleting,
+                                      onCompleteSale: _completeSale,
                                     ),
                                   ],
                                 ),
@@ -737,6 +696,176 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Customer, totals and payment column shared by the wide side panel and the
+/// compact checkout bottom sheet. Watches the billing/totals providers itself
+/// so the sheet stays live while the operator edits payment details.
+class _SalesCheckoutPanel extends ConsumerWidget {
+  const _SalesCheckoutPanel({
+    required this.paymentMethodFocusNode,
+    required this.paidAmountFocusNode,
+    required this.notesFocusNode,
+    required this.isCompleting,
+    required this.onCompleteSale,
+  });
+
+  final FocusNode paymentMethodFocusNode;
+  final FocusNode paidAmountFocusNode;
+  final FocusNode notesFocusNode;
+  final bool isCompleting;
+  final VoidCallback onCompleteSale;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final totals = ref.watch(totalsProvider);
+    final selectedCustomerId = ref.watch(
+      billingStateProvider.select((state) => state.selectedCustomerId),
+    );
+    final paymentMethod = ref.watch(
+      billingStateProvider.select((state) => state.paymentMethod),
+    );
+    final paidAmount = ref.watch(
+      billingStateProvider.select((state) => state.paidAmount),
+    );
+    final notes = ref.watch(
+      billingStateProvider.select((state) => state.notes),
+    );
+    final requiresRegisteredCustomerForCredit =
+        _creditSaleRequiresRegisteredCustomer(
+      selectedCustomerId: selectedCustomerId,
+      paymentMethod: paymentMethod,
+      remaining: totals.remaining,
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        FocusTraversalOrder(
+          order: const NumericFocusOrder(2),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              CustomerSelectorWidget(
+                selectedCustomerId: selectedCustomerId,
+                onChanged: (value) {
+                  ref
+                      .read(billingStateProvider.notifier)
+                      .setSelectedCustomerId(value);
+                },
+              ),
+              if (requiresRegisteredCustomerForCredit)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.sm),
+                  child: Text(
+                    'Registered customer is required for credit (udhar) sale.',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        FocusTraversalOrder(
+          order: const NumericFocusOrder(3),
+          child: TotalsPanelWidget(
+            totals: totals,
+            enteredPaidAmount: paidAmount,
+            onDiscountChanged: (value) {
+              ref.read(billingStateProvider.notifier).setDiscount(value);
+            },
+            onTaxChanged: (value) {
+              ref.read(billingStateProvider.notifier).setTax(value);
+            },
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        FocusTraversalOrder(
+          order: const NumericFocusOrder(4),
+          child: PaymentSectionWidget(
+            paymentMethod: paymentMethod,
+            paidAmount: paidAmount,
+            notes: notes,
+            paymentMethodFocusNode: paymentMethodFocusNode,
+            paidAmountFocusNode: paidAmountFocusNode,
+            notesFocusNode: notesFocusNode,
+            onPaymentMethodChanged: (value) {
+              ref.read(billingStateProvider.notifier).setPaymentMethod(value);
+            },
+            onPaidAmountChanged: (value) {
+              ref.read(billingStateProvider.notifier).setPaidAmount(value);
+            },
+            onNotesChanged: (value) {
+              ref.read(billingStateProvider.notifier).setNotes(value);
+            },
+            onPaidAmountSubmitted: onCompleteSale,
+            onCompleteSale: onCompleteSale,
+            isProcessing: isCompleting,
+            canCompleteSale: !requiresRegisteredCustomerForCredit,
+            disabledReason: 'Credit sale requires a registered customer.',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Compact-layout summary strip under the cart: shows the running total and
+/// remaining balance and opens the checkout bottom sheet.
+class _CompactCheckoutBar extends StatelessWidget {
+  const _CompactCheckoutBar({
+    required this.totals,
+    required this.onOpenCheckout,
+  });
+
+  final SaleTotalsEntity totals;
+  final VoidCallback onOpenCheckout;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    'Total: ${FormattingHelpers.currencyPkr(totals.total)}',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (totals.remaining > 0)
+                    Text(
+                      'Remaining: '
+                      '${FormattingHelpers.currencyPkr(totals.remaining)}',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            FilledButton.icon(
+              onPressed: onOpenCheckout,
+              icon: const Icon(Icons.payments_outlined),
+              label: const Text('Customer & Payment'),
+            ),
+          ],
         ),
       ),
     );

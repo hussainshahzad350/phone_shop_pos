@@ -13,6 +13,7 @@ import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/services/printing/invoice_print_models.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class InvoicePrintPreviewDialog extends ConsumerStatefulWidget {
   const InvoicePrintPreviewDialog({
@@ -53,7 +54,7 @@ class _InvoicePrintPreviewDialogState
 
     return AlertDialog(
       title: Text('Invoice Preview - ${job.invoiceNumber}'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 820,
         child: Column(
           mainAxisSize: MainAxisSize.min,

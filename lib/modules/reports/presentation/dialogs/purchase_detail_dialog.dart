@@ -17,7 +17,7 @@ class PurchaseDetailDialog extends ConsumerWidget {
     final detailAsync = ref.watch(purchaseHistoryDetailProvider(purchaseId));
     return AlertDialog(
       title: const Text('Purchase Details'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 920,
         height: 500,
         child: detailAsync.when(

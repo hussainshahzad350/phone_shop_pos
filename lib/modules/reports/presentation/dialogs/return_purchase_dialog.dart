@@ -4,6 +4,7 @@ import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class ReturnPurchaseDialog extends ConsumerStatefulWidget {
   const ReturnPurchaseDialog({
@@ -44,7 +45,7 @@ class _ReturnPurchaseDialogState extends ConsumerState<ReturnPurchaseDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Return Purchase Item'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 350,
         child: Column(
           mainAxisSize: MainAxisSize.min,

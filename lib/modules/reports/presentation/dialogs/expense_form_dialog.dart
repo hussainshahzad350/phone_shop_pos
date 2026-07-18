@@ -9,6 +9,7 @@ import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/utils/id_helpers.dart';
 import 'package:phone_shop_pos/modules/reports/domain/entities/expense_entity.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 const List<String> pakistaniExpenseCategories = <String>[
   'Shop Rent',
@@ -94,7 +95,7 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(_isEdit ? 'Edit Expense' : 'Add Expense'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 520,
         child: SingleChildScrollView(
           child: Column(

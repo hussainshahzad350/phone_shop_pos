@@ -1,11 +1,22 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
+import 'package:phone_shop_pos/core/theme/app_interaction_tokens.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 const int _kDefaultPaginateThreshold = 80;
 const double _kDesktopContentMaxWidth = 2200.0;
 const double _kDesktopCardRadius = 12.0;
+
+/// Below this width the sticky-header table switches to a single scrollable
+/// table with horizontal overflow scrolling — fixed-width columns designed
+/// for desktop tiers stop fitting around here (tablet portrait, split
+/// screen), and a dual-table sticky header cannot share one horizontal
+/// viewport without misaligning its columns.
+const double _kStickyHeaderMinWidth = 900.0;
 
 // Borders, fill and radius intentionally come from InputDecorationTheme so
 // the field adapts to light/dark mode — hardcoded colors here previously
@@ -41,27 +52,31 @@ class AppDesktopScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Row(
-        children: <Widget>[
-          sidebar,
-          const VerticalDivider(width: 1),
-          Expanded(
-            child: Column(
-              children: <Widget>[
-                topBar,
-                const Divider(height: 1),
-                Expanded(
-                  child: _DesktopContentArea(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 180),
-                      child: child,
+      // No-op on Windows (zero insets); keeps the shell clear of status bars
+      // and display cutouts on future touch/tablet targets.
+      body: SafeArea(
+        child: Row(
+          children: <Widget>[
+            sidebar,
+            const VerticalDivider(width: 1),
+            Expanded(
+              child: Column(
+                children: <Widget>[
+                  topBar,
+                  const Divider(height: 1),
+                  Expanded(
+                    child: _DesktopContentArea(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 180),
+                        child: child,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -281,16 +296,19 @@ class AppDataTable extends StatefulWidget {
 
 class _AppDataTableState extends State<AppDataTable> {
   late final ScrollController _verticalScrollController;
+  late final ScrollController _horizontalScrollController;
 
   @override
   void initState() {
     super.initState();
     _verticalScrollController = ScrollController();
+    _horizontalScrollController = ScrollController();
   }
 
   @override
   void dispose() {
     _verticalScrollController.dispose();
+    _horizontalScrollController.dispose();
     super.dispose();
   }
 
@@ -318,6 +336,18 @@ class _AppDataTableState extends State<AppDataTable> {
         icon: widget.emptyIcon,
       );
     }
+
+    // In touch mode, floor every table's row heights at the 48dp touch
+    // minimum without touching the ~15 call sites that pass desktop-tier
+    // heights. Max is raised together with min (the framework asserts
+    // min <= max).
+    final tokens = AppInteractionTokens.of(context);
+    final dataRowMinHeight = tokens.isTouch
+        ? math.max(widget.dataRowMinHeight, tokens.dataRowMinHeight)
+        : widget.dataRowMinHeight;
+    final dataRowMaxHeight = tokens.isTouch
+        ? math.max(widget.dataRowMaxHeight, tokens.dataRowMaxHeight)
+        : widget.dataRowMaxHeight;
 
     final effectiveRows = List<DataRow>.generate(widget.rows.length, (index) {
       final row = widget.rows[index];
@@ -378,8 +408,8 @@ class _AppDataTableState extends State<AppDataTable> {
           rowsPerPage: widget.rowsPerPage,
           availableRowsPerPage: const <int>[25, 50, 100],
           columnSpacing: widget.columnSpacing,
-          dataRowMinHeight: widget.dataRowMinHeight,
-          dataRowMaxHeight: widget.dataRowMaxHeight,
+          dataRowMinHeight: dataRowMinHeight,
+          dataRowMaxHeight: dataRowMaxHeight,
           headingRowHeight: 64,
           showCheckboxColumn: widget.showCheckboxColumn,
           showFirstLastButtons: true,
@@ -394,7 +424,19 @@ class _AppDataTableState extends State<AppDataTable> {
     // widths still align with the pinned header.
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.hasBoundedHeight) {
+        final fullTable = DataTable(
+          columns: effectiveColumns,
+          rows: effectiveRows,
+          columnSpacing: widget.columnSpacing,
+          dataRowMinHeight: dataRowMinHeight,
+          dataRowMaxHeight: dataRowMaxHeight,
+          headingRowHeight: 64,
+          dividerThickness: 0.6,
+          showCheckboxColumn: widget.showCheckboxColumn,
+        );
+
+        if (constraints.hasBoundedHeight &&
+            constraints.maxWidth >= _kStickyHeaderMinWidth) {
           return ClipRRect(
             borderRadius: BorderRadius.circular(_kDesktopCardRadius),
             child: Column(
@@ -417,8 +459,8 @@ class _AppDataTableState extends State<AppDataTable> {
                         columns: _inertColumns(effectiveColumns),
                         rows: effectiveRows,
                         columnSpacing: widget.columnSpacing,
-                        dataRowMinHeight: widget.dataRowMinHeight,
-                        dataRowMaxHeight: widget.dataRowMaxHeight,
+                        dataRowMinHeight: dataRowMinHeight,
+                        dataRowMaxHeight: dataRowMaxHeight,
                         headingRowHeight: 0,
                         dividerThickness: 0.6,
                         showCheckboxColumn: widget.showCheckboxColumn,
@@ -427,6 +469,35 @@ class _AppDataTableState extends State<AppDataTable> {
                   ),
                 ),
               ],
+            ),
+          );
+        }
+
+        if (constraints.hasBoundedHeight) {
+          // Narrow bounded viewport (tablet portrait, split screen): a single
+          // table keeps header and body columns aligned; the horizontal
+          // scroll only engages when the table's natural width exceeds the
+          // viewport (ConstrainedBox stretches it to full width otherwise).
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(_kDesktopCardRadius),
+            child: Scrollbar(
+              controller: _horizontalScrollController,
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                controller: _horizontalScrollController,
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                  child: Scrollbar(
+                    controller: _verticalScrollController,
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
+                      controller: _verticalScrollController,
+                      child: fullTable,
+                    ),
+                  ),
+                ),
+              ),
             ),
           );
         }
@@ -441,15 +512,20 @@ class _AppDataTableState extends State<AppDataTable> {
             scrollDirection: Axis.vertical,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(_kDesktopCardRadius),
-              child: DataTable(
-                columns: effectiveColumns,
-                rows: effectiveRows,
-                columnSpacing: widget.columnSpacing,
-                dataRowMinHeight: widget.dataRowMinHeight,
-                dataRowMaxHeight: widget.dataRowMaxHeight,
-                headingRowHeight: 64,
-                dividerThickness: 0.6,
-                showCheckboxColumn: widget.showCheckboxColumn,
+              child: Scrollbar(
+                controller: _horizontalScrollController,
+                child: SingleChildScrollView(
+                  controller: _horizontalScrollController,
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minWidth: constraints.hasBoundedWidth
+                          ? constraints.maxWidth
+                          : 0,
+                    ),
+                    child: fullTable,
+                  ),
+                ),
               ),
             ),
           ),
@@ -480,6 +556,81 @@ class _StaticDataSource extends DataTableSource {
 
   @override
   int get selectedRowCount => 0;
+}
+
+/// Gives disabled controls a tap-visible explanation in touch mode.
+///
+/// On desktop a disabled button explains itself through its hover [Tooltip];
+/// touch users have no hover, so tapping a dead control gives no feedback.
+/// When [enabled] is false and the touch profile is active, taps on [child]
+/// surface [reason] via [AppNotifier.info]. Desktop (and enabled controls)
+/// render [child] unchanged.
+class AppDisabledReasonTap extends StatelessWidget {
+  const AppDisabledReasonTap({
+    super.key,
+    required this.enabled,
+    required this.reason,
+    required this.child,
+  });
+
+  final bool enabled;
+  final String reason;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (enabled || !AppInteractionTokens.of(context).isTouch) {
+      return child;
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => AppNotifier.info(reason),
+      child: child,
+    );
+  }
+}
+
+/// Sizes an [AlertDialog]'s content to a target design width, clamped to the
+/// screen so wide dialogs (invoice/detail views up to 980px) never overflow
+/// small windows, tablets or split screens.
+///
+/// On the enforced desktop minimum window (1366x768) every existing dialog
+/// width fits, so this is a rendering no-op there — it only engages below
+/// ~1100px of window width.
+class AppDialogContentBox extends StatelessWidget {
+  const AppDialogContentBox({
+    super.key,
+    required this.width,
+    this.height,
+    required this.child,
+  });
+
+  /// Design width the dialog was laid out for; used as the maximum.
+  final double width;
+
+  /// Optional fixed content height, clamped to the screen the same way.
+  final double? height;
+
+  final Widget child;
+
+  // AlertDialog defaults: insetPadding 40px per side + content padding
+  // ~24px per side. Leave that chrome out of the usable width.
+  static const double _horizontalChrome = 128;
+  static const double _verticalChrome = 160;
+  static const double _minWidth = 280;
+  static const double _minHeight = 200;
+
+  @override
+  Widget build(BuildContext context) {
+    final screen = MediaQuery.sizeOf(context);
+    final maxWidth = math.max(_minWidth, screen.width - _horizontalChrome);
+    final maxHeight = math.max(_minHeight, screen.height - _verticalChrome);
+    return SizedBox(
+      width: math.min(width, maxWidth),
+      height: height == null ? null : math.min(height!, maxHeight),
+      child: child,
+    );
+  }
 }
 
 class AppConfirmationDialog extends StatelessWidget {

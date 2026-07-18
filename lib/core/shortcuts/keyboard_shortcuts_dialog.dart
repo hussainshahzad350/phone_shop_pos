@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 /// A single keyboard shortcut row: one or more key "chords" and a description.
 ///
@@ -170,7 +171,7 @@ class KeyboardShortcutsDialog extends StatelessWidget {
           const Text('Keyboard Shortcuts'),
         ],
       ),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 520,
         child: SingleChildScrollView(
           child: Column(

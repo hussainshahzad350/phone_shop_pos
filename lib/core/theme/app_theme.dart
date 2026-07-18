@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phone_shop_pos/core/theme/app_interaction_tokens.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/theme/app_typography.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
@@ -6,11 +7,15 @@ import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 class AppTheme {
   const AppTheme._();
 
-  static ThemeData get light => _buildTheme(Brightness.light);
+  /// [touch] switches to the touch-friendly density profile (48dp targets,
+  /// taller rows, non-dense inputs). Default keeps today's desktop profile.
+  static ThemeData light({bool touch = false}) =>
+      _buildTheme(Brightness.light, touch: touch);
 
-  static ThemeData get dark => _buildTheme(Brightness.dark);
+  static ThemeData dark({bool touch = false}) =>
+      _buildTheme(Brightness.dark, touch: touch);
 
-  static ThemeData _buildTheme(Brightness brightness) {
+  static ThemeData _buildTheme(Brightness brightness, {required bool touch}) {
     // Corporate navy from the POS Dashboard v2 design mockup.
     final colorScheme = ColorScheme.fromSeed(
       seedColor: const Color(0xFF2455A4),
@@ -20,17 +25,21 @@ class AppTheme {
     final base = ThemeData(
       colorScheme: colorScheme,
       useMaterial3: true,
-      visualDensity: VisualDensity.compact,
+      visualDensity:
+          touch ? VisualDensity.standard : VisualDensity.compact,
+      materialTapTargetSize: touch ? MaterialTapTargetSize.padded : null,
     );
 
     final textTheme = AppTypography.build(base.textTheme, colorScheme.onSurface);
     final semanticColors = brightness == Brightness.light
         ? AppSemanticColors.light
         : AppSemanticColors.dark;
+    final interactionTokens =
+        touch ? AppInteractionTokens.touch : AppInteractionTokens.desktop;
 
     return base.copyWith(
       textTheme: textTheme,
-      extensions: <ThemeExtension<dynamic>>[semanticColors],
+      extensions: <ThemeExtension<dynamic>>[semanticColors, interactionTokens],
       scaffoldBackgroundColor: brightness == Brightness.light
           ? const Color(0xFFF6F8FC)
           : colorScheme.surface,
@@ -55,7 +64,7 @@ class AppTheme {
         margin: EdgeInsets.zero,
       ),
       inputDecorationTheme: InputDecorationTheme(
-        isDense: true,
+        isDense: !touch,
         filled: true,
         fillColor: brightness == Brightness.light
             ? const Color(0xFFFAFBFE)
@@ -91,7 +100,10 @@ class AppTheme {
             borderRadius: AppRadii.mdRadius,
           ),
           side: BorderSide(color: colorScheme.outlineVariant),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: touch ? AppSpacing.lg : AppSpacing.md,
+          ),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -99,7 +111,10 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: AppRadii.mdRadius,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: touch ? AppSpacing.lg : AppSpacing.md,
+          ),
         ),
       ),
       navigationRailTheme: NavigationRailThemeData(
@@ -124,7 +139,10 @@ class AppTheme {
         headingTextStyle: textTheme.labelLarge?.copyWith(
           fontWeight: FontWeight.w700,
         ),
-        dataRowMinHeight: 40,
+        dataRowMinHeight: touch ? 48 : 40,
+        // The framework's default max is 48; raise it with the min so
+        // dataRowMinHeight <= dataRowMaxHeight always holds.
+        dataRowMaxHeight: touch ? 64 : 48,
         dividerThickness: 0.6,
       ),
     );

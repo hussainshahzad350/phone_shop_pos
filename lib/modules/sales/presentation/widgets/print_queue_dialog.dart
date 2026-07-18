@@ -79,7 +79,7 @@ class _PrintQueueDialogState extends ConsumerState<PrintQueueDialog> {
     final printQueue = ref.watch(invoicePrintQueueProvider);
     return AlertDialog(
       title: const Text('Invoice Print Queue'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 560,
         child: printQueue.isEmpty
             ? const Text('No queued or failed receipts.')

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:phone_shop_pos/core/theme/app_interaction_tokens.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/sales/domain/entities/cart_item_entity.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
@@ -349,6 +350,7 @@ class _QtyStepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokens = AppInteractionTokens.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: AppSpacing.xs),
       decoration: BoxDecoration(
@@ -362,10 +364,10 @@ class _QtyStepper extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.remove_circle_outline),
             onPressed: onDecrease,
-            visualDensity: VisualDensity.compact,
+            visualDensity: tokens.controlDensity,
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
+            padding: EdgeInsets.symmetric(horizontal: tokens.rowActionGap),
             child: Text(
               '$value',
               style: theme.textTheme.titleSmall?.copyWith(
@@ -376,7 +378,7 @@ class _QtyStepper extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
             onPressed: onIncrease,
-            visualDensity: VisualDensity.compact,
+            visualDensity: tokens.controlDensity,
           ),
         ],
       ),

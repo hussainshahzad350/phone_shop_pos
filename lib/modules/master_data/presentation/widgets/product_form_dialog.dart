@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/product_entity.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class ProductFormData {
   const ProductFormData({
@@ -158,7 +159,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
 
     return AlertDialog(
       title: Text(isEditing ? 'Edit Product' : 'Add Product'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 560,
         child: Form(
           key: _formKey,

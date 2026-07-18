@@ -24,7 +24,7 @@ class ResetPinDialog extends ConsumerWidget {
 
     return AlertDialog(
       title: const Text('Reset PIN with Recovery Code'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 420,
         child: Column(
           mainAxisSize: MainAxisSize.min,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/modules/customers/domain/entities/customer_entity.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class CustomerFormData {
   const CustomerFormData({
@@ -86,7 +87,7 @@ class _CustomerFormDialogState extends State<CustomerFormDialog> {
     final isEditing = widget.initial != null;
     return AlertDialog(
       title: Text(isEditing ? 'Edit Customer' : 'Add Customer'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 560,
         child: Form(
           key: _formKey,

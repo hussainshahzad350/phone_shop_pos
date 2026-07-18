@@ -6,6 +6,7 @@ import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/serialized_stock_entity.dart';
 import 'package:phone_shop_pos/modules/sales/domain/repositories/sales_repository.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class ImeiPickerDialog extends StatefulWidget {
   const ImeiPickerDialog({
@@ -150,7 +151,7 @@ class _ImeiPickerDialogState extends State<ImeiPickerDialog> {
         },
         child: AlertDialog(
           title: Text('Select IMEI - ${widget.productName}'),
-          content: SizedBox(
+          content: AppDialogContentBox(
             width: 520,
             height: 440,
             child: Column(

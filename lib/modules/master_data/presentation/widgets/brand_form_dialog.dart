@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/modules/inventory/domain/entities/brand_entity.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class BrandFormData {
   const BrandFormData({required this.name, required this.isActive});
@@ -50,7 +51,7 @@ class _BrandFormDialogState extends State<BrandFormDialog> {
     final isEditing = widget.initial != null;
     return AlertDialog(
       title: Text(isEditing ? 'Edit Brand' : 'Add Brand'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 420,
         child: Form(
           key: _formKey,

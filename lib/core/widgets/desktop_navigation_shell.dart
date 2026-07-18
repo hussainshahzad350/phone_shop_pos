@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phone_shop_pos/core/config/business_configuration_providers.dart';
+import 'package:phone_shop_pos/core/config/interaction_mode_provider.dart';
 import 'package:phone_shop_pos/core/config/business_profile.dart';
 import 'package:phone_shop_pos/core/config/feature_access.dart';
 import 'package:phone_shop_pos/core/routing/current_route_provider.dart';
@@ -265,11 +266,16 @@ class _ActiveOperationsChip extends ConsumerWidget {
   }
 }
 
-class _ShortcutsHelpButton extends StatelessWidget {
+class _ShortcutsHelpButton extends ConsumerWidget {
   const _ShortcutsHelpButton();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // The shortcut list documents a physical-keyboard workflow; hide it when
+    // the operator has switched the app to touch mode.
+    if (ref.watch(isTouchModeProvider)) {
+      return const SizedBox.shrink();
+    }
     return IconButton(
       icon: const Icon(Icons.help_outline, size: 18),
       tooltip: 'Keyboard shortcuts (F1)',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/core/constants/payment_method.dart';
+import 'package:phone_shop_pos/core/theme/app_interaction_tokens.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/core/utils/notes_safety.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
@@ -153,8 +154,14 @@ class _PaymentSectionWidgetState extends State<PaymentSectionWidget> {
               child: FilledButton.icon(
                 onPressed: isDisabled ? null : widget.onCompleteSale,
                 icon: const Icon(Icons.point_of_sale_outlined),
+                // The F10 hint documents a physical-keyboard shortcut; hide
+                // it when the operator has switched to touch mode.
                 label: Text(
-                  widget.isProcessing ? 'Processing...' : 'Complete Sale (F10)',
+                  widget.isProcessing
+                      ? 'Processing...'
+                      : AppInteractionTokens.of(context).isTouch
+                          ? 'Complete Sale'
+                          : 'Complete Sale (F10)',
                 ),
               ),
             ),

@@ -8,6 +8,7 @@ import 'package:phone_shop_pos/modules/dealer_issue/domain/entities/dealer_issue
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_issue_state_provider.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/presentation/providers/dealer_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class ScanReturnDialog extends ConsumerStatefulWidget {
   const ScanReturnDialog({super.key});
@@ -117,7 +118,7 @@ class _ScanReturnDialogState extends ConsumerState<ScanReturnDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Scan Return'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 420,
         child: Column(
           mainAxisSize: MainAxisSize.min,

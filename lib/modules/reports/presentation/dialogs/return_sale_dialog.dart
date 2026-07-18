@@ -5,6 +5,7 @@ import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboar
 import 'package:phone_shop_pos/modules/reports/domain/entities/operations_entities.dart';
 import 'package:phone_shop_pos/modules/reports/presentation/providers/report_providers.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 
 class ReturnSaleDialog extends ConsumerStatefulWidget {
   const ReturnSaleDialog({
@@ -38,7 +39,7 @@ class _ReturnSaleDialogState extends ConsumerState<ReturnSaleDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Process Return'),
-      content: SizedBox(
+      content: AppDialogContentBox(
         width: 420,
         child: Column(
           mainAxisSize: MainAxisSize.min,

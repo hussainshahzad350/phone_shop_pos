@@ -12,78 +12,86 @@ import 'package:phone_shop_pos/modules/scanner/services/scanner_mode_router.dart
 import 'package:phone_shop_pos/modules/scanner/services/scanner_service.dart';
 
 void main() {
-  testWidgets(
-      'global scanner input claims focus when no other field is focused',
+  testWidgets('touch mode: hidden field never requests an IME connection',
       (tester) async {
-    final container = _makeContainer();
-    addTearDown(container.dispose);
+    final context = _makeContainer();
+    addTearDown(context.container.dispose);
 
-    await tester.pumpWidget(_buildHarness(container));
+    await tester.pumpWidget(_buildHarness(context.container));
 
-    container
+    final scanner = tester.widget<TextField>(find.byKey(_kScannerKey));
+    expect(scanner.keyboardType, TextInputType.none,
+        reason: 'Touch mode must not summon the on-screen keyboard for the '
+            'hidden scanner field');
+  });
+
+  testWidgets('touch mode: scanner still reclaims focus when idle',
+      (tester) async {
+    final context = _makeContainer();
+    addTearDown(context.container.dispose);
+
+    await tester.pumpWidget(_buildHarness(context.container));
+
+    context.container
         .read(scannerControllerProvider.notifier)
         .setActiveMode(ScannerMode.sales);
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 600));
 
     expect(_hasFocus(tester, _kScannerKey), isTrue,
-        reason: 'Scanner should hold focus when no other field is active');
+        reason: 'Idle focus reclaim keeps wedge scanners working in touch '
+            'mode');
   });
 
-  testWidgets(
-      'global scanner input does NOT steal focus from a user-tapped field',
+  testWidgets('touch mode: scanner does not steal focus from a tapped field',
       (tester) async {
-    final container = _makeContainer();
-    addTearDown(container.dispose);
+    final context = _makeContainer();
+    addTearDown(context.container.dispose);
 
     final manualFocusNode = FocusNode();
     addTearDown(manualFocusNode.dispose);
 
-    await tester.pumpWidget(_buildHarness(container, extraFocusNode: manualFocusNode));
+    await tester.pumpWidget(
+      _buildHarness(context.container, extraFocusNode: manualFocusNode),
+    );
 
-    container
+    context.container
         .read(scannerControllerProvider.notifier)
         .setActiveMode(ScannerMode.sales);
     await tester.pump(const Duration(milliseconds: 300));
 
-    // User explicitly taps the manual input field.
-    await tester.tap(find.byKey(const Key('manual-field')));
-    await tester.pump();
-    expect(_hasFocus(tester, const Key('manual-field')), isTrue,
-        reason: 'Manual field should have focus after tap');
-
-    // Wait well past the scanner periodic timer interval (500 ms).
-    // The scanner must NOT steal focus from an intentionally-focused field.
-    await tester.pump(const Duration(milliseconds: 600));
-    expect(_hasFocus(tester, const Key('manual-field')), isTrue,
-        reason: 'Scanner must not steal focus from a user-focused field');
-  });
-
-  testWidgets(
-      'global scanner input reclaims focus after manual field is unfocused',
-      (tester) async {
-    final container = _makeContainer();
-    addTearDown(container.dispose);
-
-    final manualFocusNode = FocusNode();
-    addTearDown(manualFocusNode.dispose);
-
-    await tester.pumpWidget(_buildHarness(container, extraFocusNode: manualFocusNode));
-
-    container
-        .read(scannerControllerProvider.notifier)
-        .setActiveMode(ScannerMode.sales);
-    await tester.pump(const Duration(milliseconds: 300));
-
-    // User taps manual field, then dismisses it.
     await tester.tap(find.byKey(const Key('manual-field')));
     await tester.pump();
     expect(_hasFocus(tester, const Key('manual-field')), isTrue);
 
-    manualFocusNode.unfocus();
+    // Well past the 500ms reclaim timer: the manual field must keep focus so
+    // the operator can type with the on-screen keyboard.
     await tester.pump(const Duration(milliseconds: 600));
+    expect(_hasFocus(tester, const Key('manual-field')), isTrue,
+        reason: 'Touch mode must not fight the operator for focus');
+  });
 
-    expect(_hasFocus(tester, _kScannerKey), isTrue,
-        reason: 'Scanner should reclaim focus once manual field is unfocused');
+  testWidgets('touch mode: a submitted scan still reaches the mode handler',
+      (tester) async {
+    final context = _makeContainer();
+    addTearDown(context.container.dispose);
+
+    await tester.pumpWidget(_buildHarness(context.container));
+
+    context.container
+        .read(scannerControllerProvider.notifier)
+        .setActiveMode(ScannerMode.sales);
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(_hasFocus(tester, _kScannerKey), isTrue);
+
+    // Wedge scanners type into the focused hidden field and send Enter.
+    // Drive the controller through the widget's submit path.
+    final scanner = tester.widget<TextField>(find.byKey(_kScannerKey));
+    scanner.onSubmitted!.call('356938035643809');
+    await tester.pump();
+    await tester.pump();
+
+    expect(context.handler.scans, hasLength(1));
+    expect(context.handler.scans.single.normalizedValue, '356938035643809');
   });
 }
 
@@ -91,13 +99,18 @@ void main() {
 
 const Key _kScannerKey = Key('global-scanner-input');
 
-ProviderContainer _makeContainer() {
+class _TestContext {
+  const _TestContext({required this.container, required this.handler});
+
+  final ProviderContainer container;
+  final _SpyHandler handler;
+}
+
+_TestContext _makeContainer() {
   final handler = _SpyHandler();
-  return ProviderContainer(
+  final container = ProviderContainer(
     overrides: <Override>[
-      // Pin the desktop input profile so the test never touches the real
-      // settings database and keeps exercising today's wedge behavior.
-      isTouchModeProvider.overrideWithValue(false),
+      isTouchModeProvider.overrideWithValue(true),
       scannerControllerProvider.overrideWith(
         (ref) => ScannerController(
           scannerService: const ScannerService(),
@@ -110,6 +123,7 @@ ProviderContainer _makeContainer() {
       ),
     ],
   );
+  return _TestContext(container: container, handler: handler);
 }
 
 Widget _buildHarness(ProviderContainer container, {FocusNode? extraFocusNode}) {
@@ -140,8 +154,13 @@ bool _hasFocus(WidgetTester tester, Key key) {
 }
 
 class _SpyHandler implements ScannerModeHandler {
+  _SpyHandler();
+
+  final List<ScannerScanPayload> scans = <ScannerScanPayload>[];
+
   @override
   Future<ScannerHandlerResult> handle(ScannerScanPayload payload) async {
+    scans.add(payload);
     return const ScannerHandlerResult(
       isSuccess: true,
       code: 'ok',
