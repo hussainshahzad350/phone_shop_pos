@@ -21,6 +21,8 @@ class AppTheme {
       colorScheme: colorScheme,
       useMaterial3: true,
       visualDensity: VisualDensity.compact,
+      // Bundled with the app (offline-first) — see assets/fonts.
+      fontFamily: 'IBMPlexSans',
     );
 
     final textTheme = AppTypography.build(base.textTheme, colorScheme.onSurface);
