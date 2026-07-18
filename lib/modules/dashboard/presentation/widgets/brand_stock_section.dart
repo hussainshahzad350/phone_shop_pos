@@ -27,11 +27,8 @@ class BrandStockSection extends ConsumerStatefulWidget {
   ConsumerState<BrandStockSection> createState() => _BrandStockSectionState();
 }
 
-enum _BrandStockView { table, cards }
-
 class _BrandStockSectionState extends ConsumerState<BrandStockSection> {
   bool _exporting = false;
-  _BrandStockView _view = _BrandStockView.table;
   String _query = '';
 
   static const _exportService = StockReportExportService();
@@ -43,14 +40,6 @@ class _BrandStockSectionState extends ConsumerState<BrandStockSection> {
     return widget.brands
         .where((b) => b.brandName.toLowerCase().contains(q))
         .toList(growable: false);
-  }
-
-  int _columnsForWidth(double width) {
-    if (width >= 1500) return 8;
-    if (width >= 1200) return 6;
-    if (width >= 800) return 4;
-    if (width >= 520) return 3;
-    return 2;
   }
 
   Future<void> _exportCsv() async {
@@ -96,6 +85,7 @@ class _BrandStockSectionState extends ConsumerState<BrandStockSection> {
 
     final theme = Theme.of(context);
     final brands = _filteredBrands;
+    final view = ref.watch(brandStockViewProvider);
 
     return Card(
       child: Padding(
@@ -124,40 +114,69 @@ class _BrandStockSectionState extends ConsumerState<BrandStockSection> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                SizedBox(
+                // Same shell as DashboardCompactDropdown so the search box,
+                // view dropdown and export button are pixel-identical.
+                Container(
                   width: 200,
-                  height: 34,
-                  child: TextField(
-                    onChanged: (value) => setState(() => _query = value),
-                    style: theme.textTheme.bodySmall,
-                    decoration: InputDecoration(
-                      hintText: 'Search brand…',
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                        vertical: AppSpacing.sm,
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: theme.colorScheme.outlineVariant),
+                    borderRadius: AppRadii.smRadius,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      Icon(
+                        Icons.search,
+                        size: 16,
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
-                      prefixIcon: const Icon(Icons.search, size: 16),
-                      prefixIconConstraints: const BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 16,
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: TextField(
+                          onChanged: (value) =>
+                              setState(() => _query = value),
+                          style: theme.textTheme.bodySmall,
+                          // expands + stretched Row gives the field the full
+                          // box height so textAlignVertical can truly centre.
+                          expands: true,
+                          maxLines: null,
+                          minLines: null,
+                          textAlignVertical: TextAlignVertical.center,
+                          decoration: const InputDecoration(
+                            hintText: 'Search brand…',
+                            isCollapsed: true,
+                            filled: false,
+                            // Every border state must be none — otherwise the
+                            // enabled/focused borders fall back to the app's
+                            // input theme (a 16px pill) inside this shell.
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            errorBorder: InputBorder.none,
+                            focusedErrorBorder: InputBorder.none,
+                            disabledBorder: InputBorder.none,
+                          ),
+                        ),
                       ),
-                      border: OutlineInputBorder(
-                        borderRadius: AppRadii.smRadius,
-                      ),
-                    ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
-                DashboardCompactDropdown<_BrandStockView>(
-                  value: _view,
-                  items: _BrandStockView.values,
+                DashboardCompactDropdown<BrandStockView>(
+                  value: view,
+                  items: BrandStockView.values,
                   labelOf: (v) =>
-                      v == _BrandStockView.table ? 'Table' : 'Cards',
-                  leadingIcon: _view == _BrandStockView.table
+                      v == BrandStockView.table ? 'Table' : 'Cards',
+                  leadingIcon: view == BrandStockView.table
                       ? Icons.table_rows_outlined
                       : Icons.grid_view_outlined,
-                  onChanged: (selected) => setState(() => _view = selected),
+                  onChanged: (selected) =>
+                      ref.read(brandStockViewProvider.notifier).state =
+                          selected,
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 _exporting
@@ -166,16 +185,22 @@ class _BrandStockSectionState extends ConsumerState<BrandStockSection> {
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : OutlinedButton.icon(
-                        onPressed: _exportCsv,
-                        icon: const Icon(Icons.download, size: 16),
-                        label: const Text('Export CSV'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.md, vertical: 6),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          textStyle: theme.textTheme.labelSmall,
+                    : SizedBox(
+                        height: 36,
+                        child: OutlinedButton.icon(
+                          onPressed: _exportCsv,
+                          icon: const Icon(Icons.download, size: 16),
+                          label: const Text('Export CSV'),
+                          style: OutlinedButton.styleFrom(
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: AppRadii.smRadius,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            textStyle: theme.textTheme.labelMedium,
+                          ),
                         ),
                       ),
               ],
@@ -193,31 +218,28 @@ class _BrandStockSectionState extends ConsumerState<BrandStockSection> {
                   ),
                 ),
               )
-            else if (_view == _BrandStockView.table)
+            else if (view == BrandStockView.table)
               _BrandStockTable(
                 brands: brands,
                 onBrandTap: widget.onBrandTap,
               )
             else
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  return GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: brands.length,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: _columnsForWidth(constraints.maxWidth),
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      // Phone-silhouette cards are taller than wide.
-                      mainAxisExtent: 216,
-                    ),
-                    itemBuilder: (_, index) => BrandStockCard(
-                      brand: brands[index],
-                      onTap: () => widget.onBrandTap(brands[index]),
-                    ),
-                  );
-                },
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: brands.length,
+                // Compact phone-silhouette cards: capped width instead of
+                // stretching to fill wide columns.
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 140,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  mainAxisExtent: 172,
+                ),
+                itemBuilder: (_, index) => BrandStockCard(
+                  brand: brands[index],
+                  onTap: () => widget.onBrandTap(brands[index]),
+                ),
               ),
           ],
         ),

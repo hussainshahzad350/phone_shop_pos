@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 const int _kDefaultPaginateThreshold = 80;
@@ -73,12 +72,17 @@ class AppSidebar extends StatelessWidget {
     required this.selectedIndex,
     required this.onDestinationSelected,
     required this.destinations,
+    this.leading,
     this.trailing,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
   final List<NavigationRailDestination> destinations;
+
+  /// Identity header above the destinations (shop logo + name). Only
+  /// rendered in extended mode — the narrow rail has no room for it.
+  final Widget? leading;
 
   /// Extra content below the destinations (indicators, summaries). Only
   /// rendered in extended mode — the narrow rail has no room for it.
@@ -100,9 +104,12 @@ class AppSidebar extends StatelessWidget {
       extended: extended,
       minExtendedWidth: _extendedWidth,
       destinations: destinations,
-      // The rail lays trailing out with UNBOUNDED width; anything inside
-      // using Expanded rows would corrupt the whole rail layout. Pin the
-      // content to the rail's extended width explicitly.
+      // The rail lays leading/trailing out with UNBOUNDED width; anything
+      // inside using Expanded rows would corrupt the whole rail layout. Pin
+      // the content to the rail's extended width explicitly.
+      leading: (extended && leading != null)
+          ? SizedBox(width: _extendedWidth, child: leading)
+          : null,
       trailing: (extended && trailing != null)
           ? Expanded(
               child: SizedBox(width: _extendedWidth, child: trailing),
@@ -124,27 +131,19 @@ class AppTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The shop identity lives in the sidebar header (per the v2 mockup), so
+    // the top bar only carries the current screen label and utility chips.
     return SizedBox(
       height: 56,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         child: Row(
           children: <Widget>[
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Text(
-                  AppRuntimeConfig.appName,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
             ),
             const Spacer(),
             if (trailing != null) trailing!,

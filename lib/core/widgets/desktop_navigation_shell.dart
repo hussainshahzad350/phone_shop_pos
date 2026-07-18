@@ -155,6 +155,7 @@ class _DesktopNavigationShellState
                 ),
               )
               .toList(growable: false),
+          leading: const _SidebarIdentityHeader(),
           trailing: const _SidebarTrailing(),
         ),
         topBar: AppTopBar(
@@ -183,6 +184,73 @@ class _DesktopNavigationShellState
   }
 }
 
+/// Shop identity at the top of the extended sidebar (v2 mockup): logo tile
+/// with the shop initial plus the name split over two lines.
+class _SidebarIdentityHeader extends StatelessWidget {
+  const _SidebarIdentityHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    const name = AppRuntimeConfig.appName;
+    final parts = name.split(' & ');
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.sm,
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary,
+              borderRadius: AppRadii.smRadius,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              name.isEmpty ? '?' : name[0].toUpperCase(),
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm + 2),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  parts.first,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (parts.length > 1)
+                  Text(
+                    parts.sublist(1).join(' & '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Content below the nav destinations in the extended sidebar: "This Month"
 /// top performers at the top of the free space, Today summary pinned to the
 /// bottom. Scrolls if the window is too short.
@@ -193,7 +261,9 @@ class _SidebarTrailing extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: <Widget>[
-        const SizedBox(height: AppSpacing.lg),
+        // Generous gap so the indicators read as their own section rather
+        // than a continuation of the nav list.
+        const SizedBox(height: AppSpacing.xl),
         Expanded(
           child: Align(
             alignment: Alignment.topCenter,

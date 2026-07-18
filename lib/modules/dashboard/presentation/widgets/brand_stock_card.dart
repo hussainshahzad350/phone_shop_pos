@@ -39,10 +39,10 @@ class BrandStockCard extends StatelessWidget {
         borderRadius: AppRadii.lgRadius,
         child: Ink(
           padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.sm,
+            AppSpacing.sm,
             AppSpacing.sm + 2,
-            AppSpacing.md,
-            AppSpacing.md,
           ),
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -68,13 +68,13 @@ class BrandStockCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
                     CircleAvatar(
-                      radius: 20,
+                      radius: 15,
                       backgroundColor: primary,
                       child: Text(
                         brand.brandName.isEmpty
                             ? '?'
                             : brand.brandName[0].toUpperCase(),
-                        style: theme.textTheme.titleMedium?.copyWith(
+                        style: theme.textTheme.titleSmall?.copyWith(
                           color: theme.colorScheme.onPrimary,
                           fontWeight: FontWeight.w700,
                         ),
@@ -85,14 +85,14 @@ class BrandStockCard extends StatelessWidget {
                       brand.brandName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
+                      style: theme.textTheme.labelMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '${brand.stockCount}',
-                      style: theme.textTheme.titleLarge?.copyWith(
+                      style: theme.textTheme.titleMedium?.copyWith(
                         color: primary,
                         fontWeight: FontWeight.w700,
                         height: 1,
@@ -107,8 +107,8 @@ class BrandStockCard extends StatelessWidget {
                     const SizedBox(height: AppSpacing.xs),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm + 2,
-                        vertical: 2,
+                        horizontal: AppSpacing.sm,
+                        vertical: 1,
                       ),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surfaceContainerHighest,

@@ -113,8 +113,19 @@ final dashboardAllLowStockProvider =
 });
 
 /// Selected time range for the Key Metrics section (Today / Week / Month).
+///
+/// autoDispose so the selection resets to Today whenever the user leaves the
+/// dashboard — Week/Month are one-off looks, not a sticky preference.
 final dashboardRangeProvider =
-    StateProvider<DashboardRange>((ref) => DashboardRange.today);
+    StateProvider.autoDispose<DashboardRange>((ref) => DashboardRange.today);
+
+/// Brand Stock section view. Defaults to cards; unlike the metrics range it
+/// is a sticky choice — it keeps whatever the user last picked for the whole
+/// session, across screen changes.
+enum BrandStockView { table, cards }
+
+final brandStockViewProvider =
+    StateProvider<BrandStockView>((ref) => BrandStockView.cards);
 
 /// Range-dependent KPIs (sales, profit, units) keyed by range so switching
 /// the toggle back and forth reuses cached results within the session.

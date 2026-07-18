@@ -25,8 +25,10 @@ class DashboardCompactDropdown<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    // Height/radius/border match the sibling toolbar controls (search field,
+    // outlined buttons) so mixed control rows read as one family.
     return Container(
-      height: 34,
+      height: 36,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       decoration: BoxDecoration(
         border: Border.all(color: theme.colorScheme.outlineVariant),
@@ -47,6 +49,9 @@ class DashboardCompactDropdown<T> extends StatelessWidget {
             child: DropdownButton<T>(
               value: value,
               isDense: true,
+              // The button keeps keyboard focus after the menu closes, which
+              // paints a permanent "pressed" highlight — suppress it.
+              focusColor: Colors.transparent,
               borderRadius: kAppDropdownMenuRadius,
               menuMaxHeight: kAppDropdownMenuMaxHeight,
               style: theme.textTheme.labelMedium,

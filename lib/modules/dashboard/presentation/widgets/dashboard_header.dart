@@ -15,13 +15,11 @@ class DashboardHeader extends StatelessWidget {
     final semantic = Theme.of(context).semantic;
     final colorScheme = Theme.of(context).colorScheme;
 
+    // No page title here — the top bar already names the screen (matching
+    // every other screen); this row only carries the quick actions.
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.end,
       children: <Widget>[
-        Text(
-          'Dashboard',
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
         Wrap(
           spacing: 8,
           runSpacing: 8,
