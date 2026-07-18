@@ -9,7 +9,7 @@ import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 const int _kDefaultPaginateThreshold = 80;
 const double _kDesktopContentMaxWidth = 2200.0;
-const double _kDesktopCardRadius = 16.0;
+const double _kDesktopCardRadius = 12.0;
 
 /// Below this width the sticky-header table switches to a single scrollable
 /// table with horizontal overflow scrolling — fixed-width columns designed
@@ -88,24 +88,41 @@ class AppSidebar extends StatelessWidget {
     required this.selectedIndex,
     required this.onDestinationSelected,
     required this.destinations,
+    this.trailing,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
   final List<NavigationRailDestination> destinations;
 
+  /// Extra content below the destinations (indicators, summaries). Only
+  /// rendered in extended mode — the narrow rail has no room for it.
+  final Widget? trailing;
+
+  // Wide enough for the "This Month" mini KPI cards to breathe.
+  static const double _extendedWidth = 232;
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
+    final extended = width >= 1600;
     return NavigationRail(
       selectedIndex: selectedIndex,
       onDestinationSelected: onDestinationSelected,
-      labelType: width >= 1600
+      labelType: extended
           ? NavigationRailLabelType.none
           : NavigationRailLabelType.all,
-      extended: width >= 1600,
-      minExtendedWidth: 208,
+      extended: extended,
+      minExtendedWidth: _extendedWidth,
       destinations: destinations,
+      // The rail lays trailing out with UNBOUNDED width; anything inside
+      // using Expanded rows would corrupt the whole rail layout. Pin the
+      // content to the rail's extended width explicitly.
+      trailing: (extended && trailing != null)
+          ? Expanded(
+              child: SizedBox(width: _extendedWidth, child: trailing),
+            )
+          : null,
     );
   }
 }

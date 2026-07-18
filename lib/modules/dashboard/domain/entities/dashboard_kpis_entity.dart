@@ -9,8 +9,10 @@ class DashboardKpisEntity {
     required this.pendingBalances,
     double? totalStockWorth,
     int? dealerStockCount,
+    int? repairsInProgress,
   })  : _totalStockWorth = totalStockWorth,
-        _dealerStockCount = dealerStockCount;
+        _dealerStockCount = dealerStockCount,
+        _repairsInProgress = repairsInProgress;
 
   final double todaySales;
   final double todayProfit;
@@ -21,7 +23,11 @@ class DashboardKpisEntity {
   final double pendingBalances;
   final double? _totalStockWorth;
   final int? _dealerStockCount;
+  final int? _repairsInProgress;
 
   double get totalStockWorth => _totalStockWorth ?? 0;
   int get dealerStockCount => _dealerStockCount ?? 0;
+
+  /// Open repair jobs (any status other than delivered/cancelled).
+  int get repairsInProgress => _repairsInProgress ?? 0;
 }

@@ -11,6 +11,8 @@ import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/shortcuts/app_shortcut_manager.dart';
 import 'package:phone_shop_pos/core/shortcuts/keyboard_shortcuts_dialog.dart';
+import 'package:phone_shop_pos/core/theme/app_spacing.dart';
+import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/sidebar_insights_panel.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/widgets/print_queue_dialog.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
 import 'package:phone_shop_pos/modules/sales/presentation/providers/printing_providers.dart';
@@ -154,6 +156,7 @@ class _DesktopNavigationShellState
                 ),
               )
               .toList(growable: false),
+          trailing: const _SidebarTrailing(),
         ),
         topBar: AppTopBar(
           title: currentLabel,
@@ -177,6 +180,39 @@ class _DesktopNavigationShellState
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Content below the nav destinations in the extended sidebar: "This Month"
+/// top performers at the top of the free space, Today summary pinned to the
+/// bottom. Scrolls if the window is too short.
+class _SidebarTrailing extends StatelessWidget {
+  const _SidebarTrailing();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        const SizedBox(height: AppSpacing.lg),
+        Expanded(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: SingleChildScrollView(
+              child: SidebarInsightsPanel(),
+            ),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+            AppSpacing.md,
+          ),
+          child: SidebarTodaySummaryCard(),
+        ),
+      ],
     );
   }
 }

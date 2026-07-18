@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/brand_stock_entity.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
+/// Brand card styled as a phone silhouette (v2 mockup): speaker bar on top,
+/// home bar below, circular brand-initial avatar and the units count in the
+/// middle.
 class BrandStockCard extends StatelessWidget {
   const BrandStockCard({
     super.key,
@@ -16,50 +19,112 @@ class BrandStockCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurfaceVariant;
-    return Card(
+    final primary = theme.colorScheme.primary;
+
+    Widget phoneBar({required double width, required double height}) {
+      return Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.outlineVariant,
+          borderRadius: BorderRadius.circular(999),
+        ),
+      );
+    }
+
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: AppRadii.lgRadius,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 14),
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.sm + 2,
+            AppSpacing.md,
+            AppSpacing.md,
+          ),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: <Color>[
+                theme.colorScheme.surface,
+                theme.colorScheme.surfaceContainerHighest
+                    .withValues(alpha: 0.4),
+              ],
+            ),
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant,
+              width: 2,
+            ),
+            borderRadius: AppRadii.lgRadius,
+          ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              // Same phone avatar on every brand card.
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: theme.colorScheme.primary.withValues(
-                  alpha: 0.12,
-                ),
-                child: Icon(
-                  Icons.smartphone,
-                  size: 24,
-                  color: theme.colorScheme.primary,
+              phoneBar(width: 34, height: 5),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: primary,
+                      child: Text(
+                        brand.brandName.isEmpty
+                            ? '?'
+                            : brand.brandName[0].toUpperCase(),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: theme.colorScheme.onPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      brand.brandName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${brand.stockCount}',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: primary,
+                        fontWeight: FontWeight.w700,
+                        height: 1,
+                      ),
+                    ),
+                    Text(
+                      'units in stock',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm + 2,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '${brand.modelCount} models',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: muted,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 10),
-              Text(
-                brand.brandName,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Model: ${brand.modelCount}',
-                style: theme.textTheme.bodySmall?.copyWith(color: muted),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Phone: ${brand.stockCount}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              phoneBar(width: 44, height: 4),
             ],
           ),
         ),

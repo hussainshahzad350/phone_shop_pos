@@ -4,6 +4,9 @@ class _RepairingActionService {
   static void _refresh(WidgetRef ref) {
     ref.invalidate(repairJobsProvider);
     ref.invalidate(repairKpisProvider);
+    // Keeps the dashboard's Repairs in Progress card, transactions feed and
+    // the sidebar Repairing badge in sync with this mutation.
+    refreshDashboardData(ref);
   }
 
   static Future<void> openJobForm(

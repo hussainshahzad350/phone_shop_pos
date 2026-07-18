@@ -1,19 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:phone_shop_pos/core/theme/app_semantic_colors.dart';
 import 'package:phone_shop_pos/core/utils/formatting_helpers.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_kpis_entity.dart';
+import 'package:phone_shop_pos/modules/dashboard/domain/entities/dashboard_range.dart';
 import 'package:phone_shop_pos/modules/dashboard/domain/entities/kpi_card_config.dart';
+import 'package:phone_shop_pos/modules/dashboard/domain/entities/range_sales_kpis_entity.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/providers/kpi_preferences_provider.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/dashboard_kpi_card_widget.dart';
+import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/dashboard_range_toggle.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/kpi_customize_dialog.dart';
 import 'package:phone_shop_pos/modules/dashboard/presentation/widgets/kpi_detail_sheet.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 class DashboardKpiGrid extends ConsumerWidget {
-  const DashboardKpiGrid({super.key, required this.kpis});
+  const DashboardKpiGrid({
+    super.key,
+    required this.kpis,
+    this.range = DashboardRange.today,
+    this.rangeKpis,
+  });
 
   final DashboardKpisEntity kpis;
+
+  /// Selected range for the sales-derived cards.
+  final DashboardRange range;
+
+  /// Range KPIs for [range]; null while loading (cards show a placeholder).
+  final RangeSalesKpisEntity? rangeKpis;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,6 +54,8 @@ class DashboardKpiGrid extends ConsumerWidget {
               ),
             ),
             const Spacer(),
+            const DashboardRangeToggle(),
+            const SizedBox(width: AppSpacing.sm),
             TextButton.icon(
               onPressed: () => showKpiCustomizeDialog(context),
               icon: const Icon(Icons.tune, size: 15),
@@ -99,39 +116,59 @@ class DashboardKpiGrid extends ConsumerWidget {
     late final IconData icon;
     late final Color color;
 
+    // Sales-derived cards follow the Today/Week/Month toggle. When the
+    // selected range's numbers haven't loaded yet, fall back to the today
+    // KPIs for the today range and show a placeholder otherwise.
+    final ranged = rangeKpis ??
+        (range == DashboardRange.today
+            ? RangeSalesKpisEntity(
+                sales: kpis.todaySales,
+                profit: kpis.todayProfit,
+                phonesSold: kpis.phonesSoldToday,
+                accessoriesSold: kpis.accessoriesSoldToday,
+              )
+            : null);
+    const pending = '—';
+
     switch (cfg.id) {
       case 'today_sales':
-        label = 'Today Sales';
-        value = FormattingHelpers.currencyPkr(kpis.todaySales);
+        label = '${range.phrase} Sales';
+        value = ranged == null
+            ? pending
+            : FormattingHelpers.currencyPkr(ranged.sales);
         icon = Icons.payments_outlined;
         color = accent;
         break;
       case 'today_profit':
-        label = 'Today Profit';
-        value = FormattingHelpers.currencyPkr(kpis.todayProfit);
+        label = '${range.phrase} Profit';
+        value = ranged == null
+            ? pending
+            : FormattingHelpers.currencyPkr(ranged.profit);
         icon = Icons.trending_up;
-        color = kpis.todayProfit >= 0 ? semantic.success : semantic.danger;
+        color = (ranged == null || ranged.profit >= 0)
+            ? semantic.success
+            : semantic.danger;
         break;
       case 'phones_sold_today':
-        label = 'Phones Sold Today';
-        value = kpis.phonesSoldToday.toString();
+        label = 'Phones Sold ${range.phrase}';
+        value = ranged == null ? pending : ranged.phonesSold.toString();
         icon = Icons.phone_android;
         color = accent;
         break;
       case 'accessories_sold_today':
-        label = 'Accessories Sold Today';
-        value = kpis.accessoriesSoldToday.toString();
+        label = 'Accessories Sold ${range.phrase}';
+        value = ranged == null ? pending : ranged.accessoriesSold.toString();
         icon = Icons.cable;
         color = accent;
         break;
       case 'low_stock_count':
-        label = 'Low Stock Count';
+        label = 'Low Stock Items';
         value = kpis.lowStockCount.toString();
         icon = Icons.warning_amber;
         color = kpis.lowStockCount > 0 ? semantic.warning : semantic.success;
         break;
       case 'available_stock_count':
-        label = 'Available Stock Count';
+        label = 'Stock on Hand (units)';
         value = kpis.availableStockCount.toString();
         icon = Icons.inventory_2_outlined;
         color = accent;
@@ -143,10 +180,16 @@ class DashboardKpiGrid extends ConsumerWidget {
         color = accent;
         break;
       case 'pending_balances':
-        label = 'Pending Balances';
+        label = 'Receivables (Udhaar)';
         value = FormattingHelpers.currencyPkr(kpis.pendingBalances);
         icon = Icons.account_balance_wallet_outlined;
         color = kpis.pendingBalances > 0 ? semantic.warning : semantic.success;
+        break;
+      case 'repairs_in_progress':
+        label = 'Repairs in Progress';
+        value = kpis.repairsInProgress.toString();
+        icon = Icons.build_outlined;
+        color = kpis.repairsInProgress > 0 ? semantic.danger : accent;
         break;
       case 'dealer_stock':
         label = 'Phones with Dealers';
@@ -158,11 +201,27 @@ class DashboardKpiGrid extends ConsumerWidget {
         return const SizedBox.shrink();
     }
 
+    // The low-stock card takes the mockup's amber alert treatment when
+    // anything is actually low.
+    final alert = cfg.id == 'low_stock_count' && kpis.lowStockCount > 0;
+
+    if (cfg.id == 'repairs_in_progress') {
+      // No detail sheet for repairs — jump straight to the Repairing screen.
+      return DashboardKpiCardWidget(
+        label: label,
+        value: value,
+        icon: icon,
+        color: color,
+        onTap: () => context.go('/repairing'),
+      );
+    }
+
     return DashboardKpiCardWidget(
       label: label,
       value: value,
       icon: icon,
       color: color,
+      alert: alert,
       onTap: () => showKpiDetailSheet(
         context,
         cfg.id,

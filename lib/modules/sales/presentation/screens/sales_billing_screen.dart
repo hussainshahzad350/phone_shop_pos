@@ -488,8 +488,9 @@ class _SalesBillingScreenState extends ConsumerState<SalesBillingScreen> {
 
   void _invalidateFinancialReportsAfterSale() {
     ref.read(reportWorkflowCoordinatorProvider).refreshSalesAfterCompletion();
-    ref.invalidate(dashboardKpisProvider);
-    ref.invalidate(dashboardRecentSalesProvider);
+    // Cascades through every dashboard/sidebar provider (KPIs, chart, feed,
+    // low stock, brand stock, badges) so they reflect this sale immediately.
+    refreshDashboardData(ref);
   }
 
   void _handleFailedSale(AppError error) {

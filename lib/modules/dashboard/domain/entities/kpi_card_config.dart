@@ -26,13 +26,14 @@ class KpiCardConfig {
 }
 
 const kpiCardDefaults = <KpiCardConfig>[
-  KpiCardConfig(id: 'today_sales', label: 'Today Sales', order: 0),
-  KpiCardConfig(id: 'today_profit', label: 'Today Profit', order: 1),
-  KpiCardConfig(id: 'phones_sold_today', label: 'Phones Sold Today', order: 2),
-  KpiCardConfig(id: 'accessories_sold_today', label: 'Accessories Sold Today', order: 3),
-  KpiCardConfig(id: 'low_stock_count', label: 'Low Stock Count', order: 4),
-  KpiCardConfig(id: 'available_stock_count', label: 'Available Stock Count', order: 5),
-  KpiCardConfig(id: 'total_stock_worth', label: 'Total Stock Worth', order: 6),
-  KpiCardConfig(id: 'pending_balances', label: 'Pending Balances', order: 7),
-  KpiCardConfig(id: 'dealer_stock', label: 'Phones with Dealers', order: 8),
+  KpiCardConfig(id: 'today_sales', label: 'Sales', order: 0),
+  KpiCardConfig(id: 'today_profit', label: 'Profit', order: 1),
+  KpiCardConfig(id: 'phones_sold_today', label: 'Phones Sold', order: 2),
+  KpiCardConfig(id: 'accessories_sold_today', label: 'Accessories Sold', order: 3),
+  KpiCardConfig(id: 'available_stock_count', label: 'Stock on Hand (units)', order: 4),
+  KpiCardConfig(id: 'total_stock_worth', label: 'Total Stock Worth', order: 5),
+  KpiCardConfig(id: 'pending_balances', label: 'Receivables (Udhaar)', order: 6),
+  KpiCardConfig(id: 'low_stock_count', label: 'Low Stock Items', order: 7),
+  KpiCardConfig(id: 'repairs_in_progress', label: 'Repairs in Progress', order: 8),
+  KpiCardConfig(id: 'dealer_stock', label: 'Phones with Dealers', order: 9),
 ];

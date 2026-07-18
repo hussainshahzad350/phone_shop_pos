@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phone_shop_pos/core/database/database_provider.dart';
 import 'package:phone_shop_pos/core/notifications/app_notifier.dart';
+import 'package:phone_shop_pos/modules/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/domain/entities/dealer_issue_entity.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/domain/repositories/dealer_issue_repository.dart';
 import 'package:phone_shop_pos/modules/dealer_issue/data/repositories/sqlite_dealer_issue_repository.dart';
@@ -53,7 +54,17 @@ class DealerIssueState {
 class DealerIssueStateNotifier extends StateNotifier<DealerIssueState> {
   final DealerIssueRepository _repository;
 
-  DealerIssueStateNotifier(this._repository) : super(DealerIssueState());
+  /// Invoked after every successful mutation so cross-screen views (e.g. the
+  /// dashboard's "Phones with Dealers" KPI and sidebar badges) can refresh.
+  final void Function()? _onDataChanged;
+
+  DealerIssueStateNotifier(
+    this._repository, {
+    void Function()? onDataChanged,
+  })  : _onDataChanged = onDataChanged,
+        super(DealerIssueState());
+
+  void _notifyDataChanged() => _onDataChanged?.call();
 
   Future<void> loadIssues() async {
     state = state.copyWith(isLoading: true);
@@ -128,6 +139,7 @@ class DealerIssueStateNotifier extends StateNotifier<DealerIssueState> {
           issues: [...state.issues, createdIssue],
           selectedImeis: [],
         );
+        _notifyDataChanged();
       },
       onFailure: (error) {
         AppNotifier.error('Failed to create issue: ${error.message}');
@@ -148,6 +160,7 @@ class DealerIssueStateNotifier extends StateNotifier<DealerIssueState> {
         state = state.copyWith(
           issues: state.issues.map((i) => i.issueId == issue.issueId ? issue : i).toList(),
         );
+        _notifyDataChanged();
       },
       onFailure: (error) {
         AppNotifier.error('Failed to update issue: ${error.message}');
@@ -169,6 +182,7 @@ class DealerIssueStateNotifier extends StateNotifier<DealerIssueState> {
           issues: state.issues.where((i) => i.issueId != issueId).toList(),
           selectedIssue: null,
         );
+        _notifyDataChanged();
       },
       onFailure: (error) {
         AppNotifier.error('Failed to delete issue: ${error.message}');
@@ -189,6 +203,7 @@ class DealerIssueStateNotifier extends StateNotifier<DealerIssueState> {
         state = state.copyWith(
           issues: state.issues.map((i) => i.issueId == issueId ? i.copyWith(returnStatus: true, returnedAt: DateTime.now()) : i).toList(),
         );
+        _notifyDataChanged();
       },
       onFailure: (error) {
         AppNotifier.error('Failed to mark as returned: ${error.message}');
@@ -209,6 +224,7 @@ class DealerIssueStateNotifier extends StateNotifier<DealerIssueState> {
         state = state.copyWith(
           issues: state.issues.map((i) => i.issueId == issueId ? i.copyWith(convertedToSale: true, saleInvoiceId: saleInvoiceId) : i).toList(),
         );
+        _notifyDataChanged();
       },
       onFailure: (error) {
         AppNotifier.error('Failed to convert to sale: ${error.message}');
@@ -229,6 +245,7 @@ class DealerIssueStateNotifier extends StateNotifier<DealerIssueState> {
         state = state.copyWith(
           issues: state.issues.map((i) => i.issueId == issueId ? i.copyWith(soldStatus: true) : i).toList(),
         );
+        _notifyDataChanged();
       },
       onFailure: (error) {
         AppNotifier.error('Failed to mark as sold: ${error.message}');
@@ -261,6 +278,7 @@ class DealerIssueStateNotifier extends StateNotifier<DealerIssueState> {
                   : i)
               .toList(),
         );
+        _notifyDataChanged();
         return invoiceNumber;
       },
       onFailure: (error) {
@@ -282,7 +300,13 @@ class DealerIssueStateNotifier extends StateNotifier<DealerIssueState> {
 
 final dealerIssueStateProvider = StateNotifierProvider<DealerIssueStateNotifier, DealerIssueState>((ref) {
   final repository = ref.watch(dealerIssueRepositoryProvider);
-  return DealerIssueStateNotifier(repository);
+  return DealerIssueStateNotifier(
+    repository,
+    // Dealer stock movements change the dashboard's "Phones with Dealers"
+    // KPI and stock counts; invalidating the service cascades a refresh
+    // through every dashboard/sidebar provider.
+    onDataChanged: () => ref.invalidate(dashboardServiceProvider),
+  );
 });
 
 final dealerIssueRepositoryProvider = Provider<DealerIssueRepository>((ref) {
