@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
+import 'package:phone_shop_pos/core/config/app_theme_mode.dart';
 import 'package:phone_shop_pos/core/config/shop_profile.dart';
+import 'package:phone_shop_pos/core/config/theme_mode_provider.dart';
 import 'package:phone_shop_pos/core/errors/result.dart';
 import 'package:phone_shop_pos/core/services/app_runtime_config.dart';
 import 'package:phone_shop_pos/core/services/backup/database_backup_service.dart';
@@ -659,6 +661,63 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     currentPinController.dispose();
   }
 
+  Widget _buildAppearanceCard(BuildContext context) {
+    final themeModeAsync = ref.watch(themeModeProvider);
+    final selected = themeModeAsync.asData?.value ?? AppThemeMode.system;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              'Appearance',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            SegmentedButton<AppThemeMode>(
+              segments: <ButtonSegment<AppThemeMode>>[
+                for (final mode in AppThemeMode.values)
+                  ButtonSegment<AppThemeMode>(
+                    value: mode,
+                    label: Text(mode.displayName),
+                    icon: Icon(_appearanceIcon(mode)),
+                  ),
+              ],
+              selected: <AppThemeMode>{selected},
+              showSelectedIcon: false,
+              onSelectionChanged: themeModeAsync.isLoading
+                  ? null
+                  : (selection) {
+                      ref
+                          .read(themeModeProvider.notifier)
+                          .setMode(selection.first);
+                    },
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'System follows your operating system’s light or dark setting.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _appearanceIcon(AppThemeMode mode) {
+    switch (mode) {
+      case AppThemeMode.system:
+        return Icons.brightness_auto_outlined;
+      case AppThemeMode.light:
+        return Icons.light_mode_outlined;
+      case AppThemeMode.dark:
+        return Icons.dark_mode_outlined;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(backupSettingsProvider);
@@ -707,6 +766,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: AppSpacing.sm),
+              _buildAppearanceCard(context),
               const SizedBox(height: AppSpacing.sm),
               Card(
                 child: Padding(
