@@ -790,11 +790,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       height: 90,
                       child: Center(child: CircularProgressIndicator()),
                     ),
-                    error: (_, __) => const SizedBox(
-                      height: 90,
-                      child: Center(
-                        child: Text('Failed to load business configuration.'),
-                      ),
+                    error: (error, _) => AppErrorState(
+                      dense: true,
+                      message: 'Failed to load business configuration.',
+                      error: error,
+                      onRetry: () =>
+                          ref.invalidate(businessConfigurationProvider),
                     ),
                   ),
                 ),
@@ -977,10 +978,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       height: 90,
                       child: Center(child: CircularProgressIndicator()),
                     ),
-                    error: (_, __) => const SizedBox(
-                      height: 90,
-                      child:
-                          Center(child: Text('Failed to load startup health.')),
+                    error: (error, _) => AppErrorState(
+                      dense: true,
+                      message: 'Failed to load startup health.',
+                      error: error,
+                      onRetry: () =>
+                          ref.invalidate(startupHealthFromSettingsProvider),
                     ),
                   ),
                 ),
@@ -1127,10 +1130,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       height: 90,
                       child: Center(child: CircularProgressIndicator()),
                     ),
-                    error: (_, __) => const SizedBox(
-                      height: 90,
-                      child: Center(
-                          child: Text('Failed to load database health.')),
+                    error: (error, _) => AppErrorState(
+                      dense: true,
+                      message: 'Failed to load database health.',
+                      error: error,
+                      onRetry: () => ref.invalidate(databaseHealthProvider),
                     ),
                   ),
                 ),

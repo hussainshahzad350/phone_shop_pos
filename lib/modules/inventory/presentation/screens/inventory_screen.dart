@@ -214,9 +214,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                     height: 80,
                     child: Center(child: CircularProgressIndicator()),
                   ),
-                  error: (_, __) => const SizedBox(
-                    height: 80,
-                    child: Center(child: Text('Failed to load summary.')),
+                  error: (error, _) => AppErrorState(
+                    dense: true,
+                    message: 'Failed to load summary.',
+                    error: error,
+                    onRetry: () => ref.invalidate(inventorySummaryProvider),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -680,8 +682,12 @@ class _StockAdjustmentDialogState
                   rows: rows.map(_toDataRow).toList(growable: false),
                 ),
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (_, __) => const Center(
-                  child: Text('Failed to load adjustment history.'),
+                error: (error, _) => AppErrorState(
+                  dense: true,
+                  message: 'Failed to load adjustment history.',
+                  error: error,
+                  onRetry: () =>
+                      ref.invalidate(stockAdjustmentHistoryProvider),
                 ),
               ),
             ),
