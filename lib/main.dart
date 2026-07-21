@@ -4,6 +4,8 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phone_shop_pos/core/config/app_theme_mode.dart';
+import 'package:phone_shop_pos/core/config/theme_mode_provider.dart';
 import 'package:phone_shop_pos/core/database/database_provider.dart';
 import 'package:phone_shop_pos/core/services/operations/operation_manager.dart';
 import 'package:phone_shop_pos/core/widgets/desktop_components.dart';
@@ -108,6 +110,7 @@ class _PhoneShopPosAppState extends ConsumerState<PhoneShopPosApp>
         title: AppRuntimeConfig.appName,
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
+        themeMode: ThemeMode.system,
         debugShowCheckedModeBanner: false,
         home: const _StartupLoadingScreen(),
       );
@@ -118,6 +121,7 @@ class _PhoneShopPosAppState extends ConsumerState<PhoneShopPosApp>
         title: AppRuntimeConfig.appName,
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
+        themeMode: ThemeMode.system,
         debugShowCheckedModeBanner: false,
         home: _StartupErrorScreen(
           message: startup.error.toString(),
@@ -130,10 +134,15 @@ class _PhoneShopPosAppState extends ConsumerState<PhoneShopPosApp>
     }
 
     final router = ref.watch(appRouterProvider);
+    // Database is ready here, so the persisted appearance choice resolves
+    // synchronously; fall back to system until the first read completes.
+    final appThemeMode =
+        ref.watch(themeModeProvider).asData?.value ?? AppThemeMode.system;
     return MaterialApp.router(
       title: AppRuntimeConfig.appName,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
+      themeMode: appThemeMode.themeMode,
       routerConfig: router,
       scaffoldMessengerKey: AppNotifier.messengerKey,
       debugShowCheckedModeBanner: false,

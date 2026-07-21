@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:phone_shop_pos/core/errors/app_error.dart';
 import 'package:phone_shop_pos/core/theme/app_spacing.dart';
 
 const int _kDefaultPaginateThreshold = 80;
@@ -240,6 +241,83 @@ class AppEmptyState extends StatelessWidget {
             if (action != null) ...<Widget>[
               AppSpacing.gapLg,
               action!,
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Shared error/retry state, the failure-side counterpart to [AppEmptyState].
+///
+/// Replaces the dead-end `Center(child: Text('Failed to load…'))` blocks that
+/// left users stuck with no way to recover. Pass [onRetry] to surface a retry
+/// button (typically `() => ref.invalidate(theProvider)`), and optionally the
+/// caught [error] to show a short cause under the message. Set [dense] for
+/// compact card sections.
+class AppErrorState extends StatelessWidget {
+  const AppErrorState({
+    super.key,
+    required this.message,
+    this.error,
+    this.onRetry,
+    this.retryLabel = 'Retry',
+    this.icon = Icons.error_outline,
+    this.dense = false,
+  });
+
+  final String message;
+  final Object? error;
+  final VoidCallback? onRetry;
+  final String retryLabel;
+  final IconData icon;
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
+    final err = error;
+    final details = err == null
+        ? null
+        : err is AppError
+            ? err.message
+            : '$err';
+    return Center(
+      child: Padding(
+        padding: dense ? AppSpacing.paddingMd : AppSpacing.paddingLg,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(
+              icon,
+              size: dense ? 28 : 44,
+              color: theme.colorScheme.error.withValues(alpha: 0.7),
+            ),
+            dense ? AppSpacing.gapSm : AppSpacing.gapMd,
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(color: muted),
+            ),
+            if (details != null && details.isNotEmpty) ...<Widget>[
+              AppSpacing.gapXs,
+              Text(
+                details,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(color: muted),
+              ),
+            ],
+            if (onRetry != null) ...<Widget>[
+              dense ? AppSpacing.gapSm : AppSpacing.gapLg,
+              OutlinedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: Text(retryLabel),
+              ),
             ],
           ],
         ),

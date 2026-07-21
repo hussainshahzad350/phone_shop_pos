@@ -430,7 +430,12 @@ class _CustomersPanelState extends ConsumerState<CustomersPanel> {
               child: customersAsync.when(
                 data: _buildCustomersTable,
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => Center(child: Text('Error: $error')),
+                error: (error, _) => AppErrorState(
+                  dense: true,
+                  message: 'Failed to load customers.',
+                  error: error,
+                  onRetry: () => ref.invalidate(customerListProvider),
+                ),
               ),
             ),
           ),
