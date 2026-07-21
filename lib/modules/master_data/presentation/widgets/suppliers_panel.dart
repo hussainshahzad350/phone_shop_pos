@@ -430,7 +430,12 @@ class _SuppliersPanelState extends ConsumerState<SuppliersPanel> {
               child: suppliersAsync.when(
                 data: _buildSuppliersTable,
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => Center(child: Text('Error: $error')),
+                error: (error, _) => AppErrorState(
+                  dense: true,
+                  message: 'Failed to load suppliers.',
+                  error: error,
+                  onRetry: () => ref.invalidate(supplierListProvider),
+                ),
               ),
             ),
           ),
